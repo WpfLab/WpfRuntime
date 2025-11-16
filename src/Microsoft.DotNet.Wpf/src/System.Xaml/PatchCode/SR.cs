@@ -28,8 +28,8 @@ namespace System
 {
     internal partial class SR
 #if WINDOWS_BASE
-         : global::WindowsBase.Resources.Strings
-//#elif SYSTEM_XAML
+         //: global::WindowsBase.Resources.Strings
+#elif SYSTEM_XAML
 //         : System.Xaml.Resources.Strings
 #elif System_Windows_Input_Manipulations
          : System.Windows.Input.Manipulations.Resources.Strings
