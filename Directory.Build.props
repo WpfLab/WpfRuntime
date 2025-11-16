@@ -46,5 +46,5 @@
   <!-- <Import Project="$(MSBuildThisFileDirectory)eng\Versions.props"/> -->
 
   <!-- 以下为生成多语言资源所需，详细请看 [dotnet 读 WPF 源代码 学习使用 Microsoft.DotNet.Arcade.Sdk 处理代码里的多语言 - lindexi - 博客园](https://www.cnblogs.com/lindexi/p/19198245 ) -->
-  <Import Project="$(MSBuildThisFileDirectory)eng\SystemResources.props"/>
+  <Import Project="$(MSBuildThisFileDirectory)eng\WpfArcadeSdk\SystemResources.props"/>
 </Project>
