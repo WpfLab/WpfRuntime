@@ -17,6 +17,20 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Windows.Input.Manipu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UIAutomationTypes", "src\Microsoft.DotNet.Wpf\src\UIAutomation\UIAutomationTypes\UIAutomationTypes.csproj", "{152C4B33-3B53-4180-B8BC-7BB0BC91A2ED}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		global.json = global.json
+		NuGet.config = NuGet.config
+		eng\Versions.props = eng\Versions.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WpfArcadeSdk", "WpfArcadeSdk", "{EB1FC3DA-199A-41A0-A6E5-1D1EF66F5D04}"
+	ProjectSection(SolutionItems) = preProject
+		eng\WpfArcadeSdk\SystemResources.props = eng\WpfArcadeSdk\SystemResources.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -114,6 +128,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EB1FC3DA-199A-41A0-A6E5-1D1EF66F5D04} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0BF08449-2860-4DE4-B31E-7B417CCFA3EC}

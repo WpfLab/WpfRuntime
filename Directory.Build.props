@@ -1,4 +1,7 @@
 <Project>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
   <PropertyGroup>
     <RepositoryName>wpf</RepositoryName>
     <WindowsDesktopARM64Support>true</WindowsDesktopARM64Support>
@@ -39,5 +42,9 @@
     <WpfCommonDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\Common\</WpfCommonDir>
   </PropertyGroup>
 
-  <Import Project="$(MSBuildThisFileDirectory)eng\Versions.props"/>
+  <!-- warning MSB4011: 无法再次导入“C:\lindexi\Code\WpfReorganize_dotnetcampus\eng\Versions.props”。可能已在“C:\Users\lindexi\.nuget\packages\microsoft.dotnet.arcade.sdk\10.0.0-beta.25411.109\tools\DefaultVersions.props (15,3)”处导入过它。这很可能是生成创作错误。将忽略此后续导入。[C:\lindexi\Code\WpfReorganize_dotnetcampus\src\Microsoft.DotNet.Wpf\src\System.Xaml\System.Xaml.csproj] -->
+  <!-- <Import Project="$(MSBuildThisFileDirectory)eng\Versions.props"/> -->
+
+  <!-- 以下为生成多语言资源所需，详细请看 [dotnet 读 WPF 源代码 学习使用 Microsoft.DotNet.Arcade.Sdk 处理代码里的多语言 - lindexi - 博客园](https://www.cnblogs.com/lindexi/p/19198245 ) -->
+  <Import Project="$(MSBuildThisFileDirectory)eng\SystemResources.props"/>
 </Project>
