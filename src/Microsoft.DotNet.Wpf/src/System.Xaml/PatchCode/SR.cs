@@ -34,7 +34,7 @@ namespace System
 #elif System_Windows_Input_Manipulations
          : System.Windows.Input.Manipulations.Resources.Strings
 #elif UIAUTOMATIONTYPES
-         : UIAutomationTypes.Resources.Strings
+         //: UIAutomationTypes.Resources.Strings
 #endif
     {
     }
