@@ -1426,9 +1426,9 @@
     <!--<ProjectReference Include="$(WpfSourceDir)DirectWriteForwarder\DirectWriteForwarder.vcxproj">
       <UndefineProperties>TargetFramework;TargetFrameworks</UndefineProperties>
     </ProjectReference>-->
-    <Reference Include="DirectWriteForwarder">
+    <!--<Reference Include="DirectWriteForwarder">
       <HintPath>$(WpfReferencePath)DirectWriteForwarder.dll</HintPath>
-    </Reference>
+    </Reference>-->
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
     <ProjectReference Include="$(WpfSourceDir)System.Windows.Input.Manipulations\System.Windows.Input.Manipulations.csproj" />
     <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationTypes\UIAutomationTypes.csproj" />
@@ -1489,18 +1489,6 @@
 
   <ItemGroup>
     <Compile Include="$(WpfSourceDir)System.Xaml\PatchCode\SR.cs" Link="PatchCode\SR.cs" />
-    <Compile Include="Resources\Strings.Designer.cs" />
-
-    <Compile Update="Resources\Strings.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Strings.resx</DependentUpon>
-    </Compile>
-
-    <EmbeddedResource Update="Resources\Strings.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
   </ItemGroup>
 
   <!-- Including the Microsoft.TextTemplating.targets requires us to manually import Sdk.Targets because
