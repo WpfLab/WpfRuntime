@@ -1422,10 +1422,7 @@
 
   <ItemGroup>
     <!-- required for internals access -->
-     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" /> 
-    <!--<Reference Include="WindowsBase">
-      <HintPath>$(WpfReferencePath)WindowsBase.dll</HintPath>
-    </Reference>-->
+    <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" /> 
     <!--<ProjectReference Include="$(WpfSourceDir)DirectWriteForwarder\DirectWriteForwarder.vcxproj">
       <UndefineProperties>TargetFramework;TargetFrameworks</UndefineProperties>
     </ProjectReference>-->
