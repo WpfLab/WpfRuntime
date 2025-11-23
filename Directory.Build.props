@@ -42,6 +42,10 @@
     <WpfCommonDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\Common\</WpfCommonDir>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <VCTargetsPath Condition="'$(VCTargetsPath)' == ''">$([MSBuild]::GetVsInstallRoot())\Common7\IDE\VC\VCTargets\</VCTargetsPath>
+  </PropertyGroup>
+
   <!-- warning MSB4011: 无法再次导入“C:\lindexi\Code\WpfReorganize_dotnetcampus\eng\Versions.props”。可能已在“C:\Users\lindexi\.nuget\packages\microsoft.dotnet.arcade.sdk\10.0.0-beta.25411.109\tools\DefaultVersions.props (15,3)”处导入过它。这很可能是生成创作错误。将忽略此后续导入。[C:\lindexi\Code\WpfReorganize_dotnetcampus\src\Microsoft.DotNet.Wpf\src\System.Xaml\System.Xaml.csproj] -->
   <!-- <Import Project="$(MSBuildThisFileDirectory)eng\Versions.props"/> -->
 
