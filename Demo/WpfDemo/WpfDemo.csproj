@@ -9,5 +9,8 @@
 
   </PropertyGroup>
 
+  <PropertyGroup>
+    <GenerateResxSource>false</GenerateResxSource>
+  </PropertyGroup>
 
 </Project>
