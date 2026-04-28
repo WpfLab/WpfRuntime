@@ -112,9 +112,11 @@
 1. 已建立新的根级构建配置。
 2. 已迁入一批核心托管项目，至少包括：`WindowsBase`、`System.Xaml`、`PresentationCore`、`UIAutomation` 系列、`WindowsFormsIntegration`、`System.Windows.Input.Manipulations`。
 3. 已确认并使用根目录 `Microsoft.Dotnet.Wpf.sln` 作为当前解决方案级入口。
-4. 本轮已开始进行“项目纳管型迁移”，将已存在的 `UIAutomationClient`、`UIAutomationClientSideProviders` 纳入当前解决方案。
+4. 已验证当前磁盘上的 `Microsoft.Dotnet.Wpf.sln` 仍只纳入一批基础项目，尚未实际包含 `UIAutomationClient`、`UIAutomationClientSideProviders`、`PresentationCore`、`WindowsFormsIntegration`。
 5. 已开始处理共享源码目录和公共构建属性，使部分项目可以通过共享文件方式编译。
-6. 仓库中已经存在对原始 WPF 结构的明显映射关系，说明当前不是从零开始，而是处于“持续搬迁与校正引用”的阶段。
+6. 已确认当前解决方案本身可以成功构建，但这并不代表目录中所有现存项目都已具备独立构建能力。
+7. 已开始针对 `PresentationCore` 进行“缺失源码补齐型迁移”，从 `origin/src/src/PresentationCore/` 拷贝首批 `TextInterface`、`Interop/DWrite`、`BinaryFormat`、`UISettings` 相关源码，并同步补充 `PresentationCore.csproj` 编译项。
+8. 仓库中已经存在对原始 WPF 结构的明显映射关系，说明当前不是从零开始，而是处于“持续搬迁与校正引用”的阶段。
 
 ## 当前主要缺口
 
@@ -124,10 +126,11 @@
    - `Themes`
    - `PresentationBuildTasks`
    - `WpfGfx`
-2. 解决方案入口虽已存在，但项目纳管仍不完整，至少还有 `PresentationCore`、`WindowsFormsIntegration` 等现存项目未全部纳入或未验证。
+2. 解决方案入口虽已存在，但项目纳管仍不完整，至少还有 `PresentationCore`、`WindowsFormsIntegration`、`UIAutomationClient`、`UIAutomationClientSideProviders` 等现存项目未纳入当前磁盘上的解决方案文件。
 3. `WindowsFormsIntegration` 当前仍直接依赖缺失的 `PresentationFramework`，说明上层托管链尚未闭合。
-4. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮验证。
-5. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
+4. `PresentationCore` 当前迁移并不完整，独立构建时仍缺失一批 DirectWrite/TextInterface/Interop 相关托管源码与编译项，因此会继续阻塞 `UIAutomationClient` 等上层项目的独立构建验证。
+5. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
+6. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
 
 ## 已明确的迁移顺序
 
@@ -154,11 +157,12 @@
 
 ## 建议的当前优先级
 
-1. 先验证本轮新纳入的 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
-2. 再处理 `PresentationFramework` 及其依赖链，这是后续大部分 WPF 托管能力的关键。
-3. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的纳管时机。
-4. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。
-5. 每完成一个模块迁移，就记录：
+1. 先继续按 `origin/src/src/PresentationCore/PresentationCore.csproj` 与当前 `PresentationCore.csproj` 的差异，批量补齐缺失源码与编译项。
+2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
+3. 再处理 `PresentationFramework` 及其依赖链，这是后续大部分 WPF 托管能力的关键。
+4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的纳管时机。
+5. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。
+6. 每完成一个模块迁移，就记录：
    - 新增项目
    - 新增目录
    - 调整过的项目引用

@@ -101,10 +101,19 @@
 - 至少一批核心托管项目可稳定构建。
 - 每个失败项目都有明确阻塞记录。
 
+### 当前阶段补充记录
+
+- 已验证当前 `Microsoft.Dotnet.Wpf.sln` 可成功构建。
+- 已确认磁盘上的解决方案文件尚未纳入 `UIAutomationClient`、`UIAutomationClientSideProviders`、`PresentationCore`、`WindowsFormsIntegration`。
+- 已确认 `UIAutomationClient` 的独立构建会被 `PresentationCore` 阻塞。
+- 已确认 `PresentationCore` 当前与 `origin/src/src/PresentationCore/PresentationCore.csproj` 相比仍缺失一批编译项与源码。
+- 本轮已开始按原始 `PresentationCore.csproj` 的清单补齐缺失文件，而不是直接纳管更多项目。
+
 ### 风险
 
 - 共享源码和生成代码路径可能仍依赖原始仓库布局。
 - 本地引用路径可能使构建无法脱离个人机器环境。
+- 若继续以“先纳管、后补源码”的顺序推进，会反复被 `PresentationCore` 的未闭合依赖链阻塞。
 
 ---
 
@@ -135,6 +144,11 @@
 2. 修正 `ProjectReference`、共享源码路径、生成代码输入路径。
 3. 按模块记录迁移差异，而不是一次性做大批量不可追踪改动。
 4. 每迁入一个模块，就更新 Docs 文档。
+
+### 当前顺序修正
+
+- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的缺失源码补齐。
+- `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework`，但 `UIAutomationClient`、`UIAutomationClientSideProviders` 的独立构建验证先依赖 `PresentationCore` 完整化。
 
 ### 完成标准
 

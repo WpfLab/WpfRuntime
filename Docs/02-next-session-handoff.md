@@ -2,15 +2,17 @@
 
 ## 本次工作产出
 
-本次已从“仅做文档基线”推进到“开始解决方案纳管型迁移”，目的是让后续迁移围绕一个真实可用的解决方案入口持续前进。
+本次已从“仅做文档基线”推进到“开始真实构建验证与缺失源码补齐”，目的是让后续迁移围绕一个真实可用的解决方案入口和可独立构建的项目链持续前进。
 
 已完成：
 
 - 确认当前仓库根目录存在 `Microsoft.Dotnet.Wpf.sln`。
-- 核对解决方案当前已纳入项目。
-- 将 `UIAutomationClient`、`UIAutomationClientSideProviders` 纳入当前解决方案。
+- 核对了磁盘上解决方案当前已纳入项目。
+- 验证当前 `Microsoft.Dotnet.Wpf.sln` 可以成功构建。
+- 验证 `UIAutomationClient` 独立构建时会被 `PresentationCore` 阻塞。
 - 对照当前仓库与 `origin/src/src/`，确认关键缺失模块仍未迁入。
-- 开始在计划文档中列出迁移项目顺序。
+- 对照 `origin/src/src/PresentationCore/PresentationCore.csproj` 与当前 `PresentationCore.csproj`，确认当前 `PresentationCore` 缺失一批源码与编译项。
+- 已从 `origin/src/src/PresentationCore/` 拷贝首批 `TextInterface`、`Interop/DWrite`、`BinaryFormat`、`UISettings` 相关源码，并同步更新 `PresentationCore.csproj`。
 
 ## 当前已知事实
 
@@ -45,10 +47,16 @@
 - `System.Windows.Input.Manipulations`
 - `UIAutomationTypes`
 - `UIAutomationProvider`
+- `DirectWriteForwarder`
+- `Docs`
+- `Demo/WpfDemo`
+
+### 当前已确认未纳入解决方案但已存在于目录中的主要项目
+
+- `PresentationCore`
+- `WindowsFormsIntegration`
 - `UIAutomationClient`
 - `UIAutomationClientSideProviders`
-- `DirectWriteForwarder`
-- `Demo/WpfDemo`
 
 ### 当前已列明的迁移顺序
 
@@ -87,23 +95,22 @@
 
 ### 已知不确定点
 
-1. 尚未验证当前解决方案在纳入 `UIAutomationClient`、`UIAutomationClientSideProviders` 后是否可稳定构建。
+1. 当前解决方案本身可以构建，但这不代表目录内未纳管项目也可独立构建。
 2. `WindowsFormsIntegration` 仍依赖尚未迁入的 `PresentationFramework`。
-3. `PresentationCore` 已在目录中存在，但当前尚未纳入根解决方案。
-4. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
+3. `PresentationCore` 已在目录中存在，但当前既未纳入根解决方案，也尚未完成源码补齐。
+4. `PresentationCore` 当前仍缺少更多 DirectWrite/TextInterface 相关托管类型，例如 `IFontSourceCollection`、`IFontSource`、`GlyphOffset`、`DWriteFontFeature` 等。
+5. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
 
 ## 下一次对话建议起手顺序
 
-1. 先验证当前解决方案或至少新增纳管项目的构建状态：
+1. 先继续对照 `origin/src/src/PresentationCore/PresentationCore.csproj`，批量补齐当前 `PresentationCore.csproj` 缺失的源码文件与 `<Compile Include>` 项。
+2. 优先处理当前已暴露的缺口类型：`IFontSourceCollection`、`IFontSource`、`GlyphOffset`、`DWriteFontFeature` 及其相关依赖。
+3. 重新验证 `PresentationCore` 独立构建状态。
+4. 在 `PresentationCore` 能独立构建后，再验证：
    - `UIAutomationClient`
    - `UIAutomationClientSideProviders`
-2. 再验证当前核心托管项目的可构建性：
-   - `WindowsBase`
-   - `System.Xaml`
-   - `PresentationCore`
-   - `UIAutomation` 系列
-3. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失”分类记录。
-4. 开始正式迁入 `PresentationFramework`，并同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
+5. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失”分类记录。
+6. 再开始正式迁入 `PresentationFramework`，并同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
 
 ## 下一次对话建议直接复制的提示词
 
@@ -117,8 +124,9 @@
 然后优先完成以下事项：
 
 - 验证 `Microsoft.Dotnet.Wpf.sln` 当前纳管项目的构建状态。
+- 继续按 `origin/src/src/PresentationCore/PresentationCore.csproj` 补齐 `PresentationCore` 缺失源码与编译项。
+- 先打通 `PresentationCore` 的独立构建，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
 - 梳理当前仓库项目与解决方案入口的对应关系，尤其是未纳入的 `PresentationCore`、`WindowsFormsIntegration`。
-- 验证 `WindowsBase`、`System.Xaml`、`PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
 - 开始迁入 `PresentationFramework`，并把发现的依赖顺序继续写回 Docs。
 - 将发现的阻塞点回写到 Docs 文档中。
 
