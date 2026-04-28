@@ -17,6 +17,7 @@
 - `global.json` 指定 SDK 为 `8.0.206`。
 - 当前仓库根目录已存在解决方案入口：`Microsoft.Dotnet.Wpf.sln`。
 - 当前仓库通过 `WpfSourceDir`、`WpfSharedDir`、`WpfCommonDir` 指向 `src/Microsoft.DotNet.Wpf/src/` 下的重组源码。
+- 当前仓库已新增 `WpfCycleBreakersDir`、`WpfCodeGenDir`，分别用于指向当前仓库下的 `cycle-breakers/` 与 `eng/WpfArcadeSdk/tools/`。
 - 当前仓库依赖本地 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 作为部分引用路径。
 - 当前仓库已引入 `eng/WpfArcadeSdk/SystemResources.props` 以支持资源生成相关构建能力。
 
@@ -127,6 +128,9 @@
 8. 仓库中已经存在对原始 WPF 结构的明显映射关系，说明当前不是从零开始，而是处于“持续搬迁与校正引用”的阶段。
 9. 本轮已从 `origin/src/src/` 批量拷贝 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录，用于先闭合上层目录结构和项目引用入口。
 10. 已验证 `PresentationFramework` 项目文件可开始进入真实构建诊断，但当前会先被缺失的循环桥接项目和 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 阻塞。
+11. 本轮已在仓库根目录补齐首批 `cycle-breakers` 项目，至少包括 `PresentationUI-PresentationFramework-impl-cycle`、`PresentationFramework-ReachFramework-impl-cycle`、`PresentationFramework-System.Printing-api-cycle`、`PresentationFramework-PresentationUI-api-cycle`、`ReachFramework-PresentationFramework-api-cycle`、`ReachFramework-System.Printing-api-cycle`、`System.Printing-PresentationFramework-api-cycle`。
+12. 已将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 改为条件导入，使其不再因目标文件缺失而在项目评估阶段直接失败。
+13. 重新验证后，`PresentationFramework` 已越过 cycle-breaker/AvTrace 层面的首批阻塞，当前重新被 `PresentationCore` 的 `MS.Internal.Text.TextInterface` 托管包装源码缺失所阻塞。
 
 ## 当前主要缺口
 
@@ -138,9 +142,8 @@
 3. `WindowsFormsIntegration` 当前仍直接依赖缺失的 `PresentationFramework`，说明上层托管链尚未闭合。
 4. `PresentationCore` 当前迁移并不完整，独立构建时仍缺失一批 DirectWrite/TextInterface/Interop 相关托管源码与编译项，因此会继续阻塞 `UIAutomationClient` 等上层项目的独立构建验证。
 5. 新迁入的上层项目虽然已进入当前目录，但仍未完成构建前置补齐，当前已确认存在以下阻塞：
-   - `PresentationFramework` 依赖的 `PresentationUI-PresentationFramework-impl-cycle.csproj` 缺失
-   - `ReachFramework` / `System.Printing` 相关循环桥接项目缺失
-   - `WpfCodeGenDir` 指向的 `AvTrace\GenAvMessages.targets` 尚未接入当前仓库
+   - `PresentationCore` 缺失一批 `MS.Internal.Text.TextInterface` 托管包装源码与接口定义，例如 `IFontSource`、`IFontSourceCollection`、`ItemProps`、`DWriteFontFeature`、`GlyphMetrics`、`InformationalStringID`
+   - `WpfCodeGenDir` 虽已定义且 `PresentationFramework` 已改为条件导入，但 `AvTrace\GenAvMessages.targets` 本体仍未接入当前仓库
 6. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
 7. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
 
@@ -170,11 +173,13 @@
 ## 建议的当前优先级
 
 1. 先继续按 `origin/src/src/PresentationCore/PresentationCore.csproj` 与当前 `PresentationCore.csproj` 的差异，批量补齐缺失源码与编译项。
-2. 补齐 `PresentationFramework` 当前暴露出来的构建前置，优先处理缺失的 cycle-breaker 项目和 `AvTrace` 代码生成目标来源。
-3. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
-4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的纳管时机。
-5. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。
-6. 每完成一个模块迁移，就记录：
+2. 继续按 `PresentationCore` 的 DirectWrite/TextInterface 缺口补齐托管包装源码与编译项，优先处理 `IFontSource`、`IFontSourceCollection`、`ItemProps`、`DWriteFontFeature`、`GlyphMetrics`、`InformationalStringID`。
+3. 在 `PresentationCore` 的缺失源码补齐过程中，同步核对当前仓库中是否存在遗漏但未纳入 `PresentationCore.csproj` 的 `TextInterface` 文件。
+4. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
+5. 继续补齐 `AvTrace` 代码生成目标来源，使 `PresentationFramework` 不仅能跳过导入失败，还能恢复预期生成链路。
+6. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的纳管时机。
+7. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。
+8. 每完成一个模块迁移，就记录：
    - 新增项目
    - 新增目录
    - 调整过的项目引用

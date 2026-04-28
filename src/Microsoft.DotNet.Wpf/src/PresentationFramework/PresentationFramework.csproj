@@ -1462,7 +1462,7 @@
        doesn’t run before the Build target.-->
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
-  <Import Project="$(WpfCodeGenDir)AvTrace\GenAvMessages.targets" />
+  <Import Project="$(WpfCodeGenDir)AvTrace\GenAvMessages.targets" Condition="Exists('$(WpfCodeGenDir)AvTrace\GenAvMessages.targets')" />
   <!-- DevDiv Bug 888747: Re-enable AvTrace codegen -->
   <!-- <Import Project="$(WpfCodeGenDir)DesignTimeTextTemplating.targets" /> -->
 </Project>
