@@ -19,6 +19,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{02EA681E
 		Directory.Build.targets = Directory.Build.targets
 		global.json = global.json
 		NuGet.config = NuGet.config
+		README.md = README.md
 		eng\Versions.props = eng\Versions.props
 	EndProjectSection
 EndProject
