@@ -26,10 +26,18 @@
 
 - `Common`
 - `DirectWriteForwarder`
+- `Extensions`
+- `PresentationBuildTasks`
 - `PresentationCore`
+- `PresentationFramework`
+- `PresentationUI`
+- `ReachFramework`
 - `Shared`
+- `System.Printing`
+- `System.Windows.Controls.Ribbon`
 - `System.Windows.Input.Manipulations`
 - `System.Xaml`
+- `Themes`
 - `UIAutomation`
 - `WindowsBase`
 - `WindowsFormsIntegration`
@@ -117,20 +125,24 @@
 6. 已确认当前解决方案本身可以成功构建，但这并不代表目录中所有现存项目都已具备独立构建能力。
 7. 已开始针对 `PresentationCore` 进行“缺失源码补齐型迁移”，从 `origin/src/src/PresentationCore/` 拷贝首批 `TextInterface`、`Interop/DWrite`、`BinaryFormat`、`UISettings` 相关源码，并同步补充 `PresentationCore.csproj` 编译项。
 8. 仓库中已经存在对原始 WPF 结构的明显映射关系，说明当前不是从零开始，而是处于“持续搬迁与校正引用”的阶段。
+9. 本轮已从 `origin/src/src/` 批量拷贝 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录，用于先闭合上层目录结构和项目引用入口。
+10. 已验证 `PresentationFramework` 项目文件可开始进入真实构建诊断，但当前会先被缺失的循环桥接项目和 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 阻塞。
 
 ## 当前主要缺口
 
 1. 缺少多个关键顶层模块，尤其是：
-   - `PresentationFramework`
-   - `ReachFramework`
-   - `Themes`
-   - `PresentationBuildTasks`
    - `WpfGfx`
+   - `PenImc`
+   - `System.Windows.Presentation`
 2. 解决方案入口虽已存在，但项目纳管仍不完整，至少还有 `PresentationCore`、`WindowsFormsIntegration`、`UIAutomationClient`、`UIAutomationClientSideProviders` 等现存项目未纳入当前磁盘上的解决方案文件。
 3. `WindowsFormsIntegration` 当前仍直接依赖缺失的 `PresentationFramework`，说明上层托管链尚未闭合。
 4. `PresentationCore` 当前迁移并不完整，独立构建时仍缺失一批 DirectWrite/TextInterface/Interop 相关托管源码与编译项，因此会继续阻塞 `UIAutomationClient` 等上层项目的独立构建验证。
-5. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
-6. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
+5. 新迁入的上层项目虽然已进入当前目录，但仍未完成构建前置补齐，当前已确认存在以下阻塞：
+   - `PresentationFramework` 依赖的 `PresentationUI-PresentationFramework-impl-cycle.csproj` 缺失
+   - `ReachFramework` / `System.Printing` 相关循环桥接项目缺失
+   - `WpfCodeGenDir` 指向的 `AvTrace\GenAvMessages.targets` 尚未接入当前仓库
+6. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
+7. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
 
 ## 已明确的迁移顺序
 
@@ -158,8 +170,8 @@
 ## 建议的当前优先级
 
 1. 先继续按 `origin/src/src/PresentationCore/PresentationCore.csproj` 与当前 `PresentationCore.csproj` 的差异，批量补齐缺失源码与编译项。
-2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
-3. 再处理 `PresentationFramework` 及其依赖链，这是后续大部分 WPF 托管能力的关键。
+2. 补齐 `PresentationFramework` 当前暴露出来的构建前置，优先处理缺失的 cycle-breaker 项目和 `AvTrace` 代码生成目标来源。
+3. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
 4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的纳管时机。
 5. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。
 6. 每完成一个模块迁移，就记录：

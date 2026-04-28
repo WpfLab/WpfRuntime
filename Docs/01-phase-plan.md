@@ -108,6 +108,8 @@
 - 已确认 `UIAutomationClient` 的独立构建会被 `PresentationCore` 阻塞。
 - 已确认 `PresentationCore` 当前与 `origin/src/src/PresentationCore/PresentationCore.csproj` 相比仍缺失一批编译项与源码。
 - 本轮已开始按原始 `PresentationCore.csproj` 的清单补齐缺失文件，而不是直接纳管更多项目。
+- 本轮已批量迁入 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录。
+- 已验证 `PresentationFramework` 可进入构建诊断，但当前首先被缺失的 cycle-breaker 项目与 `AvTrace\GenAvMessages.targets` 阻塞。
 
 ### 风险
 
@@ -149,6 +151,7 @@
 
 - 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的缺失源码补齐。
 - `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework`，但 `UIAutomationClient`、`UIAutomationClientSideProviders` 的独立构建验证先依赖 `PresentationCore` 完整化。
+- 由于 `PresentationFramework` 已经进入当前仓库目录，后续不再是“是否迁入”的问题，而是“先补哪一类构建前置”的问题；优先级应调整为：`PresentationCore` 缺失源码、`PresentationFramework` 代码生成前置、cycle-breaker 项目。
 
 ### 完成标准
 
@@ -160,6 +163,7 @@
 
 - `PresentationFramework` 依赖面极广，容易带出更多未迁入模块。
 - 生成资源、主题、任务项目之间可能存在隐式构建顺序要求。
+- 当前缺失的不只是源码目录，还包括一批专门用于打断循环依赖的桥接项目和代码生成目标，若不先补这些前置，继续单点修项目会反复受阻。
 
 ---
 
