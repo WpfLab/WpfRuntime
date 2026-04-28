@@ -18,7 +18,10 @@
 - 已在仓库根目录新增 `cycle-breakers/` 目录，并补齐首批桥接项目与最小占位源码。
 - 已在 `Directory.Build.props` 中新增 `WpfCycleBreakersDir`、`WpfCodeGenDir`。
 - 已将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 调整为条件导入，解除项目评估阶段的导入失败。
-- 已重新验证 `PresentationFramework` 构建，确认当前主要阻塞重新收敛到 `PresentationCore` 的 `MS.Internal.Text.TextInterface` 托管包装源码缺失。
+- 已将 `PresentationCore.csproj` 恢复为引用仓库内 `DirectWriteForwarder.vcxproj`，不再依赖外部 `DirectWriteForwarder.dll` 文件引用。
+- 已将 `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders`、`WindowsFormsIntegration` 纳入 `Microsoft.Dotnet.Wpf.sln`。
+- 已验证根解决方案在纳入上述项目后仍可成功构建。
+- 已重新验证 `PresentationCore` 构建，确认 `TextInterface` 依赖已回到真实的 `DirectWriteForwarder` 依赖链，当前主要阻塞变为本地 VC++ 构建任务失败。
 
 ## 当前已知事实
 
@@ -53,6 +56,7 @@
 - `src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationClientSideProviders/UIAutomationClientSideProviders.csproj`
 - `src/Microsoft.DotNet.Wpf/src/WindowsFormsIntegration/WindowsFormsIntegration.csproj`
 - `src/Microsoft.DotNet.Wpf/src/System.Windows.Input.Manipulations/System.Windows.Input.Manipulations.csproj`
+- `src/Microsoft.DotNet.Wpf/src/DirectWriteForwarder/DirectWriteForwarder.vcxproj`
 
 ### 当前解决方案已纳入的项目
 
@@ -61,16 +65,23 @@
 - `System.Windows.Input.Manipulations`
 - `UIAutomationTypes`
 - `UIAutomationProvider`
+- `PresentationCore`
+- `UIAutomationClient`
+- `UIAutomationClientSideProviders`
+- `WindowsFormsIntegration`
 - `DirectWriteForwarder`
 - `Docs`
 - `Demo/WpfDemo`
 
 ### 当前已确认未纳入解决方案但已存在于目录中的主要项目
 
-- `PresentationCore`
-- `WindowsFormsIntegration`
-- `UIAutomationClient`
-- `UIAutomationClientSideProviders`
+- `PresentationFramework`
+- `ReachFramework`
+- `Themes` 相关项目
+- `PresentationBuildTasks`
+- `PresentationUI`
+- `System.Printing`
+- `System.Windows.Controls.Ribbon`
 
 ### 当前已列明的迁移顺序
 
@@ -103,28 +114,23 @@
 
 1. 当前解决方案本身可以构建，但这不代表目录内未纳管项目也可独立构建。
 2. `WindowsFormsIntegration` 仍依赖尚未迁入的 `PresentationFramework`。
-3. `PresentationCore` 已在目录中存在，但当前既未纳入根解决方案，也尚未完成源码补齐。
-4. `PresentationCore` 当前仍缺少更多 DirectWrite/TextInterface 相关托管类型，例如 `IFontSourceCollection`、`IFontSource`、`GlyphOffset`、`DWriteFontFeature` 等。
+3. `PresentationCore` 已纳入根解决方案，但独立构建仍未闭环。
+4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件，而是 `DirectWriteForwarder` 在本地命令行环境下会触发 VC++ 构建任务 `GetOutOfDateItems` 的 `TypeLoadException`。
 5. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
 6. 当前已补齐首批 bridge 项目，但是否还需要补更多 cycle-breaker 项目，要继续对照 `origin/src/cycle-breakers/` 与真实构建错误确认。
 7. `PresentationFramework` 对 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 已改为条件导入，但当前仓库仍未接入该目标文件本体，因此代码生成链尚未恢复。
-8. `PresentationCore` 当前缺失的 `TextInterface` 类型已至少确认包括：`IFontSource`、`IFontSourceCollection`、`ItemProps`、`DWriteFontFeature`、`GlyphMetrics`、`InformationalStringID`、`Font`。
+8. 需要继续确认 `DirectWriteForwarder` 在 Visual Studio 内部构建与命令行构建的差异，以及是否需要调整项目配置来规避当前 VC++ 任务异常。
 
 ## 下一次对话建议起手顺序
 
-1. 先继续对照 `origin/src/src/PresentationCore/PresentationCore.csproj`，批量补齐当前 `PresentationCore.csproj` 缺失的源码文件与 `<Compile Include>` 项。
-2. 优先处理当前已暴露的缺口类型：`IFontSource`、`IFontSourceCollection`、`ItemProps`、`DWriteFontFeature`、`GlyphMetrics`、`InformationalStringID`、`Font` 及其相关 DirectWrite/TextInterface 托管包装源码来源。
-3. 重点确认这些类型究竟来自：
-   - 尚未拷贝到当前仓库的 C# 托管包装源码
-   - 已在当前仓库存在但未纳入 `PresentationCore.csproj` 的源码文件
-   - 需要从原始仓库其他目录一并迁入的辅助接口或转换层
-4. 重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
-5. 在 `PresentationCore` 能独立构建后，再验证：
+1. 先处理 `DirectWriteForwarder.vcxproj` 的本地 VC++ 构建异常，重点看 `GetOutOfDateItems` / `CanonicalTrackedOutputFiles` 的兼容性问题。
+2. 重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
+3. 在 `PresentationCore` 能独立构建后，再验证：
    - `UIAutomationClient`
    - `UIAutomationClientSideProviders`
-6. 若 `PresentationCore` 仍卡在 `TextInterface`，继续核对 `DirectWriteForwarder` 与 `PresentationCore` 之间的托管包装边界，而不是重复只补桥接项目。
-7. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失”分类记录。
-8. 再同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
+4. 继续补齐 `AvTrace` 代码生成目标来源，并重新验证 `PresentationFramework`。
+5. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失 / VC++ 工具链异常”分类记录。
+6. 再同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
 
 ## 下一次对话建议直接复制的提示词
 
@@ -138,10 +144,9 @@
 然后优先完成以下事项：
 
 - 验证 `Microsoft.Dotnet.Wpf.sln` 当前纳管项目的构建状态。
-- 继续按 `origin/src/src/PresentationCore/PresentationCore.csproj` 补齐 `PresentationCore` 缺失源码与编译项。
-- 先利用已补齐的 cycle-breaker 基线，继续打通 `PresentationCore` 的 `TextInterface` 托管包装源码缺口。
+- 先处理 `DirectWriteForwarder.vcxproj` 在当前环境下的 VC++ 构建异常。
 - 先打通 `PresentationCore` 的独立构建，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
-- 梳理当前仓库项目与解决方案入口的对应关系，尤其是未纳入的 `PresentationCore`、`PresentationFramework`、`WindowsFormsIntegration`。
+- 梳理当前仓库项目与解决方案入口的对应关系，尤其是尚未纳入的 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`。
 - 将发现的阻塞点回写到 Docs 文档中。
 
 ## 每次结束前必须回写的信息

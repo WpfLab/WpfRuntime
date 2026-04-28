@@ -104,7 +104,7 @@
 ### 当前阶段补充记录
 
 - 已验证当前 `Microsoft.Dotnet.Wpf.sln` 可成功构建。
-- 已确认磁盘上的解决方案文件尚未纳入 `UIAutomationClient`、`UIAutomationClientSideProviders`、`PresentationCore`、`WindowsFormsIntegration`。
+- 已将 `UIAutomationClient`、`UIAutomationClientSideProviders`、`PresentationCore`、`WindowsFormsIntegration` 纳入磁盘上的解决方案文件。
 - 已确认 `UIAutomationClient` 的独立构建会被 `PresentationCore` 阻塞。
 - 已确认 `PresentationCore` 当前与 `origin/src/src/PresentationCore/PresentationCore.csproj` 相比仍缺失一批编译项与源码。
 - 本轮已开始按原始 `PresentationCore.csproj` 的清单补齐缺失文件，而不是直接纳管更多项目。
@@ -112,13 +112,15 @@
 - 已验证 `PresentationFramework` 可进入构建诊断，但当前首先被缺失的 cycle-breaker 项目与 `AvTrace\GenAvMessages.targets` 阻塞。
 - 本轮已在仓库根目录补齐首批 `cycle-breakers` 项目，并新增 `WpfCycleBreakersDir` 属性指向该目录。
 - 本轮已新增 `WpfCodeGenDir` 属性，并将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 调整为条件导入。
-- 重新验证后，`PresentationFramework` 已越过 cycle-breaker 与 `GenAvMessages.targets` 的首批阻塞，当前重新被 `PresentationCore` 缺失的 `MS.Internal.Text.TextInterface` 托管包装源码阻塞。
+- 重新验证后，`PresentationFramework` 已越过 cycle-breaker 与 `GenAvMessages.targets` 的首批阻塞，依赖重新收敛到 `PresentationCore` 与 `DirectWriteForwarder` 的真实构建链。
+- 已将 `PresentationCore.csproj` 从外部 `DirectWriteForwarder.dll` 文件引用改回仓库内 `DirectWriteForwarder.vcxproj` 项目引用。
+- 已验证根解决方案在纳入新增项目后仍可成功构建。
 
 ### 风险
 
 - 共享源码和生成代码路径可能仍依赖原始仓库布局。
 - 本地引用路径可能使构建无法脱离个人机器环境。
-- 若继续以“先纳管、后补源码”的顺序推进，会反复被 `PresentationCore` 的未闭合依赖链阻塞。
+- `DirectWriteForwarder` 当前在命令行环境下会触发 VC++ 构建任务 `GetOutOfDateItems` 的 `TypeLoadException`，可能影响 `PresentationCore` 的独立构建验证。
 
 ---
 
@@ -166,7 +168,7 @@
 
 - `PresentationFramework` 依赖面极广，容易带出更多未迁入模块。
 - 生成资源、主题、任务项目之间可能存在隐式构建顺序要求。
-- 当前虽然已补齐首批桥接项目并解除项目评估级阻塞，但 `PresentationCore` 依赖的 `TextInterface` 托管包装源码缺失仍会持续阻塞上层项目构建验证。
+- 当前虽然已补齐首批桥接项目并解除项目评估级阻塞，但 `DirectWriteForwarder` 的本地 VC++ 构建失败仍会持续阻塞 `PresentationCore` 和上层项目的独立构建验证。
 
 ---
 

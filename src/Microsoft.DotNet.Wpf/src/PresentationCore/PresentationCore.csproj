@@ -1481,12 +1481,9 @@
   <ItemGroup>
     <!-- required for internals access -->
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" /> 
-    <!--<ProjectReference Include="$(WpfSourceDir)DirectWriteForwarder\DirectWriteForwarder.vcxproj">
+    <ProjectReference Include="$(WpfSourceDir)DirectWriteForwarder\DirectWriteForwarder.vcxproj">
       <UndefineProperties>TargetFramework;TargetFrameworks</UndefineProperties>
-    </ProjectReference>-->
-    <Reference Include="DirectWriteForwarder">
-      <HintPath>$(WpfReferencePath)DirectWriteForwarder.dll</HintPath>
-    </Reference>
+    </ProjectReference>
 
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
     <ProjectReference Include="$(WpfSourceDir)System.Windows.Input.Manipulations\System.Windows.Input.Manipulations.csproj" />
