@@ -2,14 +2,15 @@
 
 ## 本次工作产出
 
-本次尚未继续做大规模代码迁移，先完成了文档基线建设，目的是为后续长周期重组提供稳定交接点。
+本次已从“仅做文档基线”推进到“开始解决方案纳管型迁移”，目的是让后续迁移围绕一个真实可用的解决方案入口持续前进。
 
 已完成：
 
-- 创建 `Docs/` 文档目录。
-- 建立总览、阶段计划、交接文档。
-- 盘点当前重组仓库的主要顶层目录和项目文件。
-- 对照 `origin/src/src/` 梳理出尚未进入当前重组目录的关键模块。
+- 确认当前仓库根目录存在 `Microsoft.Dotnet.Wpf.sln`。
+- 核对解决方案当前已纳入项目。
+- 将 `UIAutomationClient`、`UIAutomationClientSideProviders` 纳入当前解决方案。
+- 对照当前仓库与 `origin/src/src/`，确认关键缺失模块仍未迁入。
+- 开始在计划文档中列出迁移项目顺序。
 
 ## 当前已知事实
 
@@ -37,6 +38,39 @@
 - `src/Microsoft.DotNet.Wpf/src/WindowsFormsIntegration/WindowsFormsIntegration.csproj`
 - `src/Microsoft.DotNet.Wpf/src/System.Windows.Input.Manipulations/System.Windows.Input.Manipulations.csproj`
 
+### 当前解决方案已纳入的项目
+
+- `System.Xaml`
+- `WindowsBase`
+- `System.Windows.Input.Manipulations`
+- `UIAutomationTypes`
+- `UIAutomationProvider`
+- `UIAutomationClient`
+- `UIAutomationClientSideProviders`
+- `DirectWriteForwarder`
+- `Demo/WpfDemo`
+
+### 当前已列明的迁移顺序
+
+1. 先收敛已存在项目：
+   - `UIAutomationClient`
+   - `UIAutomationClientSideProviders`
+2. 再迁入上层主线：
+   - `PresentationFramework`
+   - `WindowsFormsIntegration`
+   - `ReachFramework`
+   - `Themes`
+3. 再迁入构建任务和扩展模块：
+   - `PresentationBuildTasks`
+   - `System.Windows.Controls.Ribbon`
+   - `System.Printing`
+   - `PresentationUI`
+   - `Extensions`
+4. 最后处理底层或 native 依赖较重模块：
+   - `PenImc`
+   - `System.Windows.Presentation`
+   - `WpfGfx`
+
 ### 尚未进入当前重组顶层目录的关键模块
 
 - `PresentationFramework`
@@ -53,22 +87,23 @@
 
 ### 已知不确定点
 
-1. 当前仓库中尚未通过文件扫描找到 `Microsoft.DotNet.Wpf.sln`。
-2. 尚未验证当前已有项目是否可直接整体构建。
-3. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
+1. 尚未验证当前解决方案在纳入 `UIAutomationClient`、`UIAutomationClientSideProviders` 后是否可稳定构建。
+2. `WindowsFormsIntegration` 仍依赖尚未迁入的 `PresentationFramework`。
+3. `PresentationCore` 已在目录中存在，但当前尚未纳入根解决方案。
+4. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
 
 ## 下一次对话建议起手顺序
 
-1. 先确认解决方案文件是否存在：
-   - 如果存在，记录路径并梳理已纳入项目。
-   - 如果不存在，决定是迁入原始解决方案还是新建适配当前结构的解决方案。
-2. 验证当前核心托管项目的可构建性：
+1. 先验证当前解决方案或至少新增纳管项目的构建状态：
+   - `UIAutomationClient`
+   - `UIAutomationClientSideProviders`
+2. 再验证当前核心托管项目的可构建性：
    - `WindowsBase`
    - `System.Xaml`
    - `PresentationCore`
    - `UIAutomation` 系列
 3. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失”分类记录。
-4. 在进入 `PresentationFramework` 迁移前，先补齐最小依赖链说明。
+4. 开始正式迁入 `PresentationFramework`，并同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
 
 ## 下一次对话建议直接复制的提示词
 
@@ -81,9 +116,10 @@
 
 然后优先完成以下事项：
 
-- 确认 `Microsoft.DotNet.Wpf.sln` 的现状。
-- 梳理当前仓库项目与解决方案入口的对应关系。
-- 验证 `WindowsBase`、`System.Xaml`、`PresentationCore` 的构建状态。
+- 验证 `Microsoft.Dotnet.Wpf.sln` 当前纳管项目的构建状态。
+- 梳理当前仓库项目与解决方案入口的对应关系，尤其是未纳入的 `PresentationCore`、`WindowsFormsIntegration`。
+- 验证 `WindowsBase`、`System.Xaml`、`PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
+- 开始迁入 `PresentationFramework`，并把发现的依赖顺序继续写回 Docs。
 - 将发现的阻塞点回写到 Docs 文档中。
 
 ## 每次结束前必须回写的信息

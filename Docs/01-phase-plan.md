@@ -4,6 +4,29 @@
 
 整个重组工作建议按“先建立可持续迁移框架，再逐步纳入关键模块，最后收敛解决方案构建”的顺序执行。每个阶段都必须留下可被下一次 AI 对话直接继承的结果记录。
 
+## 当前已明确的迁移项目顺序
+
+该顺序用于指导“下一批先迁什么”，并且会随着真实构建结果持续调整：
+
+1. 先纳管当前仓库已经存在但尚未完全进入解决方案主线的项目：
+   - `UIAutomationClient`
+   - `UIAutomationClientSideProviders`
+2. 再迁入上层托管主线模块：
+   - `PresentationFramework`
+   - `WindowsFormsIntegration`
+   - `ReachFramework`
+   - `Themes`
+3. 再迁入构建任务与扩展功能模块：
+   - `PresentationBuildTasks`
+   - `System.Windows.Controls.Ribbon`
+   - `System.Printing`
+   - `PresentationUI`
+   - `Extensions`
+4. 最后处理底层或 native 依赖更重的模块：
+   - `PenImc`
+   - `System.Windows.Presentation`
+   - `WpfGfx`
+
 ---
 
 ## 阶段 0：基线确认
@@ -17,12 +40,14 @@
 - 已确认当前仓库部分顶层目录和项目文件。
 - 已确认原始仓库 `origin/src/src/` 的顶层模块列表。
 - 已建立 Docs 文档目录用于后续交接。
+- 已确认当前仓库根目录存在 `Microsoft.Dotnet.Wpf.sln`。
 
 ### 后续输出
 
 - 一份稳定的“已迁移模块清单”。
 - 一份稳定的“未迁移模块清单”。
 - 一份“解决方案入口现状”说明。
+- 一份持续更新的“迁移项目顺序”清单。
 
 ---
 
@@ -34,21 +59,23 @@
 
 ### 任务
 
-1. 确认 `Microsoft.DotNet.Wpf.sln` 是否已经存在于当前仓库。
-2. 如果不存在，确认是尚未迁入，还是需要按当前结构新建解决方案。
-3. 梳理当前所有 `*.csproj`、`ref/*.csproj` 与解决方案之间的对应关系。
-4. 记录哪些项目应该先加入解决方案，哪些项目暂时保留在目录中但不纳入首批构建。
+1. 以 `Microsoft.Dotnet.Wpf.sln` 作为当前统一入口继续推进。
+2. 梳理当前所有 `*.csproj`、`ref/*.csproj` 与解决方案之间的对应关系。
+3. 先把当前目录中已存在且依赖相对闭合的项目纳入解决方案。
+4. 记录哪些项目暂时保留在目录中但不纳入首批构建，以及阻塞原因。
 
 ### 完成标准
 
 - 有一个明确的解决方案文件路径。
 - 有一份项目纳管清单。
 - 能说明每个未纳入项目的原因。
+- 至少完成一批“现存项目纳入解决方案”的实际迁移。
 
 ### 风险
 
 - 原始 WPF 解决方案可能依赖尚未迁入的项目或原始目录假设。
 - 直接照搬原始解决方案可能会引入大量失效路径。
+- 部分现存项目虽然源码已在仓库中，但其依赖链仍可能指向尚未迁入的模块。
 
 ---
 
@@ -90,16 +117,17 @@
 ### 优先顺序建议
 
 1. `PresentationFramework`
-2. `ReachFramework`
-3. `Themes`
-4. `PresentationBuildTasks`
-5. `System.Windows.Controls.Ribbon`
-6. `System.Printing`
-7. `PresentationUI`
-8. `Extensions`
-9. `PenImc`
-10. `System.Windows.Presentation`
-11. `WpfGfx`
+2. `WindowsFormsIntegration`（在 `PresentationFramework` 进入后重新验证）
+3. `ReachFramework`
+4. `Themes`
+5. `PresentationBuildTasks`
+6. `System.Windows.Controls.Ribbon`
+7. `System.Printing`
+8. `PresentationUI`
+9. `Extensions`
+10. `PenImc`
+11. `System.Windows.Presentation`
+12. `WpfGfx`
 
 ### 任务
 
