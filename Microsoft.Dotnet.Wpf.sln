@@ -1,17 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11716.220 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Xaml", "src\Microsoft.DotNet.Wpf\src\System.Xaml\System.Xaml.csproj", "{9AC36357-34B7-40A1-95CA-FE9F46D089A7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WindowsBase", "src\Microsoft.DotNet.Wpf\src\WindowsBase\WindowsBase.csproj", "{FA69991B-9696-42D0-A5C7-F5E73F0DEE9E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WpfDemo", "Demo\WpfDemo\WpfDemo.csproj", "{B1EB6ECF-58DA-498F-9A87-C0EDEBA0187F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WindowsFormsIntegration", "src\Microsoft.DotNet.Wpf\src\WindowsFormsIntegration\WindowsFormsIntegration.csproj", "{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PresentationCore", "src\Microsoft.DotNet.Wpf\src\PresentationCore\PresentationCore.csproj", "{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Windows.Input.Manipulations", "src\Microsoft.DotNet.Wpf\src\System.Windows.Input.Manipulations\System.Windows.Input.Manipulations.csproj", "{EDA525FC-C10E-4652-A0CB-C0034B4932E5}"
 EndProject
@@ -95,36 +91,6 @@ Global
 		{B1EB6ECF-58DA-498F-9A87-C0EDEBA0187F}.Release|x64.Build.0 = Release|Any CPU
 		{B1EB6ECF-58DA-498F-9A87-C0EDEBA0187F}.Release|x86.ActiveCfg = Release|Any CPU
 		{B1EB6ECF-58DA-498F-9A87-C0EDEBA0187F}.Release|x86.Build.0 = Release|Any CPU
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|arm64.ActiveCfg = Debug|arm64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|arm64.Build.0 = Debug|arm64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|x64.ActiveCfg = Debug|x64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|x64.Build.0 = Debug|x64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|arm64.ActiveCfg = Release|arm64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|arm64.Build.0 = Release|arm64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|x64.ActiveCfg = Release|x64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|x64.Build.0 = Release|x64
-		{1B7A4CB7-DE0A-4161-BA55-0335807B11DF}.Release|x86.ActiveCfg = Release|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|arm64.ActiveCfg = Debug|arm64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|arm64.Build.0 = Debug|arm64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|x64.ActiveCfg = Debug|x64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|x64.Build.0 = Debug|x64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Debug|x86.Build.0 = Debug|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|Any CPU.Build.0 = Release|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|arm64.ActiveCfg = Release|arm64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|arm64.Build.0 = Release|arm64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|x64.ActiveCfg = Release|x64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|x64.Build.0 = Release|x64
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|x86.ActiveCfg = Release|Any CPU
-		{897D9729-FCE6-4AD4-8FD1-5757DD8AE345}.Release|x86.Build.0 = Release|Any CPU
 		{EDA525FC-C10E-4652-A0CB-C0034B4932E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EDA525FC-C10E-4652-A0CB-C0034B4932E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EDA525FC-C10E-4652-A0CB-C0034B4932E5}.Debug|arm64.ActiveCfg = Debug|arm64
