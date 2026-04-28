@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(VCTargetsPath)' == '' and Exists('C:\Program Files\Microsoft Visual Studio\18\Professional\MSBuild\Microsoft\VC\v180\Microsoft.Cpp.targets')">
+    <VCTargetsPath>C:\Program Files\Microsoft Visual Studio\18\Professional\MSBuild\Microsoft\VC\v180\</VCTargetsPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(VCTargetsPath)' == '' and Exists('C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Microsoft\VC\v170\Microsoft.Cpp.targets')">
+    <VCTargetsPath>C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Microsoft\VC\v170\</VCTargetsPath>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM64">
       <Configuration>Debug</Configuration>
@@ -28,7 +34,7 @@
   </ItemGroup>
   <PropertyGroup>
     <UseDestinationLibFolder>true</UseDestinationLibFolder>
-    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+    <TargetFramework>net8.0</TargetFramework>
     <RestoreProjectStyle>Unknown</RestoreProjectStyle>
     <!-- 
       Opting out of this to ensure _WindowsBaseReference is used as 
@@ -39,8 +45,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" Condition="Exists('$(VCTargetsPath)\Microsoft.Cpp.Default.props')"/>
   <PropertyGroup>
     <Keyword>NetCoreCProj</Keyword>
-    <CLRSupport>pure</CLRSupport>
+    <CLRSupport>NetCore</CLRSupport>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <Import Project="$(WpfCppProps)" Condition="Exists('$(WpfCppProps)')"/>
@@ -57,7 +65,6 @@
     <ClCompile>
       <AdditionalOptions>%(AdditionalOptions) /clr:initLocals</AdditionalOptions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(WpfSharedDir)\inc;.\;.\CPP</AdditionalIncludeDirectories>
-      <CompileAsManaged>pure</CompileAsManaged>
       <PreprocessorDefinitions>$(CDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>precomp.hxx</PrecompiledHeaderFile>
       <ForceConformanceInForLoopScope>false</ForceConformanceInForLoopScope>
@@ -90,7 +97,13 @@
     PackageReferences to pass to CppCliHelper target
   -->
   <ItemGroup>
-    <AdditionalPackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />
+    <PackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Packaging">
+      <HintPath>$(NuGetPackageRoot)system.io.packaging\$(SystemIOPackagingVersion)\lib\net8.0\System.IO.Packaging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <!--
     Ignore ijwhost.dll during packaging
@@ -127,3 +140,12 @@
     </PropertyGroup>
   </Target>
 </Project>
+
+
+
+
+
+
+
+
+
