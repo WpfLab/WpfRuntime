@@ -7,18 +7,7 @@
 
 namespace System.Windows.Documents
 {
-    public sealed partial class FixedPage : System.Windows.UIElement
-    {
-        public System.Windows.Controls.UIElementCollection Children { get; }
-
-        public double Width { get; set; }
-
-        public double Height { get; set; }
-
-        public System.Windows.Media.Brush Background { get; set; }
-
-        public System.Windows.Markup.XmlLanguage Language { get; set; }
-
-        public static System.Uri GetNavigateUri(System.Windows.UIElement element) { throw null; }
+    public sealed partial class FixedPage
+    {        
     }
 }

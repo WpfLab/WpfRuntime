@@ -8,7 +8,7 @@
 namespace System.Windows.Documents.Serialization
 {
     public abstract partial class SerializerWriterCollator
-    {
+    { 
         protected SerializerWriterCollator() { }
         public abstract void BeginBatchWrite();
         public abstract void Cancel();

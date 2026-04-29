@@ -5,7 +5,7 @@
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
 
-namespace System.Windows.Controls
+namespace System.Windows.Controls   
 {
     public partial struct PageRange
     {

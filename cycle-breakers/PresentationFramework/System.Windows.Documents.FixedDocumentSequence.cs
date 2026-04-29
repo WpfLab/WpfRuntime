@@ -7,12 +7,7 @@
 
 namespace System.Windows.Documents
 {
-    using System.Collections.Generic;
-
-    public partial class FixedDocumentSequence : IDocumentPaginatorSource
-    {
-        public IEnumerable<DocumentReference> References => throw null;
-
-        public DocumentPaginator DocumentPaginator => throw null;
+    public partial class FixedDocumentSequence
+    {        
     }
 }

@@ -6,7 +6,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnablePInvokeAnalyzer>false</EnablePInvokeAnalyzer>
     <!-- SYSLIB5005: System.Formats.Nrbf is experimental -->
-    <NoWarn>$(NoWarn);0618;1058;SYSLIB5005</NoWarn>
+    <NoWarn>$(NoWarn);0618;1058;SYSLIB5005;WPF0001</NoWarn>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     <Platforms>AnyCPU;x64;arm64</Platforms>
     <GenerateDependencyFile>false</GenerateDependencyFile>

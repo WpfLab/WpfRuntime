@@ -152,25 +152,22 @@
 
 ### 最新验证结果
 
-使用当前工作区的整体构建入口重新验证后，`run_build` 失败，首个可见错误为：
+使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 已恢复可构建：
 
-- `UIAutomationClientSideProviders` 报 `CS0006`
-- 缺失文件：`C:\lindexi\Code\God\WpfReorganize\artifacts\obj\UIAutomationClient\Debug\net8.0\ref\UIAutomationClient.dll`
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- 结果：构建成功。
 
-这说明“当前解决方案可以稳定构建”的旧描述已经过期，后续工作应以最新失败结果为准，先恢复当前解决方案基线，再继续扩展纳管范围。
+此前 `UIAutomationClientSideProviders` 缺失 `UIAutomationClient` 参考程序集的问题没有复现。`UIAutomationClient` 独立构建可产出实现程序集和 ref 相关输出；解决方案入口在清理后重建也可通过。
 
 ### 当前可直接确认的含义
 
-1. `UIAutomationClientSideProviders` 依赖的 `UIAutomationClient` 参考程序集当前没有按预期产出。
-2. 需要优先判断是：
-   - `UIAutomationClient` 本身构建失败；
-   - 解决方案构建顺序或依赖图未正确建立；
-   - `ref` 输出路径或目标框架配置与当前解决方案构建入口不一致。
-3. 在未重新验证之前，不应继续把“`UIAutomationClient`、`UIAutomationClientSideProviders` 已稳定通过”当作当前事实写入后续文档。
+1. 当前已纳入解决方案的项目恢复到可构建基线。
+2. 构建仍存在多项警告，包括 `WindowsBase` 4.0.0.0 与 6.0.2.0 引用冲突警告，以及 `System.Formats.Nrbf` 从 8.0.0 解析到 9.0.0 的 NuGet 警告。
+3. `ReachFramework-ref` 与 `System.Printing-ref` 可独立构建，但 `ReachFramework` / `PresentationFramework` 主链仍存在 cycle-breaker 与同名程序集 API 暴露问题。
 
 ## 当前主要缺口
 
-1. 当前解决方案基线并不稳定，首先需要重新打通现有已纳管项目的构建链。
+1. 当前解决方案已纳入项目可构建，但尚未纳管的主链项目仍需继续打通。
 2. 解决方案纳管明显滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
    - `WindowsFormsIntegration`
    - `PresentationFramework`
@@ -183,18 +180,17 @@
    - `PenImc`
    - `System.Windows.Presentation`
    - `WpfGfx`
-4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但其当前真实构建状态仍需重新验证，尤其是：
-   - `ReachFramework-ref`
-   - `System.Printing-ref`
-   - `cycle-breakers`
-   - `AvTrace` 代码生成目标
+4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但当前真实阻塞集中在 `ReachFramework-ref` / `ReachFramework` / `PresentationFramework` 与 cycle-breaker 的同名 API 暴露上：
+   - `ReachFramework-ref` 需要 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 `PresentationFramework` API。
+   - 多个 `PresentationFramework` cycle-breaker 与 `ReachFramework` / `System.Printing-ref` 同时暴露 `PrintTicket`、`PrintTicketLevel`、`SerializerWriter`、`FixedDocumentSequence` 等类型时会触发 `CS0433`。
+   - `AvTrace` 代码生成目标仍需在 `PresentationFramework` 主项目继续验证。
 5. 当前仓库仍保留个人机器本地引用路径，影响可移植性与构建复现性。
 
 ## 建议的当前优先级
 
-1. 先恢复当前 `Microsoft.Dotnet.Wpf.sln` 的构建基线，优先定位 `UIAutomationClient` 参考程序集未生成的原因。
-2. 基线恢复后，补齐“磁盘已有项目”与“解决方案已纳管项目”之间的清单差异。
-3. 再重新验证 `ReachFramework-ref`、`System.Printing-ref`、`PresentationFramework` 的真实阻塞点。
+1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
+2. 继续收敛 `ReachFramework-ref` / `ReachFramework` 的 cycle-breaker 引用，优先解决 `XpsDocumentWriter` / `ISerializerFactory` 缺失与同名类型重复暴露之间的矛盾。
+3. 再重新验证 `PresentationFramework` 的真实阻塞点。
 4. 在 `PresentationFramework` 链路稳定后，再评估 `WindowsFormsIntegration` 的重新纳管与构建状态。
 5. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
 

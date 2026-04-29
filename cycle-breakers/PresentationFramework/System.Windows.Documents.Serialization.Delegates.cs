@@ -20,12 +20,12 @@ namespace System.Windows.Documents.Serialization
 
     public partial class WritingCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs
     {
-        public WritingCompletedEventArgs(bool cancelled, object state, System.Exception exception) : base(default(System.Exception), default(bool), default(object)) { }
+        public WritingCompletedEventArgs(bool cancelled, object state, System.Exception exception) : base (default(System.Exception), default(bool), default(object)) { }
     }
 
     public partial class WritingProgressChangedEventArgs : System.ComponentModel.ProgressChangedEventArgs
     {
-        public WritingProgressChangedEventArgs(System.Windows.Documents.Serialization.WritingProgressChangeLevel writingLevel, int number, int progressPercentage, object state) : base(default(int), default(object)) { }
+        public WritingProgressChangedEventArgs(System.Windows.Documents.Serialization.WritingProgressChangeLevel writingLevel, int number, int progressPercentage, object state) : base (default(int), default(object)) { }
         public int Number { get { throw null; } }
         public System.Windows.Documents.Serialization.WritingProgressChangeLevel WritingLevel { get { throw null; } }
     }

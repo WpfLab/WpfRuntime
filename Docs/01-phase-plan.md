@@ -64,26 +64,26 @@
 
 先让 `Microsoft.Dotnet.Wpf.sln` 的现有纳管项目重新回到可诊断、可复现的状态。
 
-### 当前已知阻塞
+### 当前状态
 
-- 当前工作区整体构建失败，首个可见错误为：
-  - `UIAutomationClientSideProviders` 缺少 `artifacts/obj/UIAutomationClient/Debug/net8.0/ref/UIAutomationClient.dll`
+- `Microsoft.Dotnet.Wpf.sln` 已恢复可构建。
+- 验证命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- `UIAutomationClient` 可独立构建，`UIAutomationClientSideProviders` 下游缺失参考程序集的问题没有复现。
 
 ### 任务
 
-1. 重新验证 `UIAutomationClient` 是否能独立产出参考程序集。
-2. 检查 `UIAutomationClient` 与 `UIAutomationClientSideProviders` 的项目引用、目标框架、输出路径、`ref` 生成链是否一致。
-3. 若 `UIAutomationClient` 本身失败，记录首个真实编译错误，而不是只记录下游 `CS0006`。
-4. 若 `UIAutomationClient` 能独立通过，检查解决方案构建顺序、项目依赖和增量构建缓存。
+1. 保持现有解决方案构建基线可复现。
+2. 若再次出现 `UIAutomationClientSideProviders` 下游 `CS0006`，先独立构建 `UIAutomationClient`，再检查解决方案增量状态和构建顺序。
+3. 不要在基线未验证时继续扩大解决方案纳管范围。
 
 ### 完成标准
 
-- `Microsoft.Dotnet.Wpf.sln` 恢复可构建，或
-- 已将当前首个真实阻塞从下游 `CS0006` 精确收敛到具体源项目与具体错误。
+- `Microsoft.Dotnet.Wpf.sln` 恢复可构建。
+- 当前已纳入项目可通过同一条 `msbuild` 命令复现。
 
 ### 风险
 
-- 当前失败点可能只是第一个表面错误，修复后还会暴露新的依赖问题。
+- 当前解决方案基线恢复后，继续纳管 `ReachFramework`、`PresentationFramework` 等项目会暴露新的依赖问题。
 - `ref` 项目与实现项目的输出链可能不只受项目引用影响，还受自定义 targets 影响。
 
 ---
@@ -146,6 +146,12 @@
    - 缺生成步骤
 3. 继续确认 `AvTrace` 代码生成目标是否已完整接入，而不是仅仅跳过导入失败。
 4. 在 `PresentationFramework` 到达稳定阻塞点后，再判断 `WindowsFormsIntegration` 是否具备重新纳管条件。
+
+### 当前已验证状态
+
+- `ReachFramework-ref` 与 `System.Printing-ref` 可独立构建，但仍有 cycle-breaker 相关的同名类型警告。
+- `ReachFramework` 在补齐上游结构后仍未构建通过，当前稳定错误集中在 `ReachFramework-ref` 对 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 `PresentationFramework` API 的解析，以及将这些 API 放入 `ReachFramework` bridge 后引发的同名类型重复暴露。
+- `PresentationFramework` 已抑制实现项目中的 `WPF0001`，后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` 三方 cycle-breaker 的 API 边界。
 
 ### 完成标准
 

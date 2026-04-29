@@ -13,7 +13,7 @@ namespace System.Printing
         }
     }
 
-    public partial class PrintQueue
+    internal partial class PrintQueue
     {
         public string FullName { get; } = string.Empty;
 
@@ -52,7 +52,7 @@ namespace System.Printing
 
     }
 
-    public partial class PrintJobSettings
+    internal partial class PrintJobSettings
     {
         public PrintTicket CurrentPrintTicket { get; set; }
 

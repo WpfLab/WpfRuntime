@@ -85,22 +85,19 @@
 
 ## 最新构建结果
 
-### 当前整体构建失败
+### 当前解决方案构建成功
 
-对当前工作区重新执行整体构建后，首个可见错误为：
+对当前工作区重新执行整体构建后，当前解决方案入口可构建：
 
-- 项目：`UIAutomationClientSideProviders`
-- 错误：`CS0006`
-- 缺失文件：`C:\lindexi\Code\God\WpfReorganize\artifacts\obj\UIAutomationClient\Debug\net8.0\ref\UIAutomationClient.dll`
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- 结果：构建成功。
 
 ### 这意味着什么
 
-1. 旧文档中“解决方案已稳定构建”的描述已经不再可靠。
-2. 当前第一优先级不是继续扩大迁移范围，而是先恢复现有解决方案构建基线。
-3. 需要先追到 `UIAutomationClient` 的真实失败点，确认它是：
-   - 没有被正确构建；
-   - 构建失败但错误被下游 `CS0006` 遮蔽；
-   - `ref` 输出路径、项目依赖或增量构建状态存在异常。
+1. 当前已纳入解决方案的项目恢复到可构建基线。
+2. `UIAutomationClientSideProviders` 下游 `CS0006` 没有复现；`UIAutomationClient` 独立构建可通过。
+3. 后续重点应放在 `ReachFramework` / `PresentationFramework` 主链，而不是继续排查已恢复的 `UIAutomationClient` 问题。
+4. 当前主链阻塞集中在 cycle-breaker API 边界：`ReachFramework-ref` 需要 `XpsDocumentWriter` / `ISerializerFactory` 等 `PresentationFramework` API，但将相关类型放入 `ReachFramework` bridge 后又会引发与 `PresentationFramework` / `System.Printing` 的同名类型冲突。
 
 ## 建议起手顺序
 
@@ -112,17 +109,18 @@
    - `Microsoft.Dotnet.Wpf.sln`
    - `Directory.Build.props`
    - `Directory.Build.targets`
-2. 重新验证 `UIAutomationClient` 与 `UIAutomationClientSideProviders`：
-   - 先看 `UIAutomationClient` 是否能独立产出 `ref/UIAutomationClient.dll`
-   - 再看 `UIAutomationClientSideProviders` 是否只是下游缺文件
-3. 若 `UIAutomationClient` 独立构建失败，记录首个真实错误，不要只记录 `CS0006`。
-4. 若 `UIAutomationClient` 独立构建通过，检查解决方案构建顺序、项目依赖和 `artifacts/obj` 输出路径。
-5. 当前解决方案基线恢复后，再继续处理：
+2. 先用上述 `msbuild` 命令确认解决方案基线仍可构建。
+3. 继续处理：
    - `ReachFramework-ref`
    - `System.Printing-ref`
+   - `ReachFramework`
    - `PresentationFramework`
    - `WindowsFormsIntegration`
-6. 只有在上层主链重新进入稳定状态后，再继续补缺失顶层模块：
+4. 排查 `ReachFramework-ref` 时重点检查：
+   - `PresentationFramework-ReachFramework-impl-cycle` 与 `PresentationFramework-System.Printing-api-cycle` 的同名 `PresentationFramework.dll` 引用是否被 MSBuild 去重。
+   - `XpsDocumentWriter` / `ISerializerFactory` 应由哪个 cycle-breaker 暴露给 `ReachFramework-ref`，且不能污染 `ReachFramework` 自身 ref 输出。
+   - `PrintTicket`、`PrintTicketLevel`、`FixedDocumentSequence`、`SerializerWriter` 是否同时从多个同名程序集暴露。
+5. 只有在上层主链重新进入稳定状态后，再继续补缺失顶层模块：
    - `PenImc`
    - `System.Windows.Presentation`
    - `WpfGfx`
