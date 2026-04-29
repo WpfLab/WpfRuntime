@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <Compile Include="PresentationFramework.cs" />
+    <Compile Include="System.Windows.Markup.ParserContext.cs" />
+    <Compile Include="System.Windows.Markup.XamlReader.cs" />
     <Compile Include="System.Windows.Controls.PageRange.cs" />
     <Compile Include="System.Windows.Controls.PageRangeSelection.cs" />
     <Compile Include="System.Windows.Documents.FixedDocument.cs" />

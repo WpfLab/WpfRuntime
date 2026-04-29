@@ -54,11 +54,8 @@
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\ref\WindowsBase-ref.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="PresentationFramework"
-               HintPath="$(ArtifactsBinDir)PresentationFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
-               Private="false"
-               Condition="Exists('$(ArtifactsBinDir)PresentationFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
-    <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
+    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-ReachFramework-impl-cycle.csproj"
+                      PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Security.Cryptography.Xml" Version="$(SystemSecurityCryptographyXmlPackageVersion)" />

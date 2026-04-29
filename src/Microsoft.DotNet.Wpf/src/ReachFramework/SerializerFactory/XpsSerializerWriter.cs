@@ -94,7 +94,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(visual, printTicket);
+            _xpsDocumentWriter.WriteAsync(visual, userState);
         }
         
         /// <summary>
@@ -104,7 +104,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(visual, userState);
+            _xpsDocumentWriter.WriteAsync(visual, printTicket);
         }
         
         /// <summary>
