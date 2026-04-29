@@ -2,231 +2,213 @@
 
 ## 总体策略
 
-整个重组工作建议按“先建立可持续迁移框架，再逐步纳入关键模块，最后收敛解决方案构建”的顺序执行。每个阶段都必须留下可被下一次 AI 对话直接继承的结果记录。
+当前工作应按“先恢复现有解决方案基线，再补齐解决方案纳管，再继续打通 `PresentationFramework` 主链，最后补缺失模块”的顺序推进。
 
-## 当前已明确的迁移项目顺序
+原因如下：
 
-该顺序用于指导“下一批先迁什么”，并且会随着真实构建结果持续调整：
+1. 磁盘上已经存在的项目数量明显多于解决方案已纳入项目数量。
+2. 最新构建验证显示当前解决方案本身仍有失败点。
+3. 如果现有基线都不稳定，继续扩大纳管范围只会放大排障成本。
 
-1. 先纳管当前仓库已经存在但尚未完全进入解决方案主线的项目：
+## 当前建议执行顺序
+
+1. 先恢复当前解决方案构建基线：
    - `UIAutomationClient`
    - `UIAutomationClientSideProviders`
-2. 再迁入上层托管主线模块：
-   - `PresentationFramework`
+   - `PresentationCore`
+   - `System.Xaml`
+   - `WindowsBase`
+2. 再收敛“磁盘已存在但尚未纳入解决方案”的项目：
    - `WindowsFormsIntegration`
-   - `ReachFramework`
-   - `Themes`
-3. 再迁入构建任务与扩展功能模块：
-   - `PresentationBuildTasks`
-   - `System.Windows.Controls.Ribbon`
-   - `System.Printing`
+   - `PresentationFramework`
    - `PresentationUI`
-   - `Extensions`
-4. 最后处理底层或 native 依赖更重的模块：
+   - `ReachFramework`
+   - `System.Printing`
+   - `System.Windows.Controls.Ribbon`
+   - 主题项目
+3. 再继续打通 `PresentationFramework` 主依赖链：
+   - `ReachFramework-ref`
+   - `System.Printing-ref`
+   - `cycle-breakers`
+   - `AvTrace` 代码生成链
+4. 最后再迁入缺失顶层模块：
    - `PenImc`
    - `System.Windows.Presentation`
    - `WpfGfx`
 
 ---
 
-## 阶段 0：基线确认
+## 阶段 0：基线与清单重校验
 
 ### 目标
 
-确认当前仓库、原始仓库和构建基础设施的真实状态，避免后续迁移建立在错误假设上。
+确认当前文档、当前磁盘状态和当前解决方案状态一致，避免后续工作建立在过期记录上。
 
 ### 已完成
 
-- 已确认当前仓库部分顶层目录和项目文件。
-- 已确认原始仓库 `origin/src/src/` 的顶层模块列表。
-- 已建立 Docs 文档目录用于后续交接。
-- 已确认当前仓库根目录存在 `Microsoft.Dotnet.Wpf.sln`。
-
-### 后续输出
-
-- 一份稳定的“已迁移模块清单”。
-- 一份稳定的“未迁移模块清单”。
-- 一份“解决方案入口现状”说明。
-- 一份持续更新的“迁移项目顺序”清单。
-
----
-
-## 阶段 1：解决方案入口与项目清单收敛
-
-### 目标
-
-让仓库具备一个明确的解决方案级入口，使后续迁移工作可以围绕一个统一的构建目标推进。
-
-### 任务
-
-1. 以 `Microsoft.Dotnet.Wpf.sln` 作为当前统一入口继续推进。
-2. 梳理当前所有 `*.csproj`、`ref/*.csproj` 与解决方案之间的对应关系。
-3. 先把当前目录中已存在且依赖相对闭合的项目纳入解决方案。
-4. 记录哪些项目暂时保留在目录中但不纳入首批构建，以及阻塞原因。
+- 已重新核对 `Docs/README.md`、`00-overview.md`、`01-phase-plan.md`、`02-next-session-handoff.md`。
+- 已重新核对 `Microsoft.Dotnet.Wpf.sln` 当前实际纳入项目。
+- 已重新盘点 `src/Microsoft.DotNet.Wpf/src/` 顶层目录。
+- 已重新盘点 `cycle-breakers/` 当前存在的桥接项目。
 
 ### 完成标准
 
-- 有一个明确的解决方案文件路径。
-- 有一份项目纳管清单。
-- 能说明每个未纳入项目的原因。
-- 至少完成一批“现存项目纳入解决方案”的实际迁移。
+- 文档中的“已纳入解决方案项目”“磁盘已有项目”“缺失顶层模块”三份清单相互一致。
+- 后续构建记录以最新验证结果为准，不再保留互相矛盾的历史描述。
+
+---
+
+## 阶段 1：恢复当前解决方案构建基线
+
+### 目标
+
+先让 `Microsoft.Dotnet.Wpf.sln` 的现有纳管项目重新回到可诊断、可复现的状态。
+
+### 当前已知阻塞
+
+- 当前工作区整体构建失败，首个可见错误为：
+  - `UIAutomationClientSideProviders` 缺少 `artifacts/obj/UIAutomationClient/Debug/net8.0/ref/UIAutomationClient.dll`
+
+### 任务
+
+1. 重新验证 `UIAutomationClient` 是否能独立产出参考程序集。
+2. 检查 `UIAutomationClient` 与 `UIAutomationClientSideProviders` 的项目引用、目标框架、输出路径、`ref` 生成链是否一致。
+3. 若 `UIAutomationClient` 本身失败，记录首个真实编译错误，而不是只记录下游 `CS0006`。
+4. 若 `UIAutomationClient` 能独立通过，检查解决方案构建顺序、项目依赖和增量构建缓存。
+
+### 完成标准
+
+- `Microsoft.Dotnet.Wpf.sln` 恢复可构建，或
+- 已将当前首个真实阻塞从下游 `CS0006` 精确收敛到具体源项目与具体错误。
 
 ### 风险
 
-- 原始 WPF 解决方案可能依赖尚未迁入的项目或原始目录假设。
-- 直接照搬原始解决方案可能会引入大量失效路径。
-- 部分现存项目虽然源码已在仓库中，但其依赖链仍可能指向尚未迁入的模块。
+- 当前失败点可能只是第一个表面错误，修复后还会暴露新的依赖问题。
+- `ref` 项目与实现项目的输出链可能不只受项目引用影响，还受自定义 targets 影响。
 
 ---
 
-## 阶段 2：核心托管依赖链收敛
+## 阶段 2：解决方案纳管与项目清单收敛
 
 ### 目标
 
-围绕已迁入的核心项目，先建立一个尽可能小但可持续扩展的托管依赖链。
+让解决方案入口逐步跟上磁盘现状，避免“目录里已经有项目，但解决方案看不到”的长期分裂状态。
 
 ### 任务
 
-1. 验证 `WindowsBase`、`System.Xaml`、`PresentationCore` 当前构建状态。
-2. 验证 `UIAutomation` 系列项目的引用关系是否闭合。
-3. 验证 `WindowsFormsIntegration`、`System.Windows.Input.Manipulations` 是否能在当前结构下构建。
-4. 记录每个项目的外部依赖来源：
-   - 本仓库项目引用
-   - 本地 DLL 引用
-   - SDK/框架引用
-   - 暂未迁入的源码项目
+1. 记录当前所有关键项目的状态：
+   - 已在解决方案中
+   - 已在磁盘中但未纳入解决方案
+   - 目录尚未迁入
+2. 优先纳管与当前主链直接相关的现存项目：
+   - `WindowsFormsIntegration`
+   - `PresentationFramework`
+   - `PresentationUI`
+   - `ReachFramework`
+   - `System.Printing`
+3. 对暂不纳入解决方案的项目，明确写出原因，不要只写“待处理”。
 
 ### 完成标准
 
-- 至少一批核心托管项目可稳定构建。
-- 每个失败项目都有明确阻塞记录。
-
-### 当前阶段补充记录
-### 当前阶段补充记录
-
-- 已验证当前 `Microsoft.Dotnet.Wpf.sln` 可成功构建。
-- 已将 `UIAutomationClient`、`UIAutomationClientSideProviders`、`PresentationCore`、`WindowsFormsIntegration` 纳入磁盘上的解决方案文件。
-- 已确认 `UIAutomationClient` 的独立构建会被 `PresentationCore` 阻塞。
-- 已确认 `PresentationCore` 当前与 `origin/src/src/PresentationCore/PresentationCore.csproj` 相比仍缺失一批编译项与源码。
-- 已开始按原始 `PresentationCore.csproj` 的清单补齐缺失文件，而不是直接纳管更多项目。
-- 已批量迁入 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录。
-- 已验证 `PresentationFramework` 可进入构建诊断，但当前首先被缺失的 cycle-breaker 项目与 `AvTrace\GenAvMessages.targets` 阻塞。
-- 已在仓库根目录补齐首批 `cycle-breakers` 项目，并新增 `WpfCycleBreakersDir` 属性指向该目录。
-- 已新增 `WpfCodeGenDir` 属性，并将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 调整为条件导入。
-- 重新验证后，`PresentationFramework` 已越过 cycle-breaker 与 `GenAvMessages.targets` 的首批阻塞，依赖重新收敛到 `PresentationCore` 与 `DirectWriteForwarder` 的真实构建链。
-- 已将 `PresentationCore.csproj` 从外部 `DirectWriteForwarder.dll` 文件引用改回仓库内 `DirectWriteForwarder.vcxproj` 项目引用。
-- 已验证根解决方案在纳入新增项目后仍可成功构建。
-- 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可以成功构建，`dotnet msbuild` 的阻塞来自 VC++ 跟踪任务与当前 MSBuild 主机的不兼容。
-- 已为 `PresentationCore` 补上 `System.Formats.Nrbf` 包引用与 `SYSLIB5005` 抑制。
-- 已确认此前通过将本地 WPF 程序集 `AssemblyVersion` 对齐到 `4.0.0.0` 来缓解 `WindowsBase` 类型解析错误属于错误方向；根因是仓库内 `WindowsBase` 与 .NET 8 引用包中的 `WindowsBase.dll` 同时进入引用图。
-- 已通过 `ResolveReferences` 日志确认 `PresentationCore` 同时解析到仓库输出 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll` 与 `Microsoft.NETCore.App.Ref/.../WindowsBase.dll`，后续必须以“收敛引用来源”为主线推进。
-- 已在 `Directory.Build.targets` 中加入公共 `ResolveReferences` 后处理逻辑：当项目已直接引用仓库内 `WindowsBase.csproj` 时，移除来自 `Microsoft.NETCore.App.Ref` 的 inbox `WindowsBase.dll` 编译引用。
-- 已重新验证 `PresentationCore`；此前由 `WindowsBase` 双来源触发的 `Rect`、`Point`、`IRawElementProviderFragment` 相关 `CS7069` / `CS9333` 已消失，当前构建错误已前移到 `UISettingsRcw.cs` 的 `RoActivateInstance` 缺口与 `TypefaceMap.cs` 的 DWrite 签名不匹配。
-- 已再次使用 `msbuild` 验证 `PresentationCore` 独立构建通过；`UISettingsRcw` / `TypefaceMap` 错误已不再复现。
-- 已为 `MicrosoftPrivateWinFormsReference` 补齐 `Accessibility.dll` 参考程序集解析逻辑，修复 `UIAutomationClient` 中 `Accessibility.IAccessible` 不可访问的问题。
-- 已验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 独立构建通过，并将二者加入 `Microsoft.Dotnet.Wpf.sln`。
-- 已验证根解决方案在纳入 `UIAutomationClient`、`UIAutomationClientSideProviders` 后仍可成功构建。
-- 已推进 `PresentationFramework` 上层构建链，确认 `System.Printing-ref`、`PresentationFramework-ReachFramework-impl-cycle`、`PresentationFramework-System.Printing-api-cycle` 可构建通过。
-
-- 共享源码和生成代码路径可能仍依赖原始仓库布局。
-- 本地引用路径可能使构建无法脱离个人机器环境。
-- `dotnet msbuild` 当前仍会在 `DirectWriteForwarder` 上触发 VC++ 跟踪任务兼容性异常，本地独立验证需要改用 Visual Studio 自带 `MSBuild.exe`。
-- `PresentationCore` 已越过 DirectWriteForwarder 阶段，且 `WindowsBase` 双来源导致的主类型冲突已被压下；当前需要继续观察该公共清理策略对其他项目的影响，并转向处理 `UISettingsRcw`、`TypefaceMap` 等剩余源码差异，同时继续关注 `WindowsBase` 引用程序集复制阶段的文件锁来源。
-
-## 阶段 3：引入 `PresentationFramework` 及关键缺失模块
-
-### 目标
-
-逐步把最关键的上层模块纳入当前结构，为最终形成完整 WPF 托管构建链打基础。
-
-### 优先顺序建议
-
-1. `PresentationFramework`
-2. `WindowsFormsIntegration`（在 `PresentationFramework` 进入后重新验证）
-3. `ReachFramework`
-4. `Themes`
-5. `PresentationBuildTasks`
-6. `System.Windows.Controls.Ribbon`
-7. `System.Printing`
-8. `PresentationUI`
-9. `Extensions`
-10. `PenImc`
-11. `System.Windows.Presentation`
-12. `WpfGfx`
-
-### 任务
-
-1. 从 `origin/src/src/` 对照复制或映射目标模块目录结构。
-2. 修正 `ProjectReference`、共享源码路径、生成代码输入路径。
-3. 按模块记录迁移差异，而不是一次性做大批量不可追踪改动。
-4. 每迁入一个模块，就更新 Docs 文档。
-
-### 当前顺序修正
-
-- `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders` 已可独立构建，当前优先级转向 `PresentationFramework` 依赖链。
-- `PresentationFramework` 当前重点不再是早期 cycle-breaker 缺失，而是继续收敛 `ReachFramework-ref`、`System.Printing-ref` 与 `PresentationFramework` 之间的桥接类型和同名程序集引用来源。
-- `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework` 构建链进一步闭合。
-
-### 完成标准
-
-- `PresentationFramework` 进入当前仓库结构。
-- 至少建立其直接依赖项目的迁移顺序。
-- 对未完成模块有清晰阻塞说明。
+- 有一份清晰的项目纳管清单。
+- 能说明每个未纳入项目的阻塞原因。
+- 解决方案中的项目清单与文档保持同步。
 
 ### 风险
 
-- `PresentationFramework` 依赖面极广，容易带出更多未迁入模块。
-- 生成资源、主题、任务项目之间可能存在隐式构建顺序要求。
-- 当前虽然已补齐 `PresentationFramework-System.Printing-impl-cycle` 等桥接项目，但 `PresentationCore` 的托管引用收敛仍会继续影响上层项目验证顺序。
-
-## 当前新增执行约束
-
-1. 只要仓库中已经存在 `WindowsBase.csproj`，后续构建修复就必须把“是否又从 SDK 隐式引用拿到第二份 `WindowsBase`”作为首要检查项。
-2. 禁止再次使用修改 `eng/Versions.props` 中 `AssemblyVersion` 的方式掩盖程序集冲突。
-3. 若需要收敛引用图，应优先从项目引用、隐式框架引用、定制引用项映射三处入手，确保最终只保留一个 `WindowsBase` 身份进入编译图。
+- 直接把过多项目一次性纳入解决方案会引入大量新失败点。
+- 某些项目虽然已经在磁盘中存在，但其真实依赖链仍未闭合。
 
 ---
 
-## 阶段 4：解决方案级构建打通
+## 阶段 3：`PresentationFramework` 主链打通
 
 ### 目标
 
-让 Visual Studio 构建和命令行 `msbuild` 构建都能围绕统一入口稳定运行。
+围绕 `PresentationFramework` 建立后续迁移主线，为 `WindowsFormsIntegration`、主题项目和更上层模块打基础。
+
+### 优先顺序
+
+1. `ReachFramework-ref`
+2. `System.Printing-ref`
+3. `PresentationFramework`
+4. `PresentationUI`
+5. `WindowsFormsIntegration`
+6. 主题项目
 
 ### 任务
 
-1. 修正解决方案中的项目依赖与构建顺序。
-2. 清理失效路径和仅在原始仓库有效的导入。
-3. 梳理需要保留的本地依赖与可替换的项目引用。
-4. 记录最小可复现构建命令。
+1. 重新验证 `ReachFramework-ref` 与 `System.Printing-ref` 的最新构建结果。
+2. 对照 `cycle-breakers/` 当前桥接项目，确认缺口是：
+   - 缺类型
+   - 缺引用
+   - 缺项目纳管
+   - 缺生成步骤
+3. 继续确认 `AvTrace` 代码生成目标是否已完整接入，而不是仅仅跳过导入失败。
+4. 在 `PresentationFramework` 到达稳定阻塞点后，再判断 `WindowsFormsIntegration` 是否具备重新纳管条件。
 
 ### 完成标准
 
-- Visual Studio 中可对目标解决方案发起构建。
-- 命令行中有一条明确的 `msbuild` 或 `dotnet msbuild` 命令可复现。
+- `PresentationFramework` 能进入稳定、可重复的构建诊断状态。
+- `ReachFramework-ref` / `System.Printing-ref` / `cycle-breakers` 的阻塞已被分类记录。
+
+### 风险
+
+- `PresentationFramework` 依赖面很广，任何上游变化都会联动多个项目。
+- 代码生成、主题资源、桥接项目可能共同决定其最终构建顺序。
 
 ---
 
-## 阶段 5：文档收敛与持续交接
+## 阶段 4：缺失顶层模块补齐
 
 ### 目标
 
-确保该重组工程可以在多轮 AI 对话中稳定推进，而不是每次重新调查。
+在现有主链稳定后，再迁入仓库顶层尚未出现的模块。
+
+### 目标模块
+
+1. `PenImc`
+2. `System.Windows.Presentation`
+3. `WpfGfx`
+
+### 任务
+
+1. 先补目录与项目文件。
+2. 再处理 `ProjectReference`、共享源码路径和 native 依赖。
+3. 每迁入一个模块，就同步更新 Docs 文档。
+
+### 完成标准
+
+- 三个缺失顶层模块都已在当前仓库可见。
+- 能说明每个模块是否已纳入解决方案、是否可构建、当前首个阻塞点是什么。
+
+---
+
+## 阶段 5：解决方案级构建与文档持续交接
+
+### 目标
+
+让 Visual Studio 构建和命令行 `msbuild` 构建都能围绕统一入口稳定复现，并让后续 AI 不需要再次重建上下文。
 
 ### 每次结束前必须更新
 
-- `00-overview.md`：更新已迁移模块、缺失模块、当前构建状态。
-- `01-phase-plan.md`：调整阶段优先级和阻塞情况。
-- `02-next-session-handoff.md`：更新建议起手任务和必读上下文。
+- `00-overview.md`：当前状态、当前构建结果、主要缺口。
+- `01-phase-plan.md`：优先级、阶段顺序、阻塞变化。
+- `02-next-session-handoff.md`：建议起手任务、最新构建入口、必读文件。
 
 ### 推荐记录格式
 
-每次工作结束时至少补充以下内容：
+- 最近新增或修改的项目/目录
+- 最近验证过的构建入口与命令
+- 当前首个真实失败点
+- 后续第一步该做什么
+- 若中断，后续 AI 先读哪些文件
 
-- 本轮新增或修改的项目/目录
-- 本轮验证过的构建命令或构建入口
-- 当前失败点
-- 下一轮最小可执行任务
-- 若中断，下一轮先读哪些文件
+## 当前执行约束
+
+1. 只要仓库中已经存在 `WindowsBase.csproj`、`PresentationCore.csproj`、`PresentationFramework.csproj` 等同名项目，就必须先排查是否又从 SDK 隐式引用拿到了第二份同名程序集。
+2. 禁止再次通过修改 `eng/Versions.props` 中 `AssemblyVersion` 的方式掩盖程序集冲突。
+3. 涉及 native/WPF 主链时优先使用 `msbuild`，不要默认使用 `dotnet msbuild`。
+4. 不能通过把项目从解决方案中移除来制造“构建通过”；应尽量保留项目并修复构建。
 
 

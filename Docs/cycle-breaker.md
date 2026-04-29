@@ -16,12 +16,16 @@
 
 ## 已识别的 cycle-breaker 项目
 
-当前项目文件中已出现以下 `cycle-breaker` 项目：
+当前仓库磁盘上已确认存在以下 `cycle-breaker` 项目：
 
-- `PresentationUI-PresentationFramework-impl-cycle.csproj`
+- `PresentationFramework-PresentationUI-api-cycle.csproj`
 - `PresentationFramework-ReachFramework-impl-cycle.csproj`
 - `PresentationFramework-System.Printing-api-cycle.csproj`
+- `PresentationFramework-System.Printing-impl-cycle.csproj`
+- `PresentationUI-PresentationFramework-impl-cycle.csproj`
+- `ReachFramework-PresentationFramework-api-cycle.csproj`
 - `ReachFramework-System.Printing-api-cycle.csproj`
+- `System.Printing-PresentationFramework-api-cycle.csproj`
 
 从命名可以看出，这些项目分别用于打断实现层或 API 层的循环依赖，不应视为临时性产物。
 
@@ -33,11 +37,13 @@
 
 - `PresentationUI.csproj` 引用 `PresentationFramework.csproj`
 - `PresentationFramework.csproj` 引用 `PresentationUI-PresentationFramework-impl-cycle.csproj`
+- 当前仓库还存在 `PresentationFramework-PresentationUI-api-cycle.csproj`
 
 判断：
 
 - 该循环属于实现层循环
-- 对应的打断方式为 `impl-cycle`
+- 同时可以看到 API 层桥接项目也已存在
+- 不应假设只需保留单一桥接项目即可
 
 ### 2. PresentationFramework ↔ ReachFramework
 
@@ -47,12 +53,12 @@
 - `ReachFramework.csproj` 引用 `PresentationFramework-ReachFramework-impl-cycle.csproj`
 - `PresentationFramework-ref.csproj` 引用 `ReachFramework-ref.csproj`
 - `ReachFramework-ref.csproj` 引用 `PresentationFramework-ReachFramework-impl-cycle.csproj`
+- 当前仓库还存在 `ReachFramework-PresentationFramework-api-cycle.csproj`
 
 判断：
 
 - 该循环是 `PresentationFramework` 与 `ReachFramework` 之间的双向依赖
-- 问题同时影响实现层与 ref 层
-- 对应的打断方式为 `impl-cycle`
+- 问题同时影响实现层、ref 层以及 API 桥接层
 
 ### 3. PresentationFramework ↔ System.Printing
 
@@ -60,12 +66,13 @@
 
 - `PresentationFramework.csproj` 引用 `System.Printing-ref.csproj`
 - `System.Printing-ref.csproj` 反向引用 `PresentationFramework-System.Printing-api-cycle.csproj`
+- 当前仓库还存在 `PresentationFramework-System.Printing-impl-cycle.csproj`
+- 当前仓库还存在 `System.Printing-PresentationFramework-api-cycle.csproj`
 
 判断：
 
 - 该循环属于 API 层循环
-- 问题位于公开契约层，而不仅是实现代码层
-- 对应的打断方式为 `api-cycle`
+- 当前至少同时存在 API 层与实现层桥接项目，后续排查时不能只检查单个方向
 
 ### 4. ReachFramework ↔ System.Printing
 
@@ -97,8 +104,9 @@
 
 1. 保留现有 `cycle-breaker` 设计
 2. 补齐缺失的 `cycle-breaker` 项目
-3. 先打通迁移链路并保证仓库可稳定构建
-4. 在构建稳定后，再单独评估是否进行“去 cycle-breaker 化”重构
+3. 在处理 `PresentationFramework` / `ReachFramework` / `System.Printing` / `PresentationUI` 构建错误时，优先检查桥接项目是否已纳管、是否已被正确引用、是否缺少最小占位类型
+4. 先打通迁移链路并保证仓库可稳定构建
+5. 在构建稳定后，再单独评估是否进行“去 cycle-breaker 化”重构
 
 ## 何时可以评估移除 cycle-breaker
 
@@ -116,5 +124,6 @@
 下一步可继续整理以下内容：
 
 - 四组循环依赖的明确项目依赖图
-- 各 `cycle-breaker` 项目的目标位置与目录规划
-- 缺失 `cycle-breaker` 项目的补齐清单
+- 各 `cycle-breaker` 项目在解决方案中的纳管状态
+- 各 `cycle-breaker` 项目是否已产出目标程序集
+- `PresentationFramework` / `ReachFramework` / `System.Printing` 当前仍缺少哪些桥接类型或生成步骤
