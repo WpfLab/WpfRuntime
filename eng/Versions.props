@@ -17,7 +17,7 @@
       NOTE: WPF does not currently have any public analyzers or source generators. When these are added please check how
             dotnet/winforms is handling versions for the analyzers.
       -->
-    <AssemblyVersion>4.0.0.0</AssemblyVersion>
+    <AssemblyVersion>$(MajorVersion).$(MinorVersion).$(PatchVersion).0</AssemblyVersion>
   </PropertyGroup>
   <!-- Packages that come from https://github.com/dotnet/winforms -->
   <PropertyGroup>

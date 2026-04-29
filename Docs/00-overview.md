@@ -134,8 +134,10 @@
 14. 已将 `PresentationCore.csproj` 恢复为引用仓库内 `DirectWriteForwarder.vcxproj`，不再依赖外部 `DirectWriteForwarder.dll` 文件引用。
 15. 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，当前 `dotnet msbuild` 的失败来自 VC++ 跟踪任务与 MSBuild 主机的兼容性问题。
 16. 已为 `PresentationCore` 补充 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制，独立构建已越过 `DirectWriteForwarder` 阶段，新的阻塞收敛到 `WindowsBase` 类型解析错误。
-17. 已将 `eng/Versions.props` 中的 `AssemblyVersion` 对齐到 `4.0.0.0`，消除 `PresentationCore` / `UIAutomation` 构建链里本地 `WindowsBase`（6.0.2.0）与 inbox `WindowsBase`（4.0.0.0）的程序集标识分裂，`PresentationCore` 不再卡在 `Rect`、`Point` 类型解析错误。
-18. 重新验证 `PresentationCore` 后，当前阻塞已从编译期类型缺失转移到 `WindowsBase` 引用程序集复制阶段的文件锁：`artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`。
+17. 已确认此前将 `eng/Versions.props` 中的 `AssemblyVersion` 改成 `4.0.0.0` 是错误修复方向。该修改只能让仓库内 `WindowsBase` 在程序集标识上伪装成 inbox `WindowsBase`，从表面上缓解 `Rect`、`Point` 等类型解析错误，但没有消除“双来源 `WindowsBase` 同时进入引用图”的根因。
+18. 已通过 `PresentationCore` 的 `ResolveReferences` 日志确认：当前引用图中同时存在仓库项目输出 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll` 与 .NET 8 引用包 `C:/Program Files/dotnet/packs/Microsoft.NETCore.App.Ref/8.0.6/ref/net8.0/WindowsBase.dll`。后续迁移应收敛引用来源，而不是继续修改 `AssemblyVersion` 掩盖冲突。
+19. `AssemblyVersion` 已恢复为 `$(MajorVersion).$(MinorVersion).$(PatchVersion).0`。后续若再次出现 `WindowsBase` / BCL 冲突，禁止再通过改版本号解决，必须优先检查项目是否同时保留了仓库项目引用与 SDK 隐式框架引用。
+20. 重新验证 `PresentationCore` 后，当前阻塞除 `WindowsBase` 双来源策略问题外，还包括 `WindowsBase` 引用程序集复制阶段的文件锁：`artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`。
 19. 已将 `PresentationFramework-System.Printing-impl-cycle.csproj` 纳入根解决方案。
 20. 已验证根解决方案在纳入 `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders`、`WindowsFormsIntegration` 后仍可成功构建。
 
@@ -150,7 +152,7 @@
 4. `PresentationCore` 当前迁移并不完整；已确认 `DirectWriteForwarder` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，但 `PresentationCore` 独立构建仍未闭环。
 5. 新迁入的上层项目虽然已进入当前目录，但仍未完成构建前置补齐，当前已确认存在以下阻塞：
    - `dotnet msbuild` 构建 `DirectWriteForwarder` 时会在 VC++ 跟踪任务 `GetOutOfDateItems` / `FileTracker` 上触发 `TypeLoadException`，当前本地兼容入口应改为 Visual Studio 自带 `MSBuild.exe`
-   - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，并新增 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制；当前新的独立构建阻塞已收敛到 `WindowsBase` 类型解析错误（如 `Rect`、`Point`）
+    - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，并新增 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制；当前需要继续收敛 `WindowsBase` 的引用来源，避免仓库输出与 .NET 8 引用包中的 `WindowsBase.dll` 同时进入同一编译图
    - `WpfCodeGenDir` 虽已定义且 `PresentationFramework` 已改为条件导入，但 `AvTrace\GenAvMessages.targets` 本体仍未接入当前仓库
 6. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
 7. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
@@ -180,7 +182,7 @@
 
 ## 建议的当前优先级
 
-1. 以 Visual Studio 自带 `MSBuild.exe` 作为当前本地 native 构建入口，继续验证 `PresentationCore` 的真实源码/引用缺口。
+1. 以 Visual Studio 自带 `MSBuild.exe` 作为当前本地 native 构建入口，继续验证 `PresentationCore` 的真实源码/引用缺口，并优先处理 `WindowsBase` 双来源引用问题。
 2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
 3. 继续补齐 `AvTrace` 代码生成目标来源，使 `PresentationFramework` 不仅能跳过导入失败，还能恢复预期生成链路。
 4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的独立构建状态。
@@ -191,5 +193,11 @@
    - 调整过的项目引用
    - 当前可构建状态
    - 尚未解决的阻塞点
+
+## 当前新增迁移约束
+
+1. 仓库内已经迁入 `WindowsBase` 时，后续所有引用该程序集的项目都必须避免再从 SDK 隐式框架引用中同时拿到另一份 `WindowsBase.dll`。
+2. 若出现 `Rect`、`Point`、`DependencyObject` 等基础类型解析异常，先检查是否是“两份 `WindowsBase`” 冲突，禁止先改 `AssemblyVersion`。
+3. `AssemblyVersion` 只用于表达仓库程序集自身版本语义，不能用来制造与 inbox/BCL 同名程序集的“伪兼容”。
 
 

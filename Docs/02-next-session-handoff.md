@@ -23,8 +23,10 @@
 - 已验证根解决方案在纳入上述项目后仍可成功构建。
 - 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，`dotnet msbuild` 失败点是 VC++ 跟踪任务 `GetOutOfDateItems` / `FileTracker` 的主机兼容性问题。
 - 已为 `PresentationCore.csproj` 补充 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制，独立构建已越过 DirectWriteForwarder 阶段。
-- 已将 `eng/Versions.props` 中的 `AssemblyVersion` 对齐到 `4.0.0.0`，消除本地 `WindowsBase` 与 inbox `WindowsBase` 的程序集版本分裂。
-- 已确认 `PresentationCore` 原先的 `WindowsBase` 类型解析错误（如 `Rect`、`Point`）已解除，当前新的独立构建阻塞是 `WindowsBase` 引用程序集复制阶段的文件锁（`MSB3883`，目标文件为 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`）。
+- 已确认此前将 `eng/Versions.props` 中 `AssemblyVersion` 改成 `4.0.0.0` 是错误修复。该做法只是把仓库内 `WindowsBase` 伪装成 inbox `WindowsBase`，没有消除双引用。
+- 已通过 `PresentationCore` 的 `ResolveReferences` 日志确认：当前同时解析到仓库输出 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll` 与 .NET 8 引用包 `Microsoft.NETCore.App.Ref/.../WindowsBase.dll`。
+- 已将 `AssemblyVersion` 恢复为 `$(MajorVersion).$(MinorVersion).$(PatchVersion).0`，并明确后续禁止再用改版本号的方式处理 `WindowsBase` / BCL 冲突。
+- 已确认 `PresentationCore` 的下一步重点不是继续改版本号，而是收敛 `WindowsBase` 引用来源；此外仍需处理 `WindowsBase` 引用程序集复制阶段的文件锁（`MSB3883`，目标文件为 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`）。
 - 已从 `origin/src/cycle-breakers/` 补齐 `PresentationFramework-System.Printing-impl-cycle.csproj` 并加入 `Microsoft.Dotnet.Wpf.sln`。
 
 ## 当前已知事实
@@ -119,7 +121,7 @@
 1. 当前解决方案本身可以构建，但这不代表目录内未纳管项目也可独立构建。
 2. `WindowsFormsIntegration` 仍依赖尚未迁入的 `PresentationFramework`。
 3. `PresentationCore` 已纳入根解决方案，但独立构建仍未闭环。
-4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件；`DirectWriteForwarder` 需要改用 Visual Studio 自带 `MSBuild.exe` 构建，而 `PresentationCore` 本身的新阻塞已转移到 `WindowsBase` 引用程序集复制阶段的文件锁。
+4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件；`DirectWriteForwarder` 需要改用 Visual Studio 自带 `MSBuild.exe` 构建，而 `PresentationCore` 本身需要先解决 `WindowsBase` 双来源引用，再继续处理 `WindowsBase` 引用程序集复制阶段的文件锁。
 5. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
 6. 当前已补齐首批 bridge 项目，并额外补齐了 `PresentationFramework-System.Printing-impl-cycle`；后续仍需继续对照 `origin/src/cycle-breakers/` 与真实构建错误确认是否还有缺口。
 7. `PresentationFramework` 对 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 已改为条件导入，但当前仓库仍未接入该目标文件本体，因此代码生成链尚未恢复。
@@ -128,13 +130,14 @@
 ## 下一次对话建议起手顺序
 
 1. 先使用 Visual Studio 自带 `MSBuild.exe` 继续验证 `PresentationCore`，不要再用 `dotnet msbuild` 作为 `DirectWriteForwarder` 的本地验证入口。
-2. 继续定位 `WindowsBase` 引用程序集复制阶段的文件锁，再重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
-3. 在 `PresentationCore` 能独立构建后，再验证：
+2. 优先收敛 `WindowsBase` 引用来源，确认哪些项目同时持有仓库 `WindowsBase.csproj` 项目引用与 SDK 隐式框架引用，不要再尝试通过修改 `AssemblyVersion` 掩盖冲突。
+3. 在 `WindowsBase` 双来源问题收敛后，再继续定位 `WindowsBase` 引用程序集复制阶段的文件锁，并重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
+4. 在 `PresentationCore` 能独立构建后，再验证：
    - `UIAutomationClient`
    - `UIAutomationClientSideProviders`
-4. 继续补齐 `AvTrace` 代码生成目标来源，并重新验证 `PresentationFramework`。
-5. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失 / VC++ 工具链异常”分类记录。
-6. 再同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
+5. 继续补齐 `AvTrace` 代码生成目标来源，并重新验证 `PresentationFramework`。
+6. 把构建失败按“缺文件 / 缺引用 / 缺项目 / 路径不匹配 / 生成步骤缺失 / VC++ 工具链异常 / 双来源程序集冲突”分类记录。
+7. 再同步判断 `WindowsFormsIntegration` 的阻塞是否解除。
 
 ## 下一次对话建议直接复制的提示词
 
@@ -149,9 +152,14 @@
 
 - 验证 `Microsoft.Dotnet.Wpf.sln` 当前纳管项目的构建状态。
 - 优先使用 Visual Studio 自带 `MSBuild.exe` 验证 `DirectWriteForwarder` / `PresentationCore`，不要直接用 `dotnet msbuild` 诊断 native 阶段。
-- 先打通 `PresentationCore` 的独立构建，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
+- 先收敛 `WindowsBase` 双来源引用，再打通 `PresentationCore` 的独立构建，然后验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
 - 梳理当前仓库项目与解决方案入口的对应关系，尤其是尚未纳入的 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`。
 - 将发现的阻塞点回写到 Docs 文档中。
+
+## 当前新增禁止事项
+
+- 禁止再次把 `eng/Versions.props` 中的 `AssemblyVersion` 改成 `4.0.0.0` 来掩盖 `WindowsBase` 冲突。
+- 禁止看到 `Rect`、`Point`、`DependencyObject` 等类型错误就直接改版本号；必须先检查是否同时引用了两份 `WindowsBase`。
 
 ## 每次结束前必须回写的信息
 

@@ -117,12 +117,14 @@
 - 已将 `PresentationCore.csproj` 从外部 `DirectWriteForwarder.dll` 文件引用改回仓库内 `DirectWriteForwarder.vcxproj` 项目引用。
 - 已验证根解决方案在纳入新增项目后仍可成功构建。
 - 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可以成功构建，`dotnet msbuild` 的阻塞来自 VC++ 跟踪任务与当前 MSBuild 主机的不兼容。
-- 已为 `PresentationCore` 补上 `System.Formats.Nrbf` 包引用与 `SYSLIB5005` 抑制，并通过将本地 WPF 程序集 `AssemblyVersion` 对齐到 `4.0.0.0` 消除了 `WindowsBase` 类型解析错误；当前新的独立构建阻塞已转移到 `WindowsBase` 引用程序集复制阶段的文件锁。
+- 已为 `PresentationCore` 补上 `System.Formats.Nrbf` 包引用与 `SYSLIB5005` 抑制。
+- 已确认此前通过将本地 WPF 程序集 `AssemblyVersion` 对齐到 `4.0.0.0` 来缓解 `WindowsBase` 类型解析错误属于错误方向；根因是仓库内 `WindowsBase` 与 .NET 8 引用包中的 `WindowsBase.dll` 同时进入引用图。
+- 已通过 `ResolveReferences` 日志确认 `PresentationCore` 同时解析到仓库输出 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll` 与 `Microsoft.NETCore.App.Ref/.../WindowsBase.dll`，后续必须以“收敛引用来源”为主线推进。
 
 - 共享源码和生成代码路径可能仍依赖原始仓库布局。
 - 本地引用路径可能使构建无法脱离个人机器环境。
 - `dotnet msbuild` 当前仍会在 `DirectWriteForwarder` 上触发 VC++ 跟踪任务兼容性异常，本地独立验证需要改用 Visual Studio 自带 `MSBuild.exe`。
-- `PresentationCore` 已越过 DirectWriteForwarder 阶段，`WindowsBase` 类型解析错误已解决；当前需要继续定位 `WindowsBase` 引用程序集复制阶段的文件锁来源。
+- `PresentationCore` 已越过 DirectWriteForwarder 阶段，但 `WindowsBase` 相关问题不能再靠 `AssemblyVersion` 对齐处理；当前需要优先设计如何让仓库项目引用与 SDK 隐式框架引用之间只保留一个 `WindowsBase` 来源，并继续定位 `WindowsBase` 引用程序集复制阶段的文件锁来源。
 
 ## 阶段 3：引入 `PresentationFramework` 及关键缺失模块
 
@@ -154,7 +156,7 @@
 
 ### 当前顺序修正
 
-- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的剩余构建阻塞收敛，其中最新阻塞是 `WindowsBase` 引用程序集复制文件锁。
+- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的剩余构建阻塞收敛，其中第一优先级是 `WindowsBase` 双来源引用问题，随后再处理 `WindowsBase` 引用程序集复制文件锁。
 - `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework`，但 `UIAutomationClient`、`UIAutomationClientSideProviders` 的独立构建验证先依赖 `PresentationCore` 完整化。
 - 由于 `PresentationFramework` 已经进入当前仓库目录，后续不再是“是否迁入”的问题，而是“先补哪一类构建前置”的问题；当前优先级应调整为：`PresentationCore` 的 `TextInterface` 托管包装源码缺口、`AvTrace` 代码生成目标本体、其余未恢复的构建前置。
 
@@ -169,6 +171,12 @@
 - `PresentationFramework` 依赖面极广，容易带出更多未迁入模块。
 - 生成资源、主题、任务项目之间可能存在隐式构建顺序要求。
 - 当前虽然已补齐 `PresentationFramework-System.Printing-impl-cycle` 等桥接项目，但 `PresentationCore` 的托管引用收敛仍会继续影响上层项目验证顺序。
+
+## 当前新增执行约束
+
+1. 只要仓库中已经存在 `WindowsBase.csproj`，后续构建修复就必须把“是否又从 SDK 隐式引用拿到第二份 `WindowsBase`”作为首要检查项。
+2. 禁止再次使用修改 `eng/Versions.props` 中 `AssemblyVersion` 的方式掩盖程序集冲突。
+3. 若需要收敛引用图，应优先从项目引用、隐式框架引用、定制引用项映射三处入手，确保最终只保留一个 `WindowsBase` 身份进入编译图。
 
 ---
 
