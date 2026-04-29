@@ -28,6 +28,9 @@
 - 已将 `AssemblyVersion` 恢复为 `$(MajorVersion).$(MinorVersion).$(PatchVersion).0`，并明确后续禁止再用改版本号的方式处理 `WindowsBase` / BCL 冲突。
 - 已确认 `PresentationCore` 的下一步重点不是继续改版本号，而是收敛 `WindowsBase` 引用来源；此外仍需处理 `WindowsBase` 引用程序集复制阶段的文件锁（`MSB3883`，目标文件为 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`）。
 - 已从 `origin/src/cycle-breakers/` 补齐 `PresentationFramework-System.Printing-impl-cycle.csproj` 并加入 `Microsoft.Dotnet.Wpf.sln`。
+- 已在 `Directory.Build.targets` 中加入公共 `ResolveReferences` 后处理逻辑：当项目已直接引用仓库内 `WindowsBase.csproj` 时，移除来自 `Microsoft.NETCore.App.Ref` 的 inbox `WindowsBase.dll` 编译引用。
+- 已重新使用 Visual Studio 自带 `MSBuild.exe` 验证 `PresentationCore`；此前由 `WindowsBase` 双来源触发的 `Rect`、`Point`、`IRawElementProviderFragment` 相关 `CS7069` / `CS9333` 已消失，说明 `PresentationCore` 的主构建阻塞已不再是 `WindowsBase` 类型冲突。
+- `PresentationCore` 当前新的独立构建错误为：`UISettingsRcw.cs` 缺少 `NativeMethods.RoActivateInstance`，以及 `TypefaceMap.cs` 中 `MS.Internal.Text.TextInterface.Factory` 与 `Native.IDWriteFactory*` 的签名不匹配。
 
 ## 当前已知事实
 
@@ -121,7 +124,7 @@
 1. 当前解决方案本身可以构建，但这不代表目录内未纳管项目也可独立构建。
 2. `WindowsFormsIntegration` 仍依赖尚未迁入的 `PresentationFramework`。
 3. `PresentationCore` 已纳入根解决方案，但独立构建仍未闭环。
-4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件；`DirectWriteForwarder` 需要改用 Visual Studio 自带 `MSBuild.exe` 构建，而 `PresentationCore` 本身需要先解决 `WindowsBase` 双来源引用，再继续处理 `WindowsBase` 引用程序集复制阶段的文件锁。
+4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件；`DirectWriteForwarder` 需要改用 Visual Studio 自带 `MSBuild.exe` 构建，而 `PresentationCore` 已越过 `WindowsBase` 双来源触发的主类型冲突，接下来应继续处理 `UISettingsRcw`、`TypefaceMap` 与 `WindowsBase` 引用程序集复制阶段的文件锁。
 5. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
 6. 当前已补齐首批 bridge 项目，并额外补齐了 `PresentationFramework-System.Printing-impl-cycle`；后续仍需继续对照 `origin/src/cycle-breakers/` 与真实构建错误确认是否还有缺口。
 7. `PresentationFramework` 对 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 已改为条件导入，但当前仓库仍未接入该目标文件本体，因此代码生成链尚未恢复。
@@ -130,8 +133,8 @@
 ## 下一次对话建议起手顺序
 
 1. 先使用 Visual Studio 自带 `MSBuild.exe` 继续验证 `PresentationCore`，不要再用 `dotnet msbuild` 作为 `DirectWriteForwarder` 的本地验证入口。
-2. 优先收敛 `WindowsBase` 引用来源，确认哪些项目同时持有仓库 `WindowsBase.csproj` 项目引用与 SDK 隐式框架引用，不要再尝试通过修改 `AssemblyVersion` 掩盖冲突。
-3. 在 `WindowsBase` 双来源问题收敛后，再继续定位 `WindowsBase` 引用程序集复制阶段的文件锁，并重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
+2. 继续检查公共 `WindowsBase` 收敛逻辑在 `UIAutomationTypes`、`UIAutomationProvider` 等项目上的表现，确认是否还存在需要单独处理的 `MSB3243` 版本冲突警告，不要再尝试通过修改 `AssemblyVersion` 掩盖冲突。
+3. 在 `PresentationCore` 已越过 `WindowsBase` 类型冲突后，优先补齐 `UISettingsRcw` 的 `RoActivateInstance` 入口与 `TypefaceMap` 的 DWrite 包装签名，再继续定位 `WindowsBase` 引用程序集复制阶段的文件锁，并重新验证 `PresentationFramework` 的独立构建状态。
 4. 在 `PresentationCore` 能独立构建后，再验证：
    - `UIAutomationClient`
    - `UIAutomationClientSideProviders`
@@ -152,7 +155,7 @@
 
 - 验证 `Microsoft.Dotnet.Wpf.sln` 当前纳管项目的构建状态。
 - 优先使用 Visual Studio 自带 `MSBuild.exe` 验证 `DirectWriteForwarder` / `PresentationCore`，不要直接用 `dotnet msbuild` 诊断 native 阶段。
-- 先收敛 `WindowsBase` 双来源引用，再打通 `PresentationCore` 的独立构建，然后验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
+- 基于已经加入的公共 `WindowsBase` 收敛逻辑，先打通 `PresentationCore` 剩余的 `UISettingsRcw` / `TypefaceMap` 构建错误，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
 - 梳理当前仓库项目与解决方案入口的对应关系，尤其是尚未纳入的 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`。
 - 将发现的阻塞点回写到 Docs 文档中。
 

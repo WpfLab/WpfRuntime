@@ -149,10 +149,10 @@
    - `System.Windows.Presentation`
 2. 解决方案入口虽已存在，但项目纳管仍不完整，至少还有 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`System.Printing`、`PresentationUI`、`System.Windows.Controls.Ribbon` 等现存项目未纳入当前磁盘上的解决方案文件。
 3. `WindowsFormsIntegration` 当前仍直接依赖缺失的 `PresentationFramework`，说明上层托管链尚未闭合。
-4. `PresentationCore` 当前迁移并不完整；已确认 `DirectWriteForwarder` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，但 `PresentationCore` 独立构建仍未闭环。
+4. `PresentationCore` 当前迁移并不完整；已确认 `DirectWriteForwarder` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，`WindowsBase` 双来源导致的主阻塞已被压下，但 `PresentationCore` 独立构建仍未闭环。
 5. 新迁入的上层项目虽然已进入当前目录，但仍未完成构建前置补齐，当前已确认存在以下阻塞：
    - `dotnet msbuild` 构建 `DirectWriteForwarder` 时会在 VC++ 跟踪任务 `GetOutOfDateItems` / `FileTracker` 上触发 `TypeLoadException`，当前本地兼容入口应改为 Visual Studio 自带 `MSBuild.exe`
-    - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，并新增 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制；当前需要继续收敛 `WindowsBase` 的引用来源，避免仓库输出与 .NET 8 引用包中的 `WindowsBase.dll` 同时进入同一编译图
+    - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，并新增 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制；当前已通过公共 `ResolveReferences` 清理逻辑压下 `PresentationCore` 自身的 `WindowsBase` 双来源类型冲突，后续需要把注意力转向剩余源码缺口以及仍在其他项目中出现的 `WindowsBase` 版本冲突警告
    - `WpfCodeGenDir` 虽已定义且 `PresentationFramework` 已改为条件导入，但 `AvTrace\GenAvMessages.targets` 本体仍未接入当前仓库
 6. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
 7. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
@@ -182,8 +182,8 @@
 
 ## 建议的当前优先级
 
-1. 以 Visual Studio 自带 `MSBuild.exe` 作为当前本地 native 构建入口，继续验证 `PresentationCore` 的真实源码/引用缺口，并优先处理 `WindowsBase` 双来源引用问题。
-2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
+1. 以 Visual Studio 自带 `MSBuild.exe` 作为当前本地 native 构建入口，继续验证 `PresentationCore` 的真实源码/引用缺口；`WindowsBase` 双来源不再是 `PresentationCore` 当前首要错误后，优先补齐 `UISettingsRcw` 与 `TypefaceMap` 的剩余差异。
+2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态，并顺带确认公共 `WindowsBase` 收敛逻辑是否也足以消除其项目内的 `MSB3243` 警告。
 3. 继续补齐 `AvTrace` 代码生成目标来源，使 `PresentationFramework` 不仅能跳过导入失败，还能恢复预期生成链路。
 4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的独立构建状态。
 5. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。

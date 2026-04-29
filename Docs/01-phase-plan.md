@@ -120,11 +120,13 @@
 - 已为 `PresentationCore` 补上 `System.Formats.Nrbf` 包引用与 `SYSLIB5005` 抑制。
 - 已确认此前通过将本地 WPF 程序集 `AssemblyVersion` 对齐到 `4.0.0.0` 来缓解 `WindowsBase` 类型解析错误属于错误方向；根因是仓库内 `WindowsBase` 与 .NET 8 引用包中的 `WindowsBase.dll` 同时进入引用图。
 - 已通过 `ResolveReferences` 日志确认 `PresentationCore` 同时解析到仓库输出 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll` 与 `Microsoft.NETCore.App.Ref/.../WindowsBase.dll`，后续必须以“收敛引用来源”为主线推进。
+- 已在 `Directory.Build.targets` 中加入公共 `ResolveReferences` 后处理逻辑：当项目已直接引用仓库内 `WindowsBase.csproj` 时，移除来自 `Microsoft.NETCore.App.Ref` 的 inbox `WindowsBase.dll` 编译引用。
+- 已重新验证 `PresentationCore`；此前由 `WindowsBase` 双来源触发的 `Rect`、`Point`、`IRawElementProviderFragment` 相关 `CS7069` / `CS9333` 已消失，当前构建错误已前移到 `UISettingsRcw.cs` 的 `RoActivateInstance` 缺口与 `TypefaceMap.cs` 的 DWrite 签名不匹配。
 
 - 共享源码和生成代码路径可能仍依赖原始仓库布局。
 - 本地引用路径可能使构建无法脱离个人机器环境。
 - `dotnet msbuild` 当前仍会在 `DirectWriteForwarder` 上触发 VC++ 跟踪任务兼容性异常，本地独立验证需要改用 Visual Studio 自带 `MSBuild.exe`。
-- `PresentationCore` 已越过 DirectWriteForwarder 阶段，但 `WindowsBase` 相关问题不能再靠 `AssemblyVersion` 对齐处理；当前需要优先设计如何让仓库项目引用与 SDK 隐式框架引用之间只保留一个 `WindowsBase` 来源，并继续定位 `WindowsBase` 引用程序集复制阶段的文件锁来源。
+- `PresentationCore` 已越过 DirectWriteForwarder 阶段，且 `WindowsBase` 双来源导致的主类型冲突已被压下；当前需要继续观察该公共清理策略对其他项目的影响，并转向处理 `UISettingsRcw`、`TypefaceMap` 等剩余源码差异，同时继续关注 `WindowsBase` 引用程序集复制阶段的文件锁来源。
 
 ## 阶段 3：引入 `PresentationFramework` 及关键缺失模块
 
@@ -156,7 +158,7 @@
 
 ### 当前顺序修正
 
-- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的剩余构建阻塞收敛，其中第一优先级是 `WindowsBase` 双来源引用问题，随后再处理 `WindowsBase` 引用程序集复制文件锁。
+- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的剩余构建阻塞收敛；`WindowsBase` 双来源已不再是 `PresentationCore` 当前首要错误，下一优先级调整为 `UISettingsRcw` 的 WinRT 入口缺口、`TypefaceMap` 的 DWrite 托管包装签名收敛，以及随后再处理 `WindowsBase` 引用程序集复制文件锁。
 - `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework`，但 `UIAutomationClient`、`UIAutomationClientSideProviders` 的独立构建验证先依赖 `PresentationCore` 完整化。
 - 由于 `PresentationFramework` 已经进入当前仓库目录，后续不再是“是否迁入”的问题，而是“先补哪一类构建前置”的问题；当前优先级应调整为：`PresentationCore` 的 `TextInterface` 托管包装源码缺口、`AvTrace` 代码生成目标本体、其余未恢复的构建前置。
 

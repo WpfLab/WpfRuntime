@@ -1,3 +1,13 @@
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
+  <Target Name="RemoveInboxWindowsBaseReference"
+          AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)"
+                     Condition="'%(ReferencePath.Filename)' == 'WindowsBase' and '%(ReferencePath.FrameworkReferenceName)' == 'Microsoft.NETCore.App'" />
+      <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
+                                      Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' and '%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.NETCore.App'" />
+    </ItemGroup>
+  </Target>
 </Project>

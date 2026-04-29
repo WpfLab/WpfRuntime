@@ -29,3 +29,4 @@
 2. 整个 WPF 代码仓库非常庞大，不要试图将所有文件加载到你的上下文里面，你的上下文不足以进行完全加载
 3. 对 origin/src 原始文件的迁移，应该采用拷贝文件的方式，而不是直接让 sln 对 origin/src 的引用。这是因为最终会将整个 origin/src 文件夹完全删除。拷贝文件的方式也方便进行对比
 4. 应该使用 `msbuild` 命令进行构建，而不是 `dotnet` 命令进行构建。如 `msbuild -restore`
+  - 禁止运行 `C:\Program Files\Microsoft Visual Studio\2026\Professional\MSBuild\Current\Bin\MSBuild.exe` 命令，而应该是直接的 `msbuild` 命令或 `C:\Program Files\Microsoft Visual Studio\18\Professional\MSBuild\Current\Bin\MSBuild.exe`
