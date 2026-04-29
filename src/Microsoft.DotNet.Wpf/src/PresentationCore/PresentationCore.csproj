@@ -2,7 +2,7 @@
   <!--<Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />-->
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);CORE_NATIVEMETHODS;PRESENTATION_CORE;COMMONDPS</DefineConstants>
-    <NoWarn>$(NoWarn);0618;0436;1058;1705;3001;3002;3003;3009;3024</NoWarn>
+    <NoWarn>$(NoWarn);0618;0436;1058;1705;3001;3002;3003;3009;3024;SYSLIB5005</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn)</NoWarn>
     <EnablePInvokeAnalyzer>false</EnablePInvokeAnalyzer>
@@ -1476,6 +1476,7 @@
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(SystemConfigurationConfigurationManagerPackageVersion)" />
     <PackageReference Include="System.Windows.Extensions" Version="$(SystemWindowsExtensionsPackageVersion)" />
     <PackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />
+    <PackageReference Include="System.Formats.Nrbf" Version="$(SystemFormatsNrbfVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -1556,3 +1557,5 @@
   <!-- DevDiv Bug 888747: Re-enable AvTrace codegen -->
   <!-- <Import Project="$(WpfCodeGenDir)DesignTimeTextTemplating.targets" /> -->
 </Project>
+
+

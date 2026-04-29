@@ -128,11 +128,16 @@
 8. 仓库中已经存在对原始 WPF 结构的明显映射关系，说明当前不是从零开始，而是处于“持续搬迁与校正引用”的阶段。
 9. 已从 `origin/src/src/` 批量拷贝 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录，用于先闭合上层目录结构和项目引用入口。
 10. 已验证 `PresentationFramework` 项目文件可开始进入真实构建诊断，但当前会先被缺失的循环桥接项目和 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 阻塞。
-11. 已在仓库根目录补齐首批 `cycle-breakers` 项目，至少包括 `PresentationUI-PresentationFramework-impl-cycle`、`PresentationFramework-ReachFramework-impl-cycle`、`PresentationFramework-System.Printing-api-cycle`、`PresentationFramework-PresentationUI-api-cycle`、`ReachFramework-PresentationFramework-api-cycle`、`ReachFramework-System.Printing-api-cycle`、`System.Printing-PresentationFramework-api-cycle`。
+11. 已在仓库根目录补齐首批 `cycle-breakers` 项目，至少包括 `PresentationUI-PresentationFramework-impl-cycle`、`PresentationFramework-ReachFramework-impl-cycle`、`PresentationFramework-System.Printing-api-cycle`、`PresentationFramework-System.Printing-impl-cycle`、`PresentationFramework-PresentationUI-api-cycle`、`ReachFramework-PresentationFramework-api-cycle`、`ReachFramework-System.Printing-api-cycle`、`System.Printing-PresentationFramework-api-cycle`。
 12. 已将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 改为条件导入，使其不再因目标文件缺失而在项目评估阶段直接失败。
 13. 重新验证后，`PresentationFramework` 已越过 cycle-breaker/AvTrace 层面的首批阻塞，依赖重新收敛到 `PresentationCore` 与 `DirectWriteForwarder` 的 DirectWrite 构建链。
 14. 已将 `PresentationCore.csproj` 恢复为引用仓库内 `DirectWriteForwarder.vcxproj`，不再依赖外部 `DirectWriteForwarder.dll` 文件引用。
-15. 已验证根解决方案在纳入 `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders`、`WindowsFormsIntegration` 后仍可成功构建。
+15. 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，当前 `dotnet msbuild` 的失败来自 VC++ 跟踪任务与 MSBuild 主机的兼容性问题。
+16. 已为 `PresentationCore` 补充 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制，独立构建已越过 `DirectWriteForwarder` 阶段，新的阻塞收敛到 `WindowsBase` 类型解析错误。
+17. 已将 `eng/Versions.props` 中的 `AssemblyVersion` 对齐到 `4.0.0.0`，消除 `PresentationCore` / `UIAutomation` 构建链里本地 `WindowsBase`（6.0.2.0）与 inbox `WindowsBase`（4.0.0.0）的程序集标识分裂，`PresentationCore` 不再卡在 `Rect`、`Point` 类型解析错误。
+18. 重新验证 `PresentationCore` 后，当前阻塞已从编译期类型缺失转移到 `WindowsBase` 引用程序集复制阶段的文件锁：`artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`。
+19. 已将 `PresentationFramework-System.Printing-impl-cycle.csproj` 纳入根解决方案。
+20. 已验证根解决方案在纳入 `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders`、`WindowsFormsIntegration` 后仍可成功构建。
 
 ## 当前主要缺口
 
@@ -142,9 +147,10 @@
    - `System.Windows.Presentation`
 2. 解决方案入口虽已存在，但项目纳管仍不完整，至少还有 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`System.Printing`、`PresentationUI`、`System.Windows.Controls.Ribbon` 等现存项目未纳入当前磁盘上的解决方案文件。
 3. `WindowsFormsIntegration` 当前仍直接依赖缺失的 `PresentationFramework`，说明上层托管链尚未闭合。
-4. `PresentationCore` 当前迁移并不完整，虽然 `TextInterface` 相关缺口已重新收敛到真实的 `DirectWriteForwarder` 依赖，但独立构建仍会被本地 VC++ 构建任务失败阻塞。
+4. `PresentationCore` 当前迁移并不完整；已确认 `DirectWriteForwarder` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，但 `PresentationCore` 独立构建仍未闭环。
 5. 新迁入的上层项目虽然已进入当前目录，但仍未完成构建前置补齐，当前已确认存在以下阻塞：
-   - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，但当前独立构建会被本地 VC++ 构建任务 `GetOutOfDateItems` 的 `TypeLoadException` 阻塞
+   - `dotnet msbuild` 构建 `DirectWriteForwarder` 时会在 VC++ 跟踪任务 `GetOutOfDateItems` / `FileTracker` 上触发 `TypeLoadException`，当前本地兼容入口应改为 Visual Studio 自带 `MSBuild.exe`
+   - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，并新增 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制；当前新的独立构建阻塞已收敛到 `WindowsBase` 类型解析错误（如 `Rect`、`Point`）
    - `WpfCodeGenDir` 虽已定义且 `PresentationFramework` 已改为条件导入，但 `AvTrace\GenAvMessages.targets` 本体仍未接入当前仓库
 6. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
 7. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
@@ -174,7 +180,7 @@
 
 ## 建议的当前优先级
 
-1. 先解决 `DirectWriteForwarder.vcxproj` 在当前环境下的 VC++ 构建任务失败，使 `PresentationCore` 可以走通真实依赖链独立构建。
+1. 以 Visual Studio 自带 `MSBuild.exe` 作为当前本地 native 构建入口，继续验证 `PresentationCore` 的真实源码/引用缺口。
 2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态。
 3. 继续补齐 `AvTrace` 代码生成目标来源，使 `PresentationFramework` 不仅能跳过导入失败，还能恢复预期生成链路。
 4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的独立构建状态。
@@ -185,3 +191,5 @@
    - 调整过的项目引用
    - 当前可构建状态
    - 尚未解决的阻塞点
+
+

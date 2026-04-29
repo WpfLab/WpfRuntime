@@ -21,7 +21,11 @@
 - 已将 `PresentationCore.csproj` 恢复为引用仓库内 `DirectWriteForwarder.vcxproj`，不再依赖外部 `DirectWriteForwarder.dll` 文件引用。
 - 已将 `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders`、`WindowsFormsIntegration` 纳入 `Microsoft.Dotnet.Wpf.sln`。
 - 已验证根解决方案在纳入上述项目后仍可成功构建。
-- 已重新验证 `PresentationCore` 构建，确认 `TextInterface` 依赖已回到真实的 `DirectWriteForwarder` 依赖链，当前主要阻塞变为本地 VC++ 构建任务失败。
+- 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，`dotnet msbuild` 失败点是 VC++ 跟踪任务 `GetOutOfDateItems` / `FileTracker` 的主机兼容性问题。
+- 已为 `PresentationCore.csproj` 补充 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制，独立构建已越过 DirectWriteForwarder 阶段。
+- 已将 `eng/Versions.props` 中的 `AssemblyVersion` 对齐到 `4.0.0.0`，消除本地 `WindowsBase` 与 inbox `WindowsBase` 的程序集版本分裂。
+- 已确认 `PresentationCore` 原先的 `WindowsBase` 类型解析错误（如 `Rect`、`Point`）已解除，当前新的独立构建阻塞是 `WindowsBase` 引用程序集复制阶段的文件锁（`MSB3883`，目标文件为 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`）。
+- 已从 `origin/src/cycle-breakers/` 补齐 `PresentationFramework-System.Printing-impl-cycle.csproj` 并加入 `Microsoft.Dotnet.Wpf.sln`。
 
 ## 当前已知事实
 
@@ -115,16 +119,16 @@
 1. 当前解决方案本身可以构建，但这不代表目录内未纳管项目也可独立构建。
 2. `WindowsFormsIntegration` 仍依赖尚未迁入的 `PresentationFramework`。
 3. `PresentationCore` 已纳入根解决方案，但独立构建仍未闭环。
-4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件，而是 `DirectWriteForwarder` 在本地命令行环境下会触发 VC++ 构建任务 `GetOutOfDateItems` 的 `TypeLoadException`。
+4. `PresentationCore` 当前的主要问题不再是继续寻找额外的 `TextInterface` C# 文件；`DirectWriteForwarder` 需要改用 Visual Studio 自带 `MSBuild.exe` 构建，而 `PresentationCore` 本身的新阻塞已转移到 `WindowsBase` 引用程序集复制阶段的文件锁。
 5. 本地引用路径 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 可能影响可移植性和构建重现性。
-6. 当前已补齐首批 bridge 项目，但是否还需要补更多 cycle-breaker 项目，要继续对照 `origin/src/cycle-breakers/` 与真实构建错误确认。
+6. 当前已补齐首批 bridge 项目，并额外补齐了 `PresentationFramework-System.Printing-impl-cycle`；后续仍需继续对照 `origin/src/cycle-breakers/` 与真实构建错误确认是否还有缺口。
 7. `PresentationFramework` 对 `$(WpfCodeGenDir)AvTrace\GenAvMessages.targets` 已改为条件导入，但当前仓库仍未接入该目标文件本体，因此代码生成链尚未恢复。
 8. 需要继续确认 `DirectWriteForwarder` 在 Visual Studio 内部构建与命令行构建的差异，以及是否需要调整项目配置来规避当前 VC++ 任务异常。
 
 ## 下一次对话建议起手顺序
 
-1. 先处理 `DirectWriteForwarder.vcxproj` 的本地 VC++ 构建异常，重点看 `GetOutOfDateItems` / `CanonicalTrackedOutputFiles` 的兼容性问题。
-2. 重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
+1. 先使用 Visual Studio 自带 `MSBuild.exe` 继续验证 `PresentationCore`，不要再用 `dotnet msbuild` 作为 `DirectWriteForwarder` 的本地验证入口。
+2. 继续定位 `WindowsBase` 引用程序集复制阶段的文件锁，再重新验证 `PresentationCore` 与 `PresentationFramework` 的独立构建状态。
 3. 在 `PresentationCore` 能独立构建后，再验证：
    - `UIAutomationClient`
    - `UIAutomationClientSideProviders`
@@ -144,7 +148,7 @@
 然后优先完成以下事项：
 
 - 验证 `Microsoft.Dotnet.Wpf.sln` 当前纳管项目的构建状态。
-- 先处理 `DirectWriteForwarder.vcxproj` 在当前环境下的 VC++ 构建异常。
+- 优先使用 Visual Studio 自带 `MSBuild.exe` 验证 `DirectWriteForwarder` / `PresentationCore`，不要直接用 `dotnet msbuild` 诊断 native 阶段。
 - 先打通 `PresentationCore` 的独立构建，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders`。
 - 梳理当前仓库项目与解决方案入口的对应关系，尤其是尚未纳入的 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`。
 - 将发现的阻塞点回写到 Docs 文档中。
@@ -156,3 +160,5 @@
 - 本轮验证过的构建入口
 - 当前阻塞点
 - 下一轮第一步该做什么
+
+

@@ -102,27 +102,27 @@
 - 每个失败项目都有明确阻塞记录。
 
 ### 当前阶段补充记录
+### 当前阶段补充记录
 
 - 已验证当前 `Microsoft.Dotnet.Wpf.sln` 可成功构建。
 - 已将 `UIAutomationClient`、`UIAutomationClientSideProviders`、`PresentationCore`、`WindowsFormsIntegration` 纳入磁盘上的解决方案文件。
 - 已确认 `UIAutomationClient` 的独立构建会被 `PresentationCore` 阻塞。
 - 已确认 `PresentationCore` 当前与 `origin/src/src/PresentationCore/PresentationCore.csproj` 相比仍缺失一批编译项与源码。
-- 本轮已开始按原始 `PresentationCore.csproj` 的清单补齐缺失文件，而不是直接纳管更多项目。
-- 本轮已批量迁入 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录。
+- 已开始按原始 `PresentationCore.csproj` 的清单补齐缺失文件，而不是直接纳管更多项目。
+- 已批量迁入 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`PresentationUI`、`System.Printing`、`System.Windows.Controls.Ribbon`、`Extensions` 到当前重组目录。
 - 已验证 `PresentationFramework` 可进入构建诊断，但当前首先被缺失的 cycle-breaker 项目与 `AvTrace\GenAvMessages.targets` 阻塞。
-- 本轮已在仓库根目录补齐首批 `cycle-breakers` 项目，并新增 `WpfCycleBreakersDir` 属性指向该目录。
-- 本轮已新增 `WpfCodeGenDir` 属性，并将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 调整为条件导入。
+- 已在仓库根目录补齐首批 `cycle-breakers` 项目，并新增 `WpfCycleBreakersDir` 属性指向该目录。
+- 已新增 `WpfCodeGenDir` 属性，并将 `PresentationFramework.csproj` 中的 `GenAvMessages.targets` 调整为条件导入。
 - 重新验证后，`PresentationFramework` 已越过 cycle-breaker 与 `GenAvMessages.targets` 的首批阻塞，依赖重新收敛到 `PresentationCore` 与 `DirectWriteForwarder` 的真实构建链。
 - 已将 `PresentationCore.csproj` 从外部 `DirectWriteForwarder.dll` 文件引用改回仓库内 `DirectWriteForwarder.vcxproj` 项目引用。
 - 已验证根解决方案在纳入新增项目后仍可成功构建。
-
-### 风险
+- 已确认 `DirectWriteForwarder.vcxproj` 在 Visual Studio 自带 `MSBuild.exe` 下可以成功构建，`dotnet msbuild` 的阻塞来自 VC++ 跟踪任务与当前 MSBuild 主机的不兼容。
+- 已为 `PresentationCore` 补上 `System.Formats.Nrbf` 包引用与 `SYSLIB5005` 抑制，并通过将本地 WPF 程序集 `AssemblyVersion` 对齐到 `4.0.0.0` 消除了 `WindowsBase` 类型解析错误；当前新的独立构建阻塞已转移到 `WindowsBase` 引用程序集复制阶段的文件锁。
 
 - 共享源码和生成代码路径可能仍依赖原始仓库布局。
 - 本地引用路径可能使构建无法脱离个人机器环境。
-- `DirectWriteForwarder` 当前在命令行环境下会触发 VC++ 构建任务 `GetOutOfDateItems` 的 `TypeLoadException`，可能影响 `PresentationCore` 的独立构建验证。
-
----
+- `dotnet msbuild` 当前仍会在 `DirectWriteForwarder` 上触发 VC++ 跟踪任务兼容性异常，本地独立验证需要改用 Visual Studio 自带 `MSBuild.exe`。
+- `PresentationCore` 已越过 DirectWriteForwarder 阶段，`WindowsBase` 类型解析错误已解决；当前需要继续定位 `WindowsBase` 引用程序集复制阶段的文件锁来源。
 
 ## 阶段 3：引入 `PresentationFramework` 及关键缺失模块
 
@@ -154,7 +154,7 @@
 
 ### 当前顺序修正
 
-- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的缺失源码补齐。
+- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的剩余构建阻塞收敛，其中最新阻塞是 `WindowsBase` 引用程序集复制文件锁。
 - `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework`，但 `UIAutomationClient`、`UIAutomationClientSideProviders` 的独立构建验证先依赖 `PresentationCore` 完整化。
 - 由于 `PresentationFramework` 已经进入当前仓库目录，后续不再是“是否迁入”的问题，而是“先补哪一类构建前置”的问题；当前优先级应调整为：`PresentationCore` 的 `TextInterface` 托管包装源码缺口、`AvTrace` 代码生成目标本体、其余未恢复的构建前置。
 
@@ -168,7 +168,7 @@
 
 - `PresentationFramework` 依赖面极广，容易带出更多未迁入模块。
 - 生成资源、主题、任务项目之间可能存在隐式构建顺序要求。
-- 当前虽然已补齐首批桥接项目并解除项目评估级阻塞，但 `DirectWriteForwarder` 的本地 VC++ 构建失败仍会持续阻塞 `PresentationCore` 和上层项目的独立构建验证。
+- 当前虽然已补齐 `PresentationFramework-System.Printing-impl-cycle` 等桥接项目，但 `PresentationCore` 的托管引用收敛仍会继续影响上层项目验证顺序。
 
 ---
 
@@ -213,3 +213,5 @@
 - 当前失败点
 - 下一轮最小可执行任务
 - 若中断，下一轮先读哪些文件
+
+
