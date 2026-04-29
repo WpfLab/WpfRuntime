@@ -30,6 +30,9 @@ namespace MS.Internal.WindowsRuntime
 
             [DllImport(DllImport.ApiSetWinRT, CallingConvention = CallingConvention.StdCall)]
             internal static extern unsafe int RoGetActivationFactory(IntPtr runtimeClassId, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out object factory);
+
+            [DllImport(DllImport.ApiSetWinRT, CallingConvention = CallingConvention.StdCall)]
+            internal static extern unsafe int RoActivateInstance(IntPtr runtimeClassId, [MarshalAs(UnmanagedType.Interface)] out object instance);
         
             internal const int E_NOINTERFACE = unchecked((int)0x80004002);
 
