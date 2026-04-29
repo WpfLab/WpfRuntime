@@ -150,7 +150,8 @@
 ### 当前已验证状态
 
 - `ReachFramework-ref` 与 `System.Printing-ref` 可独立构建，但仍有 cycle-breaker 相关的同名类型警告。
-- `ReachFramework` 在补齐上游结构后仍未构建通过，当前稳定错误集中在 `ReachFramework-ref` 对 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 `PresentationFramework` API 的解析，以及将这些 API 放入 `ReachFramework` bridge 后引发的同名类型重复暴露。
+- `ReachFramework-ref` 对 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 API 的解析已由 `PresentationFramework-System.Printing-api-cycle` 补齐。
+- `ReachFramework` 在补齐上游结构后仍未构建通过，当前稳定错误集中在实现项目中 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时出现的类型身份不一致：`PrintTicket`、`XpsDocument`、`SerializerWriter` 可能分别来自 `ReachFramework` 实现、`ReachFramework-PresentationFramework-api-cycle`、`System.Printing-ref` 或 `PresentationFramework` bridge。
 - `PresentationFramework` 已抑制实现项目中的 `WPF0001`，后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` 三方 cycle-breaker 的 API 边界。
 
 ### 完成标准

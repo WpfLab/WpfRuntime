@@ -20,8 +20,10 @@
     <Compile Include="System.Windows.Controls.PageRange.cs" />
     <Compile Include="System.Windows.Controls.PageRangeSelection.cs" />
     <Compile Include="System.Windows.Documents.Serialization.Delegates.cs" />
+    <Compile Include="System.Windows.Documents.Serialization.ISerializerFactory.cs" />
     <Compile Include="System.Windows.Documents.Serialization.SerializerWriter.cs" />
     <Compile Include="System.Windows.Documents.Serialization.SerializerWriterCollator.cs" />
+    <Compile Include="System.Windows.Xps.XpsDocumentWriter.cs" />
   </ItemGroup>
 
   <ItemGroup>

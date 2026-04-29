@@ -8,6 +8,7 @@
     <Platforms>AnyCPU;x64;arm64</Platforms>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     <NoWarn>$(NoWarn);0169</NoWarn>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -51,6 +52,6 @@
 
   <ItemGroup>
     <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-PresentationFramework-api-cycle.csproj" />
-    <ProjectReference Include="$(WpfCycleBreakersDir)System.Printing\System.Printing-PresentationFramework-api-cycle.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
   </ItemGroup>
 </Project>

@@ -98,6 +98,7 @@
 2. `UIAutomationClientSideProviders` 下游 `CS0006` 没有复现；`UIAutomationClient` 独立构建可通过。
 3. 后续重点应放在 `ReachFramework` / `PresentationFramework` 主链，而不是继续排查已恢复的 `UIAutomationClient` 问题。
 4. 当前主链阻塞集中在 cycle-breaker API 边界：`ReachFramework-ref` 需要 `XpsDocumentWriter` / `ISerializerFactory` 等 `PresentationFramework` API，但将相关类型放入 `ReachFramework` bridge 后又会引发与 `PresentationFramework` / `System.Printing` 的同名类型冲突。
+5. `ReachFramework-ref` 已通过 `PresentationFramework-System.Printing-api-cycle` 补齐 `XpsDocumentWriter` / `ISerializerFactory` 并可独立构建；`ReachFramework` 实现项目仍失败，首个真实阻塞是 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
 
 ## 建议起手顺序
 
@@ -111,15 +112,14 @@
    - `Directory.Build.targets`
 2. 先用上述 `msbuild` 命令确认解决方案基线仍可构建。
 3. 继续处理：
-   - `ReachFramework-ref`
-   - `System.Printing-ref`
    - `ReachFramework`
+   - `System.Printing-ref`
    - `PresentationFramework`
    - `WindowsFormsIntegration`
-4. 排查 `ReachFramework-ref` 时重点检查：
+4. 排查 `ReachFramework` 时重点检查：
    - `PresentationFramework-ReachFramework-impl-cycle` 与 `PresentationFramework-System.Printing-api-cycle` 的同名 `PresentationFramework.dll` 引用是否被 MSBuild 去重。
-   - `XpsDocumentWriter` / `ISerializerFactory` 应由哪个 cycle-breaker 暴露给 `ReachFramework-ref`，且不能污染 `ReachFramework` 自身 ref 输出。
-   - `PrintTicket`、`PrintTicketLevel`、`FixedDocumentSequence`、`SerializerWriter` 是否同时从多个同名程序集暴露。
+   - `XpsDocumentWriter` / `ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露给 `ReachFramework-ref`，但实现项目不应同时引用会造成 `XpsDocumentWriter` 或 `PrintTicket` 重复暴露的 bridge 输出。
+   - `PrintTicket`、`PrintTicketLevel`、`FixedDocumentSequence`、`SerializerWriter`、`XpsDocument` 是否同时从多个同名程序集暴露。
 5. 只有在上层主链重新进入稳定状态后，再继续补缺失顶层模块：
    - `PenImc`
    - `System.Windows.Presentation`
