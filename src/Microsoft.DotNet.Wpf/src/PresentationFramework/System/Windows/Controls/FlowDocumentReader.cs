@@ -1890,7 +1890,7 @@ namespace System.Windows.Controls
         /// </summary>
         private FindToolBar FindToolBar
         {
-            get { return (_findToolBarHost != null) ? _findToolBarHost.Child as FindToolBar : null; }
+            get { return (_findToolBarHost != null) ? (FindToolBar)(dynamic)_findToolBarHost.Child : null; }
         }
 
         /// <summary>

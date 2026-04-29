@@ -151,8 +151,9 @@
 
 - `ReachFramework-ref` 与 `System.Printing-ref` 可独立构建，但仍有 cycle-breaker 相关的同名类型警告。
 - `ReachFramework-ref` 对 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 API 的解析已由 `PresentationFramework-System.Printing-api-cycle` 补齐。
-- `ReachFramework` 在补齐上游结构后仍未构建通过，当前稳定错误集中在实现项目中 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时出现的类型身份不一致：`PrintTicket`、`XpsDocument`、`SerializerWriter` 可能分别来自 `ReachFramework` 实现、`ReachFramework-PresentationFramework-api-cycle`、`System.Printing-ref` 或 `PresentationFramework` bridge。
-- `PresentationFramework` 已抑制实现项目中的 `WPF0001`，后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` 三方 cycle-breaker 的 API 边界。
+- `ReachFramework` 实现项目已可独立构建。当前采用动态调用边界绕开 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
+- `PresentationFramework` 已抑制实现项目中的 `WPF0001`，并已可独立构建。当前采用动态调用边界绕开打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
+- 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界。
 
 ### 完成标准
 

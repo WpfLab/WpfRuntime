@@ -1070,7 +1070,7 @@ namespace System.Windows.Xps.Packaging
             XpsDocument xpsDocument
             )
         {
-            XpsDocumentWriter   writer  = new XpsDocumentWriter(xpsDocument);
+            XpsDocumentWriter   writer  = (XpsDocumentWriter)Activator.CreateInstance(typeof(XpsDocumentWriter), nonPublic: true);
 
             return writer;
         }

@@ -72,7 +72,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.Write(visual, printTicket);
+            _xpsDocumentWriter.Write(visual, (dynamic)printTicket);
 
             FinalizeWriter();
         }
@@ -104,7 +104,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(visual, printTicket);
+            _xpsDocumentWriter.WriteAsync(visual, (dynamic)printTicket);
         }
         
         /// <summary>
@@ -114,7 +114,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(visual, printTicket, userState);
+            _xpsDocumentWriter.WriteAsync(visual, (dynamic)printTicket, userState);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.Write(paginator, printTicket);
+            _xpsDocumentWriter.Write(paginator, (dynamic)printTicket);
 
             FinalizeWriter();
         }
@@ -158,7 +158,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(paginator, printTicket);
+            _xpsDocumentWriter.WriteAsync(paginator, (dynamic)printTicket);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(paginator, printTicket, userState);
+            _xpsDocumentWriter.WriteAsync(paginator, (dynamic)printTicket, userState);
         }
 
         /// <summary>
@@ -200,7 +200,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.Write(fixedPage, printTicket);
+            _xpsDocumentWriter.Write(fixedPage, (dynamic)printTicket);
 
             FinalizeWriter();
         }
@@ -222,7 +222,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(fixedPage, printTicket);
+            _xpsDocumentWriter.WriteAsync(fixedPage, (dynamic)printTicket);
         }
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(fixedPage, printTicket, Async);
+            _xpsDocumentWriter.WriteAsync(fixedPage, (dynamic)printTicket, Async);
         }
 
         /// <summary>
@@ -264,7 +264,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.Write(fixedDocument, printTicket);
+            _xpsDocumentWriter.Write(fixedDocument, (dynamic)printTicket);
 
             FinalizeWriter();
         }
@@ -286,7 +286,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(fixedDocument, printTicket);
+            _xpsDocumentWriter.WriteAsync(fixedDocument, (dynamic)printTicket);
         }
 
         /// <summary>
@@ -306,7 +306,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(fixedDocument, printTicket, userState);
+            _xpsDocumentWriter.WriteAsync(fixedDocument, (dynamic)printTicket, userState);
         }
 
         /// <summary>
@@ -328,7 +328,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.Write(fixedDocumentSequence, printTicket);
+            _xpsDocumentWriter.Write((dynamic)fixedDocumentSequence, (dynamic)printTicket);
 
             FinalizeWriter();
         }
@@ -350,7 +350,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(fixedDocumentSequence, printTicket);
+            _xpsDocumentWriter.WriteAsync((dynamic)fixedDocumentSequence, (dynamic)printTicket);
         }
 
         /// <summary>
@@ -370,7 +370,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            _xpsDocumentWriter.WriteAsync(fixedDocumentSequence, printTicket, userState);
+            _xpsDocumentWriter.WriteAsync((dynamic)fixedDocumentSequence, (dynamic)printTicket, userState);
         }
 
         /// <summary>
@@ -407,7 +407,7 @@ namespace System.Windows.Xps.Serialization
         {
             CheckDisposed();
 
-            SerializerWriterCollator collator = _xpsDocumentWriter.CreateVisualsCollator(documentSequencePT, documentPT);
+            SerializerWriterCollator collator = _xpsDocumentWriter.CreateVisualsCollator((dynamic)documentSequencePT, (dynamic)documentPT);
     
             // swc will close these
             _xpsDocument = null;

@@ -2166,7 +2166,7 @@ namespace System.Windows.Controls
                 // Now insert the toolbar, if it isn't already parented elsewhere.
                 // (It will have been disconnected from DocumentViewer on a Theme or
                 // Template change.)
-                if (!_findToolbar.IsAncestorOf(this))
+                if (!((dynamic)_findToolbar).IsAncestorOf(this))
                 {
                     ((IAddChild)findHost).AddChild(_findToolbar);
                 }

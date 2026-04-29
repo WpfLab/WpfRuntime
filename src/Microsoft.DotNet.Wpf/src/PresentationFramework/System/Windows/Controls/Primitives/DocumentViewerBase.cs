@@ -570,7 +570,7 @@ namespace System.Windows.Controls.Primitives
         protected virtual void OnPrintCommand()
         {
 #if !DONOTREFPRINTINGASMMETA
-            System.Windows.Xps.XpsDocumentWriter docWriter;
+            dynamic docWriter;
             System.Printing.PrintDocumentImageableArea ia = null;
 
             // Only one printing job is allowed.
@@ -587,8 +587,8 @@ namespace System.Windows.Controls.Primitives
                 {
                     // Register for WritingCompleted event.
                     _documentWriter = docWriter;
-                    _documentWriter.WritingCompleted += new WritingCompletedEventHandler(HandlePrintCompleted);
-                    _documentWriter.WritingCancelled += new WritingCancelledEventHandler(HandlePrintCancelled);
+                    _documentWriter.WritingCompleted += new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                    _documentWriter.WritingCancelled += new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
 
                     // Since _documentWriter value is used to determine CanExecute state, we must invalidate that state.
                     CommandManager.InvalidateRequerySuggested();
@@ -1435,8 +1435,8 @@ namespace System.Windows.Controls.Primitives
 #if !DONOTREFPRINTINGASMMETA
             if (_documentWriter != null)
             {
-                _documentWriter.WritingCompleted -= new WritingCompletedEventHandler(HandlePrintCompleted);
-                _documentWriter.WritingCancelled -= new WritingCancelledEventHandler(HandlePrintCancelled);
+                _documentWriter.WritingCompleted -= new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                _documentWriter.WritingCancelled -= new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
                 _documentWriter = null;
 
                 // Since _documentWriter value is used to determine CanExecute state, we must invalidate that state.
@@ -1668,7 +1668,7 @@ namespace System.Windows.Controls.Primitives
         private IDocumentPaginatorSource _document;                 // IDocumentPaginatorSource representing Document.
         private Flags _flags;                                       // Flags reflecting various aspects of object's state.
 #if !DONOTREFPRINTINGASMMETA
-        private System.Windows.Xps.XpsDocumentWriter _documentWriter;                  // DocumentWriter used for printing.
+        private dynamic _documentWriter;                  // DocumentWriter used for printing.
 #endif // DONOTREFPRINTINGASMMETA
 
         private static bool IsEditingEnabled = false;               // A flag enabling text editing within a document viewer

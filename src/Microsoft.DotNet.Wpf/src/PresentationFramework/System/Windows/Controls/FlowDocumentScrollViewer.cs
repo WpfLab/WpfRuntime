@@ -533,7 +533,7 @@ namespace System.Windows.Controls
         protected virtual void OnPrintCommand()
         {
 #if !DONOTREFPRINTINGASMMETA
-            System.Windows.Xps.XpsDocumentWriter docWriter;
+            dynamic docWriter;
             System.Printing.PrintDocumentImageableArea ia = null;
             FlowDocumentPaginator paginator;
             Thickness pagePadding;
@@ -570,8 +570,8 @@ namespace System.Windows.Controls
                     CommandManager.InvalidateRequerySuggested();
 
                     // Register for XpsDocumentWriter events.
-                    docWriter.WritingCompleted += new WritingCompletedEventHandler(HandlePrintCompleted);
-                    docWriter.WritingCancelled += new WritingCancelledEventHandler(HandlePrintCancelled);
+                    docWriter.WritingCompleted += new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                    docWriter.WritingCancelled += new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
 
                     // Add PreviewCanExecute handler to have a chance to disable UI Commands during printing.
                     if (_contentHost != null)
@@ -1072,8 +1072,8 @@ namespace System.Windows.Controls
                 }
 
                 // Unregister for XpsDocumentWriter events.
-                _printingState.XpsDocumentWriter.WritingCompleted -= new WritingCompletedEventHandler(HandlePrintCompleted);
-                _printingState.XpsDocumentWriter.WritingCancelled -= new WritingCancelledEventHandler(HandlePrintCancelled);
+                _printingState.XpsDocumentWriter.WritingCompleted -= new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                _printingState.XpsDocumentWriter.WritingCancelled -= new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
 
                 // Restore old page metrics on FlowDocument.
                 Document.PagePadding = _printingState.PagePadding;
@@ -1792,7 +1792,7 @@ namespace System.Windows.Controls
         /// </summary>
         private FindToolBar FindToolBar
         {
-            get { return (_findToolBarHost != null) ? _findToolBarHost.Child as FindToolBar : null; }
+            get { return (_findToolBarHost != null) ? (FindToolBar)(dynamic)_findToolBarHost.Child : null; }
         }
 
         /// <summary>

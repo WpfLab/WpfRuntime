@@ -207,7 +207,7 @@ namespace System.Windows.Documents.Serialization
             // The XpsSerializer (our default document serializer) is defined in ReachFramework.dll
             // But callers can only get here if the above demand succeeds, so they are already fully trusted
             serializerDescriptor = SerializerDescriptor.CreateFromFactoryInstance(
-                                        new XpsSerializerFactory()
+                                        (dynamic)new XpsSerializerFactory()
                                         );
 
             return serializerDescriptor;

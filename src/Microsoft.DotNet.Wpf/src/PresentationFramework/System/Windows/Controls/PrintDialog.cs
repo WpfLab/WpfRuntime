@@ -351,7 +351,7 @@ namespace System.Windows.Controls
         {
             ArgumentNullException.ThrowIfNull(visual);
 
-            XpsDocumentWriter writer = CreateWriter(description);
+            dynamic writer = CreateWriter(description);
 
             writer.Write(visual, _printTicket);
 
@@ -380,7 +380,7 @@ namespace System.Windows.Controls
         {
             ArgumentNullException.ThrowIfNull(documentPaginator);
 
-            XpsDocumentWriter writer = CreateWriter(description);
+            dynamic writer = CreateWriter(description);
 
             writer.Write(documentPaginator, _printTicket);
 
@@ -520,14 +520,14 @@ namespace System.Windows.Controls
         }
 
         private
-        XpsDocumentWriter
+        dynamic
         CreateWriter(
             String  description
             )
         {
             PrintQueue        printQueue  = null;
             PrintTicket       printTicket = null;
-            XpsDocumentWriter writer      = null;
+            dynamic writer      = null;
 
             PickCorrectPrintingEnvironment(ref printQueue, ref printTicket);
 
@@ -541,7 +541,7 @@ namespace System.Windows.Controls
             PrintDlgPrintTicketEventHandler eventHandler = new PrintDlgPrintTicketEventHandler(printTicket);
 
             writer.WritingPrintTicketRequired +=
-            new WritingPrintTicketRequiredEventHandler(eventHandler.SetPrintTicket);
+            new System.Windows.Documents.Serialization.WritingPrintTicketRequiredEventHandler(eventHandler.SetPrintTicket);
 
             return writer;
         }

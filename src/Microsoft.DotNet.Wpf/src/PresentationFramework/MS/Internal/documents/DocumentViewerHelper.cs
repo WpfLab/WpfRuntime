@@ -45,13 +45,13 @@ namespace MS.Internal.Documents
             {
                 // Create FindToolBar and attach it to the host.
                 FindToolBar findToolBar = new FindToolBar();
-                findToolBarHost.Child = findToolBar;
+                findToolBarHost.Child = (UIElement)(dynamic)findToolBar;
                 findToolBarHost.Visibility = Visibility.Visible;
                 KeyboardNavigation.SetTabNavigation(findToolBarHost, KeyboardNavigationMode.Continue);
                 FocusManager.SetIsFocusScope(findToolBarHost, true);
 
                 // Initialize FindToolBar
-                findToolBar.SetResourceReference(Control.StyleProperty, FindToolBarStyleKey);
+                ((dynamic)findToolBar).SetResourceReference(Control.StyleProperty, FindToolBarStyleKey);
                 findToolBar.FindClicked += handlerFindClicked;
                 findToolBar.DocumentLoaded = true;
                 findToolBar.GoToTextBox();
@@ -59,7 +59,7 @@ namespace MS.Internal.Documents
             else
             {
                 // Reset FindToolBar state to its initial state.
-                FindToolBar findToolBar = findToolBarHost.Child as FindToolBar;
+                FindToolBar findToolBar = (FindToolBar)(dynamic)findToolBarHost.Child;
                 findToolBar.FindClicked -= handlerFindClicked;
                 findToolBar.DocumentLoaded = false;
 
@@ -282,7 +282,7 @@ namespace MS.Internal.Documents
                         SR.DocumentViewerSearchDownCompleteLabel;
             messageString = String.Format(System.Globalization.CultureInfo.CurrentCulture, messageString, findToolBar.SearchText);
 
-            HwndSource hwndSource = PresentationSource.CriticalFromVisual(findToolBar) as HwndSource;
+            HwndSource hwndSource = PresentationSource.CriticalFromVisual((DependencyObject)(dynamic)findToolBar) as HwndSource;
             IntPtr hwnd = (hwndSource != null) ? hwndSource.CriticalHandle : IntPtr.Zero;
 
             PresentationFramework.SecurityHelper.ShowMessageBoxHelper(
@@ -485,7 +485,7 @@ namespace MS.Internal.Documents
     internal class FlowDocumentPrintingState
     {
 #if !DONOTREFPRINTINGASMMETA
-        internal System.Windows.Xps.XpsDocumentWriter XpsDocumentWriter;
+        internal dynamic XpsDocumentWriter;
 #endif //DONOTREFPRINTINGASMMETA
         internal Size PageSize;
         internal Thickness PagePadding;

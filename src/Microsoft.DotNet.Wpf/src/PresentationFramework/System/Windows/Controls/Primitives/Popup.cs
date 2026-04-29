@@ -3465,7 +3465,7 @@ namespace System.Windows.Controls.Primitives
                         IntPtr lResult = AutomationInteropProvider.ReturnRawElementProvider(Handle, IntPtr.Zero, new IntPtr(NativeMethods.OBJID_CLIENT), RootProviderForHwnd);
                         if (lResult != IntPtr.Zero)
                         {
-                            IAccessible acc = null;
+                            Accessibility.IAccessible acc = null;
                             int hr = NativeMethods.S_FALSE;
                             Guid iid = new Guid(MS.Internal.AppModel.IID.Accessible);
                             hr = UnsafeNativeMethods.ObjectFromLresult(lResult, ref iid, IntPtr.Zero, ref acc);

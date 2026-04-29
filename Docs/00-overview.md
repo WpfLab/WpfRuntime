@@ -164,11 +164,21 @@
 
 此前 `UIAutomationClientSideProviders` 缺失 `UIAutomationClient` 参考程序集的问题没有复现。`UIAutomationClient` 独立构建可产出实现程序集和 ref 相关输出；解决方案入口在清理后重建也可通过。
 
+`ReachFramework` 实现项目已越过 `XpsSerializerWriter` / `XpsDocumentWriter` 调用链中的 `PrintTicket` 与 `XpsDocument` 类型身份不一致阻塞，并可独立构建：
+
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\ReachFramework\ReachFramework.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- 结果：构建成功。
+
+`PresentationFramework` 实现项目已进入可独立构建状态：
+
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\PresentationFramework\PresentationFramework.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- 结果：构建成功。
+
 ### 当前可直接确认的含义
 
 1. 当前已纳入解决方案的项目恢复到可构建基线。
 2. 构建仍存在多项警告，包括 `WindowsBase` 4.0.0.0 与 6.0.2.0 引用冲突警告，以及 `System.Formats.Nrbf` 从 8.0.0 解析到 9.0.0 的 NuGet 警告。
-3. `ReachFramework-ref` 与 `System.Printing-ref` 可独立构建，但 `ReachFramework` / `PresentationFramework` 主链仍存在 cycle-breaker 与同名程序集 API 暴露问题。
+3. `ReachFramework-ref`、`System.Printing-ref`、`ReachFramework` 与 `PresentationFramework` 已可独立构建，但主链仍存在 cycle-breaker 与同名程序集 API 暴露警告，后续纳入解决方案前仍需继续收敛边界。
 
 ## 当前主要缺口
 
@@ -185,18 +195,19 @@
    - `PenImc`
    - `System.Windows.Presentation`
    - `WpfGfx`
-4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但当前真实阻塞集中在 `ReachFramework-ref` / `ReachFramework` / `PresentationFramework` 与 cycle-breaker 的同名 API 暴露上：
+4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但 cycle-breaker 的同名 API 暴露仍需要继续收敛：
    - `ReachFramework-ref` 所需的 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露，参考程序集项目可独立构建。
-   - `ReachFramework` 实现项目仍未通过，当前错误集中在 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时，`System.Printing.PrintTicket`、`XpsDocument`、`SerializerWriter` 等类型分别来自 `ReachFramework` 实现、`ReachFramework-PresentationFramework-api-cycle`、`System.Printing-ref` 或 `PresentationFramework` bridge，导致参数类型身份不一致。
-   - `AvTrace` 代码生成目标仍需在 `PresentationFramework` 主项目继续验证。
+   - `ReachFramework` 实现项目已通过动态调用边界越过 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
+   - `PresentationFramework` 实现项目已通过动态调用边界越过打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
+   - `AvTrace` 代码生成目标在 `PresentationFramework` 主项目独立构建中未形成当前阻塞。
 5. 当前仓库仍保留个人机器本地引用路径，影响可移植性与构建复现性。
 
 ## 建议的当前优先级
 
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
-2. 继续收敛 `ReachFramework` 实现项目的 cycle-breaker 引用，优先解决 `XpsSerializerWriter` / `XpsDocumentWriter` 调用链中的 `PrintTicket` 与 `XpsDocument` 类型身份不一致。
-3. 再重新验证 `PresentationFramework` 的真实阻塞点。
-4. 在 `PresentationFramework` 链路稳定后，再评估 `WindowsFormsIntegration` 的重新纳管与构建状态。
+2. 继续收敛 `ReachFramework` / `PresentationFramework` 的动态边界，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用。
+3. 评估 `ReachFramework` 与 `PresentationFramework` 是否具备加入 `Microsoft.Dotnet.Wpf.sln` 的条件，并确认不会破坏现有解决方案基线。
+4. 在 `PresentationFramework` 链路稳定后，评估 `WindowsFormsIntegration` 的重新纳管与构建状态。
 5. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
 
 ## 当前执行约束
