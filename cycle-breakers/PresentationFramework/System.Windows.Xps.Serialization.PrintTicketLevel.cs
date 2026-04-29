@@ -5,14 +5,13 @@
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
 
-namespace System.Windows.Documents
+namespace System.Windows.Xps.Serialization
 {
-    using System.Collections.Generic;
-
-    public partial class FixedDocumentSequence : IDocumentPaginatorSource
+    public enum PrintTicketLevel
     {
-        public IEnumerable<DocumentReference> References => throw null;
-
-        public DocumentPaginator DocumentPaginator => throw null;
+        None = 0,
+        FixedDocumentSequencePrintTicket = 1,
+        FixedDocumentPrintTicket = 2,
+        FixedPagePrintTicket = 3,
     }
 }

@@ -11,8 +11,6 @@ using System.Windows;                  // for Rect                        Window
 using System.Windows.Media;            // for Geometry, Brush, BitmapSource. PresentationCore.dll
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;           // for Glyphs
-
 using System.Globalization;
 using System.Text;
 using System.Collections.Generic;

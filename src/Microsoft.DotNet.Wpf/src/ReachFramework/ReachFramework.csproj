@@ -284,6 +284,8 @@
     <Compile Include="PrintConfig\PhotoPrintingIntent.cs" />
     <Compile Include="PrintConfig\JobInputBins.cs" />
     <Compile Include="PrintConfig\ParameterRefs.cs" />
+    <Compile Include="PrintConfig\LegacyDevice.cs" />
+    <Compile Include="PrintConfig\PrintQueueBridge.cs" />
     <Compile Include="PrintConfig\PrintCapabilitesWriter.cs" />
     <Compile Include="PrintConfig\PrintSchema.cs" />
     <Compile Include="PrintConfig\PrintSchemaShim.cs" />
@@ -325,6 +327,7 @@
     <Compile Include="MS\Internal\Printing\Configuration\DevModeTrueTypeOption.cs" />
     <Compile Include="MS\Internal\Printing\Configuration\DevMode.cs" />
     <Compile Include="MS\Internal\Printing\Configuration\SafeWinSpoolPrinterHandle.cs" />
+    <Compile Include="MS\Internal\Printing\Configuration\SafeMemoryHandle.cs" />
     <Compile Include="MS\Internal\Printing\Configuration\UnsafeNativeMethods.cs" />
     <Compile Include="MS\Internal\Printing\Configuration\COMPSTUISRID.cs" />
     <Compile Include="MS\Internal\Printing\Configuration\DocumentPropertiesFlags.cs" />
@@ -375,14 +378,10 @@
     </ProjectReference>
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)ReachFramework\ref\ReachFramework-ref.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-ReachFramework-impl-cycle.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
   </ItemGroup>
 
   <ItemGroup>

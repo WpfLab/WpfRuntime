@@ -19,8 +19,6 @@ using System.Windows.Xps.Packaging;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Markup;
-using System.Windows.Shapes;
-
 namespace System.Windows.Xps.Serialization
 {
     /// <summary>

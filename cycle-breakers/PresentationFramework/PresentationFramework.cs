@@ -22,7 +22,47 @@ namespace Microsoft.Win32
 
 namespace System.Windows
 {
+    public class FrameworkElement : UIElement
+    {
+        public string Name { get; set; }
+
+        public object TemplatedParent { get; set; }
+
+        public ResourceDictionary Resources { get { throw null; } }
+    }
+
+    public class FrameworkContentElement : ContentElement
+    {
+        public static readonly DependencyProperty LanguageProperty;
+
+        public string Name { get; set; }
+    }
+
     public class Window
+    {
+    }
+
+    public class ResourceDictionary : System.Collections.Hashtable
+    {
+    }
+
+    public static class LogicalTreeHelper
+    {
+        public static System.Collections.IEnumerable GetChildren(DependencyObject current) { throw null; }
+    }
+}
+
+namespace System.Windows.Controls
+{
+    public class UIElementCollection : System.Collections.CollectionBase
+    {
+    }
+}
+
+
+namespace System.Windows.Controls
+{
+    public class Control : System.Windows.FrameworkElement
     {
     }
 }

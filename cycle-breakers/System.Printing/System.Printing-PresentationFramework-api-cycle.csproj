@@ -21,4 +21,9 @@
     <NetCoreReference Include="System.Runtime.InteropServices" />
     <NetCoreReference Include="System.Resources.ResourceManager" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
+  </ItemGroup>
 </Project>

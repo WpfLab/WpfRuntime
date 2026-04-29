@@ -7,7 +7,16 @@
 
 namespace System.Windows.Documents
 {
-    public sealed partial class FixedDocument
+    using System.Collections.Generic;
+
+    public sealed partial class FixedDocument : IDocumentPaginatorSource
     {
+        public System.Windows.Threading.Dispatcher Dispatcher { get { throw null; } }
+
+        public bool IsInitialized { get { throw null; } }
+
+        public IEnumerable<PageContent> Pages => throw null;
+
+        public DocumentPaginator DocumentPaginator => throw null;
     }
 }

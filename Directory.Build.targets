@@ -8,13 +8,13 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="RemoveInboxWindowsBaseReference"
+  <Target Name="RemoveInboxWpfReference"
           AfterTargets="ResolveReferences">
     <ItemGroup>
       <ReferencePath Remove="@(ReferencePath)"
-                     Condition="'%(ReferencePath.Filename)' == 'WindowsBase' and '%(ReferencePath.FrameworkReferenceName)' == 'Microsoft.NETCore.App'" />
+                     Condition="('%(ReferencePath.Filename)' == 'WindowsBase' or '%(ReferencePath.Filename)' == 'PresentationCore' or '%(ReferencePath.Filename)' == 'PresentationFramework' or '%(ReferencePath.Filename)' == 'ReachFramework' or '%(ReferencePath.Filename)' == 'System.Printing') and ('%(ReferencePath.FrameworkReferenceName)' == 'Microsoft.NETCore.App' or '%(ReferencePath.FrameworkReferenceName)' == 'Microsoft.WindowsDesktop.App')" />
       <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
-                                      Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' and '%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.NETCore.App'" />
+                                      Condition="('%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing') and ('%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.NETCore.App' or '%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.WindowsDesktop.App')" />
     </ItemGroup>
   </Target>
 </Project>

@@ -68,7 +68,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Write a single Visual and close stream
         /// </summary>
-        public override void Write(Visual visual, PrintTicket printTicket)
+        public void Write(Visual visual, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -90,7 +90,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single Visual and close stream
         /// </summary>
-        public override void WriteAsync(Visual visual, PrintTicket printTicket)
+        public override void WriteAsync(Visual visual, object userState)
         {
             CheckDisposed();
 
@@ -100,7 +100,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single Visual and close stream
         /// </summary>
-        public override void WriteAsync(Visual visual, object userState)
+        public void WriteAsync(Visual visual, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -110,7 +110,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single Visual and close stream
         /// </summary>
-        public override void WriteAsync(Visual visual, PrintTicket printTicket, object userState)
+        public void WriteAsync(Visual visual, PrintTicket printTicket, object userState)
         {
             CheckDisposed();
 
@@ -132,7 +132,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Write a single DocumentPaginator and close stream
         /// </summary>
-        public override void Write(DocumentPaginator paginator, PrintTicket printTicket)
+        public void Write(DocumentPaginator paginator, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -154,7 +154,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single DocumentPaginator and close stream
         /// </summary>
-        public override void WriteAsync(DocumentPaginator paginator, PrintTicket printTicket)
+        public void WriteAsync(DocumentPaginator paginator, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -174,7 +174,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single DocumentPaginator and close stream
         /// </summary>
-        public override void WriteAsync(DocumentPaginator paginator, PrintTicket printTicket, object userState)
+        public void WriteAsync(DocumentPaginator paginator, PrintTicket printTicket, object userState)
         {
             CheckDisposed();
 
@@ -196,7 +196,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Write a single FixedPage and close stream
         /// </summary>
-        public override void Write(FixedPage fixedPage, PrintTicket printTicket)
+        public void Write(FixedPage fixedPage, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -218,7 +218,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single FixedPage and close stream
         /// </summary>
-        public override void WriteAsync(FixedPage fixedPage, PrintTicket printTicket)
+        public void WriteAsync(FixedPage fixedPage, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -238,7 +238,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single FixedPage and close stream
         /// </summary>
-        public override void WriteAsync(FixedPage fixedPage, PrintTicket printTicket, object Async)
+        public void WriteAsync(FixedPage fixedPage, PrintTicket printTicket, object Async)
         {
             CheckDisposed();
 
@@ -260,7 +260,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Write a single FixedDocument and close stream
         /// </summary>
-        public override void Write(FixedDocument fixedDocument, PrintTicket printTicket)
+        public void Write(FixedDocument fixedDocument, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -282,7 +282,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single FixedDocument and close stream
         /// </summary>
-        public override void WriteAsync(FixedDocument fixedDocument, PrintTicket printTicket)
+        public void WriteAsync(FixedDocument fixedDocument, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -302,7 +302,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single FixedDocument and close stream
         /// </summary>
-        public override void WriteAsync(FixedDocument fixedDocument, PrintTicket printTicket, object userState)
+        public void WriteAsync(FixedDocument fixedDocument, PrintTicket printTicket, object userState)
         {
             CheckDisposed();
 
@@ -324,7 +324,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Write a single FixedDocumentSequence and close stream
         /// </summary>
-        public override void Write(FixedDocumentSequence fixedDocumentSequence, PrintTicket printTicket)
+        public void Write(FixedDocumentSequence fixedDocumentSequence, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -346,7 +346,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single FixedDocumentSequence and close stream
         /// </summary>
-        public override void WriteAsync(FixedDocumentSequence fixedDocumentSequence, PrintTicket printTicket)
+        public void WriteAsync(FixedDocumentSequence fixedDocumentSequence, PrintTicket printTicket)
         {
             CheckDisposed();
 
@@ -366,7 +366,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Async Write a single FixedDocumentSequence and close stream
         /// </summary>
-        public override void WriteAsync(FixedDocumentSequence fixedDocumentSequence, PrintTicket printTicket, object userState)
+        public void WriteAsync(FixedDocumentSequence fixedDocumentSequence, PrintTicket printTicket, object userState)
         {
             CheckDisposed();
 
@@ -403,7 +403,7 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Create a SerializerWriterCollator to gobble up multiple Visuals
         /// </summary>
-        public override SerializerWriterCollator CreateVisualsCollator(PrintTicket documentSequencePT, PrintTicket documentPT)
+        public SerializerWriterCollator CreateVisualsCollator(PrintTicket documentSequencePT, PrintTicket documentPT)
         {
             CheckDisposed();
 
