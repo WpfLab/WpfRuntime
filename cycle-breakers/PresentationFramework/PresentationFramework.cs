@@ -19,3 +19,10 @@ namespace Microsoft.Win32
         public System.Nullable<bool> ShowDialog(System.Windows.Window owner) { throw null; }
     }
 }
+
+namespace System.Windows
+{
+    public class Window
+    {
+    }
+}

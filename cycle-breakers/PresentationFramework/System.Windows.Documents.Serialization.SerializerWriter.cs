@@ -7,6 +7,15 @@
 
 namespace System.Windows.Documents.Serialization
 {
+    public interface ISerializerFactory
+    {
+        string DefaultFileExtension { get; }
+        string DisplayName { get; }
+        string ManufacturerName { get; }
+        System.Uri ManufacturerWebsite { get; }
+        System.Windows.Documents.Serialization.SerializerWriter CreateSerializerWriter(System.IO.Stream stream);
+    }
+
     public abstract partial class SerializerWriter
     {
         protected SerializerWriter() { }
@@ -47,5 +56,12 @@ namespace System.Windows.Documents.Serialization
         public abstract void WriteAsync(System.Windows.Media.Visual visual, object userState);
         public abstract void WriteAsync(System.Windows.Media.Visual visual, System.Printing.PrintTicket printTicket);
         public abstract void WriteAsync(System.Windows.Media.Visual visual, System.Printing.PrintTicket printTicket, object userState);
+    }
+}
+
+namespace System.Windows.Xps
+{
+    public partial class XpsDocumentWriter
+    {
     }
 }

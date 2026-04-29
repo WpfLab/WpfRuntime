@@ -307,7 +307,7 @@ namespace MS.Win32
 #endif
 
         [DllImport("oleacc.dll")]
-        internal static extern int ObjectFromLresult(IntPtr lResult, ref Guid iid, IntPtr wParam, [In, Out] ref IAccessible ppvObject);
+        internal static extern int ObjectFromLresult(IntPtr lResult, ref Guid iid, IntPtr wParam, [In, Out] ref Accessibility.IAccessible ppvObject);
 
         [DllImport("user32.dll")]
         internal static extern bool IsWinEventHookInstalled(int winevent);

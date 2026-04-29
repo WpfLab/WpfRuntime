@@ -53,6 +53,7 @@
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
     <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationProvider\UIAutomationProvider.csproj" />
     <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationTypes\UIAutomationTypes.csproj" />
+    <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-PresentationFramework-api-cycle.csproj" />
   </ItemGroup>
 
   <ItemGroup>

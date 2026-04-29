@@ -52,7 +52,10 @@
 
   <ItemGroup>
     <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj" />
-    <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-System.Printing-api-cycle.csproj" />
+    <Reference Include="ReachFramework"
+               HintPath="$(ArtifactsBinDir)ReachFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\ReachFramework.dll"
+               Private="false"
+               Condition="Exists('$(ArtifactsBinDir)ReachFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\ReachFramework.dll')" />
   </ItemGroup>
 
 </Project>

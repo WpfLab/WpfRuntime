@@ -102,16 +102,8 @@
 
 以下模块目前在 `origin/src/src/` 中存在，但尚未出现在当前重组仓库的对应顶层目录中：
 
-- `Extensions`
 - `PenImc`
-- `PresentationBuildTasks`
-- `PresentationFramework`
-- `PresentationUI`
-- `ReachFramework`
-- `System.Printing`
-- `System.Windows.Controls.Ribbon`
 - `System.Windows.Presentation`
-- `Themes`
 - `WpfGfx`
 
 ## 当前进度判断
@@ -140,6 +132,11 @@
 20. 重新验证 `PresentationCore` 后，当前阻塞除 `WindowsBase` 双来源策略问题外，还包括 `WindowsBase` 引用程序集复制阶段的文件锁：`artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll`。
 19. 已将 `PresentationFramework-System.Printing-impl-cycle.csproj` 纳入根解决方案。
 20. 已验证根解决方案在纳入 `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders`、`WindowsFormsIntegration` 后仍可成功构建。
+21. 已使用 `msbuild` 验证 `PresentationCore` 独立构建通过；此前记录的 `UISettingsRcw` / `TypefaceMap` 编译阻塞已不再复现。
+22. 已补齐 `MicrosoftPrivateWinFormsReference` 到 .NET 8 WindowsDesktop 参考包的 `Accessibility.dll` 解析逻辑，并修正共享 `UnsafeNativeMethodsCLR.cs` 中 `IAccessible` 的歧义。
+23. 已使用 `msbuild` 验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 独立构建通过，并将二者加入 `Microsoft.Dotnet.Wpf.sln`。
+24. 已验证 `Microsoft.Dotnet.Wpf.sln` 在纳入 `UIAutomationClient`、`UIAutomationClientSideProviders` 后仍可成功构建。
+25. 已推进 `PresentationFramework` 的上层依赖诊断：`System.Printing-ref` 已可独立构建通过；`PresentationFramework-ReachFramework-impl-cycle` 与 `PresentationFramework-System.Printing-api-cycle` 已可构建通过。
 
 ## 当前主要缺口
 
@@ -148,12 +145,13 @@
    - `PenImc`
    - `System.Windows.Presentation`
 2. 解决方案入口虽已存在，但项目纳管仍不完整，至少还有 `PresentationFramework`、`ReachFramework`、`Themes`、`PresentationBuildTasks`、`System.Printing`、`PresentationUI`、`System.Windows.Controls.Ribbon` 等现存项目未纳入当前磁盘上的解决方案文件。
-3. `WindowsFormsIntegration` 当前仍直接依赖缺失的 `PresentationFramework`，说明上层托管链尚未闭合。
-4. `PresentationCore` 当前迁移并不完整；已确认 `DirectWriteForwarder` 在 Visual Studio 自带 `MSBuild.exe` 下可成功构建，`WindowsBase` 双来源导致的主阻塞已被压下，但 `PresentationCore` 独立构建仍未闭环。
+3. `WindowsFormsIntegration` 当前仍直接依赖尚未闭环构建的 `PresentationFramework`，说明上层托管链尚未闭合。
+4. `PresentationCore` 已可独立构建通过，但仍存在 `System.Formats.Nrbf` 8.0.0 未安装而回退到 9.0.0 的 `NU1603` 警告，以及多个 Windows-only API 的 `CA1416` 警告。
 5. 新迁入的上层项目虽然已进入当前目录，但仍未完成构建前置补齐，当前已确认存在以下阻塞：
    - `dotnet msbuild` 构建 `DirectWriteForwarder` 时会在 VC++ 跟踪任务 `GetOutOfDateItems` / `FileTracker` 上触发 `TypeLoadException`，当前本地兼容入口应改为 Visual Studio 自带 `MSBuild.exe`
     - `PresentationCore` 已恢复到真实的 `DirectWriteForwarder` 依赖链，并新增 `System.Formats.Nrbf` 依赖与 `SYSLIB5005` 抑制；当前已通过公共 `ResolveReferences` 清理逻辑压下 `PresentationCore` 自身的 `WindowsBase` 双来源类型冲突，后续需要把注意力转向剩余源码缺口以及仍在其他项目中出现的 `WindowsBase` 版本冲突警告
    - `WpfCodeGenDir` 虽已定义且 `PresentationFramework` 已改为条件导入，但 `AvTrace\GenAvMessages.targets` 本体仍未接入当前仓库
+   - `PresentationFramework` 构建已推进到 `ReachFramework-ref` 相关桥接类型与同名程序集冲突阶段；`ReachFramework-ref` 重新验证命令被取消，尚未获得最终错误清单。
 6. 部分项目虽然已存在，但是否已经全部可构建仍未在本轮完成闭环验证。
 7. 当前文档体系刚建立，后续需要把每次迁移结果持续补充进来。
 
@@ -182,8 +180,8 @@
 
 ## 建议的当前优先级
 
-1. 以 Visual Studio 自带 `MSBuild.exe` 作为当前本地 native 构建入口，继续验证 `PresentationCore` 的真实源码/引用缺口；`WindowsBase` 双来源不再是 `PresentationCore` 当前首要错误后，优先补齐 `UISettingsRcw` 与 `TypefaceMap` 的剩余差异。
-2. 在 `PresentationCore` 能独立构建后，再验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 的构建状态，并顺带确认公共 `WindowsBase` 收敛逻辑是否也足以消除其项目内的 `MSB3243` 警告。
+1. 继续验证 `ReachFramework-ref` 与 `PresentationFramework` 的真实构建阻塞，优先确认 `System.Windows.Xps.XpsDocumentWriter`、`ISerializerFactory` 等桥接类型是否已被正确解析。
+2. 继续收敛 `WindowsBase` 与 `System.Printing` / `ReachFramework` 等同名程序集的双来源警告，禁止通过修改程序集版本掩盖冲突。
 3. 继续补齐 `AvTrace` 代码生成目标来源，使 `PresentationFramework` 不仅能跳过导入失败，还能恢复预期生成链路。
 4. 以 `PresentationFramework` 为前置条件，重新评估 `WindowsFormsIntegration` 的独立构建状态。
 5. 同步梳理原始仓库到当前仓库的目录映射和引用改写规则。

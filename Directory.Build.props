@@ -34,6 +34,8 @@
 
   <PropertyGroup>
     <WpfReferencePath>C:\lindexi\Lib\Microsoft.WindowsDesktop.App\</WpfReferencePath>
+    <WpfWindowsDesktopReferencePath Condition="'$(WpfWindowsDesktopReferencePath)' == '' and Exists('$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.6\ref\net8.0\')">$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.6\ref\net8.0\</WpfWindowsDesktopReferencePath>
+    <WpfWindowsDesktopReferencePath Condition="'$(WpfWindowsDesktopReferencePath)' == '' and Exists('$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.26\ref\net8.0\')">$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.26\ref\net8.0\</WpfWindowsDesktopReferencePath>
   </PropertyGroup>
 
   <PropertyGroup>

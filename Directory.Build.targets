@@ -1,6 +1,13 @@
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
+  <ItemGroup Condition="'$(WpfWindowsDesktopReferencePath)' != ''">
+    <Reference Include="@(MicrosoftPrivateWinFormsReference->'$(WpfWindowsDesktopReferencePath)%(Identity).dll')"
+               Private="false">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
   <Target Name="RemoveInboxWindowsBaseReference"
           AfterTargets="ResolveReferences">
     <ItemGroup>

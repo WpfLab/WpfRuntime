@@ -122,6 +122,11 @@
 - 已通过 `ResolveReferences` 日志确认 `PresentationCore` 同时解析到仓库输出 `artifacts/obj/WindowsBase/Debug/net8.0/ref/WindowsBase.dll` 与 `Microsoft.NETCore.App.Ref/.../WindowsBase.dll`，后续必须以“收敛引用来源”为主线推进。
 - 已在 `Directory.Build.targets` 中加入公共 `ResolveReferences` 后处理逻辑：当项目已直接引用仓库内 `WindowsBase.csproj` 时，移除来自 `Microsoft.NETCore.App.Ref` 的 inbox `WindowsBase.dll` 编译引用。
 - 已重新验证 `PresentationCore`；此前由 `WindowsBase` 双来源触发的 `Rect`、`Point`、`IRawElementProviderFragment` 相关 `CS7069` / `CS9333` 已消失，当前构建错误已前移到 `UISettingsRcw.cs` 的 `RoActivateInstance` 缺口与 `TypefaceMap.cs` 的 DWrite 签名不匹配。
+- 已再次使用 `msbuild` 验证 `PresentationCore` 独立构建通过；`UISettingsRcw` / `TypefaceMap` 错误已不再复现。
+- 已为 `MicrosoftPrivateWinFormsReference` 补齐 `Accessibility.dll` 参考程序集解析逻辑，修复 `UIAutomationClient` 中 `Accessibility.IAccessible` 不可访问的问题。
+- 已验证 `UIAutomationClient`、`UIAutomationClientSideProviders` 独立构建通过，并将二者加入 `Microsoft.Dotnet.Wpf.sln`。
+- 已验证根解决方案在纳入 `UIAutomationClient`、`UIAutomationClientSideProviders` 后仍可成功构建。
+- 已推进 `PresentationFramework` 上层构建链，确认 `System.Printing-ref`、`PresentationFramework-ReachFramework-impl-cycle`、`PresentationFramework-System.Printing-api-cycle` 可构建通过。
 
 - 共享源码和生成代码路径可能仍依赖原始仓库布局。
 - 本地引用路径可能使构建无法脱离个人机器环境。
@@ -158,9 +163,9 @@
 
 ### 当前顺序修正
 
-- 在正式进入 `PresentationFramework` 之前，先完成 `PresentationCore` 的剩余构建阻塞收敛；`WindowsBase` 双来源已不再是 `PresentationCore` 当前首要错误，下一优先级调整为 `UISettingsRcw` 的 WinRT 入口缺口、`TypefaceMap` 的 DWrite 托管包装签名收敛，以及随后再处理 `WindowsBase` 引用程序集复制文件锁。
-- `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework`，但 `UIAutomationClient`、`UIAutomationClientSideProviders` 的独立构建验证先依赖 `PresentationCore` 完整化。
-- 由于 `PresentationFramework` 已经进入当前仓库目录，后续不再是“是否迁入”的问题，而是“先补哪一类构建前置”的问题；当前优先级应调整为：`PresentationCore` 的 `TextInterface` 托管包装源码缺口、`AvTrace` 代码生成目标本体、其余未恢复的构建前置。
+- `PresentationCore`、`UIAutomationClient`、`UIAutomationClientSideProviders` 已可独立构建，当前优先级转向 `PresentationFramework` 依赖链。
+- `PresentationFramework` 当前重点不再是早期 cycle-breaker 缺失，而是继续收敛 `ReachFramework-ref`、`System.Printing-ref` 与 `PresentationFramework` 之间的桥接类型和同名程序集引用来源。
+- `WindowsFormsIntegration` 的重新验证仍依赖 `PresentationFramework` 构建链进一步闭合。
 
 ### 完成标准
 

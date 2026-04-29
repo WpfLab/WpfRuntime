@@ -54,7 +54,10 @@
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\ref\WindowsBase-ref.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-ReachFramework-impl-cycle.csproj" />
+    <Reference Include="PresentationFramework"
+               HintPath="$(ArtifactsBinDir)PresentationFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               Private="false"
+               Condition="Exists('$(ArtifactsBinDir)PresentationFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
     <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
   </ItemGroup>
   <ItemGroup>
