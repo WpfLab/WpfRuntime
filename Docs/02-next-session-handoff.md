@@ -50,6 +50,7 @@
 - `System.Xaml`
 - `Themes`
 - `UIAutomation`
+- `System.Windows.Presentation`
 - `WindowsBase`
 - `WindowsFormsIntegration`
 
@@ -79,6 +80,8 @@
 - `System.Windows.Controls.Ribbon`
 - `WindowsFormsIntegration`
 - `PresentationBuildTasks`
+- `System.Windows.Presentation`
+- `System.Windows.Presentation-ref`
 - `mcwpf`
 
 ### 当前磁盘已存在但尚未纳入解决方案的主要项目
@@ -101,7 +104,6 @@
 ### 当前尚未进入顶层目录的关键模块
 
 - `PenImc`
-- `System.Windows.Presentation`
 - `WpfGfx`
 
 ## 最新构建结果
@@ -140,6 +142,10 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 15. `WindowsFormsIntegration` 当前已纳入解决方案并随解决方案入口构建通过，且已重新验证可独立构建；后续仍需继续收敛其对完整 `PresentationFramework` x64 输出的显式依赖。
 16. `PresentationBuildTasks` 已完成从 `net9.0` 到 `net8.0` 的目标框架调整，当前已纳入解决方案并可独立构建。
 17. `Shared/Tracing/mcwpf` 已改写为 SDK 风格项目，移除对 `Microsoft.DevDiv.Settings.targets` / `Microsoft.DevDiv.targets` 的依赖，当前已纳入解决方案并可独立构建。
+18. 已新增 `Docs/03-origin-diff-audit.md`，记录当前仓库与 `origin` 的结构差异、迁移性桥接和潜在风险。审计结果表明差异主要集中在 `WpfGfx`、`PenImc`、测试项目缺失，以及若干当前仓库独有的迁移性 bridge 文件。
+19. `System.Windows.Presentation` 已从 `origin` 迁入当前仓库，并已纳入 `Microsoft.Dotnet.Wpf.sln`；其实现项目和 ref 项目均已随当前解决方案入口重新验证通过。
+20. 为匹配当前仓库的实际强签名输出，`BuildInfo.SystemWindowsPresentation` 已从 DevDiv 公钥调整为 WCP 公钥；否则新迁入的 `System.Windows.Presentation` 无法访问 `WindowsBase` internals。
+21. 迁入 `System.Windows.Presentation` 过程中暴露出 `ReachFramework-ref` 对 `System.Printing-ref` 中 `System.Windows.Xps.XpsDocumentWriter` 的解析仍依赖项目引用顺序。当前 `ReachFramework-ref.csproj` 已显式引用 `artifacts/obj/System.Printing-ref/.../ref/System.Printing.dll`，解决了 `CS0234` 回归并恢复解决方案构建稳定性。
 
 ## 建议起手顺序
 
@@ -147,6 +153,7 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
    - `Docs/README.md`
    - `Docs/00-overview.md`
    - `Docs/01-phase-plan.md`
+   - `Docs/03-origin-diff-audit.md`
    - `Docs/cycle-breaker.md`
    - `Microsoft.Dotnet.Wpf.sln`
    - `Directory.Build.props`
@@ -155,6 +162,8 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 3. 再核对 `Microsoft.Dotnet.Wpf.sln` 中声明的关键项目与 IDE 实际已加载项目是否一致；若存在加载失败、未加载或状态异常，优先把它当作真实阻塞处理并记录。
 4. 在完成基线检查后，不要停在文档同步，应直接继续处理当前最高优先级迁移项，且在同一次工作中持续迭代，直到完成实质迁移或遇到已验证阻塞。
 5. 继续处理：
+   - 按 `Docs/03-origin-diff-audit.md` 的优先级开始迁入 `PenImc`
+   - 再规划 `WpfGfx` 的分批迁入顺序
    - `ReachFramework` 与 `PresentationFramework` 的动态边界收敛
     - `PresentationUI` 的 XAML partial 占位替换为真实标记编译生成链路
    - `System.Printing` C++/CLI 类型重定义与 `System.IO.Packaging` 引用缺失
@@ -181,9 +190,8 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 11. 排查 Ribbon 与主题项目时重点检查：
    - 显式完整 `PresentationFramework` 输出引用是否可替换为更稳定的项目引用输出顺序。
    - `BuildInfo.SystemWindowsControlsRibbon` 使用 WCP 公钥后是否会影响后续与原始仓库同步。
-11. 只有在上层主链持续稳定后，再继续补缺失顶层模块：
+11. 当前缺失顶层模块已收敛掉 `System.Windows.Presentation`，后续优先补：
    - `PenImc`
-   - `System.Windows.Presentation`
    - `WpfGfx`
 
 ## 推荐命令方向
@@ -226,4 +234,9 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 ### WindowsFormsIntegration 已加入解决方案
 
 - 状态:已加入解决方案,随解决方案入口构建通过。后续需继续收敛对完整 `PresentationFramework` x64 输出的显式依赖。
+
+### origin 差异审计与 `System.Windows.Presentation` 迁移完成
+
+- 状态:已新增 `Docs/03-origin-diff-audit.md`，并已根据审计结果优先迁入 `System.Windows.Presentation`。
+- 结果:`System.Windows.Presentation` / `System.Windows.Presentation-ref` 已加入解决方案并可构建；当前剩余未迁入的关键顶层模块变为 `PenImc` 与 `WpfGfx`。
 

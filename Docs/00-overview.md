@@ -44,6 +44,7 @@
 - `System.Xaml`
 - `Themes`
 - `UIAutomation`
+- `System.Windows.Presentation`
 - `WindowsBase`
 - `WindowsFormsIntegration`
 
@@ -58,6 +59,7 @@
   - `src/Microsoft.DotNet.Wpf/src/PresentationFramework/PresentationFramework.csproj`
   - `src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj`
   - `src/Microsoft.DotNet.Wpf/src/ReachFramework/ReachFramework.csproj`
+  - `src/Microsoft.DotNet.Wpf/src/System.Windows.Presentation/System.Windows.Presentation.csproj`
   - `src/Microsoft.DotNet.Wpf/src/System.Windows.Controls.Ribbon/System.Windows.Controls.Ribbon.csproj`
   - `src/Microsoft.DotNet.Wpf/src/System.Windows.Input.Manipulations/System.Windows.Input.Manipulations.csproj`
   - `src/Microsoft.DotNet.Wpf/src/WindowsFormsIntegration/WindowsFormsIntegration.csproj`
@@ -77,6 +79,7 @@
   - `PresentationUI-ref`
   - `ReachFramework-ref`
   - `System.Printing-ref`
+  - `System.Windows.Presentation-ref`
   - `System.Windows.Input.Manipulations-ref`
   - `System.Windows.Controls.Ribbon-ref`
   - `UIAutomationTypes-ref`
@@ -136,6 +139,8 @@
 - `System.Windows.Controls.Ribbon`
 - `WindowsFormsIntegration`
 - `PresentationBuildTasks`
+- `System.Windows.Presentation`
+- `System.Windows.Presentation-ref`
 - `mcwpf`
 
 ### 当前已存在但尚未纳入解决方案的主要项目
@@ -151,7 +156,6 @@
 相较原始 WPF 仓库，当前重组仓库尚未出现以下顶层目录：
 
 - `PenImc`
-- `System.Windows.Presentation`
 - `WpfGfx`
 
 ## 当前构建状态
@@ -176,6 +180,13 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\ReachFramework\ref\ReachFramework-ref.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 结果：构建成功。
+- 额外收敛：当前 `ReachFramework-ref.csproj` 已显式引用 `artifacts/obj/System.Printing-ref/.../ref/System.Printing.dll`，避免 `System.Windows.Xps.XpsDocumentWriter` 仅靠项目引用顺序解析而导致间歇性 `CS0234`。
+
+`System.Windows.Presentation` 已从 `origin` 迁入当前仓库，并已纳入 `Microsoft.Dotnet.Wpf.sln`：
+
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\System.Windows.Presentation\System.Windows.Presentation.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- 结果：构建成功。
+- 当前处理方式：`BuildInfo.SystemWindowsPresentation` 已从 DevDiv 公钥调整为当前仓库使用的 WCP 公钥，使 `WindowsBase` 对 `System.Windows.Presentation` 的友元访问与当前强签名输出一致。
 
 此前 `UIAutomationClientSideProviders` 缺失 `UIAutomationClient` 参考程序集的问题没有复现。`UIAutomationClient` 独立构建可产出实现程序集和 ref 相关输出；解决方案入口在清理后重建也可通过。
 
@@ -236,11 +247,9 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 1. 当前解决方案已纳入项目可构建，但尚未纳管的主链项目仍需继续打通。
 2. 解决方案纳管仍滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
-   - `WindowsFormsIntegration`
    - `System.Printing`（C++/CLI 实现项目仍失败，ref 项目可用）
    3. 关键顶层模块仍未迁入：
    - `PenImc`
-   - `System.Windows.Presentation`
    - `WpfGfx`
 4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但 cycle-breaker 的同名 API 暴露仍需要继续收敛：
    - `ReachFramework-ref` 所需的 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露，参考程序集项目可独立构建。
@@ -253,11 +262,11 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 ## 建议的当前优先级
 
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
-2. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
-3. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，当前优先补齐 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri` 等更深层 API。
-4. 继续处理 `PresentationUI` 的 XAML 标记编译链路，优先用真实生成产物替换当前占位 partial 成员。
-5. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
-6. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
+2. 继续补齐缺失顶层模块，当前优先级从 `System.Windows.Presentation` 转到 `PenImc`，再到 `WpfGfx`。
+3. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
+4. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，当前优先补齐 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri` 等更深层 API。
+5. 继续处理 `PresentationUI` 的 XAML 标记编译链路，优先用真实生成产物替换当前占位 partial 成员。
+6. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
 
 ## 当前执行约束
 

@@ -48,7 +48,6 @@
    - `AvTrace` 代码生成链
 4. 最后再迁入缺失顶层模块：
    - `PenImc`
-   - `System.Windows.Presentation`
    - `WpfGfx`
 
 ---
@@ -122,6 +121,7 @@
    - 目录尚未迁入
    - 已写入 `.sln` 但在 IDE 中加载失败或未成功加载
 2. 优先纳管与当前主链直接相关的现存项目：
+   - `System.Windows.Presentation`：已从 `origin` 迁入，并已纳入解决方案；后续需确认其与原始仓库的强签名/友元边界在当前仓库长期保持一致。
    - `ReachFramework`：已纳入解决方案。
    - `PresentationFramework`：已纳入解决方案。
    - `PresentationUI`：已纳入解决方案。
@@ -187,6 +187,8 @@
 - `mcwpf` 已完成现代化改造 (从旧非 SDK 风格改为 SDK 风格),并已加入解决方案。
 - `PresentationBuildTasks` 与 `mcwpf` 已重新验证可独立构建，不再是当前阻塞点。
 - `ReachFramework-System.Printing-api-cycle` 已继续补齐 `PackagingProgressEventArgs.Action` / `NumberCompleted`、`PrintingCanceledException`、`PrintJobException`、`System.Printing.Interop` 占位命名空间、`PrintTicket.SaveTo/Clone`、`XpsDocument` 最小构造器与序列化管理器成员、`IXpsFixedDocumentSequenceReader` / `IXpsFixedDocumentReader` / `IXpsFixedPageReader` 最小读取属性、`IXpsOMPackageWriter.Close`、`IPrintDocumentPackageTarget.Cancel`、`PrintDocumentPackageStatusProvider.JobIdAcquiredEvent` / `JobId`；bridge 项目已重新验证可独立构建。
+- `System.Windows.Presentation` 已从 `origin` 迁入到 `src/Microsoft.DotNet.Wpf/src/System.Windows.Presentation/`，并已纳入 `Microsoft.Dotnet.Wpf.sln`。为匹配当前仓库实际强签名输出，`BuildInfo.SystemWindowsPresentation` 已调整为 WCP 公钥；项目独立构建与解决方案入口构建已重新验证通过。
+- 在迁入 `System.Windows.Presentation` 过程中，`ReachFramework-ref` 暴露出 `System.Windows.Xps.XpsDocumentWriter` 解析仍依赖项目引用顺序的问题。当前 `ReachFramework-ref.csproj` 已显式绑定 `System.Printing-ref` 的 ref 输出，避免后续增量构建或解决方案拓扑变化再次触发 `CS0234`。
 - `System.Printing` 当前已越过前一组打印 bridge 与 `XpsDocument` 缺口，新的首个失败面已前移到 `GDIExporter` / ReachFramework 更深层 API：`System.Windows.Xps.Serialization.GeometryHelper.ArcToBezier`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri`。
 - 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界，并继续恢复 `PresentationUI` 的真实标记编译生成链路。
 
@@ -211,8 +213,7 @@
 ### 目标模块
 
 1. `PenImc`
-2. `System.Windows.Presentation`
-3. `WpfGfx`
+2. `WpfGfx`
 
 ### 任务
 
@@ -222,7 +223,7 @@
 
 ### 完成标准
 
-- 三个缺失顶层模块都已在当前仓库可见。
+- `PenImc` 与 `WpfGfx` 两个剩余缺失顶层模块都已在当前仓库可见。
 - 能说明每个模块是否已纳入解决方案、是否可构建、当前首个阻塞点是什么。
 
 ---

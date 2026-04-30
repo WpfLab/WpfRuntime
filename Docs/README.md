@@ -7,6 +7,7 @@
 - [00-overview.md](00-overview.md)：当前仓库的已验证事实、解决方案现状、主要缺口。
 - [01-phase-plan.md](01-phase-plan.md)：后续执行顺序、每个阶段的目标、完成标准与风险。
 - [02-next-session-handoff.md](02-next-session-handoff.md)：给后续 AI 直接使用的起手顺序、必读文件、当前阻塞点。
+- [03-origin-diff-audit.md](03-origin-diff-audit.md)：当前仓库与 `origin` 原始 WPF 代码的差异审计、潜在风险与优先收敛方向。
 - [backlog.md](backlog.md)：后备待办记录，用于保存工作过程中发现但不属于当前优先任务范围的问题。
 - [cycle-breaker.md](cycle-breaker.md)：`PresentationFramework` / `ReachFramework` / `System.Printing` / `PresentationUI` 之间桥接项目的保留原因与使用建议。
 
@@ -15,9 +16,10 @@
 1. 先阅读 `Docs/README.md`，了解文档结构和维护规则。
 2. 再阅读 `00-overview.md`，确认当前磁盘状态、解决方案纳管状态和最新构建结论。
 3. 再阅读 `01-phase-plan.md`，确认下一步应该先解决什么问题。
-4. 阅读 `backlog.md`，了解已经记录但暂不打断当前迁移顺序的后备待办。
-5. 如果准备处理 `PresentationFramework`、`ReachFramework`、`System.Printing` 或 `PresentationUI`，继续阅读 `cycle-breaker.md`。
-6. 开始新的 AI 对话前，将 `02-next-session-handoff.md` 作为交接输入基础。
+4. 阅读 `03-origin-diff-audit.md`，了解当前仓库与 `origin` 的结构差距、迁移性补丁和优先收敛方向。
+5. 阅读 `backlog.md`，了解已经记录但暂不打断当前迁移顺序的后备待办。
+6. 如果准备处理 `PresentationFramework`、`ReachFramework`、`System.Printing` 或 `PresentationUI`，继续阅读 `cycle-breaker.md`。
+7. 开始新的 AI 对话前，将 `02-next-session-handoff.md` 作为交接输入基础。
 
 ## 更新规则
 
