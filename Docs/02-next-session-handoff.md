@@ -92,6 +92,13 @@
 - 结果：构建成功。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
 
+Visual Studio 默认 `Any CPU` 入口也已验证：
+
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
+- 结果：构建成功。
+- `Any CPU` 下通过 `WpfNativePlatform=x64` 解析显式完整 `PresentationFramework` 输出，避免 `PresentationUI`、`WindowsFormsIntegration` 找不到完整控件/API。
+- 构建期间不断弹出打开 `.pl` 文件的问题已定位为缺少 Perl 时直接执行 `.pl` 脚本导致 Windows 文件关联接管。当前 `VerifyPerlCommand` 会在需要运行主题生成脚本时检测 `PerlCommand`，缺少 Perl 时输出警告并跳过脚本，不再弹窗。若需要重新生成主题 XAML，安装 Perl 或设置 `PerlCommand`。
+
 ### 这意味着什么
 
 1. 当前解决方案在纳入 `ReachFramework`、`PresentationFramework`、`PresentationUI`、`System.Windows.Controls.Ribbon` 与全部现有主题实现项目后仍可构建。
@@ -106,7 +113,9 @@
 10. `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API。
 11. `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
 12. `System.Printing` C++/CLI 实现项目已越过空 `WpfCppProps`、旧目标框架、旧平台工具集、缺失 `FilterItem1ByItem2`、`/clr:pure` 等配置阻塞；当前源码编译失败集中在 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 引用缺失。
-13. `WindowsFormsIntegration` 当前独立构建失败，首个错误面为完整 `PresentationFramework` 控件/API 引用缺失和 `IKeyboardInputSink` 接口签名不匹配，日志为 `artifacts/windowsformsintegration-errors.latest.log`。\r\n14. `PresentationBuildTasks` 当前独立构建失败，原因是项目面向 `net9.0`，但当前 SDK 为 `8.0.206`，日志为 `artifacts/presentationbuildtasks-errors.latest.log`。\r\n15. `Shared/Tracing/mcwpf` 当前独立构建失败，原因是导入 `C:\tools\Microsoft.DevDiv.Settings.targets` 失败，日志为 `artifacts/mcwpf-errors.latest.log`。
+13. `WindowsFormsIntegration` 当前已纳入解决方案并随解决方案入口构建通过；后续仍需继续收敛其对完整 `PresentationFramework` x64 输出的显式依赖。
+14. `PresentationBuildTasks` 当前独立构建失败，原因是项目面向 `net9.0`，但当前 SDK 为 `8.0.206`，日志为 `artifacts/presentationbuildtasks-errors.latest.log`。
+15. `Shared/Tracing/mcwpf` 当前独立构建失败，原因是导入 `C:\tools\Microsoft.DevDiv.Settings.targets` 失败，日志为 `artifacts/mcwpf-errors.latest.log`。
 
 ## 建议起手顺序
 

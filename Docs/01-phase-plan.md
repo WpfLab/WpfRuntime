@@ -68,6 +68,8 @@
 
 - `Microsoft.Dotnet.Wpf.sln` 已恢复可构建。
 - 验证命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- Visual Studio 默认 `Any CPU` 构建已验证可通过：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`。
+- `.pl` 文件弹窗已定位为缺少 Perl 时 `Exec` 直接执行 `ThemeGenerator.pl` / `PreprocessXAML.pl` 触发 Windows 文件关联；当前改为先检测 `PerlCommand`，缺少 Perl 时跳过脚本并输出警告。
 - `UIAutomationClient` 可独立构建，`UIAutomationClientSideProviders` 下游缺失参考程序集的问题没有复现。
 - `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 纳入解决方案后，解决方案完整重建仍可通过。
 - 当前解决方案级剩余警告为 `DirectWriteForwarder.vcxproj` 的 `/Zc:forScope-` 已否决警告。

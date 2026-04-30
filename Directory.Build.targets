@@ -17,4 +17,15 @@
                                       Condition="('%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing') and ('%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.NETCore.App' or '%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.WindowsDesktop.App')" />
     </ItemGroup>
   </Target>
+
+  <Target Name="VerifyPerlCommand" Condition="'@(WpfPerlScript)' != ''">
+    <Exec Command="where.exe $(PerlCommand)" IgnoreExitCode="true" ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="PerlCommandExitCode" />
+    </Exec>
+    <PropertyGroup>
+      <WpfPerlCommandAvailable Condition="'$(PerlCommandExitCode)' == '0'">true</WpfPerlCommandAvailable>
+      <WpfPerlCommandAvailable Condition="'$(PerlCommandExitCode)' != '0'">false</WpfPerlCommandAvailable>
+    </PropertyGroup>
+    <Warning Condition="'$(WpfPerlCommandAvailable)' != 'true'" Text="Perl is not available; skipping WPF build script(s): @(WpfPerlScript). Install Perl or set PerlCommand to a valid Perl executable to regenerate these files. The build does not execute .pl files directly because Windows may open them through file association." />
+  </Target>
 </Project>

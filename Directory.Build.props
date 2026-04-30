@@ -47,6 +47,12 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <WpfNativePlatform Condition="'$(Platform)' == 'AnyCPU' or '$(Platform)' == 'Any CPU'">x64</WpfNativePlatform>
+    <WpfNativePlatform Condition="'$(WpfNativePlatform)' == ''">$(Platform)</WpfNativePlatform>
+    <PerlCommand Condition="'$(PerlCommand)' == ''">perl</PerlCommand>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <VCTargetsPath Condition="'$(VCTargetsPath)' == ''">$([MSBuild]::GetVsInstallRoot())\Common7\IDE\VC\VCTargets\</VCTargetsPath>
   </PropertyGroup>
 

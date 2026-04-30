@@ -200,9 +200,9 @@
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
     <Reference Include="PresentationFramework"
-               HintPath="$(ArtifactsBinDir)PresentationFramework\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               HintPath="$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
                Private="false"
-               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
+               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
     <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
     <ProjectReference Include="$(WpfSourceDir)ReachFramework\ReachFramework.csproj" />
@@ -264,8 +264,13 @@
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
+  <ItemGroup>
+    <WpfPerlScript Include="ThemeGenerator.pl" />
+  </ItemGroup>
+
   <Target Name="AfterBuild" Inputs="@(Page)" Outputs="$(OutputPath)sdk\PUI.%(Page.Filename)%(Page.Extension)">
-    <Exec Command="$(PerlCommand) ThemeGenerator.pl %(Page.Identity) @(Page -> '$(IntermediateOutputPath)PUI.%(Filename)%(Extension)')" Condition="'%(Page.GenerateTheme)' == 'true'" StandardOutputImportance="normal" />
+    <CallTarget Targets="VerifyPerlCommand" Condition="'%(Page.GenerateTheme)' == 'true'" />
+    <Exec Command="$(PerlCommand) ThemeGenerator.pl %(Page.Identity) @(Page -> '$(IntermediateOutputPath)PUI.%(Filename)%(Extension)')" Condition="'%(Page.GenerateTheme)' == 'true' and '$(WpfPerlCommandAvailable)' == 'true'" StandardOutputImportance="normal" />
     <ItemGroup>
       <DataFile Condition="'%(Page.GenerateTheme)' == 'true' and Exists('$(IntermediateOutputPath)PUI.%(Page.Filename)%(Page.Extension)')" Include="$(IntermediateOutputPath)PUI.%(Page.Filename)%(Page.Extension)">
         <SubFolder>sdk</SubFolder>

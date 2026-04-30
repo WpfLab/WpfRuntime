@@ -49,6 +49,11 @@
 
   <Target Name="Build"
           DependsOnTargets="GenerateThemes" />
+
+  <ItemGroup>
+    <WpfPerlScript Include="ThemeGenerator.pl" />
+    <WpfPerlScript Include="PreprocessXAML.pl" />
+  </ItemGroup>
   
   <Target Name="GenerateThemes"
        Inputs="@(StyleXaml);@(ThemeXaml)"
@@ -56,7 +61,10 @@
 
      <MakeDir Condition="!Exists('$(IntermediateOutputPath)')" Directories="$(IntermediateOutputPath)" />
 
-     <Exec Command="$(PerlCommand) ThemeGenerator.pl $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension).sdk $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension) %(ThemeXaml.FileName) @(StyleXaml, ' ')"
+     <CallTarget Targets="VerifyPerlCommand" />
+
+     <Exec Condition="'$(WpfPerlCommandAvailable)' == 'true'"
+        Command="$(PerlCommand) ThemeGenerator.pl $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension).sdk $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension) %(ThemeXaml.FileName) @(StyleXaml, ' ')"
         Outputs="$(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension).sdk;$(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension)"
         StandardOutputImportance="normal" />
 
@@ -66,8 +74,8 @@
        </DataFile>
      </ItemGroup>
 
-     <Exec Command="$(PerlCommand) PreprocessXAML.pl $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension) ..\%(ThemeXaml.FileName)%(ThemeXaml.Extension) Net40 Net45" />
-     <Exec Command="$(PerlCommand) PreprocessXAML.pl $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension).sdk ..\%(ThemeXaml.FileName)%(ThemeXaml.Extension).sdk Net40 Net45" />
+     <Exec Condition="'$(WpfPerlCommandAvailable)' == 'true'" Command="$(PerlCommand) PreprocessXAML.pl $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension) ..\%(ThemeXaml.FileName)%(ThemeXaml.Extension) Net40 Net45" />
+     <Exec Condition="'$(WpfPerlCommandAvailable)' == 'true'" Command="$(PerlCommand) PreprocessXAML.pl $(IntermediateOutputPath)\%(ThemeXaml.FileName).i%(ThemeXaml.Extension).sdk ..\%(ThemeXaml.FileName)%(ThemeXaml.Extension).sdk Net40 Net45" />
   </Target>
 
 </Project>
