@@ -62,6 +62,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Win32Inc.hpp</PrecompiledHeaderFile>
       <ForceConformanceInForLoopScope>false</ForceConformanceInForLoopScope>
+      <ForcedUsingFiles>$(NuGetPackageRoot)system.io.packaging\$(SystemIOPackagingVersion)\lib\net8.0\System.IO.Packaging.dll;%(ForcedUsingFiles)</ForcedUsingFiles>
     </ClCompile>
     <Link>
       <AdditionalOptions>%(AdditionalOptions) /CLRUNMANAGEDCODECHECK:NO /ignore:4042</AdditionalOptions>
@@ -145,12 +146,12 @@
       <OutputItemType>_defineReference</OutputItemType>
       <Define>PRESENTATIONCORE_DLL</Define>
     </ProjectReference>
-    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-impl-cycle.csproj">
+    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>_defineReference</OutputItemType>
       <Define>PRESENTATIONFRAMEWORK_DLL</Define>
     </ProjectReference>
-    <ProjectReference Include="$(WpfSourceDir)ReachFramework\ReachFramework.csproj">
+    <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-System.Printing-api-cycle.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>_defineReference</OutputItemType>
       <Define>REACHFRAMEWORK_DLL</Define>

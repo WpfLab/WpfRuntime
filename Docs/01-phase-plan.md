@@ -128,7 +128,7 @@
    - `System.Windows.Controls.Ribbon`：已纳入解决方案。
    - `PresentationFramework.Classic`：已纳入解决方案。\r\n   - `PresentationFramework.Aero` / `Aero2` / `AeroLite` / `Fluent` / `Luna` / `Royale`：已纳入解决方案。
    - `WindowsFormsIntegration`：已纳入解决方案，且已重新验证可独立构建；后续需收敛其对完整 `PresentationFramework` 输出的显式 HintPath 依赖。
-   - `System.Printing`：C++/CLI 实现项目仍需解决类型重定义和 `System.IO.Packaging` 引用问题。
+   - `System.Printing`：C++/CLI 实现项目仍未独立构建；已先收敛掉大面积类型重定义与 `System.IO.Packaging` 缺失，当前转为补齐 ReachFramework / PresentationFramework 打印桥接 API。
 3. 对暂不纳入解决方案的项目，明确写出原因，不要只写“待处理”。
 4. 对已经写入 `.sln` 但在 IDE 中加载失败的项目，优先当作真实阻塞处理，不能因为命令行构建暂时通过就搁置。
 

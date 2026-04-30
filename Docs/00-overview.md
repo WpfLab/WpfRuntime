@@ -160,7 +160,8 @@
 
 使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 可构建：
 
-- 结果：构建成功(2024年验证)。
+- 结果：构建成功。
+- 额外修复：`Microsoft.Dotnet.Wpf.sln` 先前缺失 `System.Xaml`、`System.Windows.Input.Manipulations`、`PresentationCore` 三个 solution folder 节点，导致 `NestedProjects` 指向不存在的父 GUID，`msbuild` 无法解析解决方案；现已补回缺失节点并重新验证解决方案入口可构建。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 仍报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
 - 当前解决方案已纳入 `PresentationBuildTasks` 和 `mcwpf` 项目。
 
@@ -204,7 +205,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 `System.Printing` C++/CLI 项目已越过早期 MSBuild 配置阻塞，但尚未可独立构建：
 
 - 已修复：空 `WpfCppProps` 导入、旧 `TargetFrameworkIdentifier/TargetFrameworkVersion` 组合、默认 `v100` 平台工具集、缺失 `FilterItem1ByItem2` 自定义任务依赖、`/clr:pure` 与 .NET Core C++/CLI 不兼容。
-- 当前首个错误面：改用 `/clr:netcore` 后，`System.Printing` 编译进入 C++/CLI 类型重定义与缺引用阶段，首批错误集中在 `SafeMemoryHandle`、`PrintSystemDispatcherObject`、`PrintJobSettings`、`ILegacyDevice`、`PrintQueue` 重定义，以及 `System.IO.Packaging` 引用缺失。
+- 当前首个错误面：已将 `System.Printing` 的 C++/CLI 引用从 `PresentationFramework-System.Printing-impl-cycle` / `ReachFramework` 实现程序集收窄到 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle`，并显式把 `System.IO.Packaging.dll` 通过 `ForcedUsingFiles` 注入编译器。此前的 `SafeMemoryHandle`、`PrintSystemDispatcherObject`、`PrintJobSettings`、`ILegacyDevice`、`PrintQueue` 大面积重定义与 `System.IO.Packaging` 缺失已不再是首个失败点；当前新的首个错误面是桥接程序集缺少 `PackageSerializationManager`、`XpsSerializationManager`、`XpsSerializationManagerAsync`、`XpsOMSerializationManager`、`XpsOMSerializationManagerAsync`、`NgcSerializationManager`、`NgcSerializationManagerAsync` 等 ReachFramework 序列化管理器 API。
 - 错误日志：`artifacts/system-printing-errors.log`。
 
 `WindowsFormsIntegration` 已重新验证，当前未能独立构建：
