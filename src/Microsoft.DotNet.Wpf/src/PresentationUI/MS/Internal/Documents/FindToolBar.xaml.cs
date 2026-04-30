@@ -29,8 +29,23 @@ using MS.Internal.PresentationUI;
 namespace MS.Internal.Documents
 {
     [FriendAccessAllowed]
-    internal partial class FindToolBar
+    internal partial class FindToolBar : ToolBar
     {
+        internal readonly TextBox FindTextBox = new TextBox();
+        internal readonly TextBlock FindTextLabel = new TextBlock();
+        internal readonly Button FindPreviousButton = new Button();
+        internal readonly Button FindNextButton = new Button();
+        internal readonly MenuItem OptionsMenuItem = new MenuItem();
+        internal readonly MenuItem OptionsWholeWordMenuItem = new MenuItem();
+        internal readonly MenuItem OptionsCaseMenuItem = new MenuItem();
+        internal readonly MenuItem OptionsDiacriticMenuItem = new MenuItem();
+        internal readonly MenuItem OptionsKashidaMenuItem = new MenuItem();
+        internal readonly MenuItem OptionsAlefHamzaMenuItem = new MenuItem();
+
+        private void InitializeComponent()
+        {
+        }
+
         //------------------------------------------------------
         //
         //  Constructors

@@ -4,6 +4,28 @@
         
 namespace System.Windows.Automation.Peers
 {
+    public partial class AutomationPeer
+    {
+    }
+
+    public enum AutomationControlType
+    {
+        Custom = 50025,
+    }
+
+    public partial class FrameworkElementAutomationPeer : System.Windows.Automation.Peers.AutomationPeer
+    {
+        protected FrameworkElementAutomationPeer(System.Windows.FrameworkElement owner) { }
+        protected virtual System.Windows.Automation.Peers.AutomationControlType GetAutomationControlTypeCore() { throw null; }
+        protected virtual string GetClassNameCore() { throw null; }
+        protected virtual System.Windows.Automation.Peers.HostedWindowWrapper GetHostRawElementProviderCore() { throw null; }
+    }
+
+    public partial class HostedWindowWrapper
+    {
+        public HostedWindowWrapper(System.IntPtr hwnd) { }
+    }
+
     public sealed partial class WindowsFormsHostAutomationPeer : System.Windows.Automation.Peers.FrameworkElementAutomationPeer
     {
         public WindowsFormsHostAutomationPeer(System.Windows.Forms.Integration.WindowsFormsHost owner) : base (default(System.Windows.FrameworkElement)) { }
@@ -11,6 +33,59 @@ namespace System.Windows.Automation.Peers
         protected override string GetClassNameCore() { throw null; }
         [System.Security.SecurityTreatAsSafeAttribute]
         protected override System.Windows.Automation.Peers.HostedWindowWrapper GetHostRawElementProviderCore() { throw null; }
+    }
+}
+namespace System.Windows.Controls
+{
+    public partial class Panel : System.Windows.FrameworkElement
+    {
+        public Panel() { }
+    }
+}
+namespace System.Windows.Interop
+{
+    public abstract partial class HwndHost : System.Windows.FrameworkElement, System.IDisposable, System.Windows.Interop.IKeyboardInputSink
+    {
+        protected HwndHost() { }
+        public System.Windows.Interop.IKeyboardInputSite KeyboardInputSite { get { throw null; } set { } }
+        public void Dispose() { }
+        public bool HasFocusWithin() { throw null; }
+        public bool OnMnemonic(ref System.Windows.Interop.MSG msg, System.Windows.Input.ModifierKeys modifiers) { throw null; }
+        public System.Windows.Interop.IKeyboardInputSite RegisterKeyboardInputSink(System.Windows.Interop.IKeyboardInputSink sink) { throw null; }
+        public virtual bool TabInto(System.Windows.Input.TraversalRequest request) { throw null; }
+        public bool TranslateAccelerator(ref System.Windows.Interop.MSG msg, System.Windows.Input.ModifierKeys modifiers) { throw null; }
+        public bool TranslateChar(ref System.Windows.Interop.MSG msg, System.Windows.Input.ModifierKeys modifiers) { throw null; }
+        protected abstract System.Runtime.InteropServices.HandleRef BuildWindowCore(System.Runtime.InteropServices.HandleRef hwndParent);
+        protected abstract void DestroyWindowCore(System.Runtime.InteropServices.HandleRef hwnd);
+        protected virtual void Dispose(bool disposing) { }
+        protected virtual System.Windows.Size ArrangeOverride(System.Windows.Size finalSize) { throw null; }
+        protected virtual System.Windows.Size MeasureOverride(System.Windows.Size constraint) { throw null; }
+        protected virtual System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() { throw null; }
+        protected virtual void OnPropertyChanged(System.Windows.DependencyPropertyChangedEventArgs e) { }
+        protected virtual System.IntPtr WndProc(System.IntPtr hwnd, int msg, System.IntPtr wParam, System.IntPtr lParam, ref bool handled) { throw null; }
+    }
+}
+namespace System.Windows
+{
+    public partial class FrameworkElement : System.Windows.UIElement
+    {
+        public FrameworkElement() { }
+    }
+
+    public partial class Window : System.Windows.FrameworkElement
+    {
+        public Window() { }
+    }
+
+    public partial struct Thickness : System.IEquatable<System.Windows.Thickness>
+    {
+        public Thickness(double uniformLength) { throw null; }
+        public Thickness(double left, double top, double right, double bottom) { throw null; }
+        public double Bottom { get { throw null; } set { } }
+        public double Left { get { throw null; } set { } }
+        public double Right { get { throw null; } set { } }
+        public double Top { get { throw null; } set { } }
+        public bool Equals(System.Windows.Thickness thickness) { throw null; }
     }
 }
 namespace System.Windows.Forms.Integration

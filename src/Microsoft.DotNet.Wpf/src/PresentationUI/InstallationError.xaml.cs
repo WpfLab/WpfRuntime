@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using System.Windows.Input;
@@ -18,8 +19,19 @@ using System.Security;
 namespace Microsoft.Internal.DeploymentUI
 {
     [FriendAccessAllowed] // Built into UI, used by Framework.
-    internal partial class InstallationErrorPage : IErrorPage
+    internal partial class InstallationErrorPage : Grid, IErrorPage
     {
+        private readonly TextBlock txtTitle = new TextBlock();
+        private readonly TextBlock Text = new TextBlock();
+        private readonly TextBlock SupportUriText = new TextBlock();
+        private readonly Hyperlink SupportHyperLink = new Hyperlink();
+        private readonly Button LogFileButton = new Button();
+        private readonly Button RetryButton = new Button();
+        private readonly Button GetWinFXButton = new Button();
+
+        private void InitializeComponent()
+        {
+        }
 
         static InstallationErrorPage()
         {

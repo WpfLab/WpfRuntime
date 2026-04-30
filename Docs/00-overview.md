@@ -123,18 +123,19 @@
 - `PresentationCore`
 - `UIAutomationClient`
 - `UIAutomationClientSideProviders`
+- `ReachFramework`
+- `PresentationFramework`
+- `PresentationUI`
+- `PresentationFramework.Classic`
+- `System.Windows.Controls.Ribbon`
 
 ### 当前已存在但尚未纳入解决方案的主要项目
 
 以下项目已在磁盘中存在，但当前未出现在 `Microsoft.Dotnet.Wpf.sln`：
 
 - `WindowsFormsIntegration`
-- `PresentationFramework`
-- `PresentationUI`
-- `ReachFramework`
 - `System.Printing`（含 `ref` 与 native 项目）
-- `System.Windows.Controls.Ribbon`
-- 各主题项目
+- 除 `PresentationFramework.Classic` 以外的各主题项目
 - `PresentationBuildTasks`
 - `Shared/Tracing/mcwpf`
 - 多数 `ref/*.csproj`
@@ -152,10 +153,11 @@
 
 ### 最新验证结果
 
-使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 已恢复可构建：
+使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 可构建：
 
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 结果：构建成功。
+- 剩余警告：`DirectWriteForwarder.vcxproj` 仍报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
 
 `ReachFramework-ref` 已补齐 `PresentationFramework-System.Printing-api-cycle` 中的 `ISerializerFactory` 与 `XpsDocumentWriter` 桥接 API，并可独立构建：
 
@@ -174,23 +176,45 @@
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\PresentationFramework\PresentationFramework.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 结果：构建成功。
 
+`PresentationUI` 实现项目已进入可独立构建状态：
+
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\PresentationUI\PresentationUI.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- 结果：构建成功。
+- 当前处理方式：`PresentationUI` 改为引用 `System.Printing-ref`，并显式引用完整 `PresentationFramework` 实现输出，避免 `System.Printing-ref` 依赖的 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整 `PresentationFramework` API。
+- 当前仍有迁移性占位：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress` 与 `FindToolBar` 增加了最小 XAML partial 占位成员，用于在 `InternalMarkupCompilation` 链路尚未完全接入时保持托管编译可推进。后续需要恢复为真实标记编译生成代码。
+
+`System.Windows.Controls.Ribbon` 与 `PresentationFramework.Classic` 已进入可独立构建并已纳入解决方案：
+
+- `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析到同名 `XpsDocument`。
+- `PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 的实现项目和 ref 项目已显式引用完整 `PresentationFramework` 输出，用于补齐 `Thickness`、`Style`、`Control` 等完整 PresentationFramework API。
+- `BuildInfo.SystemWindowsControlsRibbon` 已调整为 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元程序集声明与当前输出程序集强命名一致。
+
+`System.Printing` C++/CLI 项目已越过早期 MSBuild 配置阻塞，但尚未可独立构建：
+
+- 已修复：空 `WpfCppProps` 导入、旧 `TargetFrameworkIdentifier/TargetFrameworkVersion` 组合、默认 `v100` 平台工具集、缺失 `FilterItem1ByItem2` 自定义任务依赖、`/clr:pure` 与 .NET Core C++/CLI 不兼容。
+- 当前首个错误面：改用 `/clr:netcore` 后，`System.Printing` 编译进入 C++/CLI 类型重定义与缺引用阶段，首批错误集中在 `SafeMemoryHandle`、`PrintSystemDispatcherObject`、`PrintJobSettings`、`ILegacyDevice`、`PrintQueue` 重定义，以及 `System.IO.Packaging` 引用缺失。
+- 错误日志：`artifacts/system-printing-errors.log`。
+
+`WindowsFormsIntegration` 已重新验证，当前未能独立构建：
+
+- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\WindowsFormsIntegration\WindowsFormsIntegration.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- 当前首个错误面：缺少完整 `PresentationFramework` 控件/API 引用，表现为 `FrameworkElement`、`Panel`、`Thickness`、`Window`、`AdornerDecorator` 等类型缺失，以及 `WindowsFormsHost` 对 `IKeyboardInputSink` 的接口签名不匹配。
+- 错误日志：`artifacts/windowsformsintegration-errors.log`。
+
 ### 当前可直接确认的含义
 
-1. 当前已纳入解决方案的项目恢复到可构建基线。
-2. 构建仍存在多项警告，包括 `WindowsBase` 4.0.0.0 与 6.0.2.0 引用冲突警告，以及 `System.Formats.Nrbf` 从 8.0.0 解析到 9.0.0 的 NuGet 警告。
-3. `ReachFramework-ref`、`System.Printing-ref`、`ReachFramework` 与 `PresentationFramework` 已可独立构建，但主链仍存在 cycle-breaker 与同名程序集 API 暴露警告，后续纳入解决方案前仍需继续收敛边界。
+1. 当前解决方案已在纳入 `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 后恢复可构建基线。
+2. 解决方案级构建报告仍保留 `DirectWriteForwarder` 的 `/Zc:forScope-` native 警告。
+3. 多个主链项目已可独立构建，但仍存在 cycle-breaker、显式 HintPath 与同名程序集 API 暴露边界，后续仍需继续收敛。
+4. `System.Printing` C++/CLI 项目已进入源码编译阶段，但尚未构建成功；`PresentationUI` 当前通过 `System.Printing-ref` 绕过实现程序集阻塞。
 
 ## 当前主要缺口
 
 1. 当前解决方案已纳入项目可构建，但尚未纳管的主链项目仍需继续打通。
-2. 解决方案纳管明显滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
+2. 解决方案纳管仍滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
    - `WindowsFormsIntegration`
-   - `PresentationFramework`
-   - `PresentationUI`
-   - `ReachFramework`
-   - `System.Printing`
-   - `System.Windows.Controls.Ribbon`
-   - 各主题项目
+   - `System.Printing`（C++/CLI 实现项目仍失败，ref 项目可用）
+   - 除 `PresentationFramework.Classic` 以外的各主题项目
 3. 关键顶层模块仍未迁入：
    - `PenImc`
    - `System.Windows.Presentation`
@@ -199,16 +223,18 @@
    - `ReachFramework-ref` 所需的 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露，参考程序集项目可独立构建。
    - `ReachFramework` 实现项目已通过动态调用边界越过 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
    - `PresentationFramework` 实现项目已通过动态调用边界越过打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
+    - `PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 已纳入解决方案，但当前依赖 XAML partial 占位、显式完整 `PresentationFramework` 引用与友元公钥调整，后续需恢复真实标记编译链路并收敛同名程序集解析。
    - `AvTrace` 代码生成目标在 `PresentationFramework` 主项目独立构建中未形成当前阻塞。
 5. 当前仓库仍保留个人机器本地引用路径，影响可移植性与构建复现性。
 
 ## 建议的当前优先级
 
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
-2. 继续收敛 `ReachFramework` / `PresentationFramework` 的动态边界，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用。
-3. 评估 `ReachFramework` 与 `PresentationFramework` 是否具备加入 `Microsoft.Dotnet.Wpf.sln` 的条件，并确认不会破坏现有解决方案基线。
-4. 在 `PresentationFramework` 链路稳定后，评估 `WindowsFormsIntegration` 的重新纳管与构建状态。
-5. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
+2. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
+3. 继续处理 `System.Printing` C++/CLI 的类型重定义和 `System.IO.Packaging` 引用缺失问题。
+4. 在当前解决方案基线保持成功的前提下，继续评估剩余主题项目是否可按 `PresentationFramework.Classic` 的方式逐步纳管。
+5. 在 `PresentationUI` 与 Ribbon 链路稳定后，继续处理 `WindowsFormsIntegration` 的完整 `PresentationFramework` API 引用问题。
+6. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
 
 ## 当前执行约束
 

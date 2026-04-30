@@ -21,8 +21,20 @@ namespace Microsoft.Internal.DeploymentUI
     /// Interaction logic for TenFeetInstallationProgress.xaml
     /// </summary>
     [FriendAccessAllowed] // Built into UI, used by Framework.
-    internal partial class TenFeetInstallationProgress : IProgressPage
+    internal partial class TenFeetInstallationProgress : Grid, IProgressPage
     {
+        private readonly TextBlock PublisherText = new TextBlock();
+        private readonly TextBlock ApplicationNameText = new TextBlock();
+        private readonly ProgressBar ProgressBar_1 = new ProgressBar();
+        private readonly TextBlock ProgressBarStatusText = new TextBlock();
+        private readonly TextBlock DownloadFrom = new TextBlock();
+        private readonly TextBlock CurrentBytesText = new TextBlock();
+        private readonly TextBlock TotalBytesText = new TextBlock();
+
+        private void InitializeComponent()
+        {
+        }
+
         public TenFeetInstallationProgress()
         {
             InitializeComponent();

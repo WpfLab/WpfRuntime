@@ -65,7 +65,7 @@ namespace Microsoft.Internal
         // Make internal visible to the 3.5 dll, System.Windows.Presentation.dll.
         // we hard code the key here because the 3.5 dll is built in the devdiv depot using the CLR key.
         internal const string SystemWindowsPresentation = "System.Windows.Presentation, PublicKey=" + DEVDIV_PUBLIC_KEY_STRING;
-        internal const string SystemWindowsControlsRibbon = "System.Windows.Controls.Ribbon, PublicKey=" + DEVDIV_PUBLIC_KEY_STRING;
+        internal const string SystemWindowsControlsRibbon = "System.Windows.Controls.Ribbon, PublicKey=" + WCP_PUBLIC_KEY_STRING;
     }
 
     internal static class DllImport

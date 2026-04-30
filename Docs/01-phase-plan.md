@@ -69,6 +69,8 @@
 - `Microsoft.Dotnet.Wpf.sln` 已恢复可构建。
 - 验证命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - `UIAutomationClient` 可独立构建，`UIAutomationClientSideProviders` 下游缺失参考程序集的问题没有复现。
+- `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 纳入解决方案后，解决方案完整重建仍可通过。
+- 当前解决方案级剩余警告为 `DirectWriteForwarder.vcxproj` 的 `/Zc:forScope-` 已否决警告。
 
 ### 任务
 
@@ -101,11 +103,13 @@
    - 已在磁盘中但未纳入解决方案
    - 目录尚未迁入
 2. 优先纳管与当前主链直接相关的现存项目：
-   - `WindowsFormsIntegration`
-   - `PresentationFramework`
-   - `PresentationUI`
-   - `ReachFramework`
-   - `System.Printing`
+   - `ReachFramework`：已纳入解决方案。
+   - `PresentationFramework`：已纳入解决方案。
+   - `PresentationUI`：已纳入解决方案。
+   - `System.Windows.Controls.Ribbon`：已纳入解决方案。
+   - `PresentationFramework.Classic`：已纳入解决方案。
+   - `WindowsFormsIntegration`：仍需解决完整 `PresentationFramework` API 引用和 `IKeyboardInputSink` 签名问题。
+   - `System.Printing`：C++/CLI 实现项目仍需解决类型重定义和 `System.IO.Packaging` 引用问题。
 3. 对暂不纳入解决方案的项目，明确写出原因，不要只写“待处理”。
 
 ### 完成标准
@@ -153,6 +157,13 @@
 - `ReachFramework-ref` 对 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 API 的解析已由 `PresentationFramework-System.Printing-api-cycle` 补齐。
 - `ReachFramework` 实现项目已可独立构建。当前采用动态调用边界绕开 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
 - `PresentationFramework` 已抑制实现项目中的 `WPF0001`，并已可独立构建。当前采用动态调用边界绕开打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
+- `PresentationUI` 已可独立构建。当前通过 `System.Printing-ref` 绕过 `System.Printing` C++/CLI 实现项目，并显式引用完整 `PresentationFramework` 输出，避免 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整控件 API。
+- `PresentationUI` 当前仍有 XAML partial 占位成员，说明 `InternalMarkupCompilation` 生成链路还未完全恢复，后续需要用真实标记编译产物替代占位。
+- `PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` 输出补齐主题和 Ribbon 所需控件 API。
+- `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析到同名类型。
+- `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
+- `System.Printing` C++/CLI 实现项目已越过 MSBuild 配置错误并进入源码编译阶段，当前阻塞为 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 引用缺失。
+- `WindowsFormsIntegration` 已重新验证，当前阻塞为完整 `PresentationFramework` 控件/API 引用缺失和 `IKeyboardInputSink` 接口签名不匹配。
 - 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界。
 
 ### 完成标准

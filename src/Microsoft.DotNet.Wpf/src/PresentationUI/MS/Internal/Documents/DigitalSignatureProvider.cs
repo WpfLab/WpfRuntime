@@ -14,6 +14,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Windows.TrustUI;
 using System.Windows.Xps.Packaging;
 
+using XpsDocument = System.Windows.Xps.Packaging.XpsDocument;
+
 using MS.Internal.PresentationUI;   // For FriendAccessAllowed
 
 namespace MS.Internal.Documents

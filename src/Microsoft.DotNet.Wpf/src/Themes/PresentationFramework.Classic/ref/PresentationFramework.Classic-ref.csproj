@@ -26,6 +26,10 @@
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
+    <Reference Include="PresentationFramework"
+               HintPath="$(ArtifactsBinDir)PresentationFramework\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               Private="false"
+               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\$(Platform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
   </ItemGroup>
 
   <!-- Minimal set of .NET core references -->
