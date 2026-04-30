@@ -18,6 +18,7 @@
     <Compile Include="System.Printing.PrintTicketScope.cs" />
     <Compile Include="System.Printing.PrintCapabilities.cs" />
     <Compile Include="System.Printing.ValidationResult.cs" />
+    <Compile Include="System.Windows.Xps.Serialization.SerializationManagers.cs" />
     <Compile Include="System.Windows.Xps.Serialization.XpsDocumentEvent.cs" />
     <Compile Include="System.Windows.Xps.Packaging.PackagingProgressEventArgs.cs" />
     <Compile Include="System.Windows.Xps.Serialization.RCW.IXpsOMPackageWriter.cs" />

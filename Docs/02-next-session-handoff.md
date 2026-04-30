@@ -135,9 +135,11 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 10. `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API。
 11. `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
 12. `System.Printing` C++/CLI 实现项目已进一步收敛：当前已把 `PresentationFramework-System.Printing-impl-cycle` / `ReachFramework` 实现程序集引用改为打印专用 API bridge，并通过 `ForcedUsingFiles` 显式引入 `System.IO.Packaging.dll`。此前的 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 缺失已不再是首个失败点；当前源码编译首先卡在 ReachFramework bridge 缺少 `PackageSerializationManager`、`XpsSerializationManager`、`XpsSerializationManagerAsync`、`XpsOMSerializationManager`、`XpsOMSerializationManagerAsync`、`NgcSerializationManager`、`NgcSerializationManagerAsync` 等序列化管理器 API。
-13. `WindowsFormsIntegration` 当前已纳入解决方案并随解决方案入口构建通过，且已重新验证可独立构建；后续仍需继续收敛其对完整 `PresentationFramework` x64 输出的显式依赖。
-14. `PresentationBuildTasks` 已完成从 `net9.0` 到 `net8.0` 的目标框架调整，当前已纳入解决方案并可独立构建。
-15. `Shared/Tracing/mcwpf` 已改写为 SDK 风格项目，移除对 `Microsoft.DevDiv.Settings.targets` / `Microsoft.DevDiv.targets` 的依赖，当前已纳入解决方案并可独立构建。
+13. `ReachFramework-System.Printing-api-cycle` 已新增 `System.Windows.Xps.Serialization.SerializationManagers.cs`，用最小 bridge 方式补齐 `PackageSerializationManager`、`BasePackagingPolicy`、`XpsSerializationManager` / `Async`、`XpsOMSerializationManager` / `Async`、`NgcSerializationManager` / `Async`、`MXDWSerializationManager` 及部分 RCW 声明；bridge 项目本身已重新验证可独立构建。
+14. `System.Printing` 当前首个失败点已前移：缺失 ReachFramework 序列化管理器 API 已不再是首个阻塞，当前先卡在 `PackagingProgressEventArgs` bridge 缺少 `Action` / `NumberCompleted`、缺少 `PrintingCanceledException` 与 `System.Printing.Interop` 相关声明，以及 `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 与当前 `System.Printing` 自带头文件中的同名声明冲突。
+15. `WindowsFormsIntegration` 当前已纳入解决方案并随解决方案入口构建通过，且已重新验证可独立构建；后续仍需继续收敛其对完整 `PresentationFramework` x64 输出的显式依赖。
+16. `PresentationBuildTasks` 已完成从 `net9.0` 到 `net8.0` 的目标框架调整，当前已纳入解决方案并可独立构建。
+17. `Shared/Tracing/mcwpf` 已改写为 SDK 风格项目，移除对 `Microsoft.DevDiv.Settings.targets` / `Microsoft.DevDiv.targets` 的依赖，当前已纳入解决方案并可独立构建。
 
 ## 建议起手顺序
 
@@ -166,8 +168,9 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
    - `FindToolBar` 当前仍位于 `PresentationUI`，但 `PresentationFramework` 的 `DocumentViewer`、`FlowDocumentReader`、`FlowDocumentScrollViewer`、`SinglePageViewer` 与 `DocumentViewerHelper` 会直接使用该类型。
 8. 排查 `System.Printing` 时新增重点检查：
    - `src/Microsoft.DotNet.Wpf/src/System.Printing/System.Printing.vcxproj` 当前已改为引用 `PresentationFramework-System.Printing-api-cycle` 与 `ReachFramework-System.Printing-api-cycle`，不要直接回退到完整 `ReachFramework` 或 `PresentationFramework-System.Printing-impl-cycle`，否则会重新引入 `SafeMemoryHandle` / `PrintQueue` 等类型重定义。
-   - 优先在 `cycle-breakers/ReachFramework/` 中补 `PackageSerializationManager`、`XpsSerializationManager`、`XpsSerializationManagerAsync`、`XpsOMSerializationManager`、`XpsOMSerializationManagerAsync`、`NgcSerializationManager`、`NgcSerializationManagerAsync` 及相关事件委托的最小桥接 API。
-   - `cycle-breakers/PresentationFramework/System.Windows.Controls.PrintDialog.cs` 与 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.XpsDocumentEvent.cs` / `System.Printing.PrintTicketManager.cs` 是当前已新增的最小 bridge 占位，应在此基础上继续补齐，而不是另起新的 bridge 方向。
+    - 继续在 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.SerializationManagers.cs` 基础上补齐剩余最小 bridge API，优先处理 `PackagingProgressEventArgs.Action` / `NumberCompleted`、`PrintingCanceledException`、`System.Printing.Interop`、`RCW::PrintDocumentPackageStatusProvider`。
+    - 继续收敛 `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 的同名类型来源，避免 bridge 与 `System.Printing` 自带头文件同时暴露同名声明。
+    - `cycle-breakers/PresentationFramework/System.Windows.Controls.PrintDialog.cs` 与 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.XpsDocumentEvent.cs` / `System.Printing.PrintTicketManager.cs` / `System.Windows.Xps.Serialization.SerializationManagers.cs` 是当前已新增的最小 bridge 占位，应在此基础上继续补齐，而不是另起新的 bridge 方向。
 9. 排查 `PresentationUI` 时重点检查：
    - `src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj` 中显式完整 `PresentationFramework` 引用是否仍需要保留，是否可以改为更稳定的项目引用输出顺序。
    - `InstallationError.xaml.cs`、`TenFeetInstallationError.xaml.cs`、`TenFeetInstallationProgress.xaml.cs` 与 `MS/Internal/Documents/FindToolBar.xaml.cs` 中的 XAML partial 占位应由真实标记编译产物替换。

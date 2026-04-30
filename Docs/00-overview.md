@@ -205,7 +205,10 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 `System.Printing` C++/CLI 项目已越过早期 MSBuild 配置阻塞，但尚未可独立构建：
 
 - 已修复：空 `WpfCppProps` 导入、旧 `TargetFrameworkIdentifier/TargetFrameworkVersion` 组合、默认 `v100` 平台工具集、缺失 `FilterItem1ByItem2` 自定义任务依赖、`/clr:pure` 与 .NET Core C++/CLI 不兼容。
-- 当前首个错误面：已将 `System.Printing` 的 C++/CLI 引用从 `PresentationFramework-System.Printing-impl-cycle` / `ReachFramework` 实现程序集收窄到 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle`，并显式把 `System.IO.Packaging.dll` 通过 `ForcedUsingFiles` 注入编译器。此前的 `SafeMemoryHandle`、`PrintSystemDispatcherObject`、`PrintJobSettings`、`ILegacyDevice`、`PrintQueue` 大面积重定义与 `System.IO.Packaging` 缺失已不再是首个失败点；当前新的首个错误面是桥接程序集缺少 `PackageSerializationManager`、`XpsSerializationManager`、`XpsSerializationManagerAsync`、`XpsOMSerializationManager`、`XpsOMSerializationManagerAsync`、`NgcSerializationManager`、`NgcSerializationManagerAsync` 等 ReachFramework 序列化管理器 API。
+- 当前首个错误面：已将 `System.Printing` 的 C++/CLI 引用从 `PresentationFramework-System.Printing-impl-cycle` / `ReachFramework` 实现程序集收窄到 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle`，并显式把 `System.IO.Packaging.dll` 通过 `ForcedUsingFiles` 注入编译器。`ReachFramework-System.Printing-api-cycle` 已新增 `System.Windows.Xps.Serialization.SerializationManagers.cs`，补齐 `PackageSerializationManager`、`BasePackagingPolicy`、`XpsSerializationManager` / `Async`、`XpsOMSerializationManager` / `Async`、`NgcSerializationManager` / `Async`、`MXDWSerializationManager` 及部分 RCW 最小桥接声明，bridge 项目本身已可独立构建。此前缺失序列化管理器 API 已不再是首个失败点；当前新的首个错误面转为：
+  - `PackagingProgressEventArgs` bridge 仍缺少 `Action` / `NumberCompleted` 属性；
+  - `ReachFramework-System.Printing-api-cycle` 仍缺少 `PrintingCanceledException`、`System.Printing.Interop` 相关桥接；
+  - `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 仍与当前 `System.Printing` 自带头文件中的同名声明冲突，需要继续收敛引用边界，避免同时从 bridge 与本项目源码暴露同名类型。
 - 错误日志：`artifacts/system-printing-errors.log`。
 
 `WindowsFormsIntegration` 已重新验证，当前未能独立构建：
@@ -219,7 +222,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 1. 当前解决方案已在纳入 `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 后恢复可构建基线。
 2. 解决方案级构建报告仍保留 `DirectWriteForwarder` 的 `/Zc:forScope-` native 警告。
 3. 多个主链项目已可独立构建，但仍存在 cycle-breaker、显式 HintPath 与同名程序集 API 暴露边界，后续仍需继续收敛。
-4. `System.Printing` C++/CLI 项目已进入源码编译阶段，但尚未构建成功；`PresentationUI` 当前通过 `System.Printing-ref` 绕过实现程序集阻塞。
+4. `System.Printing` C++/CLI 项目已进入更深一层源码编译阶段，但尚未构建成功；`PresentationUI` 当前通过 `System.Printing-ref` 绕过实现程序集阻塞。
 
 ## 当前主要缺口
 
@@ -243,7 +246,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
 2. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
-3. 继续处理 `System.Printing` C++/CLI 的类型重定义和 `System.IO.Packaging` 引用缺失问题。
+3. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，优先补齐 `PackagingProgressEventArgs`、`PrintingCanceledException`、`System.Printing.Interop` 等最小 API，并消除 `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 同名类型重定义。
 4. 继续处理 `PresentationUI` 的 XAML 标记编译链路，优先用真实生成产物替换当前占位 partial 成员。
 5. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
 6. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。

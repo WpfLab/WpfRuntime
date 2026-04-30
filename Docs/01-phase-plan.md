@@ -186,6 +186,7 @@
 - `PresentationBuildTasks` 已完成 SDK 目标框架调整 (从 `net9.0` 改为 `net8.0`),并已加入解决方案。
 - `mcwpf` 已完成现代化改造 (从旧非 SDK 风格改为 SDK 风格),并已加入解决方案。
 - `PresentationBuildTasks` 与 `mcwpf` 已重新验证可独立构建，不再是当前阻塞点。
+- `ReachFramework-System.Printing-api-cycle` 已新增 `System.Windows.Xps.Serialization.SerializationManagers.cs`，用最小 bridge 方式补齐 `PackageSerializationManager`、`BasePackagingPolicy`、`XpsSerializationManager` / `Async`、`XpsOMSerializationManager` / `Async`、`NgcSerializationManager` / `Async`、`MXDWSerializationManager` 及部分 RCW 声明；bridge 项目已可独立构建。
 - 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界，并继续恢复 `PresentationUI` 的真实标记编译生成链路。
 
 ### 完成标准
