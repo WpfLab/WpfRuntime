@@ -55,15 +55,13 @@
 - `ReachFramework`
 - `PresentationFramework`
 - `PresentationUI`
-- `PresentationFramework.Classic`
-- `System.Windows.Controls.Ribbon`
+- `PresentationFramework.Classic`\r\n- `PresentationFramework.Aero`\r\n- `PresentationFramework.Aero2`\r\n- `PresentationFramework.AeroLite`\r\n- `PresentationFramework.Fluent`\r\n- `PresentationFramework.Luna`\r\n- `PresentationFramework.Royale`\r\n- `System.Windows.Controls.Ribbon`
 
 ### 当前磁盘已存在但尚未纳入解决方案的主要项目
 
 - `WindowsFormsIntegration`
 - `System.Printing`
 - `PresentationBuildTasks`
-- 除 `PresentationFramework.Classic` 以外的 `Themes` 相关项目
 - 大部分 `ref/*.csproj`
 - `cycle-breakers/*.csproj`
 
@@ -96,7 +94,7 @@
 
 ### 这意味着什么
 
-1. 当前解决方案在纳入 `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 后仍可构建。
+1. 当前解决方案在纳入 `ReachFramework`、`PresentationFramework`、`PresentationUI`、`System.Windows.Controls.Ribbon` 与全部现有主题实现项目后仍可构建。
 2. `UIAutomationClientSideProviders` 下游 `CS0006` 没有复现；`UIAutomationClient` 独立构建可通过。
 3. 后续重点应放在 `ReachFramework` / `PresentationFramework` 主链，而不是继续排查已恢复的 `UIAutomationClient` 问题。
 4. 当前主链阻塞集中在 cycle-breaker API 边界：`ReachFramework-ref` 需要 `XpsDocumentWriter` / `ISerializerFactory` 等 `PresentationFramework` API，但将相关类型放入 `ReachFramework` bridge 后又会引发与 `PresentationFramework` / `System.Printing` 的同名类型冲突。
@@ -105,10 +103,10 @@
 7. `PresentationFramework` 实现项目已可独立构建；当前通过动态调用边界绕开打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
 8. `PresentationUI` 实现项目已可独立构建；当前通过 `System.Printing-ref` 绕过 `System.Printing` C++/CLI 实现项目，并显式引用完整 `PresentationFramework` 输出，避免 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整控件 API。
 9. `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析同名类型。
-10. `PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` 输出补齐主题和 Ribbon 所需控件 API。
+10. `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API。
 11. `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
 12. `System.Printing` C++/CLI 实现项目已越过空 `WpfCppProps`、旧目标框架、旧平台工具集、缺失 `FilterItem1ByItem2`、`/clr:pure` 等配置阻塞；当前源码编译失败集中在 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 引用缺失。
-13. `WindowsFormsIntegration` 当前独立构建失败，首个错误面为完整 `PresentationFramework` 控件/API 引用缺失和 `IKeyboardInputSink` 接口签名不匹配。
+13. `WindowsFormsIntegration` 当前独立构建失败，首个错误面为完整 `PresentationFramework` 控件/API 引用缺失和 `IKeyboardInputSink` 接口签名不匹配，日志为 `artifacts/windowsformsintegration-errors.latest.log`。\r\n14. `PresentationBuildTasks` 当前独立构建失败，原因是项目面向 `net9.0`，但当前 SDK 为 `8.0.206`，日志为 `artifacts/presentationbuildtasks-errors.latest.log`。\r\n15. `Shared/Tracing/mcwpf` 当前独立构建失败，原因是导入 `C:\tools\Microsoft.DevDiv.Settings.targets` 失败，日志为 `artifacts/mcwpf-errors.latest.log`。
 
 ## 建议起手顺序
 
@@ -124,7 +122,6 @@
 3. 继续处理：
    - `ReachFramework` 与 `PresentationFramework` 的动态边界收敛
    - `PresentationUI` 的 XAML partial 占位替换为真实标记编译生成链路
-    - 剩余主题项目按 `PresentationFramework.Classic` 的方式逐步验证与纳管
    - `System.Printing` C++/CLI 类型重定义与 `System.IO.Packaging` 引用缺失
    - `PresentationFramework` / `PresentationUI` 的完整 API 引用与同名 bridge 解析顺序
    - `WindowsFormsIntegration`

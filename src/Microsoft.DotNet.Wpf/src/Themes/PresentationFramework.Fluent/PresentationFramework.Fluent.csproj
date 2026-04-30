@@ -37,6 +37,10 @@
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
+    <Reference Include="PresentationFramework"
+               HintPath="$(ArtifactsBinDir)PresentationFramework\x64\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               Private="false"
+               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\x64\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
     <ProjectReference Include="$(WpfSourceDir)Themes\PresentationFramework.Fluent\ref\PresentationFramework.Fluent-ref.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

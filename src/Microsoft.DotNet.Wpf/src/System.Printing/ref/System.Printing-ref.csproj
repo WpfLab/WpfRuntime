@@ -12,6 +12,8 @@
   <PropertyGroup>
     
     <EnableDefaultItems>false</EnableDefaultItems>
+    <WpfBridgePlatform Condition="'$(Platform)' == 'AnyCPU'">x64</WpfBridgePlatform>
+    <WpfBridgePlatform Condition="'$(WpfBridgePlatform)' == ''">$(Platform)</WpfBridgePlatform>
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,16 +54,24 @@
 
   <ItemGroup>
     <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj"
+                      AdditionalProperties="Platform=$(WpfBridgePlatform)"
+                      ReferenceOutputAssembly="false"
                       PrivateAssets="all" />
     <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-System.Printing-api-cycle.csproj"
+                      AdditionalProperties="Platform=$(WpfBridgePlatform)"
+                      ReferenceOutputAssembly="false"
                       PrivateAssets="all" />
-    <Reference Include="ReachFramework"
-               HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\..\artifacts\obj\ReachFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\ref\ReachFramework.dll"
+    <Reference Include="PresentationFramework"
+               HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\bin\PresentationFramework-System.Printing-api-cycle\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               SpecificVersion="false"
+               ExternallyResolved="true"
                Private="false" />
     <Reference Include="ReachFramework"
-               HintPath="$(ArtifactsBinDir)ReachFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\ReachFramework.dll"
+               HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\ReachFramework-System.Printing-api-cycle\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\ref\ReachFramework.dll"
+               SpecificVersion="false"
+               ExternallyResolved="true"
                Private="false"
-               Condition="Exists('$(ArtifactsBinDir)ReachFramework-System.Printing-api-cycle\$(Platform)\$(Configuration)\$(TargetFramework)\ReachFramework.dll')" />
+               Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\ReachFramework-System.Printing-api-cycle\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\ref\ReachFramework.dll')" />
   </ItemGroup>
 
 </Project>

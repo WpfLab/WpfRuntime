@@ -126,8 +126,7 @@
 - `ReachFramework`
 - `PresentationFramework`
 - `PresentationUI`
-- `PresentationFramework.Classic`
-- `System.Windows.Controls.Ribbon`
+- `PresentationFramework.Classic`\r\n- `PresentationFramework.Aero`\r\n- `PresentationFramework.Aero2`\r\n- `PresentationFramework.AeroLite`\r\n- `PresentationFramework.Fluent`\r\n- `PresentationFramework.Luna`\r\n- `PresentationFramework.Royale`\r\n- `System.Windows.Controls.Ribbon`
 
 ### 当前已存在但尚未纳入解决方案的主要项目
 
@@ -135,7 +134,6 @@
 
 - `WindowsFormsIntegration`
 - `System.Printing`（含 `ref` 与 native 项目）
-- 除 `PresentationFramework.Classic` 以外的各主题项目
 - `PresentationBuildTasks`
 - `Shared/Tracing/mcwpf`
 - 多数 `ref/*.csproj`
@@ -183,10 +181,10 @@
 - 当前处理方式：`PresentationUI` 改为引用 `System.Printing-ref`，并显式引用完整 `PresentationFramework` 实现输出，避免 `System.Printing-ref` 依赖的 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整 `PresentationFramework` API。
 - 当前仍有迁移性占位：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress` 与 `FindToolBar` 增加了最小 XAML partial 占位成员，用于在 `InternalMarkupCompilation` 链路尚未完全接入时保持托管编译可推进。后续需要恢复为真实标记编译生成代码。
 
-`System.Windows.Controls.Ribbon` 与 `PresentationFramework.Classic` 已进入可独立构建并已纳入解决方案：
+`System.Windows.Controls.Ribbon` 与全部主题项目已进入可独立构建并已纳入解决方案：
 
 - `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析到同名 `XpsDocument`。
-- `PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 的实现项目和 ref 项目已显式引用完整 `PresentationFramework` 输出，用于补齐 `Thickness`、`Style`、`Control` 等完整 PresentationFramework API。
+- `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 的实现项目和 ref 项目已显式引用完整 `PresentationFramework` x64 输出，用于补齐 `Thickness`、`Style`、`Control` 等完整 PresentationFramework API。
 - `BuildInfo.SystemWindowsControlsRibbon` 已调整为 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元程序集声明与当前输出程序集强命名一致。
 
 `System.Printing` C++/CLI 项目已越过早期 MSBuild 配置阻塞，但尚未可独立构建：
@@ -214,8 +212,7 @@
 2. 解决方案纳管仍滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
    - `WindowsFormsIntegration`
    - `System.Printing`（C++/CLI 实现项目仍失败，ref 项目可用）
-   - 除 `PresentationFramework.Classic` 以外的各主题项目
-3. 关键顶层模块仍未迁入：
+   3. 关键顶层模块仍未迁入：
    - `PenImc`
    - `System.Windows.Presentation`
    - `WpfGfx`
@@ -232,8 +229,7 @@
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
 2. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
 3. 继续处理 `System.Printing` C++/CLI 的类型重定义和 `System.IO.Packaging` 引用缺失问题。
-4. 在当前解决方案基线保持成功的前提下，继续评估剩余主题项目是否可按 `PresentationFramework.Classic` 的方式逐步纳管。
-5. 在 `PresentationUI` 与 Ribbon 链路稳定后，继续处理 `WindowsFormsIntegration` 的完整 `PresentationFramework` API 引用问题。
+4. 在 `PresentationUI`、Ribbon 与主题链路稳定后，继续处理 `WindowsFormsIntegration` 的完整 `PresentationFramework` API 引用和 `IKeyboardInputSink` 签名问题。\r\n5. 继续处理 `PresentationBuildTasks` 的 SDK 版本目标问题与 `Shared/Tracing/mcwpf` 的 DevDiv targets 导入问题。
 6. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
 
 ## 当前执行约束
