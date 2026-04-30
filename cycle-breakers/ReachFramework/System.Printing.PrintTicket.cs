@@ -9,6 +9,15 @@ namespace System.Printing
 {
    public sealed partial class PrintTicket
    {
-       private PrintTicket() {}
+        public PrintTicket() {}
+
+        public void SaveTo(System.IO.Stream outStream)
+        {
+        }
+
+        public PrintTicket Clone()
+        {
+            return new PrintTicket();
+        }
    }
 }

@@ -30,4 +30,12 @@
     <NetCoreReference Include="System.Runtime.InteropServices" />
     <NetCoreReference Include="System.Resources.ResourceManager" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />
+  </ItemGroup>
 </Project>

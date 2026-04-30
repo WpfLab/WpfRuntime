@@ -7,6 +7,35 @@
 
 namespace System.Printing
 {
+    public class PrintJobException : System.Exception
+    {
+        public PrintJobException()
+        {
+        }
+
+        public PrintJobException(string message)
+            : base(message)
+        {
+        }
+
+        public PrintJobException(string message, System.Exception innerException)
+            : base(message, innerException)
+        {
+        }
+
+        public PrintJobException(int errorCode, string message)
+            : base(message)
+        {
+            HResult = errorCode;
+        }
+
+        public PrintJobException(int errorCode, string message, System.Exception innerException)
+            : base(message, innerException)
+        {
+            HResult = errorCode;
+        }
+    }
+
     internal class PrintTicketManager : System.IDisposable
     {
         public PrintTicketManager(string deviceName, int clientPrintSchemaVersion)
@@ -31,5 +60,41 @@ namespace System.Printing
         public void Dispose()
         {
         }
+    }
+
+    public class PrintingCanceledException : PrintJobException
+    {
+        public PrintingCanceledException()
+        {
+        }
+
+        public PrintingCanceledException(string message)
+            : base(message)
+        {
+        }
+
+        public PrintingCanceledException(string message, System.Exception innerException)
+            : base(message, innerException)
+        {
+        }
+
+        public PrintingCanceledException(int errorCode, string message)
+            : base(message)
+        {
+            HResult = errorCode;
+        }
+
+        public PrintingCanceledException(int errorCode, string message, System.Exception innerException)
+            : base(message, innerException)
+        {
+            HResult = errorCode;
+        }
+    }
+}
+
+namespace System.Printing.Interop
+{
+    internal static class NamespaceAnchor
+    {
     }
 }

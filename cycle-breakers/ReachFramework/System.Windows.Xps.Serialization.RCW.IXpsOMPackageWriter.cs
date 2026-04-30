@@ -12,5 +12,6 @@ namespace System.Windows.Xps.Serialization.RCW
 {
     internal partial interface IXpsOMPackageWriter
     {
+        void Close();
     }
 }

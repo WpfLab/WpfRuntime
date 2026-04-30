@@ -9,6 +9,14 @@ namespace System.Windows.Xps.Packaging
 {
     public partial class PackagingProgressEventArgs
     {
-        private PackagingProgressEventArgs() {}
+        public PackagingProgressEventArgs(PackagingAction action, int numberCompleted)
+        {
+            Action = action;
+            NumberCompleted = numberCompleted;
+        }
+
+        public PackagingAction Action { get; }
+
+        public int NumberCompleted { get; }
     }
 }

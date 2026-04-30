@@ -41,6 +41,7 @@ namespace System.Windows.Xps.Serialization.RCW
 {
     internal partial interface IPrintDocumentPackageTarget
     {
+        void Cancel();
     }
 
     internal partial interface IXpsDocumentPackageTarget
@@ -52,6 +53,10 @@ namespace System.Windows.Xps.Serialization.RCW
         public PrintDocumentPackageStatusProvider(IPrintDocumentPackageTarget docPackageTarget)
         {
         }
+
+        public System.Threading.ManualResetEvent JobIdAcquiredEvent => null;
+
+        public int JobId => 0;
     }
 }
 

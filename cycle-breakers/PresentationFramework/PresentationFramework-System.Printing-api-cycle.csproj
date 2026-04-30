@@ -24,7 +24,6 @@
     <Compile Include="System.Windows.Documents.Serialization.SerializerWriter.cs" />
     <Compile Include="System.Windows.Documents.Serialization.SerializerWriterCollator.cs" />
     <Compile Include="System.Windows.Controls.PrintDialog.cs" />
-    <Compile Include="System.Windows.Xps.XpsDocumentWriter.cs" />
   </ItemGroup>
 
   <ItemGroup>

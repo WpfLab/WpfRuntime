@@ -168,8 +168,8 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
    - `FindToolBar` 当前仍位于 `PresentationUI`，但 `PresentationFramework` 的 `DocumentViewer`、`FlowDocumentReader`、`FlowDocumentScrollViewer`、`SinglePageViewer` 与 `DocumentViewerHelper` 会直接使用该类型。
 8. 排查 `System.Printing` 时新增重点检查：
    - `src/Microsoft.DotNet.Wpf/src/System.Printing/System.Printing.vcxproj` 当前已改为引用 `PresentationFramework-System.Printing-api-cycle` 与 `ReachFramework-System.Printing-api-cycle`，不要直接回退到完整 `ReachFramework` 或 `PresentationFramework-System.Printing-impl-cycle`，否则会重新引入 `SafeMemoryHandle` / `PrintQueue` 等类型重定义。
-    - 继续在 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.SerializationManagers.cs` 基础上补齐剩余最小 bridge API，优先处理 `PackagingProgressEventArgs.Action` / `NumberCompleted`、`PrintingCanceledException`、`System.Printing.Interop`、`RCW::PrintDocumentPackageStatusProvider`。
-    - 继续收敛 `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 的同名类型来源，避免 bridge 与 `System.Printing` 自带头文件同时暴露同名声明。
+    - 继续在 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.SerializationManagers.cs`、`System.Windows.Xps.Packaging.XpsDocument.cs`、`System.Windows.Xps.Serialization.RCW.IXpsOMPackageWriter.cs` 基础上补齐剩余最小 bridge API，当前优先处理 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri`。
+    - `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 的同名类型来源已先收敛：`PresentationFramework-System.Printing-api-cycle.csproj` 已移除 `System.Windows.Xps.XpsDocumentWriter.cs`，不要再把该 bridge 文件重新加回去，除非已同步调整 `System.Printing` 自带 C++/CLI 声明边界。
     - `cycle-breakers/PresentationFramework/System.Windows.Controls.PrintDialog.cs` 与 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.XpsDocumentEvent.cs` / `System.Printing.PrintTicketManager.cs` / `System.Windows.Xps.Serialization.SerializationManagers.cs` 是当前已新增的最小 bridge 占位，应在此基础上继续补齐，而不是另起新的 bridge 方向。
 9. 排查 `PresentationUI` 时重点检查：
    - `src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj` 中显式完整 `PresentationFramework` 引用是否仍需要保留，是否可以改为更稳定的项目引用输出顺序。

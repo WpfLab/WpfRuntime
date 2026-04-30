@@ -2366,16 +2366,11 @@ CreateXPSDocument(
     String^ documentName
     )
 {
-    Application^ app = Application::Current;
     //
     // Create a package against the file
     //
     _mxdwPackage = Package::Open(documentName,
                                     FileMode::Create);
-    if( app != nullptr && app->StartupUri != nullptr )
-    {
-        XpsDocument::SaveWithUI(IntPtr::Zero, app->StartupUri, gcnew Uri(documentName));
-    }
 
     //
     // Create an XPS Document
@@ -3066,16 +3061,11 @@ CreateXPSDocument(
     String^ documentName
     )
 {
-    Application^ app = Application::Current;
     //
     // Create a package against the file
     //
     _mxdwPackage = Package::Open(documentName,
                                     FileMode::Create);
-    if( app != nullptr && app->StartupUri != nullptr )
-    {
-        XpsDocument::SaveWithUI(IntPtr::Zero, app->StartupUri, gcnew Uri(documentName));
-    }
 
     //
     // Create an XPS Document
