@@ -29,6 +29,7 @@
   <PropertyGroup>
     <UseDestinationLibFolder>true</UseDestinationLibFolder>
     <TargetFramework>net8.0</TargetFramework>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <RestoreProjectStyle>Unknown</RestoreProjectStyle>
     <!-- 
       Opting out of this to ensure _defineReference is used as 
@@ -160,6 +161,12 @@
   -->
   <ItemGroup>
     <AdditionalPackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Packaging">
+      <HintPath>$(NuGetPackageRoot)system.io.packaging\$(SystemIOPackagingVersion)\lib\net8.0\System.IO.Packaging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <!--
     Ignore ijwhost.dll during packaging

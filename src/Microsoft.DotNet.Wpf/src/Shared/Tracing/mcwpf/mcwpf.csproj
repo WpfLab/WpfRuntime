@@ -1,54 +1,19 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="Dogfood">
-
-<!-- Actually target v3.5 -->
-<!-- This PropertyGroup needs to appear before the Import of Microsoft.DevDiv.Settings.targets
-	 because it updates TFM and sets AllowCrossTargeting=true -->
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AllowCrossTargeting>true</AllowCrossTargeting>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <CrossTargetWinFXRefsVersion>v3.5</CrossTargetWinFXRefsVersion>
-    <CrossTargetWinFXToolsVersion>v3.5</CrossTargetWinFXToolsVersion>
-  </PropertyGroup>
-
-  <!-- Imports -->
-  <Import Project="$(_NTDRIVE)$(_NTROOT)\tools\Microsoft.DevDiv.Settings.targets" />
-
-  <!-- Project options -->
-  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>mcwpf</AssemblyName>
-    <ProjectGuid>{FD706CC0-FFDA-460F-B289-400B28C03472}</ProjectGuid>
     <RootNamespace>mcwpf</RootNamespace>
-    <ProductName>mcwpf</ProductName>
-    <OutputPath>$(BinariesDirectory)\WPF\Tools\Build\</OutputPath>
-    <RootOutputPath>$(OutputPath)</RootOutputPath>
-    <OutDir>$(OutputPath)</OutDir>
-    <ApplicationVersion>1.0.0.*</ApplicationVersion>
-    <UseOwnAssemblyVersion>true</UseOwnAssemblyVersion>
-    <UseVSHostingProcess>false</UseVSHostingProcess>
-    <GenerateManifests>false</GenerateManifests>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64;arm64</Platforms>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
-  <!-- Compiler and Linker options -->
-  <PropertyGroup>
-    <OutputType>exe</OutputType>
-  </PropertyGroup>
-
-  <!-- Library References -->
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
+    <Compile Remove="wpf_template.cs" />
+    <None Include="wpf_template.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
-
-  <!-- Core Files -->
-  <ItemGroup>
-      <Compile Include="CommandLineParser.cs" />
-      <Compile Include="mcwpf.cs" />
-  </ItemGroup>
-
-
-  <!-- Imports -->
-  <Import Project="$(ToolsPath)\Microsoft.DevDiv.targets" />
 </Project>

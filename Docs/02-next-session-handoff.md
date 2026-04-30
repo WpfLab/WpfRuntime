@@ -4,6 +4,20 @@
 
 该文档用于让后续 AI 直接接手当前仓库，而不是重复调查仓库结构。以下内容已根据当前工作区重新核对。
 
+## 工作模式强约束
+
+1. 当前仓库迁移工作处于无人值守模式。后续 AI 应主动持续推进总目标“完成整个 WPF 仓库的重组迁移”，不要等待用户逐步下发子任务。
+2. 不要把工作收缩成“只验证一个点”或“只更新文档”。只要没有遇到已验证的真实阻塞，就应继续在当前主线上迭代处理下一个问题。
+3. 命令行 `msbuild` 成功不等于仓库迁移工作已经完成，也不等于 Visual Studio 解决方案状态健康；必须主动检查 `.sln` 纳管状态、IDE 项目加载状态、项目引用与生成链是否一致。
+4. 若一次工作最终只产生文档修改，必须视为例外情况，并在文档中明确写出未继续推进代码/项目迁移的原因与证据。
+
+## 本次反思形成的教训
+
+1. 只做文档同步而没有继续推进迁移，是错误做法。后续 AI 在确认基线后，应直接进入下一个可落地迁移点，而不是在局部验证通过后结束。
+2. 只看命令行构建结果是不够的。后续 AI 必须同时检查 `Microsoft.Dotnet.Wpf.sln` 声明的项目与 IDE 实际已加载项目是否一致，不能忽视解决方案中的加载失败或未加载状态。
+3. 若当前最高优先级问题暂时没有立即修复，也应继续在同阶段内寻找下一个可推进任务，保持长时间、连续迭代，而不是把一次工作缩短成一次状态记录。
+4. 后续 AI 的默认结束条件不应是“已经更新了文档”，而应是“已经推进了迁移”或“已经确认了无法继续推进的真实技术阻塞并留下了充分证据”。
+
 ## 当前已验证事实
 
 ### 解决方案与构建基础设施
@@ -55,13 +69,21 @@
 - `ReachFramework`
 - `PresentationFramework`
 - `PresentationUI`
-- `PresentationFramework.Classic`\r\n- `PresentationFramework.Aero`\r\n- `PresentationFramework.Aero2`\r\n- `PresentationFramework.AeroLite`\r\n- `PresentationFramework.Fluent`\r\n- `PresentationFramework.Luna`\r\n- `PresentationFramework.Royale`\r\n- `System.Windows.Controls.Ribbon`
+- `PresentationFramework.Classic`
+- `PresentationFramework.Aero`
+- `PresentationFramework.Aero2`
+- `PresentationFramework.AeroLite`
+- `PresentationFramework.Fluent`
+- `PresentationFramework.Luna`
+- `PresentationFramework.Royale`
+- `System.Windows.Controls.Ribbon`
+- `WindowsFormsIntegration`
+- `PresentationBuildTasks`
+- `mcwpf`
 
 ### 当前磁盘已存在但尚未纳入解决方案的主要项目
 
-- `WindowsFormsIntegration`
 - `System.Printing`
-- `PresentationBuildTasks`
 - 大部分 `ref/*.csproj`
 - `cycle-breakers/*.csproj`
 
@@ -113,9 +135,9 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 10. `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API。
 11. `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
 12. `System.Printing` C++/CLI 实现项目已越过空 `WpfCppProps`、旧目标框架、旧平台工具集、缺失 `FilterItem1ByItem2`、`/clr:pure` 等配置阻塞；当前源码编译失败集中在 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 引用缺失。
-13. `WindowsFormsIntegration` 当前已纳入解决方案并随解决方案入口构建通过；后续仍需继续收敛其对完整 `PresentationFramework` x64 输出的显式依赖。
-14. `PresentationBuildTasks` 当前独立构建失败，原因是项目面向 `net9.0`，但当前 SDK 为 `8.0.206`，日志为 `artifacts/presentationbuildtasks-errors.latest.log`。
-15. `Shared/Tracing/mcwpf` 当前独立构建失败，原因是导入 `C:\tools\Microsoft.DevDiv.Settings.targets` 失败，日志为 `artifacts/mcwpf-errors.latest.log`。
+13. `WindowsFormsIntegration` 当前已纳入解决方案并随解决方案入口构建通过，且已重新验证可独立构建；后续仍需继续收敛其对完整 `PresentationFramework` x64 输出的显式依赖。
+14. `PresentationBuildTasks` 已完成从 `net9.0` 到 `net8.0` 的目标框架调整，当前已纳入解决方案并可独立构建。
+15. `Shared/Tracing/mcwpf` 已改写为 SDK 风格项目，移除对 `Microsoft.DevDiv.Settings.targets` / `Microsoft.DevDiv.targets` 的依赖，当前已纳入解决方案并可独立构建。
 
 ## 建议起手顺序
 
@@ -128,30 +150,31 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
    - `Directory.Build.props`
    - `Directory.Build.targets`
 2. 先用上述 `msbuild` 命令确认解决方案基线仍可构建。
-3. 继续处理：
+3. 再核对 `Microsoft.Dotnet.Wpf.sln` 中声明的关键项目与 IDE 实际已加载项目是否一致；若存在加载失败、未加载或状态异常，优先把它当作真实阻塞处理并记录。
+4. 在完成基线检查后，不要停在文档同步，应直接继续处理当前最高优先级迁移项，且在同一次工作中持续迭代，直到完成实质迁移或遇到已验证阻塞。
+5. 继续处理：
    - `ReachFramework` 与 `PresentationFramework` 的动态边界收敛
-   - `PresentationUI` 的 XAML partial 占位替换为真实标记编译生成链路
+    - `PresentationUI` 的 XAML partial 占位替换为真实标记编译生成链路
    - `System.Printing` C++/CLI 类型重定义与 `System.IO.Packaging` 引用缺失
-   - `PresentationFramework` / `PresentationUI` 的完整 API 引用与同名 bridge 解析顺序
-   - `WindowsFormsIntegration`
-4. 排查 `ReachFramework` 时重点检查：
+    - `PresentationFramework` / `PresentationUI` / `WindowsFormsIntegration` / 主题链路的完整 API 引用与同名 bridge 解析顺序
+6. 排查 `ReachFramework` 时重点检查：
    - `PresentationFramework-ReachFramework-impl-cycle` 与 `PresentationFramework-System.Printing-api-cycle` 的同名 `PresentationFramework.dll` 引用是否被 MSBuild 去重。
    - `XpsDocumentWriter` / `ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露给 `ReachFramework-ref`，但实现项目不应同时引用会造成 `XpsDocumentWriter` 或 `PrintTicket` 重复暴露的 bridge 输出。
    - `PrintTicket`、`PrintTicketLevel`、`FixedDocumentSequence`、`SerializerWriter`、`XpsDocument` 是否同时从多个同名程序集暴露。
-5. 排查 `PresentationFramework` 时重点检查：
+7. 排查 `PresentationFramework` 时重点检查：
    - 打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 是否可以通过更明确的桥接项目或引用顺序替代动态调用。
    - `FindToolBar` 当前仍位于 `PresentationUI`，但 `PresentationFramework` 的 `DocumentViewer`、`FlowDocumentReader`、`FlowDocumentScrollViewer`、`SinglePageViewer` 与 `DocumentViewerHelper` 会直接使用该类型。
-6. 排查 `PresentationUI` 时重点检查：
+8. 排查 `PresentationUI` 时重点检查：
    - `src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj` 中显式完整 `PresentationFramework` 引用是否仍需要保留，是否可以改为更稳定的项目引用输出顺序。
    - `InstallationError.xaml.cs`、`TenFeetInstallationError.xaml.cs`、`TenFeetInstallationProgress.xaml.cs` 与 `MS/Internal/Documents/FindToolBar.xaml.cs` 中的 XAML partial 占位应由真实标记编译产物替换。
    - `System.Printing-ref` 是否仍会通过 `PresentationFramework-System.Printing-api-cycle` 带入同名 `PresentationFramework.dll`，覆盖完整实现程序集。
-7. 排查 `System.Printing` 时重点检查：
+9. 排查 `System.Printing` 时重点检查：
    - `CPP/Win32Inc.hpp` 和各头文件中的 `#using` 是否同时引入 ref、impl 与 bridge 中的同名类型。
    - `System.IO.Packaging` 是否需要通过 C++/CLI 项目的 `Reference`、`AdditionalPackageReference` 或显式 `/FU` 进入编译。
-8. 排查 Ribbon 与主题项目时重点检查：
+10. 排查 Ribbon 与主题项目时重点检查：
    - 显式完整 `PresentationFramework` 输出引用是否可替换为更稳定的项目引用输出顺序。
    - `BuildInfo.SystemWindowsControlsRibbon` 使用 WCP 公钥后是否会影响后续与原始仓库同步。
-9. 只有在上层主链持续稳定后，再继续补缺失顶层模块：
+11. 只有在上层主链持续稳定后，再继续补缺失顶层模块：
    - `PenImc`
    - `System.Windows.Presentation`
    - `WpfGfx`
@@ -171,8 +194,29 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 
 - 当前已验证的构建入口与命令
 - 当前首个真实失败点
+- 当前是否存在 `.sln` 已声明但 IDE 加载失败/未加载的项目
 - 新增项目、目录或项目纳管变化
 - 当前仍未解决的阻塞
 - 后续 AI 开始时应该先做什么
 
+
+
+
+## 最近完成的工作
+
+### PresentationBuildTasks 迁移完成
+
+- 问题:项目面向 `net9.0`,但当前 SDK 为 `8.0.206`,导致 `NETSDK1045` 错误。
+- 解决:将目标框架从 `net472;net9.0` 改为 `net472;net8.0`。
+- 状态:已加入解决方案,可独立构建,解决方案入口构建通过。
+
+### mcwpf (事件跟踪代码生成工具) 现代化完成
+
+- 问题:旧非 SDK 风格项目,导入不存在的内部构建系统路径。
+- 解决:改写为 SDK 风格项目,禁用自动生成 AssemblyInfo,排除模板文件 `wpf_template.cs`。
+- 状态:已加入解决方案,可独立构建,解决方案入口构建通过。
+
+### WindowsFormsIntegration 已加入解决方案
+
+- 状态:已加入解决方案,随解决方案入口构建通过。后续需继续收敛对完整 `PresentationFramework` x64 输出的显式依赖。
 

@@ -126,16 +126,23 @@
 - `ReachFramework`
 - `PresentationFramework`
 - `PresentationUI`
-- `PresentationFramework.Classic`\r\n- `PresentationFramework.Aero`\r\n- `PresentationFramework.Aero2`\r\n- `PresentationFramework.AeroLite`\r\n- `PresentationFramework.Fluent`\r\n- `PresentationFramework.Luna`\r\n- `PresentationFramework.Royale`\r\n- `System.Windows.Controls.Ribbon`
+- `PresentationFramework.Classic`
+- `PresentationFramework.Aero`
+- `PresentationFramework.Aero2`
+- `PresentationFramework.AeroLite`
+- `PresentationFramework.Fluent`
+- `PresentationFramework.Luna`
+- `PresentationFramework.Royale`
+- `System.Windows.Controls.Ribbon`
+- `WindowsFormsIntegration`
+- `PresentationBuildTasks`
+- `mcwpf`
 
 ### 当前已存在但尚未纳入解决方案的主要项目
 
 以下项目已在磁盘中存在，但当前未出现在 `Microsoft.Dotnet.Wpf.sln`：
 
-- `WindowsFormsIntegration`
 - `System.Printing`（含 `ref` 与 native 项目）
-- `PresentationBuildTasks`
-- `Shared/Tracing/mcwpf`
 - 多数 `ref/*.csproj`
 - `cycle-breakers/*.csproj`
 
@@ -153,9 +160,9 @@
 
 使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 可构建：
 
-- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
-- 结果：构建成功。
+- 结果：构建成功(2024年验证)。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 仍报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
+- 当前解决方案已纳入 `PresentationBuildTasks` 和 `mcwpf` 项目。
 
 Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
@@ -236,7 +243,8 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
 2. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
 3. 继续处理 `System.Printing` C++/CLI 的类型重定义和 `System.IO.Packaging` 引用缺失问题。
-4. 在 `PresentationUI`、Ribbon 与主题链路稳定后，继续处理 `WindowsFormsIntegration` 的完整 `PresentationFramework` API 引用和 `IKeyboardInputSink` 签名问题。\r\n5. 继续处理 `PresentationBuildTasks` 的 SDK 版本目标问题与 `Shared/Tracing/mcwpf` 的 DevDiv targets 导入问题。
+4. 继续处理 `PresentationUI` 的 XAML 标记编译链路，优先用真实生成产物替换当前占位 partial 成员。
+5. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
 6. 最后再处理缺失顶层模块：`PenImc`、`System.Windows.Presentation`、`WpfGfx`。
 
 ## 当前执行约束
@@ -245,4 +253,26 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 2. 禁止再次通过修改 `eng/Versions.props` 中的 `AssemblyVersion` 来掩盖同名程序集冲突。
 3. 迁移工作中尽量把真实项目加入解决方案，并保持可构建；不要通过移除项目来规避构建问题。
 
+
+
+
+`PresentationBuildTasks` 已完成 SDK 目标框架调整并加入解决方案：
+
+- 原始问题:项目面向 `net9.0`,但当前 SDK 为 `8.0.206`,导致 `NETSDK1045` 错误。
+- 解决方法:将目标框架从 `net472;net9.0` 改为 `net472;net8.0`,匹配当前 SDK 版本。
+- 验证命令:`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\PresentationBuildTasks.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /clp:ErrorsOnly`
+- 结果:构建成功。
+
+`mcwpf` (事件跟踪代码生成工具) 已完成现代化改造并加入解决方案：
+
+- 原始问题:项目使用旧的非 SDK 风格格式,导入不存在的内部构建系统 targets (`Microsoft.DevDiv.Settings.targets`、`Microsoft.DevDiv.targets`)。
+- 解决方法:将项目改写为 SDK 风格 (`<Project Sdk="Microsoft.NET.Sdk">`),目标框架设为 `net8.0`,禁用自动生成 AssemblyInfo (`<GenerateAssemblyInfo>false</GenerateAssemblyInfo>`),并将模板文件 `wpf_template.cs` 排除在编译之外。
+- 验证命令:`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\Shared\Tracing\mcwpf\mcwpf.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /clp:ErrorsOnly`
+- 结果:构建成功。
+
+`WindowsFormsIntegration` 已重新验证可独立构建：
+
+- 验证命令:`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\WindowsFormsIntegration\WindowsFormsIntegration.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /clp:ErrorsOnly`
+- 结果:构建成功。
+- 当前含义:该项目已不再是当前首要阻塞点，后续重点转为收敛它对完整 `PresentationFramework` 输出的显式 HintPath 依赖。
 

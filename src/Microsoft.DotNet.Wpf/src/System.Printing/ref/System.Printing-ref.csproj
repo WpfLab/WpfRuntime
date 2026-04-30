@@ -70,8 +70,7 @@
                HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\ReachFramework-System.Printing-api-cycle\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\ref\ReachFramework.dll"
                SpecificVersion="false"
                ExternallyResolved="true"
-               Private="false"
-               Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\ReachFramework-System.Printing-api-cycle\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\ref\ReachFramework.dll')" />
+               Private="false" />
   </ItemGroup>
 
 </Project>

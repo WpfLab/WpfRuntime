@@ -10,6 +10,21 @@
 2. 最新构建验证显示当前解决方案本身仍有失败点。
 3. 如果现有基线都不稳定，继续扩大纳管范围只会放大排障成本。
 
+## 执行模式
+
+当前计划默认按无人值守模式执行，后续 AI 应持续推进，而不是把任务理解为一次性的文档维护或单点验证。
+
+### 执行要求
+
+1. 每次工作开始后，应先确认：
+   - 命令行构建是否通过
+   - `Microsoft.Dotnet.Wpf.sln` 中声明的关键项目是否在 IDE 中成功加载
+   - 当前最高优先级阻塞是否仍然存在
+2. 若某项验证通过，不应立即结束，而应继续处理同一主线上的下一个阻塞点。
+3. 若当前选择的子问题无法推进，应立即切换到同阶段内的下一个可落地任务，而不是只更新文档后退出。
+4. 若最终只能停在文档更新，必须把“已尝试但未完成的迁移动作”和“下一步首选落点”写入交接文档，避免后续 AI 再次空转。
+5. 结束一次工作时，应优先达到“代码/项目迁移有实质推进”而不是“文档已同步”。
+
 ## 当前建议执行顺序
 
 1. 先恢复当前解决方案构建基线：
@@ -78,7 +93,8 @@
 
 1. 保持现有解决方案构建基线可复现。
 2. 若再次出现 `UIAutomationClientSideProviders` 下游 `CS0006`，先独立构建 `UIAutomationClient`，再检查解决方案增量状态和构建顺序。
-3. 不要在基线未验证时继续扩大解决方案纳管范围。
+3. 基线验证不能只看命令行 `msbuild`；还要检查 Visual Studio 中是否存在项目加载失败、未加载项目或 `.sln` 与 IDE 已加载项目不一致的情况。
+4. 不要在基线未验证时继续扩大解决方案纳管范围。
 
 ### 完成标准
 
@@ -104,15 +120,17 @@
    - 已在解决方案中
    - 已在磁盘中但未纳入解决方案
    - 目录尚未迁入
+   - 已写入 `.sln` 但在 IDE 中加载失败或未成功加载
 2. 优先纳管与当前主链直接相关的现存项目：
    - `ReachFramework`：已纳入解决方案。
    - `PresentationFramework`：已纳入解决方案。
    - `PresentationUI`：已纳入解决方案。
    - `System.Windows.Controls.Ribbon`：已纳入解决方案。
    - `PresentationFramework.Classic`：已纳入解决方案。\r\n   - `PresentationFramework.Aero` / `Aero2` / `AeroLite` / `Fluent` / `Luna` / `Royale`：已纳入解决方案。
-   - `WindowsFormsIntegration`：仍需解决完整 `PresentationFramework` API 引用和 `IKeyboardInputSink` 签名问题。
+   - `WindowsFormsIntegration`：已纳入解决方案，且已重新验证可独立构建；后续需收敛其对完整 `PresentationFramework` 输出的显式 HintPath 依赖。
    - `System.Printing`：C++/CLI 实现项目仍需解决类型重定义和 `System.IO.Packaging` 引用问题。
 3. 对暂不纳入解决方案的项目，明确写出原因，不要只写“待处理”。
+4. 对已经写入 `.sln` 但在 IDE 中加载失败的项目，优先当作真实阻塞处理，不能因为命令行构建暂时通过就搁置。
 
 ### 完成标准
 
@@ -164,9 +182,11 @@
 - `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API，并避免解决方案内部 AnyCPU 构建落到缺失输出目录。
 - `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析到同名类型。
 - `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
-- `System.Printing` C++/CLI 实现项目已越过 MSBuild 配置错误并进入源码编译阶段，当前阻塞为 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 引用缺失。
-- `WindowsFormsIntegration` 已重新验证，当前阻塞为完整 `PresentationFramework` 控件/API 引用缺失和 `IKeyboardInputSink` 接口签名不匹配。最新日志：`artifacts/windowsformsintegration-errors.latest.log`。\r\n- `PresentationBuildTasks` 已重新验证，当前阻塞为项目面向 `net9.0`，但 `global.json` 固定 SDK `8.0.206`，错误为 `NETSDK1045`。最新日志：`artifacts/presentationbuildtasks-errors.latest.log`。\r\n- `Shared/Tracing/mcwpf` 已重新验证，当前阻塞为导入 `C:\tools\Microsoft.DevDiv.Settings.targets` 失败。最新日志：`artifacts/mcwpf-errors.latest.log`。
-- 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界。
+- `WindowsFormsIntegration` 已加入解决方案,随解决方案入口构建通过,且已重新验证可独立构建。
+- `PresentationBuildTasks` 已完成 SDK 目标框架调整 (从 `net9.0` 改为 `net8.0`),并已加入解决方案。
+- `mcwpf` 已完成现代化改造 (从旧非 SDK 风格改为 SDK 风格),并已加入解决方案。
+- `PresentationBuildTasks` 与 `mcwpf` 已重新验证可独立构建，不再是当前阻塞点。
+- 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界，并继续恢复 `PresentationUI` 的真实标记编译生成链路。
 
 ### 完成标准
 
