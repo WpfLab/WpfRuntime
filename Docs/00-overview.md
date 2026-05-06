@@ -174,6 +174,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
 - 结果：构建成功。
 - 当前处理方式：`Directory.Build.props` 将 `Any CPU` / `AnyCPU` 下的 `WpfNativePlatform` 映射到 `x64`，`PresentationUI` 与 `WindowsFormsIntegration` 的显式完整 `PresentationFramework` 引用使用该属性，避免 Visual Studio 构建时落到不存在的 `PresentationFramework\Any CPU\...` 输出目录。
+- 额外收敛：`PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 对完整 `PresentationFramework` 的显式引用路径已统一改为 `$(WpfNativePlatform)`，不再硬编码 `x64`。
 - `.pl` 文件弹窗原因已确认：主题生成目标通过 `Exec` 调用 `ThemeGenerator.pl` / `PreprocessXAML.pl`，当 `PerlCommand` 未定义或机器没有 `perl` 时，Windows 会尝试按 `.pl` 文件关联打开脚本。当前 `Directory.Build.targets` 增加 `VerifyPerlCommand`，缺少 Perl 时输出警告并跳过脚本执行，不再直接通过文件关联打开 `.pl`。如需重新生成主题产物，应安装 Perl 或设置 `PerlCommand` 指向有效 Perl 可执行文件。
 
 `ReachFramework-ref` 已补齐 `PresentationFramework-System.Printing-api-cycle` 中的 `ISerializerFactory` 与 `XpsDocumentWriter` 桥接 API，并可独立构建：
@@ -205,12 +206,12 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\PresentationUI\PresentationUI.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
 - 结果：构建成功。
 - 当前处理方式：`PresentationUI` 改为引用 `System.Printing-ref`，并显式引用完整 `PresentationFramework` 实现输出，避免 `System.Printing-ref` 依赖的 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整 `PresentationFramework` API。
-- 当前仍有迁移性占位：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress` 与 `FindToolBar` 增加了最小 XAML partial 占位成员，用于在 `InternalMarkupCompilation` 链路尚未完全接入时保持托管编译可推进。后续需要恢复为真实标记编译生成代码。
+- 当前仍有迁移性占位：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress` 与 `FindToolBar` 增加了最小 XAML partial 占位成员，用于在 `InternalMarkupCompilation` 链路尚未完全接入时保持托管编译可推进。已重新验证：当前若直接回退到 origin 形态会因缺失 `.g.cs` 生成成员导致构建失败，因此这些占位仍属于当前必要补丁；后续需要先恢复真实标记编译生成代码，再移除占位。
 
 `System.Windows.Controls.Ribbon` 与全部主题项目已进入可独立构建并已纳入解决方案：
 
 - `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析到同名 `XpsDocument`。
-- `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 的实现项目和 ref 项目已显式引用完整 `PresentationFramework` x64 输出，用于补齐 `Thickness`、`Style`、`Control` 等完整 PresentationFramework API。
+- `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 的实现项目和 ref 项目仍通过显式完整 `PresentationFramework` 输出补齐 `Thickness`、`Style`、`Control` 等完整 API，但路径已统一收敛到 `$(WpfNativePlatform)`，减少了对固定 `x64` 产物目录的耦合。
 - `BuildInfo.SystemWindowsControlsRibbon` 已调整为 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元程序集声明与当前输出程序集强命名一致。
 
 `System.Printing` C++/CLI 项目已越过早期 MSBuild 配置阻塞，但尚未可独立构建：

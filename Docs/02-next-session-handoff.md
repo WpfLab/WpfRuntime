@@ -121,6 +121,7 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
 - 结果：构建成功。
 - `Any CPU` 下通过 `WpfNativePlatform=x64` 解析显式完整 `PresentationFramework` 输出，避免 `PresentationUI`、`WindowsFormsIntegration` 找不到完整控件/API。
+- 主题项目与 `System.Windows.Controls.Ribbon` 对完整 `PresentationFramework` 的显式引用路径也已统一切到 `$(WpfNativePlatform)`，不再硬编码 `x64`。
 - 构建期间不断弹出打开 `.pl` 文件的问题已定位为缺少 Perl 时直接执行 `.pl` 脚本导致 Windows 文件关联接管。当前 `VerifyPerlCommand` 会在需要运行主题生成脚本时检测 `PerlCommand`，缺少 Perl 时输出警告并跳过脚本，不再弹窗。若需要重新生成主题 XAML，安装 Perl 或设置 `PerlCommand`。
 
 ### 这意味着什么
@@ -134,7 +135,7 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 7. `PresentationFramework` 实现项目已可独立构建；当前通过动态调用边界绕开打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
 8. `PresentationUI` 实现项目已可独立构建；当前通过 `System.Printing-ref` 绕过 `System.Printing` C++/CLI 实现项目，并显式引用完整 `PresentationFramework` 输出，避免 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整控件 API。
 9. `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析同名类型。
-10. `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API。
+10. `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前仍通过显式完整 `PresentationFramework` 输出补齐主题和 Ribbon 所需控件 API，但显式路径已从硬编码 `x64` 收敛到 `$(WpfNativePlatform)`。
 11. `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
 12. `System.Printing` C++/CLI 实现项目已进一步收敛：当前已把 `PresentationFramework-System.Printing-impl-cycle` / `ReachFramework` 实现程序集引用改为打印专用 API bridge，并通过 `ForcedUsingFiles` 显式引入 `System.IO.Packaging.dll`。此前的 `SafeMemoryHandle`、`PrintQueue` 等类型重定义和 `System.IO.Packaging` 缺失已不再是首个失败点；当前源码编译首先卡在 ReachFramework bridge 缺少 `PackageSerializationManager`、`XpsSerializationManager`、`XpsSerializationManagerAsync`、`XpsOMSerializationManager`、`XpsOMSerializationManagerAsync`、`NgcSerializationManager`、`NgcSerializationManagerAsync` 等序列化管理器 API。
 13. `ReachFramework-System.Printing-api-cycle` 已新增 `System.Windows.Xps.Serialization.SerializationManagers.cs`，用最小 bridge 方式补齐 `PackageSerializationManager`、`BasePackagingPolicy`、`XpsSerializationManager` / `Async`、`XpsOMSerializationManager` / `Async`、`NgcSerializationManager` / `Async`、`MXDWSerializationManager` 及部分 RCW 声明；bridge 项目本身已重新验证可独立构建。
@@ -182,13 +183,13 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
     - `cycle-breakers/PresentationFramework/System.Windows.Controls.PrintDialog.cs` 与 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.XpsDocumentEvent.cs` / `System.Printing.PrintTicketManager.cs` / `System.Windows.Xps.Serialization.SerializationManagers.cs` 是当前已新增的最小 bridge 占位，应在此基础上继续补齐，而不是另起新的 bridge 方向。
 9. 排查 `PresentationUI` 时重点检查：
    - `src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj` 中显式完整 `PresentationFramework` 引用是否仍需要保留，是否可以改为更稳定的项目引用输出顺序。
-   - `InstallationError.xaml.cs`、`TenFeetInstallationError.xaml.cs`、`TenFeetInstallationProgress.xaml.cs` 与 `MS/Internal/Documents/FindToolBar.xaml.cs` 中的 XAML partial 占位应由真实标记编译产物替换。
+    - `InstallationError.xaml.cs`、`TenFeetInstallationError.xaml.cs`、`TenFeetInstallationProgress.xaml.cs` 与 `MS/Internal/Documents/FindToolBar.xaml.cs` 中的 XAML partial 占位应由真实标记编译产物替换。已重新验证：当前直接删除占位会因缺失 `InitializeComponent` 与命名字段导致编译失败，因此下一步应优先恢复 `InternalMarkupCompilation` 生成链，而不是先删占位。
    - `System.Printing-ref` 是否仍会通过 `PresentationFramework-System.Printing-api-cycle` 带入同名 `PresentationFramework.dll`，覆盖完整实现程序集。
 10. 排查 `System.Printing` 时原有重点继续保留：
    - `CPP/Win32Inc.hpp` 和各头文件中的 `#using` 是否同时引入 ref、impl 与 bridge 中的同名类型。
    - `System.IO.Packaging` 是否需要通过 C++/CLI 项目的 `Reference`、`AdditionalPackageReference` 或显式 `/FU` 进入编译。
 11. 排查 Ribbon 与主题项目时重点检查：
-   - 显式完整 `PresentationFramework` 输出引用是否可替换为更稳定的项目引用输出顺序。
+   - 显式完整 `PresentationFramework` 输出引用是否可替换为更稳定的项目引用输出顺序。当前已先把硬编码 `x64` 路径统一收敛为 `$(WpfNativePlatform)`，后续再继续消除对产物路径的依赖。
    - `BuildInfo.SystemWindowsControlsRibbon` 使用 WCP 公钥后是否会影响后续与原始仓库同步。
 11. 当前缺失顶层模块已收敛掉 `System.Windows.Presentation`，后续优先补：
    - `PenImc`

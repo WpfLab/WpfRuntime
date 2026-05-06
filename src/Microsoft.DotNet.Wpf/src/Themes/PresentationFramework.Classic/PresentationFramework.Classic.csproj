@@ -44,9 +44,9 @@
     <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
     <Reference Include="PresentationFramework"
-               HintPath="$(ArtifactsBinDir)PresentationFramework\x64\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               HintPath="$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
                Private="false"
-               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\x64\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
+               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
 
     <ProjectReference Include="$(WpfSourceDir)Themes\PresentationFramework.Classic\ref\PresentationFramework.Classic-ref.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

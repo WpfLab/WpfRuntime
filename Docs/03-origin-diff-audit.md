@@ -31,10 +31,9 @@
 
 ### 顶层模块差异仍然明显
 
-对比 `origin/src/Microsoft.DotNet.Wpf/src` 与 `src/Microsoft.DotNet.Wpf/src` 后，当前仓库仍缺少以下原始顶层模块：
+当前仓库仍缺少以下原始顶层模块：
 
 - `PenImc`
-- `System.Windows.Presentation`
 - `WpfGfx`
 
 这说明当前仓库虽然已经打通了大部分托管主链，但与原始仓库相比仍不是完整镜像。
@@ -50,9 +49,8 @@
 
 1. `WpfGfx` 原生图形链
 2. `PenImc`
-3. `System.Windows.Presentation`
-4. `redist` 下的 native/redist 项目
-5. `tests` 下的单元测试与 DRT 项目
+3. `redist` 下的 native/redist 项目
+4. `tests` 下的单元测试与 DRT 项目
 
 ### 可比源码文件规模仍有较大缺口
 
@@ -67,7 +65,6 @@
 - `tests\IntegrationTests`：约 `129` 个文件
 - `tests\UnitTests`：约 `60` 个文件
 - `src\PenImc`：约 `52` 个文件
-- `src\System.Windows.Presentation`：约 `7` 个文件
 - `cycle-breakers`：若以 `origin/src/Microsoft.DotNet.Wpf` 子树为基线对比，当前仓库根目录下的 `cycle-breakers` 不在同一对比根内，不能据此误判为“当前仓库缺少 cycle-breaker”
 
 ### `git` 目录级差异量级很大
@@ -127,58 +124,63 @@
 
 ### 高优先级
 
-1. `System.Windows.Presentation` 缺失
-   - 影响：`WindowsBase` 已经保留 `BuildInfo.SystemWindowsPresentation` 友元可见性，但模块本身未迁入，说明当前结构与原始仓库不完整。
-   - 风险：后续若有代码假定该程序集存在，可能继续通过桥接或临时补丁绕开，而不是恢复原始模块边界。
-   - 建议：优先迁入。该模块文件量小，适合作为差异收敛的第一步。
-
-2. `WpfGfx` 整体缺失
+1. `WpfGfx` 整体缺失
    - 影响：当前仓库的 native 图形链与 origin 差距最大。
    - 风险：后续若继续仅靠托管侧补丁推进，容易让与图形、渲染、native 依赖有关的问题长期处于“未恢复原始结构”的状态。
    - 建议：在托管主链进一步稳定后，尽快按子模块分批迁入。
 
-3. `PenImc` 整体缺失
+2. `PenImc` 整体缺失
    - 影响：输入法/文本输入相关原生模块仍未恢复。
    - 风险：可能导致当前仓库对文本输入相关路径的覆盖不完整。
-   - 建议：在 `System.Windows.Presentation` 之后优先评估。
+   - 建议：作为剩余缺失顶层模块中的优先项先行评估。
 
-4. 测试工程未迁入
+3. 测试工程未迁入
    - 影响：当前仓库缺少与 origin 对应的回归验证能力。
    - 风险：迁移过程中即使构建通过，也无法快速判断行为是否仍与原始仓库一致。
    - 建议：至少优先迁入 `System.Xaml.Tests`、`PresentationCore.Tests` 这类体量较小、价值较高的测试项目。
 
 ### 中优先级
 
-5. 当前仓库独有 bridge 文件可能长期固化
+4. 当前仓库独有 bridge 文件可能长期固化
    - 影响：桥接文件能帮助短期构建，但可能掩盖真实缺失 API 或错误的装配边界。
    - 风险：后续继续在 bridge 上叠 bridge，会让行为越来越偏离 origin。
    - 建议：每推进一个主链阻塞点，都要回看对应 origin 文件，判断当前 bridge 是“最小占位”还是“错误替代”。
 
-6. `System.Printing` / `ReachFramework` / `PresentationFramework` 的动态边界过多
+5. `System.Printing` / `ReachFramework` / `PresentationFramework` 的动态边界过多
    - 影响：当前主链虽然可构建，但部分打印链路依赖动态边界和 API-cycle bridge。
    - 风险：编译通过不代表行为等价；若与 origin 打印链差距继续扩大，后续收敛成本会更高。
    - 建议：后续处理打印链时，应始终与 `origin` 源文件逐段对照，避免继续发散。
 
+6. `PresentationUI` 的 XAML 标记编译链尚未恢复
+   - 影响：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar` 仍依赖手写最小 partial 占位成员，未回到 origin 由 `.g.cs` 生成字段和 `InitializeComponent` 的形态。
+   - 风险：这类占位当前虽然是保持构建通过的必要补丁，但如果长期保留，会继续掩盖真实的标记编译接线缺口。
+   - 建议：后续优先恢复 `PresentationUI` 的 `InternalMarkupCompilation` 生成链；在链路恢复前，不要贸然删除这些占位成员。
+
+7. 主题项目、Ribbon、`PresentationUI`、`WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式引用仍未完全消除
+   - 影响：这类引用可以保证当前构建通过，但会使项目对产物路径和引用解析顺序保持敏感。
+   - 风险：若继续散落硬编码平台路径，AnyCPU/arm64 或解决方案内部构建顺序变化时容易回归。
+   - 建议：优先统一到 `$(WpfNativePlatform)` 这类已验证的仓库级属性，再逐步收敛为更稳定的项目引用输出顺序。
+
 ### 低优先级但需要持续观察
 
-7. 局部文件命名或位置与 origin 不完全一致
+8. 局部文件命名或位置与 origin 不完全一致
    - 影响：例如部分补丁文件在当前仓库新增，或与 origin 文件名不完全一致。
    - 风险：长期看会增加后续同步 origin 变更的难度。
    - 建议：后续在收敛 bridge 或恢复真实实现时，尽量回归 origin 命名和目录结构。
 
 ## 当前建议的修复顺序
 
-1. 先迁入 `System.Windows.Presentation`
-   - 原因：模块小、依赖简单、可直接缩小与 origin 的结构差异。
-2. 再评估 `PenImc`
-   - 原因：体量远小于 `WpfGfx`，适合作为下一步 native 迁移入口。
-3. 再拆分推进 `WpfGfx`
+1. 先评估 `PenImc`
+   - 原因：它已成为剩余缺失顶层模块中体量更小、风险更可控的 native 迁移入口。
+2. 再拆分推进 `WpfGfx`
    - 原因：体量最大，应按子目录和项目逐步迁入，不适合一次性整体搬运。
+3. 并行收敛 `PresentationUI` 标记编译链与打印动态边界
+   - 原因：这是当前最明显的“迁移妥协代码”聚集区，直接关系到最终提交质量。
 4. 之后补齐高价值测试工程
    - 优先考虑：`System.Xaml.Tests`、`PresentationCore.Tests`
 
 ## 当前执行结论
 
 - 当前仓库与 origin 的差异仍然很大，但差异主要由“缺失模块 + 迁移性桥接 + 测试缺席”构成，而不是单一代码错误。
-- 当前最适合作为差异收敛第一步的目标是：`System.Windows.Presentation`。
-- 在完成该模块迁入之前，不应把当前仓库误判为“已经基本等同于 origin”。
+- `System.Windows.Presentation` 已完成迁入，但这不意味着仓库已经等同于 origin；当前主要剩余偏离转为 `PenImc` / `WpfGfx` 缺失、打印动态边界、`PresentationUI` 标记编译占位，以及若干显式产物引用。
+- 本次重新审计已确认：主题项目和 Ribbon 对完整 `PresentationFramework` 的显式引用路径已从硬编码 `x64` 收敛到统一的 `$(WpfNativePlatform)`；`PresentationUI` 的 XAML partial 占位当前仍是构建所必需，应在恢复真实标记编译链后再移除。
