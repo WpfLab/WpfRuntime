@@ -103,8 +103,8 @@
 
 ### 当前尚未进入顶层目录的关键模块
 
-- `PenImc`
-- `WpfGfx`
+- `PenImc`：不再做源码迁移，后续改为通过 NuGet 二进制包接入
+- `WpfGfx`：不再做源码迁移，后续改为通过 NuGet 二进制包接入
 
 ## 最新构建结果
 
@@ -191,9 +191,7 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 11. 排查 Ribbon 与主题项目时重点检查：
    - 显式完整 `PresentationFramework` 输出引用是否可替换为更稳定的项目引用输出顺序。当前已先把硬编码 `x64` 路径统一收敛为 `$(WpfNativePlatform)`，后续再继续消除对产物路径的依赖。
    - `BuildInfo.SystemWindowsControlsRibbon` 使用 WCP 公钥后是否会影响后续与原始仓库同步。
-11. 当前缺失顶层模块已收敛掉 `System.Windows.Presentation`，后续优先补：
-   - `PenImc`
-   - `WpfGfx`
+11. 当前缺失顶层模块已收敛掉 `System.Windows.Presentation`，`PenImc` 与 `WpfGfx` 后续改为 NuGet 二进制接入，不再作为源码迁移优先项。
 
 ## 推荐命令方向
 
