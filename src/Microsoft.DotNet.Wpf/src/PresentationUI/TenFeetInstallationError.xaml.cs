@@ -22,21 +22,8 @@ namespace Microsoft.Internal.DeploymentUI
     /// Interaction logic for TenFeetInstallationError.xaml
     /// </summary>
     [FriendAccessAllowed] // Built into UI, used by Framework.
-    internal partial class TenFeetInstallationError : Grid, IErrorPage
+    internal partial class TenFeetInstallationError : Page, IErrorPage
     {
-        private readonly Grid Grid_2 = new Grid();
-        private readonly TextBlock txtTitle = new TextBlock();
-        private readonly TextBlock Text = new TextBlock();
-        private readonly TextBlock SupportUriText = new TextBlock();
-        private readonly Hyperlink SupportHyperLink = new Hyperlink();
-        private readonly Button LogFileButton = new Button();
-        private readonly Button RetryButton = new Button();
-        private readonly Button GetWinFXButton = new Button();
-
-        private void InitializeComponent()
-        {
-        }
-
         public TenFeetInstallationError()
         {
             InitializeComponent();

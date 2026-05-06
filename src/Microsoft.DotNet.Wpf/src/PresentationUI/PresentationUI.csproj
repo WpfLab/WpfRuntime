@@ -73,6 +73,7 @@
     <Compile Include="$(WpfCommonDir)src\System\SR.cs">
       <Link>Common\System\SR.cs</Link>
     </Compile>
+    <Compile Include="$(IntermediateOutputPath)MS.Internal.Documents.Resources.cs" Condition="Exists('$(IntermediateOutputPath)MS.Internal.Documents.Resources.cs')" />
     <Compile Include="$(WpfSharedDir)\RefAssemblyAttrs.cs" />
     <Compile Include="$(WpfSharedDir)\MS\Internal\FriendAccessAllowedAttribute.cs" />
     <Compile Include="OtherAssemblyAttrs.cs" />
@@ -263,6 +264,7 @@
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets" />
 
   <ItemGroup>
     <WpfPerlScript Include="ThemeGenerator.pl" />

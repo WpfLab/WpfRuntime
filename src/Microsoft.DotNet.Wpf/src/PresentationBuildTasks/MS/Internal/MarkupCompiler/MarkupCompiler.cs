@@ -2756,7 +2756,7 @@ namespace MS.Internal
             //
             CodeMemberMethod cmmCI = new CodeMemberMethod();
             cmmCI.Name = "CreateInstance";
-            cmmCI.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+            cmmCI.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
             cmmCI.ReturnType = new CodeTypeReference(typeof(Object));
 
             CodeParameterDeclarationExpression param1 = new CodeParameterDeclarationExpression(typeof(Type), TYPE);
@@ -2791,7 +2791,7 @@ namespace MS.Internal
             //
             CodeMemberMethod cmmGPV = new CodeMemberMethod();
             cmmGPV.Name = "GetPropertyValue";
-            cmmGPV.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+            cmmGPV.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
             cmmGPV.ReturnType = new CodeTypeReference(typeof(Object));
 
             param1 = new CodeParameterDeclarationExpression(typeof(PropertyInfo), PROPINFO);
@@ -2820,7 +2820,7 @@ namespace MS.Internal
             //
             CodeMemberMethod cmmSPV = new CodeMemberMethod();
             cmmSPV.Name = "SetPropertyValue";
-            cmmSPV.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+            cmmSPV.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
 
             CodeParameterDeclarationExpression param3 = new CodeParameterDeclarationExpression(typeof(object), VALUE);
             cmmSPV.Parameters.Add(param1);
@@ -2855,7 +2855,7 @@ namespace MS.Internal
             //
             CodeMemberMethod cmmCD = new CodeMemberMethod();
             cmmCD.Name = "CreateDelegate";
-            cmmCD.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+            cmmCD.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
             cmmCD.ReturnType = new CodeTypeReference(typeof(Delegate));
 
             param1 = new CodeParameterDeclarationExpression(typeof(Type), DELEGATETYPE);
@@ -2902,7 +2902,7 @@ namespace MS.Internal
             //
             CodeMemberMethod cmmAEH = new CodeMemberMethod();
             cmmAEH.Name = "AddEventHandler";
-            cmmAEH.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+            cmmAEH.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
 
             param1 = new CodeParameterDeclarationExpression(typeof(EventInfo), EVENTINFO);
             param3 = new CodeParameterDeclarationExpression(typeof(Delegate), HANDLERARG);

@@ -1,9 +1,12 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net9.0</_PresentationBuildTasksTfm>
+    <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net8.0</_PresentationBuildTasksTfm>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' != 'Core'">net472</_PresentationBuildTasksTfm>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'==''">$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssemblyWithPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithPlatform>
+    <_PresentationBuildTasksAssemblyWithoutPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithoutPlatform>
+    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and Exists('$(_PresentationBuildTasksAssemblyWithPlatform)')">$(_PresentationBuildTasksAssemblyWithPlatform)</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'==''">$(_PresentationBuildTasksAssemblyWithoutPlatform)</_PresentationBuildTasksAssembly>
   </PropertyGroup>
 
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.MarkupCompilePass1" AssemblyFile="$(_PresentationBuildTasksAssembly)" />

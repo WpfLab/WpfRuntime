@@ -21,18 +21,6 @@ namespace Microsoft.Internal.DeploymentUI
     [FriendAccessAllowed] // Built into UI, used by Framework.
     internal partial class InstallationErrorPage : Grid, IErrorPage
     {
-        private readonly TextBlock txtTitle = new TextBlock();
-        private readonly TextBlock Text = new TextBlock();
-        private readonly TextBlock SupportUriText = new TextBlock();
-        private readonly Hyperlink SupportHyperLink = new Hyperlink();
-        private readonly Button LogFileButton = new Button();
-        private readonly Button RetryButton = new Button();
-        private readonly Button GetWinFXButton = new Button();
-
-        private void InitializeComponent()
-        {
-        }
-
         static InstallationErrorPage()
         {
             CommandManager.RegisterClassCommandBinding(typeof(InstallationErrorPage),
