@@ -7,6 +7,7 @@
     <WindowsDesktopARM64Support>true</WindowsDesktopARM64Support>
     <TargetFramework>net8.0</TargetFramework>
     <TargetFrameworkVersion>8.0</TargetFrameworkVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <!-- Normalize $(TestWpfArcadeSdkPath) by appending a '\' to it if one is missing -->
   <PropertyGroup Condition="'$(TestWpfArcadeSdkPath)'!=''">
@@ -61,4 +62,8 @@
 
   <!-- 以下为生成多语言资源所需，详细请看 [dotnet 读 WPF 源代码 学习使用 Microsoft.DotNet.Arcade.Sdk 处理代码里的多语言 - lindexi - 博客园](https://www.cnblogs.com/lindexi/p/19198245 ) -->
   <Import Project="$(MSBuildThisFileDirectory)eng\WpfArcadeSdk\SystemResources.props"/>
+
+  <PropertyGroup>
+    <DefineConstants Condition="$(TargetFramework.StartsWith('net4'))">$(DefineConstants);NETFX</DefineConstants>
+  </PropertyGroup>
 </Project>
