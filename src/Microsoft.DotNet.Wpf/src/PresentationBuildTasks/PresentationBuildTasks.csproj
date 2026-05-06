@@ -39,6 +39,14 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' == 'true' and '$(TargetFramework)' == 'net472'">
+    <_PresentationBuildTasksIdeOutputDir>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\ide-bin\PresentationBuildTasks\$(Configuration)\$(TargetFramework)\'))))</_PresentationBuildTasksIdeOutputDir>
+    <_PresentationBuildTasksStableOutputDir>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(Configuration)\$(TargetFramework)\'))))</_PresentationBuildTasksStableOutputDir>
+    <_PresentationBuildTasksStableOutputPath>$(_PresentationBuildTasksStableOutputDir)PresentationBuildTasks.dll</_PresentationBuildTasksStableOutputPath>
+    <OutputPath>$(_PresentationBuildTasksIdeOutputDir)</OutputPath>
+    <OutDir>$(_PresentationBuildTasksIdeOutputDir)</OutDir>
+  </PropertyGroup>
+
 
   <!--
     Incorporate Microsoft.WinFX.targets in nuget packages under
@@ -319,5 +327,14 @@
     -->
     <PackageReference Include="System.CodeDom" Version="$(SystemCodeDomPackageVersionForPresentationBuildTasks)" />
   </ItemGroup>
+
+  <Target Name="SeedPresentationBuildTasksStableNet472OutputForVisualStudio"
+          AfterTargets="Build"
+          Condition="'$(BuildingInsideVisualStudio)' == 'true' and '$(TargetFramework)' == 'net472' and !Exists('$(_PresentationBuildTasksStableOutputPath)')">
+    <MakeDir Directories="$(_PresentationBuildTasksStableOutputDir)" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFiles="$(_PresentationBuildTasksStableOutputPath)"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

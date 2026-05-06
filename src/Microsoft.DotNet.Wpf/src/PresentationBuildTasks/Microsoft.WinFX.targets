@@ -5,8 +5,12 @@
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' != 'Core'">net472</_PresentationBuildTasksTfm>
     <_PresentationBuildTasksAssemblyWithPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithPlatform>
     <_PresentationBuildTasksAssemblyWithoutPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithoutPlatform>
+    <_PresentationBuildTasksIdeAssemblyWithPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\ide-bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksIdeAssemblyWithPlatform>
+    <_PresentationBuildTasksIdeAssemblyWithoutPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\ide-bin\PresentationBuildTasks\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksIdeAssemblyWithoutPlatform>
     <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and Exists('$(_PresentationBuildTasksAssemblyWithPlatform)')">$(_PresentationBuildTasksAssemblyWithPlatform)</_PresentationBuildTasksAssembly>
     <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'==''">$(_PresentationBuildTasksAssemblyWithoutPlatform)</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and '$(BuildingInsideVisualStudio)' == 'true' and Exists('$(_PresentationBuildTasksIdeAssemblyWithPlatform)')">$(_PresentationBuildTasksIdeAssemblyWithPlatform)</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and '$(BuildingInsideVisualStudio)' == 'true' and Exists('$(_PresentationBuildTasksIdeAssemblyWithoutPlatform)')">$(_PresentationBuildTasksIdeAssemblyWithoutPlatform)</_PresentationBuildTasksAssembly>
   </PropertyGroup>
 
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.MarkupCompilePass1" AssemblyFile="$(_PresentationBuildTasksAssembly)" />

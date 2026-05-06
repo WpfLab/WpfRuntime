@@ -13,11 +13,17 @@
 
 ### 收敛 Visual Studio 中 `PresentationBuildTasks.dll` 锁文件
 
-- 状态：待后续处理。
-- 问题：Visual Studio 工作区“生成解决方案”当前会在 `artifacts\bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll` 复制阶段报 `MSB3027/MSB3021`，提示文件被多个 `MSBuild.exe` 进程锁定。
-- 当前影响：命令行 `msbuild -restore` 已恢复可重复通过，但 IDE 全量构建仍不能视为完全收敛。
-- 建议处理时机：在保持当前命令行基线稳定的前提下，单独排查 `Microsoft.WinFX.targets` 对 `PresentationBuildTasks.dll` 的任务程序集加载生命周期，避免再次破坏 `PresentationUI` 的标记编译链。
-- 后续动作：优先检查是否可通过隔离 `net472` 任务程序集输出、避免复制到被 `UsingTask` 占用的目标路径、或调整 IDE 构建拓扑来消除锁文件；不要再通过全量清空 `artifacts` 目录来规避。
+- 状态：代码侧已处理，待在 Visual Studio 中复验。
+- 问题：Visual Studio 工作区“生成解决方案”此前会在 `artifacts\bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll` 复制阶段报 `MSB3027/MSB3021`，提示文件被多个 `MSBuild.exe` 进程锁定。
+- 已验证处理：
+  - `PresentationBuildTasks.csproj` 在 `BuildingInsideVisualStudio=true` 且 `TargetFramework=net472` 时，改为输出到 `artifacts\ide-bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll`，避免把 IDE 构建产物直接复制到稳定任务程序集加载路径。
+  - 构建结束后仅在稳定路径缺失时，补种一次 `artifacts\bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll`，避免稳定 `UsingTask` 加载路径与当前 IDE 编译输出争用同一文件。
+  - `Microsoft.WinFX.targets` 保留对 `artifacts\bin` 稳定路径的优先加载；仅当稳定路径不存在且处于 IDE 构建时，才回退到 `artifacts\ide-bin` 路径。
+- 当前影响：
+  - `msbuild src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\PresentationBuildTasks.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal` 仍可成功构建。
+  - 使用 `/p:BuildingInsideVisualStudio=true /p:TargetFramework=net472` 单独构建 `PresentationBuildTasks` 时，输出已写入 `artifacts\ide-bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll`，且稳定路径与 IDE 路径可并存，不再需要把正在被任务加载的稳定 DLL 作为本次编译输出目标。
+  - 继续以 `/p:BuildingInsideVisualStudio=true` 构建 `PresentationUI` 时，首个失败点已前移为 `MC1000`：`PresentationFramework-PresentationUI-api-cycle` 相关输出路径缺失；未再复现 `PresentationBuildTasks.dll` 复制锁文件错误。
+- 后续动作：在 Visual Studio 中再次执行“生成解决方案”确认锁文件问题已消失；若仍有 IDE 构建失败，优先转向排查 `PresentationUI` 标记编译阶段缺失的 `PresentationFramework.dll` 引用路径，而不是回退本条修改。
 
 ### 移除 Perl 构建依赖
 
