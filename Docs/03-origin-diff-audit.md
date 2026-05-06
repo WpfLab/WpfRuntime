@@ -115,6 +115,8 @@
 
 当前仓库已经把 `ReachFramework`、`PresentationFramework`、`PresentationUI`、主题项目、`WindowsFormsIntegration` 等主链项目纳入 `Microsoft.Dotnet.Wpf.sln`，并形成新的重组入口。
 
+当前也已把根级 `cycle-breakers/*.csproj` 全部纳入 `Microsoft.Dotnet.Wpf.sln`。这一步虽然进一步偏离了 origin 的原始入口组织，但对当前重组仓库是必要的：`System.Printing-ref` 直接依赖打印 bridge 输出，如果 bridge 项目不纳管，干净 `msbuild -restore` 会因为桥接产物未生成而失败。
+
 这有利于当前仓库构建，但也带来一个风险：
 
 - 当前解决方案组织方式已经不再等同于 origin 的原始项目入口结构。

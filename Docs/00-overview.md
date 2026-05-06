@@ -142,6 +142,14 @@
 - `System.Windows.Presentation`
 - `System.Windows.Presentation-ref`
 - `mcwpf`
+- `PresentationFramework-PresentationUI-api-cycle`
+- `PresentationFramework-ReachFramework-impl-cycle`
+- `PresentationFramework-System.Printing-api-cycle`
+- `PresentationFramework-System.Printing-impl-cycle`
+- `PresentationUI-PresentationFramework-impl-cycle`
+- `ReachFramework-PresentationFramework-api-cycle`
+- `ReachFramework-System.Printing-api-cycle`
+- `System.Printing-PresentationFramework-api-cycle`
 
 ### 当前已存在但尚未纳入解决方案的主要项目
 
@@ -149,7 +157,6 @@
 
 - `System.Printing`（含 `ref` 与 native 项目）
 - 多数 `ref/*.csproj`
-- `cycle-breakers/*.csproj`
 
 ### 与原始仓库的顶层目录差异
 
@@ -167,6 +174,7 @@
 使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 可构建：
 
 - 结果：构建成功。
+- 额外修复：已将全部 `cycle-breakers/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.sln`。此前 `System.Printing-ref` 通过硬编码 `artifacts` 路径读取 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle` 输出，但这两个桥接项目不在解决方案中，导致“旧产物残留时偶尔可过、干净构建或刚克隆仓库时 `msbuild -restore` 失败”。纳管后，解决方案入口会稳定先生成这些桥接输出，命令行干净构建已恢复。
 - 额外修复：`Microsoft.Dotnet.Wpf.sln` 先前缺失 `System.Xaml`、`System.Windows.Input.Manipulations`、`PresentationCore` 三个 solution folder 节点，导致 `NestedProjects` 指向不存在的父 GUID，`msbuild` 无法解析解决方案；现已补回缺失节点并重新验证解决方案入口可构建。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 仍报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
 - 当前解决方案已纳入 `PresentationBuildTasks` 和 `mcwpf` 项目。
@@ -178,6 +186,13 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 - 当前处理方式：`Directory.Build.props` 将 `Any CPU` / `AnyCPU` 下的 `WpfNativePlatform` 映射到 `x64`，`PresentationUI` 与 `WindowsFormsIntegration` 的显式完整 `PresentationFramework` 引用使用该属性，避免 Visual Studio 构建时落到不存在的 `PresentationFramework\Any CPU\...` 输出目录。
 - 额外收敛：`PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 对完整 `PresentationFramework` 的显式引用路径已统一改为 `$(WpfNativePlatform)`，不再硬编码 `x64`。
 - `.pl` 文件弹窗原因已确认：主题生成目标通过 `Exec` 调用 `ThemeGenerator.pl` / `PreprocessXAML.pl`，当 `PerlCommand` 未定义或机器没有 `perl` 时，Windows 会尝试按 `.pl` 文件关联打开脚本。当前 `Directory.Build.targets` 增加 `VerifyPerlCommand`，缺少 Perl 时输出警告并跳过脚本执行，不再直接通过文件关联打开 `.pl`。如需重新生成主题产物，应安装 Perl 或设置 `PerlCommand` 指向有效 Perl 可执行文件。
+
+针对“刚从 git 拉下来的项目也要能通过 `msbuild -restore`”的要求，已重新验证以下入口：
+
+- `msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- `msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
+
+两条命令当前均可重复执行并通过，不再依赖预先残留的 `artifacts` 桥接产物。
 
 `ReachFramework-ref` 已补齐 `PresentationFramework-System.Printing-api-cycle` 中的 `ISerializerFactory` 与 `XpsDocumentWriter` 桥接 API，并可独立构建：
 
@@ -242,9 +257,11 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 ### 当前可直接确认的含义
 
 1. 当前解决方案已在纳入 `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 后恢复可构建基线。
-2. 解决方案级构建报告仍保留 `DirectWriteForwarder` 的 `/Zc:forScope-` native 警告。
-3. 多个主链项目已可独立构建，但仍存在 cycle-breaker、显式 HintPath 与同名程序集 API 暴露边界，后续仍需继续收敛。
-4. `System.Printing` C++/CLI 项目已继续推进到 `GDIExporter` / ReachFramework 更深层源码编译阶段，但尚未构建成功；`PresentationUI` 当前通过 `System.Printing-ref` 绕过实现程序集阻塞。
+2. 打印相关 `cycle-breakers` 已纳入解决方案，命令行 `msbuild -restore` 不再依赖旧 `artifacts` 产物才能通过。
+3. 解决方案级构建报告仍保留 `DirectWriteForwarder` 的 `/Zc:forScope-` native 警告。
+4. 多个主链项目已可独立构建，但仍存在 cycle-breaker、显式 HintPath 与同名程序集 API 暴露边界，后续仍需继续收敛。
+5. `System.Printing` C++/CLI 项目已继续推进到 `GDIExporter` / ReachFramework 更深层源码编译阶段，但尚未构建成功；`PresentationUI` 当前通过 `System.Printing-ref` 绕过实现程序集阻塞。
+6. Visual Studio 工作区“生成解决方案”当前仍存在单独阻塞：`PresentationBuildTasks.dll` 在 `net472` 输出复制阶段被多个 `MSBuild.exe` 进程锁定。该问题不会阻止命令行 `msbuild -restore` 成功，但仍属于 IDE 构建链待继续收敛的真实阻塞。
 
 ## 当前主要缺口
 

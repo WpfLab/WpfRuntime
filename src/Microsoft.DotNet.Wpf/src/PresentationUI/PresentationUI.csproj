@@ -288,4 +288,5 @@
       $(PrepareResourcesDependsOn);
     </PrepareResourcesDependsOn>
   </PropertyGroup>
+
 </Project>

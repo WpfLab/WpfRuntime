@@ -88,7 +88,6 @@
 
 - `System.Printing`
 - 大部分 `ref/*.csproj`
-- `cycle-breakers/*.csproj`
 
 ### 当前已确认存在的 cycle-breaker 项目
 
@@ -115,6 +114,7 @@
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 结果：构建成功。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
+- 关键修复：已将全部 `cycle-breakers/*.csproj` 纳入解决方案，`System.Printing-ref` 所依赖的打印 bridge 不再依赖旧 `artifacts` 残留输出。
 
 Visual Studio 默认 `Any CPU` 入口也已验证：
 
@@ -147,6 +147,8 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
 19. `System.Windows.Presentation` 已从 `origin` 迁入当前仓库，并已纳入 `Microsoft.Dotnet.Wpf.sln`；其实现项目和 ref 项目均已随当前解决方案入口重新验证通过。
 20. 为匹配当前仓库的实际强签名输出，`BuildInfo.SystemWindowsPresentation` 已从 DevDiv 公钥调整为 WCP 公钥；否则新迁入的 `System.Windows.Presentation` 无法访问 `WindowsBase` internals。
 21. 迁入 `System.Windows.Presentation` 过程中暴露出 `ReachFramework-ref` 对 `System.Printing-ref` 中 `System.Windows.Xps.XpsDocumentWriter` 的解析仍依赖项目引用顺序。当前 `ReachFramework-ref.csproj` 已显式引用 `artifacts/obj/System.Printing-ref/.../ref/System.Printing.dll`，解决了 `CS0234` 回归并恢复解决方案构建稳定性。
+22. 打印相关 `cycle-breakers` 现已全部纳入 `Microsoft.Dotnet.Wpf.sln`。此前这些桥接项目未纳管，导致 `System.Printing-ref` 在刚克隆仓库或干净构建时找不到桥接输出，只能在旧 `artifacts` 残留时偶尔通过；当前命令行 `msbuild -restore` 已可稳定重复通过。
+23. Visual Studio 工作区“生成解决方案”当前仍存在独立阻塞：`PresentationBuildTasks.dll` 在 `artifacts\bin\PresentationBuildTasks\Debug\net472\` 复制阶段被多个 `MSBuild.exe` 进程锁定。该问题尚未修复，不要再尝试通过全量清空 `artifacts` 目录规避。
 
 ## 建议起手顺序
 
@@ -160,38 +162,39 @@ Visual Studio 默认 `Any CPU` 入口也已验证：
    - `Directory.Build.props`
    - `Directory.Build.targets`
 2. 先用上述 `msbuild` 命令确认解决方案基线仍可构建；若再次出现 `.sln` 解析失败，优先检查 `NestedProjects` 是否引用了不存在的 solution folder GUID。
-3. 再核对 `Microsoft.Dotnet.Wpf.sln` 中声明的关键项目与 IDE 实际已加载项目是否一致；若存在加载失败、未加载或状态异常，优先把它当作真实阻塞处理并记录。
-4. 在完成基线检查后，不要停在文档同步，应直接继续处理当前最高优先级迁移项，且在同一次工作中持续迭代，直到完成实质迁移或遇到已验证阻塞。
-5. 继续处理：
+3. 若命令行 `msbuild -restore` 再次回归到 `System.Printing-ref` 缺失 `System.Windows.Controls.PageRange`、`System.Windows.Documents.Serialization`、`System.Printing.PrintTicket` 等错误，先检查打印 bridge 项目是否仍在 `Microsoft.Dotnet.Wpf.sln` 中被纳管，而不是先去删 `artifacts`。
+4. 再核对 `Microsoft.Dotnet.Wpf.sln` 中声明的关键项目与 IDE 实际已加载项目是否一致；若存在加载失败、未加载或状态异常，优先把它当作真实阻塞处理并记录。
+5. 在完成基线检查后，不要停在文档同步，应直接继续处理当前最高优先级迁移项，且在同一次工作中持续迭代，直到完成实质迁移或遇到已验证阻塞。
+6. 继续处理：
    - 按 `Docs/03-origin-diff-audit.md` 的优先级开始迁入 `PenImc`
    - 再规划 `WpfGfx` 的分批迁入顺序
    - `ReachFramework` 与 `PresentationFramework` 的动态边界收敛
     - `PresentationUI` 的 XAML partial 占位替换为真实标记编译生成链路
    - `System.Printing` C++/CLI 类型重定义与 `System.IO.Packaging` 引用缺失
     - `PresentationFramework` / `PresentationUI` / `WindowsFormsIntegration` / 主题链路的完整 API 引用与同名 bridge 解析顺序
-6. 排查 `ReachFramework` 时重点检查：
+7. 排查 `ReachFramework` 时重点检查：
    - `PresentationFramework-ReachFramework-impl-cycle` 与 `PresentationFramework-System.Printing-api-cycle` 的同名 `PresentationFramework.dll` 引用是否被 MSBuild 去重。
    - `XpsDocumentWriter` / `ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露给 `ReachFramework-ref`，但实现项目不应同时引用会造成 `XpsDocumentWriter` 或 `PrintTicket` 重复暴露的 bridge 输出。
    - `PrintTicket`、`PrintTicketLevel`、`FixedDocumentSequence`、`SerializerWriter`、`XpsDocument` 是否同时从多个同名程序集暴露。
-7. 排查 `PresentationFramework` 时重点检查：
+8. 排查 `PresentationFramework` 时重点检查：
    - 打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 是否可以通过更明确的桥接项目或引用顺序替代动态调用。
    - `FindToolBar` 当前仍位于 `PresentationUI`，但 `PresentationFramework` 的 `DocumentViewer`、`FlowDocumentReader`、`FlowDocumentScrollViewer`、`SinglePageViewer` 与 `DocumentViewerHelper` 会直接使用该类型。
-8. 排查 `System.Printing` 时新增重点检查：
+9. 排查 `System.Printing` 时新增重点检查：
    - `src/Microsoft.DotNet.Wpf/src/System.Printing/System.Printing.vcxproj` 当前已改为引用 `PresentationFramework-System.Printing-api-cycle` 与 `ReachFramework-System.Printing-api-cycle`，不要直接回退到完整 `ReachFramework` 或 `PresentationFramework-System.Printing-impl-cycle`，否则会重新引入 `SafeMemoryHandle` / `PrintQueue` 等类型重定义。
     - 继续在 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.SerializationManagers.cs`、`System.Windows.Xps.Packaging.XpsDocument.cs`、`System.Windows.Xps.Serialization.RCW.IXpsOMPackageWriter.cs` 基础上补齐剩余最小 bridge API，当前优先处理 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri`。
     - `XpsDocumentWriter` / `XpsDocumentNotificationLevel` 的同名类型来源已先收敛：`PresentationFramework-System.Printing-api-cycle.csproj` 已移除 `System.Windows.Xps.XpsDocumentWriter.cs`，不要再把该 bridge 文件重新加回去，除非已同步调整 `System.Printing` 自带 C++/CLI 声明边界。
     - `cycle-breakers/PresentationFramework/System.Windows.Controls.PrintDialog.cs` 与 `cycle-breakers/ReachFramework/System.Windows.Xps.Serialization.XpsDocumentEvent.cs` / `System.Printing.PrintTicketManager.cs` / `System.Windows.Xps.Serialization.SerializationManagers.cs` 是当前已新增的最小 bridge 占位，应在此基础上继续补齐，而不是另起新的 bridge 方向。
-9. 排查 `PresentationUI` 时重点检查：
+10. 排查 `PresentationUI` 时重点检查：
    - `src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj` 中显式完整 `PresentationFramework` 引用是否仍需要保留，是否可以改为更稳定的项目引用输出顺序。
     - `InstallationError.xaml.cs`、`TenFeetInstallationError.xaml.cs`、`TenFeetInstallationProgress.xaml.cs` 与 `MS/Internal/Documents/FindToolBar.xaml.cs` 中的 XAML partial 占位应由真实标记编译产物替换。已重新验证：当前直接删除占位会因缺失 `InitializeComponent` 与命名字段导致编译失败，因此下一步应优先恢复 `InternalMarkupCompilation` 生成链，而不是先删占位。
    - `System.Printing-ref` 是否仍会通过 `PresentationFramework-System.Printing-api-cycle` 带入同名 `PresentationFramework.dll`，覆盖完整实现程序集。
-10. 排查 `System.Printing` 时原有重点继续保留：
+11. 排查 `System.Printing` 时原有重点继续保留：
    - `CPP/Win32Inc.hpp` 和各头文件中的 `#using` 是否同时引入 ref、impl 与 bridge 中的同名类型。
    - `System.IO.Packaging` 是否需要通过 C++/CLI 项目的 `Reference`、`AdditionalPackageReference` 或显式 `/FU` 进入编译。
-11. 排查 Ribbon 与主题项目时重点检查：
+12. 排查 Ribbon 与主题项目时重点检查：
    - 显式完整 `PresentationFramework` 输出引用是否可替换为更稳定的项目引用输出顺序。当前已先把硬编码 `x64` 路径统一收敛为 `$(WpfNativePlatform)`，后续再继续消除对产物路径的依赖。
    - `BuildInfo.SystemWindowsControlsRibbon` 使用 WCP 公钥后是否会影响后续与原始仓库同步。
-11. 当前缺失顶层模块已收敛掉 `System.Windows.Presentation`，`PenImc` 与 `WpfGfx` 后续改为 NuGet 二进制接入，不再作为源码迁移优先项。
+13. 当前缺失顶层模块已收敛掉 `System.Windows.Presentation`，`PenImc` 与 `WpfGfx` 后续改为 NuGet 二进制接入，不再作为源码迁移优先项。
 
 ## 推荐命令方向
 
