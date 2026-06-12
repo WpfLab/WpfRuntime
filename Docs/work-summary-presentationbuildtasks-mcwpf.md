@@ -174,18 +174,15 @@
    - 解决 SafeMemoryHandle、PrintQueue 等类型重定义
    - 解决 System.IO.Packaging 引用缺失
 
-2. **收敛 cycle-breaker 边界**
-   - ReachFramework / PresentationFramework / System.Printing / PresentationUI
-   - 用明确的桥接契约替换动态调用边界
+2. **清理迁移妥协代码**
+   - 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换 XAML partial 占位
+   - 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的打印链路动态边界
+   - 逐项评估 bridge 文件（`SafeMemoryHandle.cs`、`PrintQueueBridge.cs`、`DocumentReferenceBridge.cs` 等）是否可替换为更接近 origin 的方案
+   - 消除主题项目、Ribbon、`PresentationUI`、`WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath
 
-3. **恢复 XAML 标记编译链路**
-   - 替换 PresentationUI 中的 XAML partial 占位成员
-   - 接入真实的 InternalMarkupCompilation 生成链路
-
-4. **补齐缺失顶层模块**
-   - PenImc
-   - System.Windows.Presentation
-   - WpfGfx
+3. **为 PenImc 和 WpfGfx 接入 NuGet 二进制 DLL**
+   - 按 `Docs/04-NuGet-Binary.md` 的方案操作
+   - 这两个模块不再做源码迁移
 
 ## 遵循的原则
 

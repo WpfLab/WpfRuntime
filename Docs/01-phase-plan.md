@@ -46,9 +46,10 @@
    - `System.Printing-ref`
    - `cycle-breakers`
    - `AvTrace` 代码生成链
-4. 最后再处理缺失顶层模块的接入方式：
+4. 最后再处理 native 二进制接入与迁移妥协代码清理：
     - `PenImc`：改为通过 NuGet 获取已构建 DLL，不再做源码迁移
     - `WpfGfx`：改为通过 NuGet 获取已构建 DLL，不再做源码迁移
+    - 迁移妥协代码：bridge 文件、XAML partial 占位、动态调用边界、显式 HintPath（详见 `Docs/03-origin-diff-audit.md`）
 
 ---
 
@@ -209,25 +210,36 @@
 
 ---
 
-## 阶段 4：缺失顶层模块改为二进制接入
+## 阶段 4：迁移妥协代码清理与 native 二进制接入
 
 ### 目标
 
-在现有主链稳定后，不再迁入这两个高维护成本 native 模块的源码，而是改为通过 NuGet 包获取已构建好的 DLL，以满足现有 `DllImport` 和主链运行/编译需求。
+在现有主链稳定后，不再迁入 `PenImc`、`WpfGfx` 这两个高维护成本 native 模块的源码，而是改为通过 NuGet 包获取已构建好的 DLL。同时，把之前为了构建通过而引入的妥协代码（bridge 文件、XAML partial 占位、动态调用边界、显式 HintPath）逐一收敛或替换为更接近 origin 的方案。
 
-### 目标模块
+### 目标
 
-1. `PenImc`
-2. `WpfGfx`
+- 迁移妥协代码清理：
+  - `ReachFramework` 内的 bridge 文件：`SafeMemoryHandle.cs`、`PrintQueueBridge.cs`、`DocumentReferenceBridge.cs`
+  - `WindowsBase` 内的 `CaseInsensitiveOrdinalStringComparer.cs`
+  - `System.Xaml` 内的 `StaticExtensionConverter.cs`
+  - `PresentationUI` 的 XAML partial 占位成员：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar`
+  - `PresentationFramework` 打印链路的动态调用边界
+  - 主题项目 / Ribbon / `PresentationUI` / `WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath
+- Native 二进制接入：
+  - `PenImc`：改为通过 NuGet 获取已构建 DLL，不再做源码迁移
+  - `WpfGfx`：改为通过 NuGet 获取已构建 DLL，不再做源码迁移
 
 ### 任务
 
-1. 为 `PenImc`、`WpfGfx` 盘点现有 NuGet 包来源、目标框架、平台版本和 DLL 清单。
-2. 调整托管侧引用与构建逻辑，使其从 NuGet 包解析二进制依赖，而不是依赖源码工程参与编译。
-3. 保持与当前 C# 部分构建无关的 native 依赖隔离，避免把这两个模块重新纳入源码迁移链。
+1. 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换当前 XAML partial 占位。
+2. 逐项评估 bridge 文件是否可替换为更接近 origin 的方案或更稳定的项目引用。
+3. 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界。
+4. 为 `PenImc`、`WpfGfx` 盘点现有 NuGet 包来源、目标框架、平台版本和 DLL 清单。
+5. 调整托管侧引用与构建逻辑，使其从 NuGet 包解析二进制依赖。
 
 ### 完成标准
 
+- 迁移妥协代码清单中的每一项都有明确状态：已清理、已替换、或已确认当前无法清理并记录阻塞原因。
 - `PenImc` 与 `WpfGfx` 的依赖已经切换为 NuGet 二进制接入方案。
 - 能说明每个模块对应的包来源、平台版本、目标框架，以及当前是否仍有托管侧编译阻塞。
 

@@ -268,25 +268,32 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 1. 当前解决方案已纳入项目可构建，但尚未纳管的主链项目仍需继续打通。
 2. 解决方案纳管仍滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
    - `System.Printing`（C++/CLI 实现项目仍失败，ref 项目可用）
-   3. 关键顶层模块仍未迁入：
-   - `PenImc`
-   - `WpfGfx`
+3. `PenImc` 和 `WpfGfx` 不再走源码迁移路线，后续通过 NuGet 二进制 DLL 接入（详见 `Docs/04-NuGet-Binary.md`）。这两个模块的源码目录位于 `origin`，但不会复制到当前仓库 `src` 下。
 4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但 cycle-breaker 的同名 API 暴露仍需要继续收敛：
    - `ReachFramework-ref` 所需的 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 已由 `PresentationFramework-System.Printing-api-cycle` 暴露，参考程序集项目可独立构建。
    - `ReachFramework` 实现项目已通过动态调用边界越过 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
    - `PresentationFramework` 实现项目已通过动态调用边界越过打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
     - `PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 已纳入解决方案，但当前依赖 XAML partial 占位、显式完整 `PresentationFramework` 引用与友元公钥调整，后续需恢复真实标记编译链路并收敛同名程序集解析。
    - `AvTrace` 代码生成目标在 `PresentationFramework` 主项目独立构建中未形成当前阻塞。
-5. 当前仓库仍保留个人机器本地引用路径，影响可移植性与构建复现性。
+5. 迁移妥协代码清单（详见 `Docs/03-origin-diff-audit.md`）：
+   - `ReachFramework` 内的 bridge 文件（`SafeMemoryHandle.cs`、`PrintQueueBridge.cs`、`DocumentReferenceBridge.cs`）
+   - `WindowsBase` 内的 `CaseInsensitiveOrdinalStringComparer.cs`
+   - `System.Xaml` 内的 `StaticExtensionConverter.cs`
+   - `PresentationUI` 的 XAML partial 占位（`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar`）
+   - `PresentationFramework` 打印链路的动态调用边界
+   - 主题项目 / Ribbon / `PresentationUI` / `WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath 引用
+6. 当前仓库仍保留个人机器本地引用路径，影响可移植性与构建复现性。
 
 ## 建议的当前优先级
 
 1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
-2. 继续补齐缺失顶层模块，当前优先级从 `System.Windows.Presentation` 转到 `PenImc`，再到 `WpfGfx`。
-3. 继续收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析，优先评估是否可以用更明确的项目引用或桥接 API 替换当前动态调用与显式 HintPath。
-4. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，当前优先补齐 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri` 等更深层 API。
-5. 继续处理 `PresentationUI` 的 XAML 标记编译链路，优先用真实生成产物替换当前占位 partial 成员。
-6. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
+2. 清理迁移妥协代码：
+   - 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换当前 XAML partial 占位成员。
+   - 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析。
+   - 逐项评估 bridge 文件是否可替换为更接近 origin 的方案或更稳定的项目引用。
+3. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，当前优先补齐 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri` 等更深层 API。
+4. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
+5. 为 `PenImc` 和 `WpfGfx` 接入 NuGet 二进制 DLL（按 `Docs/04-NuGet-Binary.md` 的方案），确保 `DllImport` 和 native 依赖在主链编译中闭合。
 
 ## 当前执行约束
 

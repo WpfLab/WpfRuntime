@@ -33,3 +33,29 @@
 - 目标：等待项目完成迁移之后，移除整个 WPF 仓库对 Perl 的依赖，使仓库只需 `msbuild` 即可执行构建，不再需要额外工具。
 - 建议处理时机：主链项目迁移稳定、主题生成链路和标记编译链路完成梳理之后。
 - 后续动作：评估将 Perl 脚本改写为 MSBuild task、托管工具或内置目标；确认生成产物是否应纳入源码、作为中间产物生成，或由新的托管生成器统一输出。
+
+### 迁移妥协代码清理
+
+- 状态：待后续处理。已转入阶段计划（`Docs/01-phase-plan.md` 阶段 4），但具体执行顺序尚未排定。
+- 问题：当前仓库存在一批为迁移通过而临时写入的妥协代码，长期保留会掩盖与 origin 的真实偏差：
+  - `ReachFramework` bridge 文件：`SafeMemoryHandle.cs`、`PrintQueueBridge.cs`、`DocumentReferenceBridge.cs`
+  - `WindowsBase` 独有补丁：`CaseInsensitiveOrdinalStringComparer.cs`
+  - `System.Xaml` 独有补丁：`StaticExtensionConverter.cs`
+  - `PresentationUI` XAML partial 占位成员（`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar`）
+  - `PresentationFramework` 打印链路动态调用边界
+  - 主题项目 / Ribbon / `PresentationUI` / `WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath
+- 当前影响：构建可通过，但代码已与 origin 分叉；新开发人员难以区分临时补丁和真实实现。
+- 建议处理时机：在当前主链构建稳定后，按优先级逐项清理。
+- 后续动作：
+  1. 先恢复 `PresentationUI` 的真实标记编译生成链路，替换 XAML partial 占位
+  2. 收敛打印链路动态边界，替换为更接近 origin 的实现
+  3. 逐项评估 bridge 文件是否可替换为更稳定的项目引用或 origin 方案
+  4. 消除显式 HintPath 引用
+
+### PenImc 和 WpfGfx 的 NuGet 二进制接入
+
+- 状态：待后续处理。方案已记录在 `Docs/04-NuGet-Binary.md`。
+- 问题：`PenImc` 和 `WpfGfx` 不再走源码迁移路线，但当前尚未通过 NuGet 包接入已构建 DLL。
+- 当前影响：主链编译不直接依赖这些模块的源码，但如果遇到 `DllImport` 缺失或运行时加载问题，需要知道是二进制 DLL 未接入造成的。
+- 建议处理时机：在迁移妥协代码清理到一定程度后接入。
+- 后续动作：按 `Docs/04-NuGet-Binary.md` 的方案，使用 `GeneratePathProperty` 引用 `Microsoft.WindowsDesktop.App.Runtime` 包。

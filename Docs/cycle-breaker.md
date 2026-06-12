@@ -1,4 +1,4 @@
-﻿# cycle-breaker 评估记录
+# cycle-breaker 评估记录
 
 ## 背景
 
@@ -89,7 +89,7 @@
 
 ## 对迁移工作的影响
 
-当前阶段的优先目标是“忠实重建 + 可构建”。若立即移除 `cycle-breaker`，通常需要进行以下类型的调整：
+当前阶段的优先目标是"忠实重建 + 可构建"。若立即移除 `cycle-breaker`，通常需要进行以下类型的调整：
 
 - 迁移类型到新的程序集
 - 拆分公共 API 到新的基础程序集
@@ -103,10 +103,18 @@
 现阶段建议按以下顺序推进：
 
 1. 保留现有 `cycle-breaker` 设计
-2. 补齐缺失的 `cycle-breaker` 项目
+2. 补齐缺失的 `cycle-breaker` 项目（当前 8 个桥接项目已全部纳入 `Microsoft.Dotnet.Wpf.sln`，命令行 `msbuild -restore` 已可稳定通过）
 3. 在处理 `PresentationFramework` / `ReachFramework` / `System.Printing` / `PresentationUI` 构建错误时，优先检查桥接项目是否已纳管、是否已被正确引用、是否缺少最小占位类型
 4. 先打通迁移链路并保证仓库可稳定构建
-5. 在构建稳定后，再单独评估是否进行“去 cycle-breaker 化”重构
+5. 在构建稳定后，再单独评估是否进行"去 cycle-breaker 化"重构
+
+## 与 origin 的偏移说明
+
+当前 cycle-breaker 项目的组织方式已经偏离 origin：
+
+- origin 的 cycle-breaker 位于 `src/Microsoft.DotNet.Wpf/cycle-breakers/`，但当前仓库将其提升到根目录 `cycle-breakers/`。
+- 当前 `PresentationFramework-System.Printing-api-cycle`、`ReachFramework-System.Printing-api-cycle` 等桥接项目中包含了一批 origin 不存在的 bridge 文件（如 `SerializationManagers.cs`、`XpsDocument.cs`、`IXpsOMPackageWriter.cs`、`PrintTicketManager.cs`），这些是当前迁移阶段为绕过 C++/CLI 和打印链编译阻塞而引入的最小占位。
+- 这些 bridge 文件本身属于迁移妥协代码的一部分，应在后续清理阶段逐项评估是否可以回归到 origin 的模块边界。
 
 ## 何时可以评估移除 cycle-breaker
 
@@ -124,6 +132,6 @@
 下一步可继续整理以下内容：
 
 - 四组循环依赖的明确项目依赖图
-- 各 `cycle-breaker` 项目在解决方案中的纳管状态
+- 各 `cycle-breaker` 项目在解决方案中的纳管状态（已全部纳管）
 - 各 `cycle-breaker` 项目是否已产出目标程序集
 - `PresentationFramework` / `ReachFramework` / `System.Printing` 当前仍缺少哪些桥接类型或生成步骤
