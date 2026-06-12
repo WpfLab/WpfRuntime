@@ -14,6 +14,46 @@ msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64
 
 ## 下一步工作（已排好优先级，可直接开始）
 
+### 优先级 0：完善 Builder 构建器项目，打通 NuGet 打包
+
+Builder 项目（`eng\Builder\Builder.csproj`）是驱动构建 + NuGet 打包的入口工具。详细计划见 `Docs\05-builder-plan.md`。
+
+**当前进度（已实现，打包步骤阻塞）：**
+
+- ✅ `Builder.csproj` 已配置（net8.0、LangVersion 12、独立 OutputPath）
+- ✅ `Program.cs` 已实现完整的编排逻辑（~280 行）
+- ✅ 步骤 1 & 2：探索 `origin\NuGetPackage\` 和 NuGet 缓存 DLL 清单已完成
+- ✅ 清理逻辑：逐目录清理 artifacts\bin 和 artifacts\obj，跳过锁定文件
+- ✅ 构建驱动：按依赖顺序逐个项目调用 msbuild 构建（不走 sln），共 22 个项目
+- ✅ 托管 DLL 收集：从 artifacts\bin 自动收集 20+ 个 WPF 托管 DLL
+- ✅ Native DLL 收集：从 NuGet 缓存自动拷贝 win-x64 + win-x86 native DLL
+- ✅ `.nuspec` 生成：动态生成 `DotNetCampus.WpfLib.nuspec`
+- ❌ **打包步骤阻塞**：`dotnet pack` 失败，因为临时 _pack.csproj 会继承仓库根 `Directory.Build.props` 的 Arcade SDK（`Microsoft.DotNet.Arcade.Sdk`），该 SDK 需要 `PackageLicenseExpression` 等属性；即使写入 local `Directory.Build.props` 覆盖，Arcade SDK 仍从 NuGet 缓存路径被导入
+
+**设计决策：**
+
+- Builder **不构建 sln**，而是按依赖顺序逐项目调用 msbuild 构建具体 csproj，避免 Builder 自锁
+- 构建 `/p:Platform=x64`，产物在 `artifacts\bin\<Project>\x64\Debug\net8.0\`
+- 包 ID `DotNetCampus.WpfLib`，版本 `1.0.0`，作者 `dotnet campus`，TFM `net8.0`
+- Native DLL 来源：NuGet 缓存 `microsoft.windowsdesktop.app.runtime.win-x64/win-x86@8.0.6`
+
+**下一步：解决打包阻塞。** 可选方案：
+
+1. 找更新的 `nuget.exe`（不在 PATH 上），用 `nuget.exe pack .nuspec` 直接打包
+2. 在 staging 子目录的 `_pack.csproj` 中用 `<Import Project="" />` 显式排除 Arcade SDK
+3. 直接用 `System.IO.Compression.ZipFile` 手写 .nupkg（zip 格式）
+4. 将 `_pack.csproj` 放到 `eng\Builder\` 下，通过 `<NuspecFile>` 引用 staging 中的 .nuspec（eng\Builder\ 本身不受 Arcade SDK 影响，因为它没有 import Microsoft.DotNet.Arcade.Sdk）
+
+**Builder 项目文件：**
+
+| 文件 | 说明 |
+|------|------|
+| `eng\Builder\Builder.csproj` | 项目文件，net8.0 控制台 |
+| `eng\Builder\Program.cs` | 完整编排逻辑 |
+| `eng\Builder\bin\` | Builder 自身输出（不在 artifacts\ 内） |
+| `eng\Builder\staging\` | 打包暂存目录（lib/ + runtimes/ + .nuspec） |
+| `eng\Builder\nupkg\` | 最终 .nupkg 输出目录 |
+
 ### 优先级 1：恢复 `PresentationUI` 的 XAML 标记编译链路
 
 这是当前最高价值的清理项，完成后可以消除本次迁移中的一个显著偏差。
@@ -94,7 +134,9 @@ msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64
 2. `Docs/00-overview.md`
 3. `Docs/01-phase-plan.md`
 4. `Docs/03-origin-diff-audit.md`（注意其中"XAML partial 占位"的措辞不够准确，实际应以本交接文档为准）
-5. `Docs/cycle-breaker.md`
+5. `Docs/05-builder-plan.md`（Builder 构建器项目完善计划）
+6. `Docs/04-NuGet-Binary.md`（native 模块 NuGet 二进制接入方案）
+7. `Docs/cycle-breaker.md`
 
 ## 当前需要持续遵守的约束
 
@@ -107,4 +149,5 @@ msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64
 
 - 解决方案：`msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 单个项目：`msbuild <project>.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- 运行 Builder：`dotnet run --project eng\Builder\Builder.csproj`
 - 对比 origin：`git diff --no-index -- origin\src\...\File.cs src\...\File.cs`

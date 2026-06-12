@@ -234,8 +234,9 @@
 1. 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换当前 XAML partial 占位。
 2. 逐项评估 bridge 文件是否可替换为更接近 origin 的方案或更稳定的项目引用。
 3. 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界。
-4. 为 `PenImc`、`WpfGfx` 盘点现有 NuGet 包来源、目标框架、平台版本和 DLL 清单。
-5. 调整托管侧引用与构建逻辑，使其从 NuGet 包解析二进制依赖。
+4. 完善 `eng\Builder\Builder.csproj` 构建器项目，将构建驱动、产物收集和 NuGet 打包整合为统一入口（详见 `Docs\05-builder-plan.md`）。
+5. 为 `PenImc`、`WpfGfx` 盘点现有 NuGet 包来源、目标框架、平台版本和 DLL 清单。
+6. 调整托管侧引用与构建逻辑，使其从 NuGet 包解析二进制依赖。
 
 ### 完成标准
 

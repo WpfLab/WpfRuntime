@@ -54,8 +54,8 @@
 
 ### PenImc 和 WpfGfx 的 NuGet 二进制接入
 
-- 状态：待后续处理。方案已记录在 `Docs/04-NuGet-Binary.md`。
+- 状态：已转入正式计划。Builder 构建器项目（`eng\Builder\Builder.csproj`）将作为实现载体，详细方案见 `Docs\05-builder-plan.md`。原始方案见 `Docs\04-NuGet-Binary.md`。
 - 问题：`PenImc` 和 `WpfGfx` 不再走源码迁移路线，但当前尚未通过 NuGet 包接入已构建 DLL。
 - 当前影响：主链编译不直接依赖这些模块的源码，但如果遇到 `DllImport` 缺失或运行时加载问题，需要知道是二进制 DLL 未接入造成的。
-- 建议处理时机：在迁移妥协代码清理到一定程度后接入。
-- 后续动作：按 `Docs/04-NuGet-Binary.md` 的方案，使用 `GeneratePathProperty` 引用 `Microsoft.WindowsDesktop.App.Runtime` 包。
+- 建议处理时机：Builder 项目完善后，随构建器一起接入。
+- 后续动作：按 `Docs\05-builder-plan.md` 的计划步骤推进。
