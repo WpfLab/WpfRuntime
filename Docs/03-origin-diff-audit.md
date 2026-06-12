@@ -94,7 +94,35 @@
 **动态调用边界：**
 
 - `PresentationFramework` 打印链路中 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 的动态调用
-- `ReachFramework` 中 `XpsSerializerWriter` 调用 `XpsDocumentWriter` 的动态边界
+- `ReachFramework` 中 `XpsSerializerWriter` 调用 `XpsDocumentWriter` 的动态边界（**已验证阻塞**：三个 `PrintTicket` 类型身份不一致，详见下方专项分析）
+
+### 2.1 `XpsSerializerWriter` 动态调用边界专项分析（已验证）
+
+`src\Microsoft.DotNet.Wpf\src\ReachFramework\SerializerFactory\XpsSerializerWriter.cs` 中的 `(dynamic)` 转换已被确认为当前架构下的**必要迁移妥协**。
+
+**对比事实：**
+
+- origin 的 `XpsSerializerWriter.cs` 无任何 `(dynamic)`，所有 `PrintTicket` 方法使用 `override` + 直接传参
+- 当前版本移除了 `override`（部分方法）并添加 `(dynamic)` 转换
+
+**根因：**
+
+三个不同的 `PrintTicket` 类型身份在当前架构中共存：
+1. `ReachFramework` 自行编译的 `PrtTicket_Public_Simple.cs`（定义 `System.Printing.PrintTicket`）
+2. cycle-breaker `ReachFramework-PresentationFramework-api-cycle` 中的 stub `PrintTicket`
+3. SDK inbox `System.Printing.dll` 中的 `PrintTicket`（`XpsDocumentWriter` 使用）
+
+**origin 如何避免：**
+
+`System.Printing.vcxproj`（C++/CLI）作为真实 DLL 编译后，`XpsDocumentWriter` 引用 `ReachFramework.dll` 的 `PrintTicket`，所有类型身份统一。
+
+**解除阻塞条件：**
+
+需要 `System.Printing.vcxproj` C++/CLI 项目独立构建成功。此前 `(dynamic)` 无法消除。
+
+**已验证过的修复尝试：**
+
+将 `ReachFramework.csproj` 的 `ProjectReference` 配置完全对齐 origin（移除 `PrivateAssets`、`<Private>false</Private>` 和额外 `PresentationFramework-System.Printing-api-cycle` 引用）→ 仍然失败（12 个 CS0115）。
 
 **显式 HintPath 引用：**
 

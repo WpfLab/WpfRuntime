@@ -33,24 +33,22 @@ msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64
 
 ### 优先级 2：消除 `XpsSerializerWriter.cs` 中的动态调用边界
 
-**真实状态：**
+**状态：已验证阻塞。** `(dynamic)` 在当前架构下无法直接消除，只能在 `System.Printing` C++/CLI 构建恢复后处理。
 
-`src\Microsoft.DotNet.Wpf\src\ReachFramework\SerializerFactory\XpsSerializerWriter.cs` 中使用 `(dynamic)` 绕过了 `PrintTicket` 类型身份不一致问题。示例：
+**调查结论（已验证）：**
 
-```csharp
-_xpsDocumentWriter.Write(visual, (dynamic)printTicket);
-```
+1. origin 的 `XpsSerializerWriter.cs` **没有任何** `(dynamic)` 转换，所有带 `PrintTicket` 的方法均使用 `override` + 直接传参。
+2. 尝试将 `ReachFramework.csproj` 的 `ProjectReference` 配置调整到与 origin 完全一致后，仍然失败（12 个 CS0115 "没有找到适合的方法来重写" 错误全部持续）。
+3. 根因：当前架构中 **三个不同的 `PrintTicket` 类型身份共存**：
+   - `ReachFramework` 自行编译 `PrtTicket_Public_Simple.cs`（定义 `System.Printing.PrintTicket`）
+   - cycle-breaker stub（`ReachFramework-PresentationFramework-api-cycle`）定义自己的 `PrintTicket`，用于 `SerializerWriter` 基类
+   - SDK inbox `System.Printing.dll` 定义第三个 `PrintTicket`，用于 `XpsDocumentWriter`
+4. origin 能避免此问题的原因：`System.Printing.vcxproj`（C++/CLI）编译为真实 DLL，直接引用 `ReachFramework.dll` 的 `PrintTicket`，让 `XpsDocumentWriter` 与 `ReachFramework` 共享同一个类型身份。
+5. **阻塞条件**：需要 `System.Printing.vcxproj` C++/CLI 项目独立构建成功，才能像 origin 一样统一 `PrintTicket` 类型身份。届时 `XpsSerializerWriter.cs` 可直接替换为 origin 版本。
 
-同样模式出现在多处 `Write`、`WriteAsync` 等重载方法中。
-
-**修复方向：**
-
-`PrintTicket` 之所以出现类型身份不一致，是因为 `XpsDocumentWriter.Write(Visual, PrintTicket)` 签名中的 `PrintTicket` 来自 `System.Printing`（C++/CLI 项目），而 `XpsSerializerWriter` 这里拿到的 `PrintTicket` 来自 bridge（`PresentationFramework-System.Printing-api-cycle` 或 `ReachFramework-System.Printing-api-cycle`）。两者运行时程序集身份不同。
-
-可能的收敛方式：
-1. 查看 origin 里 `XpsSerializerWriter.cs` 是否也有 `(dynamic)`——如果没有，说明 origin 不依赖动态调用，可以用项目引用/程序集统一来解决类型身份问题。
-2. 如果 origin 无 `dynamic`，在 `ReachFramework.csproj` 中调整对 `System.Printing`/bridge 的引用顺序，确保 `XpsSerializerWriter` 中能直接拿到同一个 `PrintTicket` 类型。
-3. 如果 origin 也有 `dynamic`，那这不是我们能消除的，更新 `Docs/03-origin-diff-audit.md` 标记为"与 origin 一致"。
+**后续操作建议**：在 `System.Printing` C++/CLI 构建恢复后，执行以下步骤：
+1. 用 origin 的 `XpsSerializerWriter.cs` 直接覆盖当前文件
+2. 验证 `ReachFramework.csproj` 构建通过
 
 ### 优先级 3：逐项评估 bridge 文件
 
