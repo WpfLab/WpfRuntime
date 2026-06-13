@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <!-- Builder 自身输出不能落在 artifacts\ 内，避免清空时自毁 -->
@@ -11,5 +10,16 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageDownload Include="Microsoft.WindowsDesktop.App.Runtime.win-x64" Version="[8.0.6]" />
+    <PackageDownload Include="Microsoft.WindowsDesktop.App.Runtime.win-x86" Version="[8.0.6]" />
+  </ItemGroup>
+
+  <Target Name="WritePackagePaths" BeforeTargets="Build">
+    <WriteLinesToFile File="$(OutputPath)PackagePaths.txt"
+                      Lines="win-x64=$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\8.0.6\;win-x86=$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x86\8.0.6\"
+                      Overwrite="true" />
+  </Target>
 
 </Project>

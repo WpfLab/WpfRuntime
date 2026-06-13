@@ -1,4 +1,9 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
 
 // ===========================================================
 // DotNetCampus.WpfLib Builder — 构建驱动 + NuGet 打包工具
@@ -7,8 +12,9 @@
 
 var repoRoot = FindRepoRoot();
 var artifactsDir = Path.Join(repoRoot, "artifacts");
-var stagingDir = Path.Join(repoRoot, "eng", "Builder", "staging");
-var nupkgOutputDir = Path.Join(repoRoot, "eng", "Builder", "nupkg");
+var builderOutputDir = Path.Join(repoRoot, "eng", "Builder", "bin");
+var stagingDir = Path.Join(builderOutputDir, "staging");
+var nupkgOutputDir = Path.Join(builderOutputDir, "nupkg");
 
 var startTime = Stopwatch.GetTimestamp();
 
@@ -103,11 +109,10 @@ foreach (var (name, sourcePath) in managedDlls)
 
 // ---- 步骤 5: 收集 Native DLL ----
 Log.Step("收集 Native DLL...");
-var nugetCacheDir = GetNuGetCacheDir();
-var runtimeVersion = "8.0.6";
+var packagePaths = ReadPackagePaths(builderOutputDir);
 var runtimesDir = Path.Join(stagingDir, "runtimes");
-CopyNativeDlls(nugetCacheDir, runtimeVersion, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
-CopyNativeDlls(nugetCacheDir, runtimeVersion, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
+CopyNativeDllsFromPackage(packagePaths, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
+CopyNativeDllsFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
 
 // ---- 步骤 6: 生成 .nuspec 并打包 ----
 Log.Step("生成 .nuspec 并打包...");
@@ -182,21 +187,6 @@ static void CleanArtifacts(string artifactsDir)
     Log.Info("artifacts 清理完成");
 }
 
-static string GetNuGetCacheDir()
-{
-    // NuGet 全局包目录：优先用 NUGET_PACKAGES 环境变量，否则用默认路径
-    var envCache = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
-    if (!string.IsNullOrWhiteSpace(envCache) && Directory.Exists(envCache))
-        return envCache;
-
-    var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    var defaultCache = Path.Join(userProfile, ".nuget", "packages");
-    if (Directory.Exists(defaultCache))
-        return defaultCache;
-
-    throw new InvalidOperationException("无法找到 NuGet 缓存目录");
-}
-
 static Dictionary<string, string> CollectManagedDlls(string artifactsDir)
 {
     var binDir = Path.Join(artifactsDir, "bin");
@@ -268,15 +258,35 @@ static Dictionary<string, string> CollectManagedDlls(string artifactsDir)
     return result;
 }
 
-static void CopyNativeDlls(string nugetCacheDir, string version, string rid, string destDir)
+static Dictionary<string, string> ReadPackagePaths(string builderOutputDir)
 {
-    var sourceDir = Path.Join(
-        nugetCacheDir,
-        "microsoft.windowsdesktop.app.runtime." + rid,
-        version,
-        "runtimes",
-        rid,
-        "native");
+    var pathsFile = Path.Join(builderOutputDir, "PackagePaths.txt");
+    if (!File.Exists(pathsFile))
+        throw new InvalidOperationException($"未找到包路径文件: {pathsFile}，请先构建 Builder 项目以解析 NuGet 包路径");
+
+    var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var line in File.ReadAllLines(pathsFile))
+    {
+        var parts = line.Split('=', 2);
+        if (parts.Length == 2)
+            result[parts[0].Trim()] = parts[1].Trim();
+    }
+
+    if (result.Count == 0)
+        throw new InvalidOperationException("包路径文件为空，请检查 NuGet 包引用");
+
+    return result;
+}
+
+static void CopyNativeDllsFromPackage(Dictionary<string, string> packagePaths, string rid, string destDir)
+{
+    if (!packagePaths.TryGetValue(rid, out var packageRoot))
+    {
+        Log.Warn($"未找到 {rid} 的包路径");
+        return;
+    }
+
+    var sourceDir = Path.Join(packageRoot, "runtimes", rid, "native");
 
     if (!Directory.Exists(sourceDir))
     {
@@ -301,7 +311,7 @@ static string GenerateNuspec(string stagingDir, string version)
         ? Directory.GetFiles(managedDir, "*.dll").Select(Path.GetFileName).OrderBy(x => x).ToList()
         : [];
 
-    var sb = new System.Text.StringBuilder();
+    var sb = new StringBuilder();
     sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
     sb.AppendLine("<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">");
     sb.AppendLine("  <metadata>");
@@ -356,21 +366,18 @@ static string GenerateNuspec(string stagingDir, string version)
 static string PackNuGet(string nuspecPath, string outputDir)
 {
     Directory.CreateDirectory(outputDir);
-    var stagingDir = Path.GetDirectoryName(nuspecPath)!;
 
-    // 临时 csproj 不能继承仓库根 Directory.Build.props（Arcade SDK 要求 PackageLicenseExpression），
-    // 用一个子目录隔离，并写入 local Directory.Build.props 覆盖
-    var packDir = Path.Join(stagingDir, "_pack");
+    // _pack.csproj 放在独立于仓库树的位置（系统临时目录），
+    // 避免继承仓库根 Directory.Build.props 中的 Arcade SDK 导入
+    var packDir = Path.Join(Path.GetTempPath(), "WpfBuilderPack", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(packDir);
 
-    File.WriteAllText(Path.Join(packDir, "Directory.Build.props"),
-        "<Project />");
-
+    var nuspecRelativePath = Path.GetRelativePath(packDir, nuspecPath);
     var tempProj = Path.Join(packDir, "_pack.csproj");
     File.WriteAllText(tempProj, "<Project Sdk=\"Microsoft.NET.Sdk\">\n" +
         "  <PropertyGroup>\n" +
         "    <TargetFramework>net8.0</TargetFramework>\n" +
-        "    <NuspecFile>..\\DotNetCampus.WpfLib.nuspec</NuspecFile>\n" +
+        $"    <NuspecFile>{nuspecRelativePath}</NuspecFile>\n" +
         "    <IsPackable>true</IsPackable>\n" +
         "    <NoDefaultExcludes>true</NoDefaultExcludes>\n" +
         "  </PropertyGroup>\n" +
