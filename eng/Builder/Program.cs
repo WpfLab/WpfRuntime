@@ -6,8 +6,8 @@ using System.Linq;
 using System.Text;
 
 // ===========================================================
-// DotNetCampus.WpfLib Builder — 构建驱动 + NuGet 打包工具
-// 用法: dotnet run --project eng\Builder\Builder.csproj
+// DotNetCampus.WpfLib Builder — Build driver + NuGet packaging tool
+// Usage: dotnet run --project eng\Builder\Builder.csproj
 // ===========================================================
 
 var repoRoot = FindRepoRoot();
@@ -19,26 +19,26 @@ var nupkgOutputDir = Path.Join(builderOutputDir, "nupkg");
 var startTime = Stopwatch.GetTimestamp();
 
 Log.Info("=== DotNetCampus.WpfLib Builder ===");
-Log.Info($"仓库根目录: {repoRoot}");
+Log.Info($"Repo root: {repoRoot}");
 
-// ---- 步骤 1: 清空 artifacts ----
-Log.Step("清空 artifacts 文件夹...");
+// ---- Step 1: Clean artifacts ----
+Log.Step("Cleaning artifacts folder...");
 CleanArtifacts(artifactsDir);
 
-// ---- 步骤 2: 清空 staging 目录 ----
-Log.Step("清空 staging 目录...");
+// ---- Step 2: Clean staging directory ----
+Log.Step("Cleaning staging directory...");
 if (Directory.Exists(stagingDir))
     Directory.Delete(stagingDir, recursive: true);
 
-// ---- 步骤 3: 构建项目 ----
-Log.Step("构建项目 (x64)...");
+// ---- Step 3: Build projects ----
+Log.Step("Building projects (x64)...");
 var srcDir = Path.Join(repoRoot, "src", "Microsoft.DotNet.Wpf", "src");
 var msbuildArgs = $"-restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly";
 
-// 按依赖顺序构建：先构建被依赖的项目，再构建依赖它们的项目
+// Build in dependency order: build dependencies first, then their dependents
 var projectsToBuild = new[]
 {
-    // PresentationBuildTasks 必须先构建 — 它是 XAML 标记编译（MarkupCompilePass1）的 MSBuild 任务程序集
+    // PresentationBuildTasks must be built first — it is the MSBuild task assembly for XAML markup compilation (MarkupCompilePass1)
     Path.Join(srcDir, "PresentationBuildTasks", "PresentationBuildTasks.csproj"),
     Path.Join(srcDir, "WindowsBase", "WindowsBase.csproj"),
     Path.Join(srcDir, "System.Xaml", "System.Xaml.csproj"),
@@ -69,39 +69,39 @@ foreach (var projectPath in projectsToBuild)
 {
     if (!File.Exists(projectPath))
     {
-        Log.Warn($"项目不存在，跳过: {projectPath}");
+        Log.Warn($"Project not found, skipping: {projectPath}");
         continue;
     }
 
     var projectName = Path.GetFileNameWithoutExtension(projectPath);
-    Log.Info($"  构建 {projectName}...");
+    Log.Info($"  Building {projectName}...");
 
-    // PresentationBuildTasks 是 MSBuild 任务程序集，.NET Framework MSBuild 需要 net472 版本
+    // PresentationBuildTasks is an MSBuild task assembly; .NET Framework MSBuild requires net472 target
     var extraArgs = projectName == "PresentationBuildTasks" ? " /p:TargetFramework=net472" : "";
     var result = RunProcess("msbuild", $"\"{projectPath}\" {msbuildArgs}{extraArgs}", repoRoot);
     if (result.ExitCode != 0)
     {
-        Log.Error($"  构建失败: {projectName}");
+        Log.Error($"  Build failed: {projectName}");
         failedProjects.Add(projectName);
-        // 继续构建剩余项目，不立即中止
+        // Continue building remaining projects; do not abort immediately
     }
 }
 
 if (failedProjects.Count > 0)
 {
-    Log.Warn($"以下项目构建失败（将跳过其 DLL）: {string.Join(", ", failedProjects)}");
+    Log.Warn($"The following projects failed to build (their DLLs will be skipped): {string.Join(", ", failedProjects)}");
 }
 else
 {
-    Log.Info("所有项目构建成功");
+    Log.Info("All projects built successfully");
 }
 
-// ---- 步骤 4: 收集托管 DLL ----
-Log.Step("收集托管 DLL...");
+// ---- Step 4: Collect managed DLLs ----
+Log.Step("Collecting managed DLLs...");
 var managedDlls = CollectManagedDlls(artifactsDir);
 if (managedDlls.Count == 0)
 {
-    Log.Error("未找到任何托管 DLL，请检查构建产物");
+    Log.Error("No managed DLLs found; please check build artifacts");
     return 1;
 }
 
@@ -114,28 +114,28 @@ foreach (var (name, sourcePath) in managedDlls)
     Log.Info($"  lib/net8.0/{name}");
 }
 
-// ---- 步骤 5: 收集 Native DLL ----
-Log.Step("收集 Native DLL...");
+// ---- Step 5: Collect native DLLs ----
+Log.Step("Collecting native DLLs...");
 var packagePaths = ReadPackagePaths(builderOutputDir);
 var runtimesDir = Path.Join(stagingDir, "runtimes");
 CopyNativeDllsFromPackage(packagePaths, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
 CopyNativeDllsFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
 
-// ---- 步骤 6: 生成 .nuspec 并打包 ----
-Log.Step("生成 .nuspec 并打包...");
+// ---- Step 6: Generate .nuspec and pack ----
+Log.Step("Generating .nuspec and packing...");
 var version = "1.0.0";
 var nuspecPath = GenerateNuspec(stagingDir, version);
 var nupkgPath = PackNuGet(nuspecPath, nupkgOutputDir);
 
-// ---- 完成 ----
+// ---- Done ----
 var elapsed = Stopwatch.GetElapsedTime(startTime);
 Log.Info("========================================");
-Log.Info($"构建完成！耗时 {elapsed.TotalSeconds:F1}s");
-Log.Info($"NuGet 包: {nupkgPath}");
+Log.Info($"Build complete! Elapsed: {elapsed.TotalSeconds:F1}s");
+Log.Info($"NuGet package: {nupkgPath}");
 return 0;
 
 // ===========================================================
-// 辅助方法
+// Helper methods
 // ===========================================================
 
 static string FindRepoRoot()
@@ -149,18 +149,18 @@ static string FindRepoRoot()
         if (parent == dir) break;
         dir = parent;
     }
-    throw new InvalidOperationException("无法找到仓库根目录（.git 目录）");
+    throw new InvalidOperationException("Unable to find repository root (.git directory)");
 }
 
 static void CleanArtifacts(string artifactsDir)
 {
     if (!Directory.Exists(artifactsDir))
     {
-        Log.Info("artifacts 不存在，跳过清理");
+        Log.Info("artifacts does not exist, skipping cleanup");
         return;
     }
 
-    // 先删除 bin 和 obj（可能被部分锁定）
+    // Delete bin and obj first (may be partially locked)
     foreach (var subDir in new[] { "bin", "obj" })
     {
         var path = Path.Join(artifactsDir, subDir);
@@ -172,26 +172,26 @@ static void CleanArtifacts(string artifactsDir)
             }
             catch (UnauthorizedAccessException)
             {
-                Log.Warn($"无法删除 {subDir}（文件被锁定，跳过）");
+                Log.Warn($"Cannot delete {subDir} (file is locked, skipping)");
             }
             catch (IOException)
             {
-                Log.Warn($"无法删除 {subDir}（文件被占用，跳过）");
+                Log.Warn($"Cannot delete {subDir} (file is in use, skipping)");
             }
         }
     }
 
-    // 尝试删除 artifacts 根目录下的零散文件
+    // Try to delete loose files in the artifacts root
     try
     {
         foreach (var file in Directory.GetFiles(artifactsDir))
         {
-            try { File.Delete(file); } catch { /* 跳过锁定文件 */ }
+            try { File.Delete(file); } catch { /* skip locked files */ }
         }
     }
-    catch { /* 忽略 */ }
+    catch { /* ignore */ }
 
-    Log.Info("artifacts 清理完成");
+    Log.Info("artifacts cleanup complete");
 }
 
 static Dictionary<string, string> CollectManagedDlls(string artifactsDir)
@@ -241,8 +241,8 @@ static Dictionary<string, string> CollectManagedDlls(string artifactsDir)
         if (dirName.Contains("-api-cycle", StringComparison.OrdinalIgnoreCase)) continue;
         if (dirName.Contains("-impl-cycle", StringComparison.OrdinalIgnoreCase)) continue;
 
-        // 构建使用 /p:Platform=x64，因此产物路径为 artifacts\bin\<ProjectName>\x64\Debug\net8.0\
-        // 同时兼容 Any CPU 的路径: artifacts\bin\<ProjectName>\Debug\net8.0\
+        // Build uses /p:Platform=x64, so output path is artifacts\bin\<ProjectName>\x64\Debug\net8.0\
+        // Also compatible with Any CPU path: artifacts\bin\<ProjectName>\Debug\net8.0\
         foreach (var candidate in new[] { "x64", "" })
         {
             var dllDir = string.IsNullOrEmpty(candidate)
@@ -269,7 +269,7 @@ static Dictionary<string, string> ReadPackagePaths(string builderOutputDir)
 {
     var pathsFile = Path.Join(builderOutputDir, "PackagePaths.txt");
     if (!File.Exists(pathsFile))
-        throw new InvalidOperationException($"未找到包路径文件: {pathsFile}，请先构建 Builder 项目以解析 NuGet 包路径");
+        throw new InvalidOperationException($"Package paths file not found: {pathsFile}; build the Builder project first to resolve NuGet package paths");
 
     var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     foreach (var line in File.ReadAllLines(pathsFile))
@@ -280,7 +280,7 @@ static Dictionary<string, string> ReadPackagePaths(string builderOutputDir)
     }
 
     if (result.Count == 0)
-        throw new InvalidOperationException("包路径文件为空，请检查 NuGet 包引用");
+        throw new InvalidOperationException("Package paths file is empty; please check NuGet package references");
 
     return result;
 }
@@ -289,7 +289,7 @@ static void CopyNativeDllsFromPackage(Dictionary<string, string> packagePaths, s
 {
     if (!packagePaths.TryGetValue(rid, out var packageRoot))
     {
-        Log.Warn($"未找到 {rid} 的包路径");
+        Log.Warn($"Package path not found for {rid}");
         return;
     }
 
@@ -297,7 +297,7 @@ static void CopyNativeDllsFromPackage(Dictionary<string, string> packagePaths, s
 
     if (!Directory.Exists(sourceDir))
     {
-        Log.Warn($"Native 源目录不存在: {sourceDir}");
+        Log.Warn($"Native source directory does not exist: {sourceDir}");
         return;
     }
 
@@ -325,7 +325,7 @@ static string GenerateNuspec(string stagingDir, string version)
     sb.AppendLine("    <id>DotNetCampus.WpfLib</id>");
     sb.AppendLine($"    <version>{version}</version>");
     sb.AppendLine("    <authors>dotnet campus</authors>");
-    sb.AppendLine("    <description>WPF 自定义构建的托管程序集与 native 运行时。</description>");
+    sb.AppendLine("    <description>Custom-built WPF managed assemblies and native runtimes.</description>");
     sb.AppendLine("    <copyright>dotnet campus</copyright>");
     sb.AppendLine("    <license type=\"expression\">MIT</license>");
     sb.AppendLine("    <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>");
@@ -366,7 +366,7 @@ static string GenerateNuspec(string stagingDir, string version)
     var nuspecContent = sb.ToString();
     var nuspecPath = Path.Join(stagingDir, "DotNetCampus.WpfLib.nuspec");
     File.WriteAllText(nuspecPath, nuspecContent);
-    Log.Info($"  .nuspec 已生成: {nuspecPath}");
+    Log.Info($"  .nuspec generated: {nuspecPath}");
     return nuspecPath;
 }
 
@@ -374,8 +374,8 @@ static string PackNuGet(string nuspecPath, string outputDir)
 {
     Directory.CreateDirectory(outputDir);
 
-    // _pack.csproj 放在独立于仓库树的位置（系统临时目录），
-    // 避免继承仓库根 Directory.Build.props 中的 Arcade SDK 导入
+    // Place _pack.csproj outside the repo tree (system temp directory)
+    // to avoid inheriting Arcade SDK imports from the repo root Directory.Build.props
     var packDir = Path.Join(Path.GetTempPath(), "WpfBuilderPack", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(packDir);
 
@@ -394,17 +394,17 @@ static string PackNuGet(string nuspecPath, string outputDir)
 
     if (result.ExitCode != 0)
     {
-        Log.Error($"打包失败: {result.Output}");
-        throw new InvalidOperationException("NuGet 打包失败");
+        Log.Error($"Pack failed: {result.Output}");
+        throw new InvalidOperationException("NuGet pack failed");
     }
 
     var nupkgFiles = Directory.GetFiles(outputDir, "*.nupkg");
     if (nupkgFiles.Length == 0)
-        throw new InvalidOperationException("未找到生成的 .nupkg 文件");
+        throw new InvalidOperationException("No generated .nupkg file found");
 
     var nupkgPath = nupkgFiles.OrderByDescending(File.GetLastWriteTime).First();
     var fileInfo = new FileInfo(nupkgPath);
-    Log.Info($"  .nupkg 已生成: {nupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
+    Log.Info($"  .nupkg generated: {nupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
     return nupkgPath;
 }
 
@@ -430,7 +430,7 @@ static ProcessResult RunProcess(string fileName, string arguments, string workin
 }
 
 // ===========================================================
-// 简单日志工具
+// Simple logging utility
 // ===========================================================
 internal static class Log
 {
