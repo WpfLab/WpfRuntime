@@ -39,26 +39,26 @@ namespace System.Windows.Markup
         /// <summary>
         /// Called by the BamlReader to create an internal Type.
         /// </summary>
-        protected abstract object CreateInstance(Type type, CultureInfo culture);
+        protected internal abstract object CreateInstance(Type type, CultureInfo culture);
 
         /// <summary>
         /// Called by the BamlReader to set an internal property value on a target object.
         /// </summary>
-        protected abstract object GetPropertyValue(PropertyInfo propertyInfo, object target, CultureInfo culture);
+        protected internal abstract object GetPropertyValue(PropertyInfo propertyInfo, object target, CultureInfo culture);
 
         /// <summary>
         /// Called by the BamlReader to get an internal property value on a target object.
         /// </summary>
-        protected abstract void SetPropertyValue(PropertyInfo propertyInfo, object target, object value, CultureInfo culture);
+        protected internal abstract void SetPropertyValue(PropertyInfo propertyInfo, object target, object value, CultureInfo culture);
 
         /// <summary>
         /// Called by the BamlReader to create an event delegate on a non-public handler method.
         /// </summary>
-        protected abstract Delegate CreateDelegate(Type delegateType, object target, string handler);
+        protected internal abstract Delegate CreateDelegate(Type delegateType, object target, string handler);
 
         /// <summary>
         /// Called by the BamlReader to attach an event handler delegate to an internal event.
         /// </summary>
-        protected abstract void AddEventHandler(EventInfo eventInfo, object target, Delegate handler);
+        protected internal abstract void AddEventHandler(EventInfo eventInfo, object target, Delegate handler);
     }
 }
