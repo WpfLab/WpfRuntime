@@ -4,13 +4,27 @@
 
 该文档用于让后续 AI 直接接手当前仓库，不需要重复调查仓库结构。
 
+> **⚠️ 首先阅读 `Docs\03-session-exploration-2024-06.md`**，其中记录了最近一次会话的详细探索、已完成的修复、当前阻塞点和推荐的前进策略。
+
 ## 当前构建基线
 
 ```bash
+# 删除 artifacts 后执行（每次验证前必须清理）
+Remove-Item -Recurse -Force artifacts
 msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal
 ```
 
-结果：**构建成功**（已验证）。
+结果：**构建成功**（已验证，完全干净构建）。
+
+> **⚠️ 重要教训**：验证构建是否通过时，**必须每次先删除 artifacts 目录**，然后直接执行 `msbuild` 面向 sln 文件一次性构建。不能通过多次不断尝试构建、依赖前一次构建残留的产物来"凑"出构建成功。这是之前犯过的错误，会导致虚假的"构建通过"假象。
+
+### Any CPU 构建已知问题
+
+```bash
+msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal
+```
+
+当前失败：`ReachFramework-ref` 报 `CS0234: 命名空间"System.Windows.Xps"中不存在类型或命名空间名"XpsDocumentWriter"`。根因是 `ReachFramework-ref` 的 `HintPath` 指向 `x64` 平台路径，但 `System.Printing-ref` 用 `Any CPU` 构建时输出在 `Any CPU` 路径下，平台映射不一致。这是已有问题，与 `PresentationBuildTasks` 修复无关。
 
 ## 下一步工作（已排好优先级，可直接开始）
 

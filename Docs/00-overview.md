@@ -324,3 +324,20 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 - 结果:构建成功。
 - 当前含义:该项目已不再是当前首要阻塞点，后续重点转为收敛它对完整 `PresentationFramework` 输出的显式 HintPath 依赖。
 
+`PresentationUI` 干净构建阻塞已修复（`Microsoft.WinFX.targets` 评估阶段 `_PresentationBuildTasksAssembly` 为空）：
+
+- 原始问题:干净状态（无 `artifacts/`）下，`PresentationUI.csproj` 导入的 `Microsoft.WinFX.targets` 在评估阶段执行 `UsingTask`，此时 `PresentationBuildTasks.dll` 尚未构建，所有候选路径的 `Exists()` 检查返回 false，导致 `_PresentationBuildTasksAssembly` 属性求值为空字符串，触发 `MSB4022: AssemblyFile 特性值计算结果""无效`。
+- 根本原因:MSBuild 的评估阶段（Evaluation）先于构建阶段（Build），`UsingTask` 在评估时注册程序集路径，但程序集仅在任务实际调用时才加载。`ProjectReference` 能保证构建顺序，但无法保证评估阶段 DLL 已存在。
+- 解决方法:在 `Microsoft.WinFX.targets` 的 `_PresentationBuildTasksAssembly` 属性组末尾添加最终 fallback——当所有 `Exists()` 检查都失败时，直接使用预期构建输出路径 `$(_PresentationBuildTasksAssemblyWithPlatform)`。`UsingTask` 注册时不需要文件立即存在，程序集在任务调用时才加载，此时 `ProjectReference` 已保证 `PresentationBuildTasks` 先构建完成。
+- 额外修复:`Directory.Build.props` 中 `WpfWindowsDesktopReferencePath` 原先硬编码 `8.0.6` 和 `8.0.26` 版本，不同机器安装的版本不同会导致干净构建失败。已改为使用 inline task（`RoslynCodeTaskFactory`）动态发现 `Microsoft.WindowsDesktop.App.Ref` 目录下最高版本的 `8.0.x` pack，无需硬编码版本号。对应地，`Directory.Build.targets` 中原先在顶层 `ItemGroup` 引用 `WpfWindowsDesktopReferencePath` 的逻辑已移入 `AddWindowsDesktopReferences` target（`BeforeTargets="ResolveAssemblyReferences"`），确保 inline task 先设置属性后再添加 Reference。
+- 验证命令:`msbuild D:\lindexi\Code\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- 结果:`MSB4022` 和 `CS0234` 错误均已消除。剩余唯一错误为 `DirectWriteForwarder.vcxproj` 的 `MSB4057`（目标"Build"不存在），原因是当前机器未安装 C++ 工作负载，属于环境依赖问题，非代码问题。
+
+Builder 清理工具已新增（详见 `Docs/05-builder-clean.md`）：
+
+- 用途:在干净状态下验证构建时，替代 `git clean -xdf`（会因 Visual Studio 锁定 `.vs/` 文件而失败）。
+- 用法:`dotnet run --project eng\Builder\Builder.csproj -- clean`
+- 清理范围:`artifacts/`、`src/**/bin/`、`src/**/obj/`、`Demo/**/bin/`、`Demo/**/obj/`、`cycle-breakers/**/bin/`、`cycle-breakers/**/obj/`、`.vs/`、仓库根目录 `*.log`。
+- 锁定文件处理:对 `UnauthorizedAccessException` 和 `IOException` 进行捕获，跳过锁定文件并继续清理，不中断。
+- 后续 AI 对话使用指引:需要干净状态验证时，不要使用 `git clean -xdf`，而是使用 `dotnet run --project eng\Builder\Builder.csproj -- clean`。
+

@@ -34,10 +34,66 @@
           Condition="!Exists('$(WpfArcadeSdkProps)') Or !Exists('$(WpfArcadeSdkTargets)')"/>-->
 
   <PropertyGroup>
-    <WpfReferencePath>C:\lindexi\Lib\Microsoft.WindowsDesktop.App\</WpfReferencePath>
-    <WpfWindowsDesktopReferencePath Condition="'$(WpfWindowsDesktopReferencePath)' == '' and Exists('$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.6\ref\net8.0\')">$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.6\ref\net8.0\</WpfWindowsDesktopReferencePath>
-    <WpfWindowsDesktopReferencePath Condition="'$(WpfWindowsDesktopReferencePath)' == '' and Exists('$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.26\ref\net8.0\')">$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\8.0.26\ref\net8.0\</WpfWindowsDesktopReferencePath>
+    <!--
+      Dynamically discover the highest installed WindowsDesktop.App.Ref pack
+      instead of hardcoding version numbers.  GetDirectories returns a sorted
+      array; the last element is the highest version.  We use a SetProperty
+      target with an inline C# task to pick it robustly.
+    -->
+    <_WpfRefPackBase Condition="'$(WpfWindowsDesktopReferencePath)' == ''">$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\</_WpfRefPackBase>
+    <_WpfRefPackTfm>net8.0</_WpfRefPackTfm>
   </PropertyGroup>
+
+  <!--
+    Discover the highest installed WindowsDesktop.App.Ref version at evaluation
+    time using an inline task.  Runs before any project content is evaluated so
+    that $(WpfWindowsDesktopReferencePath) is available to all imports.
+  -->
+  <UsingTask TaskName="DiscoverWpfRefPack" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <BasePath ParameterType="System.String" Required="true" />
+      <Tfm ParameterType="System.String" Required="true" />
+      <Result ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        Result = "";
+        if (!Directory.Exists(BasePath))
+            return true;
+
+        // Prefer 8.0.x versions, fall back to any version
+        var dirs = Directory.GetDirectories(BasePath, "8.0.*");
+        if (dirs.Length == 0)
+            dirs = Directory.GetDirectories(BasePath);
+
+        if (dirs.Length == 0)
+            return true;
+
+        // Directory.GetDirectories returns sorted paths; pick the last (highest version)
+        var best = dirs[dirs.Length - 1];
+        var refDir = Path.Combine(best, "ref", Tfm);
+        if (Directory.Exists(refDir))
+            Result = refDir + Path.DirectorySeparatorChar;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="DiscoverWpfRefPackPath"
+          BeforeTargets="CollectPackageReferences;Restore;ResolveAssemblyReferences;AddWindowsDesktopReferences">
+    <DiscoverWpfRefPack Condition="'$(WpfWindowsDesktopReferencePath)' == ''"
+                        BasePath="$(_WpfRefPackBase)"
+                        Tfm="$(_WpfRefPackTfm)">
+      <Output TaskParameter="Result" PropertyName="WpfWindowsDesktopReferencePath" />
+    </DiscoverWpfRefPack>
+    <Message Condition="'$(WpfWindowsDesktopReferencePath)' != ''"
+             Text="WpfWindowsDesktopReferencePath resolved to: $(WpfWindowsDesktopReferencePath)"
+             Importance="low" />
+  </Target>
 
   <PropertyGroup>
     <WpfSourceDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\</WpfSourceDir>

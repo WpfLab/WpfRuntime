@@ -61,12 +61,12 @@
     <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System.Printing"
-               HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\System.Printing-ref\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\ref\System.Printing.dll"
-               SpecificVersion="false"
-               ExternallyResolved="true"
-               Private="false" />
-  </ItemGroup>
+      <Reference Include="System.Printing"
+                     HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\System.Printing-ref\$(WpfBridgePlatform)\$(Configuration)\$(TargetFramework)\ref\System.Printing.dll"
+                     SpecificVersion="false"
+                     ExternallyResolved="true"
+                     Private="false" />
+    </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Security.Cryptography.Xml" Version="$(SystemSecurityCryptographyXmlPackageVersion)" />
     <PackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />

@@ -7,6 +7,7 @@
 - [00-overview.md](00-overview.md)：当前仓库的已验证事实、解决方案现状、主要缺口。
 - [01-phase-plan.md](01-phase-plan.md)：后续执行顺序、每个阶段的目标、完成标准与风险。
 - [02-next-session-handoff.md](02-next-session-handoff.md)：给后续 AI 直接使用的起手顺序、必读文件、当前阻塞点。
+- [03-session-exploration-2024-06.md](03-session-exploration-2024-06.md)：最近一次会话的详细探索记录、已完成的修复、当前阻塞点和推荐的前进策略。
 - [03-origin-diff-audit.md](03-origin-diff-audit.md)：当前仓库与 `origin` 原始 WPF 代码的差异审计、潜在风险与优先收敛方向。
 - [04-NuGet-Binary.md](04-NuGet-Binary.md)：`PenImc` 和 `WpfGfx` 等 native 模块的 NuGet 二进制 DLL 接入方案。
 - [05-builder-plan.md](05-builder-plan.md)：Builder 构建器项目完善计划，驱动构建与 NuGet 打包。

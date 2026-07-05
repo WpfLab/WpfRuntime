@@ -337,4 +337,12 @@
           SkipUnchangedFiles="true" />
   </Target>
 
+  <!--
+    The net472 PresentationBuildTasks.dll is required by Microsoft.WinFX.targets
+    when running under .NET Framework MSBuild. The normal multi-targeting build
+    produces it. For non-x64 platforms (e.g., Any CPU), the DLL is produced at a
+    different path. Microsoft.WinFX.targets has fallback logic that resolves the
+    correct path at evaluation time.
+  -->
+
 </Project>

@@ -64,5 +64,10 @@ namespace System.Windows.Xps.Packaging
         internal static void SaveWithUI(System.IntPtr parent, System.Uri source, System.Uri target)
         {
         }
+
+        public static System.Windows.Xps.XpsDocumentWriter CreateXpsDocumentWriter(XpsDocument xpsDocument)
+        {
+            return null;
+        }
     }
 }

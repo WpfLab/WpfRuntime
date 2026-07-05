@@ -212,10 +212,17 @@
 
     <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
 
-    <ProjectReference Include="$(WpfSourceDir)PresentationUI\ref\PresentationUI-ref.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-  </ItemGroup>
+        <ProjectReference Include="$(WpfSourceDir)PresentationUI\ref\PresentationUI-ref.csproj">
+          <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+        </ProjectReference>
+
+        <!-- Ensure PresentationBuildTasks is built before PresentationUI.
+             PresentationUI imports Microsoft.WinFX.targets which requires
+             PresentationBuildTasks.dll (net472) for markup compilation. -->
+        <ProjectReference Include="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj"
+                           ReferenceOutputAssembly="false"
+                           SkipGetTargetFrameworkProperties="true" />
+      </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Windows.Extensions" Version="$(SystemWindowsExtensionsPackageVersion)" />

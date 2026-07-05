@@ -23,6 +23,7 @@
     <Compile Include="System.Windows.Xps.Packaging.PackagingProgressEventArgs.cs" />
     <Compile Include="System.Windows.Xps.Serialization.RCW.IXpsOMPackageWriter.cs" />
     <Compile Include="System.Windows.Xps.Packaging.XpsDocument.cs" />
+    <Compile Include="System.Windows.Xps.XpsDocumentWriter.cs" />
     <Compile Include="$(WpfSharedDir)RefAssemblyAttrs.cs" />
   </ItemGroup>
   <ItemGroup>

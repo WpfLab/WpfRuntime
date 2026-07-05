@@ -1,12 +1,21 @@
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
-  <ItemGroup Condition="'$(WpfWindowsDesktopReferencePath)' != ''">
-    <Reference Include="@(MicrosoftPrivateWinFormsReference->'$(WpfWindowsDesktopReferencePath)%(Identity).dll')"
-               Private="false">
-      <Private>false</Private>
-    </Reference>
-  </ItemGroup>
+  <!--
+    Resolve WinForms references (Accessibility, System.Windows.Forms, etc.)
+    via a target instead of a top-level ItemGroup so that the inline task in
+    Directory.Build.props has already set $(WpfWindowsDesktopReferencePath).
+  -->
+  <Target Name="AddWindowsDesktopReferences"
+          BeforeTargets="ResolveAssemblyReferences"
+          Condition="'$(WpfWindowsDesktopReferencePath)' != '' and '@(MicrosoftPrivateWinFormsReference)' != ''">
+    <ItemGroup>
+      <Reference Include="@(MicrosoftPrivateWinFormsReference->'$(WpfWindowsDesktopReferencePath)%(Identity).dll')"
+                 Private="false">
+        <Private>false</Private>
+      </Reference>
+    </ItemGroup>
+  </Target>
 
   <Target Name="RemoveInboxWpfReference"
           AfterTargets="ResolveReferences">
