@@ -4,7 +4,7 @@
 
 将当前 WPF 仓库重组为一个更易维护的结构，逐步收敛项目依赖、共享源码路径和构建入口，最终达到以下目标：
 
-- 可以直接在 Visual Studio 中打开并构建 `Microsoft.Dotnet.Wpf.sln`。
+- 可以直接在 Visual Studio 中打开并构建 `Microsoft.Dotnet.Wpf.slnx`。
 - 可以使用一条 `msbuild` 命令对该解决方案或关键项目完成构建。
 - 在重组过程中尽量保持与原始 WPF 仓库的目录结构和模块边界一致，降低后续同步和排障成本；对 `PenImc`、`WpfGfx` 这类高维护成本 native 模块，则改为优先接入已构建好的 NuGet 二进制包，而不是继续做源码迁移。
 
@@ -15,7 +15,7 @@
 - 仓库根目录存在 `Directory.Build.props`、`Directory.Build.targets`、`global.json`、`eng/Versions.props`。
 - 当前统一目标框架为 `.NET 8`。
 - `global.json` 指定 SDK 为 `8.0.206`。
-- 当前解决方案入口为 `Microsoft.Dotnet.Wpf.sln`。
+- 当前解决方案入口为 `Microsoft.Dotnet.Wpf.slnx`。
 - `Directory.Build.props` 当前定义了：
   - `WpfSourceDir=$(RepoRoot)src\Microsoft.DotNet.Wpf\src\`
   - `WpfSharedDir=$(RepoRoot)src\Microsoft.DotNet.Wpf\src\Shared\`
@@ -113,7 +113,7 @@
 
 ### 当前解决方案已纳入的项目
 
-`Microsoft.Dotnet.Wpf.sln` 当前已纳入：
+`Microsoft.Dotnet.Wpf.slnx` 当前已纳入：
 
 - `System.Xaml`
 - `WindowsBase`
@@ -153,10 +153,9 @@
 
 ### 当前已存在但尚未纳入解决方案的主要项目
 
-以下项目已在磁盘中存在，但当前未出现在 `Microsoft.Dotnet.Wpf.sln`：
+以下项目已在磁盘中存在，但当前未出现在 `Microsoft.Dotnet.Wpf.slnx`：
 
-- `System.Printing`（含 `ref` 与 native 项目）
-- 多数 `ref/*.csproj`
+- `System.Printing` native 项目
 
 ### 与原始仓库的顶层目录差异
 
@@ -171,17 +170,19 @@
 
 ### 最新验证结果
 
-使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.sln` 可构建：
+使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.slnx` 可构建：
 
 - 结果：构建成功。
-- 额外修复：已将全部 `cycle-breakers/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.sln`。此前 `System.Printing-ref` 通过硬编码 `artifacts` 路径读取 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle` 输出，但这两个桥接项目不在解决方案中，导致“旧产物残留时偶尔可过、干净构建或刚克隆仓库时 `msbuild -restore` 失败”。纳管后，解决方案入口会稳定先生成这些桥接输出，命令行干净构建已恢复。
-- 额外修复：`Microsoft.Dotnet.Wpf.sln` 先前缺失 `System.Xaml`、`System.Windows.Input.Manipulations`、`PresentationCore` 三个 solution folder 节点，导致 `NestedProjects` 指向不存在的父 GUID，`msbuild` 无法解析解决方案；现已补回缺失节点并重新验证解决方案入口可构建。
+- 额外修复：已将全部 `cycle-breakers/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.slnx`。此前 `System.Printing-ref` 通过硬编码 `artifacts` 路径读取 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle` 输出，但这两个桥接项目不在解决方案中，导致“旧产物残留时偶尔可过、干净构建或刚克隆仓库时 `msbuild -restore` 失败”。纳管后，解决方案入口会稳定先生成这些桥接输出，命令行干净构建已恢复。
+- 额外修复：`Microsoft.Dotnet.Wpf.slnx` 先前缺失 `System.Xaml`、`System.Windows.Input.Manipulations`、`PresentationCore` 三个 solution folder 节点，导致 `NestedProjects` 指向不存在的父 GUID，`msbuild` 无法解析解决方案；现已补回缺失节点并重新验证解决方案入口可构建。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 仍报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
 - 当前解决方案已纳入 `PresentationBuildTasks` 和 `mcwpf` 项目。
+- 清理后构建修复：已将磁盘上存在的全部 `ref/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.slnx`。Visual Studio 在清理后 restore 时，如果 `PresentationCore-ref`、`WindowsFormsIntegration-ref` 等项目引用的 `WindowsBase-ref`、`UIAutomationTypes-ref`、`UIAutomationProvider-ref`、`PresentationFramework-ref`、`ReachFramework-ref`、`PresentationUI-ref` 不在解决方案中，会报 `NU1105`，随后级联为 `ReachFramework-ref` 缺少 `project.assets.json`、`PresentationFramework` / `PresentationUI` / 主题项目缺少 ref 输出。纳管全部 ref 项目后，`msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly` 已验证通过。
+- Visual Studio 打开解决方案后构建曾再次出现 `PresentationUI` 标记编译 `MC1000`，日志首个真实链路为：`ReachFramework-ref` 缺少 `artifacts/obj/ReachFramework-ref/project.assets.json`，随后 `PresentationFramework` 缺少 `artifacts/obj/ReachFramework/.../ref/ReachFramework.dll`，最终 `PresentationUI` 的 XAML 编译找不到 `artifacts/bin/PresentationFramework/x64/Debug/net8.0/PresentationFramework.dll`。当前已在 `ReachFramework`、`PresentationFramework-ref`、`PresentationFramework`、`PresentationUI` 的关键 `ProjectReference` 上补充 `Targets="Restore;Build"`，让 IDE 项目级构建路径显式还原并构建上游项目。该修复已完成 XML 静态验证，尚需在 Visual Studio 中复验。
 
 Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
-- 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
+- 命令：`msbuild C:\lindexi\Code\WpfReorganize_dotnetcampus\Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
 - 结果：构建成功。
 - 当前处理方式：`Directory.Build.props` 将 `Any CPU` / `AnyCPU` 下的 `WpfNativePlatform` 映射到 `x64`，`PresentationUI` 与 `WindowsFormsIntegration` 的显式完整 `PresentationFramework` 引用使用该属性，避免 Visual Studio 构建时落到不存在的 `PresentationFramework\Any CPU\...` 输出目录。
 - 额外收敛：`PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 对完整 `PresentationFramework` 的显式引用路径已统一改为 `$(WpfNativePlatform)`，不再硬编码 `x64`。
@@ -189,8 +190,8 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 针对“刚从 git 拉下来的项目也要能通过 `msbuild -restore`”的要求，已重新验证以下入口：
 
-- `msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
-- `msbuild C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
+- `msbuild C:\lindexi\Code\WpfReorganize_dotnetcampus\Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
+- `msbuild C:\lindexi\Code\WpfReorganize_dotnetcampus\Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal /clp:ErrorsOnly`
 
 两条命令当前均可重复执行并通过，不再依赖预先残留的 `artifacts` 桥接产物。
 
@@ -199,8 +200,9 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\ReachFramework\ref\ReachFramework-ref.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 结果：构建成功。
 - 额外收敛：当前 `ReachFramework-ref.csproj` 已显式引用 `artifacts/obj/System.Printing-ref/.../ref/System.Printing.dll`，避免 `System.Windows.Xps.XpsDocumentWriter` 仅靠项目引用顺序解析而导致间歇性 `CS0234`。
+- 额外收敛：`ReachFramework.csproj` 与 `PresentationFramework/ref/PresentationFramework-ref.csproj` 对 `ReachFramework-ref.csproj` 的引用已显式执行 `Restore;Build`，避免 IDE 项目级构建时跳过 ref 项目的 NuGet assets 生成。
 
-`System.Windows.Presentation` 已从 `origin` 迁入当前仓库，并已纳入 `Microsoft.Dotnet.Wpf.sln`：
+`System.Windows.Presentation` 已从 `origin` 迁入当前仓库，并已纳入 `Microsoft.Dotnet.Wpf.slnx`：
 
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\System.Windows.Presentation\System.Windows.Presentation.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
 - 结果：构建成功。
@@ -266,7 +268,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 ## 当前主要缺口
 
 1. 当前解决方案已纳入项目可构建，但尚未纳管的主链项目仍需继续打通。
-2. 解决方案纳管仍滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.sln`：
+2. 解决方案纳管仍滞后于磁盘现状，至少以下主项目仍未进入 `Microsoft.Dotnet.Wpf.slnx`：
    - `System.Printing`（C++/CLI 实现项目仍失败，ref 项目可用）
 3. `PenImc` 和 `WpfGfx` 不再走源码迁移路线，后续通过 NuGet 二进制 DLL 接入（详见 `Docs/04-NuGet-Binary.md`）。这两个模块的源码目录位于 `origin`，但不会复制到当前仓库 `src` 下。
 4. `PresentationFramework` 依赖链虽然目录与项目文件已存在，但 cycle-breaker 的同名 API 暴露仍需要继续收敛：
@@ -286,7 +288,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 ## 建议的当前优先级
 
-1. 保持当前 `Microsoft.Dotnet.Wpf.sln` 可构建基线，不要为扩大纳管范围破坏现有项目。
+1. 保持当前 `Microsoft.Dotnet.Wpf.slnx` 可构建基线，不要为扩大纳管范围破坏现有项目。
 2. 清理迁移妥协代码：
    - 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换当前 XAML partial 占位成员。
    - 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析。

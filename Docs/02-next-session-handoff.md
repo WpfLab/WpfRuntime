@@ -9,22 +9,26 @@
 ## 当前构建基线
 
 ```bash
-# 删除 artifacts 后执行（每次验证前必须清理）
+# 删除 artifacts 后执行（每次验证前必须清理，不要删除 .vs）
 Remove-Item -Recurse -Force artifacts
-msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal
+msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly
 ```
 
-结果：**构建成功**（已验证，完全干净构建）。
+结果：命令行清理后构建曾验证成功；Visual Studio 打开解决方案后构建出现新的 IDE 项目级构建顺序问题，需继续在 Visual Studio 中复验。
+
+Visual Studio 清理后 restore 需要所有被 `ProjectReference` 引用的 `ref/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.slnx`。当前 `WindowsBase-ref`、`PresentationFramework-ref`、`PresentationUI-ref`、`ReachFramework-ref`、`UIAutomationTypes-ref`、`UIAutomationProvider-ref`、`UIAutomationClient-ref`、`UIAutomationClientSideProviders-ref`、各主题 ref 项目等均已纳入解决方案，避免 `NU1105` 和后续 `CS0006`/`MC1000` 级联失败。
+
+Visual Studio 构建日志中的 `PresentationUI` `MC1000` 已确认不是 XAML 内容本身错误，而是上游输出缺失的级联错误：`ReachFramework-ref` 缺少 `project.assets.json`，导致 `ReachFramework` ref 输出缺失、`PresentationFramework.dll` 未生成，最后 `PresentationUI` 标记编译找不到完整 `PresentationFramework.dll`。当前已在以下引用上显式加入 `Targets="Restore;Build"`：`ReachFramework -> ReachFramework-ref`、`PresentationFramework-ref -> ReachFramework-ref`、`PresentationFramework -> ReachFramework`、`PresentationUI -> PresentationFramework`。这些项目文件已通过 XML 静态验证，尚需在 Visual Studio 中验证“生成解决方案”。
 
 > **⚠️ 重要教训**：验证构建是否通过时，**必须每次先删除 artifacts 目录**，然后直接执行 `msbuild` 面向 sln 文件一次性构建。不能通过多次不断尝试构建、依赖前一次构建残留的产物来"凑"出构建成功。这是之前犯过的错误，会导致虚假的"构建通过"假象。
 
-### Any CPU 构建已知问题
+### Visual Studio 构建已知问题
 
 ```bash
-msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal
+msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal
 ```
 
-当前失败：`ReachFramework-ref` 报 `CS0234: 命名空间"System.Windows.Xps"中不存在类型或命名空间名"XpsDocumentWriter"`。根因是 `ReachFramework-ref` 的 `HintPath` 指向 `x64` 平台路径，但 `System.Printing-ref` 用 `Any CPU` 构建时输出在 `Any CPU` 路径下，平台映射不一致。这是已有问题，与 `PresentationBuildTasks` 修复无关。
+`Any CPU` 命令行构建曾通过 `WpfNativePlatform` 映射到 `x64` 收敛。当前需要优先复验的是 Visual Studio 打开解决方案后的构建顺序：确认 `ReachFramework-ref` 的 restore assets 会在 `ReachFramework` / `PresentationFramework` / `PresentationUI` 之前生成，且 `PresentationUI` 不再因缺少 `PresentationFramework.dll` 报 `MC1000`。
 
 ## 下一步工作（已排好优先级，可直接开始）
 

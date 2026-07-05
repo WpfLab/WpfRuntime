@@ -199,7 +199,8 @@
 
   <ItemGroup>
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj"
+                      Targets="Restore;Build" />
     <Reference Include="PresentationFramework"
                HintPath="$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
                Private="false"

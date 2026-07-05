@@ -74,7 +74,17 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/PresentationFramework/ref/PresentationFramework-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/PresentationUI/PresentationUI.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/PresentationUI/ref/PresentationUI-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -84,7 +94,17 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/ReachFramework/ref/ReachFramework-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/System.Windows.Controls.Ribbon/System.Windows.Controls.Ribbon.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/System.Windows.Controls.Ribbon/ref/System.Windows.Controls.Ribbon-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -94,12 +114,27 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationProvider/ref/UIAutomationProvider-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationTypes/UIAutomationTypes.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationTypes/ref/UIAutomationTypes-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/WindowsBase/WindowsBase.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/WindowsBase/ref/WindowsBase-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -174,7 +209,17 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Aero/ref/PresentationFramework.Aero-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Aero2/PresentationFramework.Aero2.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Aero2/ref/PresentationFramework.Aero2-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -184,7 +229,17 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.AeroLite/ref/PresentationFramework.AeroLite-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Classic/PresentationFramework.Classic.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Classic/ref/PresentationFramework.Classic-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -194,12 +249,27 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Fluent/ref/PresentationFramework.Fluent-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Luna/PresentationFramework.Luna.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Luna/ref/PresentationFramework.Luna-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Royale/PresentationFramework.Royale.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Royale/ref/PresentationFramework.Royale-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -211,7 +281,17 @@
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationClient/ref/UIAutomationClient-ref.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationClientSideProviders/UIAutomationClientSideProviders.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationClientSideProviders/ref/UIAutomationClientSideProviders-ref.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />

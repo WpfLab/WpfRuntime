@@ -78,7 +78,8 @@
     <NetCoreReference Include="System.Xml.ReaderWriter" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(WpfSourceDir)ReachFramework\ref\ReachFramework-ref.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)ReachFramework\ref\ReachFramework-ref.csproj"
+                      Targets="Restore;Build" />
     <ProjectReference Include="$(WpfSourceDir)System.Printing\ref\System.Printing-ref.csproj" />
   </ItemGroup>
   <ItemGroup>
