@@ -3,8 +3,22 @@
   <PropertyGroup>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net8.0</_PresentationBuildTasksTfm>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' != 'Core'">net472</_PresentationBuildTasksTfm>
-    <_PresentationBuildTasksAssembly>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssembly>
+    <UseBootstrapPresentationBuildTasks Condition="'$(UseBootstrapPresentationBuildTasks)' == ''">true</UseBootstrapPresentationBuildTasks>
+    <_BuiltPresentationBuildTasksAssembly>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_BuiltPresentationBuildTasksAssembly>
+    <BootstrapPresentationBuildTasksAssembly Condition="'$(BootstrapPresentationBuildTasksAssembly)' == '' and '$(MSBuildSDKsPath)' != ''">$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildSDKsPath)Microsoft.NET.Sdk.WindowsDesktop\tools\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</BootstrapPresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssembly>$(_BuiltPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssemblySource>built</_PresentationBuildTasksAssemblySource>
+    <_PresentationBuildTasksAssembly Condition="!Exists('$(_BuiltPresentationBuildTasksAssembly)') and '$(UseBootstrapPresentationBuildTasks)' == 'true' and Exists('$(BootstrapPresentationBuildTasksAssembly)')">$(BootstrapPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssemblySource Condition="'$(_PresentationBuildTasksAssembly)' == '$(BootstrapPresentationBuildTasksAssembly)'">bootstrap</_PresentationBuildTasksAssemblySource>
   </PropertyGroup>
+
+  <Target Name="ValidatePresentationBuildTasksAssembly" BeforeTargets="MarkupCompilePass1;MarkupCompilePass2;MainResourcesGeneration">
+    <Message Condition="'$(_PresentationBuildTasksAssemblySource)' == 'bootstrap'"
+             Importance="high"
+             Text="Using bootstrap PresentationBuildTasks.dll from '$(_PresentationBuildTasksAssembly)' because '$(_BuiltPresentationBuildTasksAssembly)' does not exist." />
+    <Error Condition="!Exists('$(_PresentationBuildTasksAssembly)')"
+           Text="PresentationBuildTasks.dll was not found. Expected built task at '$(_BuiltPresentationBuildTasksAssembly)'. Bootstrap is enabled: '$(UseBootstrapPresentationBuildTasks)'. Bootstrap path: '$(BootstrapPresentationBuildTasksAssembly)'. Build PresentationBuildTasks first, set BootstrapPresentationBuildTasksAssembly, or set UseBootstrapPresentationBuildTasks=true with a matching WindowsDesktop SDK available." />
+  </Target>
 
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.MarkupCompilePass1" AssemblyFile="$(_PresentationBuildTasksAssembly)" />
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.UidManager" AssemblyFile="$(_PresentationBuildTasksAssembly)" />

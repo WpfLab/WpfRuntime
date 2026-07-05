@@ -11,6 +11,7 @@
 - [03-origin-diff-audit.md](03-origin-diff-audit.md)：当前仓库与 `origin` 原始 WPF 代码的差异审计、潜在风险与优先收敛方向。
 - [04-NuGet-Binary.md](04-NuGet-Binary.md)：`PenImc` 和 `WpfGfx` 等 native 模块的 NuGet 二进制 DLL 接入方案。
 - [05-builder-plan.md](05-builder-plan.md)：Builder 构建器项目完善计划，驱动构建与 NuGet 打包。
+- [PresentationBuildTasks-bootstrap.md](PresentationBuildTasks-bootstrap.md)：`PresentationBuildTasks.dll` 的 bootstrap 机制、开关、路径来源和约束。
 - [backlog.md](backlog.md)：后备待办记录，用于保存工作过程中发现但不属于当前优先任务范围的问题。
 - [cycle-breaker.md](cycle-breaker.md)：`PresentationFramework` / `ReachFramework` / `System.Printing` / `PresentationUI` 之间桥接项目的保留原因与使用建议。
 
@@ -21,9 +22,10 @@
 3. 再阅读 `01-phase-plan.md`，确认下一步应该先解决什么问题。
 4. 阅读 `03-origin-diff-audit.md`，了解当前仓库与 `origin` 的结构差距、迁移性补丁和优先收敛方向。
 5. 如果需要处理 native 模块依赖或 NuGet 打包，阅读 `04-NuGet-Binary.md` 和 `05-builder-plan.md`，了解 binary 接入方案和 Builder 构建器计划。
-6. 阅读 `backlog.md`，了解已经记录但暂不打断当前迁移顺序的后备待办。
-7. 如果准备处理 `PresentationFramework`、`ReachFramework`、`System.Printing` 或 `PresentationUI`，继续阅读 `cycle-breaker.md`。
-8. 开始新的 AI 对话前，将 `02-next-session-handoff.md` 作为交接输入基础。
+6. 如果需要处理 XAML 标记编译或 `PresentationBuildTasks.dll` 加载问题，阅读 `PresentationBuildTasks-bootstrap.md`，了解 bootstrap 机制和关闭方式。
+7. 阅读 `backlog.md`，了解已经记录但暂不打断当前迁移顺序的后备待办。
+8. 如果准备处理 `PresentationFramework`、`ReachFramework`、`System.Printing` 或 `PresentationUI`，继续阅读 `cycle-breaker.md`。
+9. 开始新的 AI 对话前，将 `02-next-session-handoff.md` 作为交接输入基础。
 
 ## 更新规则
 
