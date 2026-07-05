@@ -3,27 +3,7 @@
   <PropertyGroup>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net8.0</_PresentationBuildTasksTfm>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' != 'Core'">net472</_PresentationBuildTasksTfm>
-    <_PresentationBuildTasksAssemblyWithPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithPlatform>
-    <_PresentationBuildTasksAssemblyWithActualPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(Platform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithActualPlatform>
-    <_PresentationBuildTasksAssemblyWithoutPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssemblyWithoutPlatform>
-    <_PresentationBuildTasksIdeAssemblyWithPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\ide-bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksIdeAssemblyWithPlatform>
-    <_PresentationBuildTasksIdeAssemblyWithoutPlatform>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\ide-bin\PresentationBuildTasks\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksIdeAssemblyWithoutPlatform>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and Exists('$(_PresentationBuildTasksAssemblyWithPlatform)')">$(_PresentationBuildTasksAssemblyWithPlatform)</_PresentationBuildTasksAssembly>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and Exists('$(_PresentationBuildTasksAssemblyWithActualPlatform)')">$(_PresentationBuildTasksAssemblyWithActualPlatform)</_PresentationBuildTasksAssembly>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and Exists('$(_PresentationBuildTasksAssemblyWithoutPlatform)')">$(_PresentationBuildTasksAssemblyWithoutPlatform)</_PresentationBuildTasksAssembly>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and '$(BuildingInsideVisualStudio)' == 'true' and Exists('$(_PresentationBuildTasksIdeAssemblyWithPlatform)')">$(_PresentationBuildTasksIdeAssemblyWithPlatform)</_PresentationBuildTasksAssembly>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'=='' and '$(BuildingInsideVisualStudio)' == 'true' and Exists('$(_PresentationBuildTasksIdeAssemblyWithoutPlatform)')">$(_PresentationBuildTasksIdeAssemblyWithoutPlatform)</_PresentationBuildTasksAssembly>
-    <!--
-      Final fallback: if the DLL has not been built yet (clean checkout), use
-      the expected build-output path anyway.  UsingTask registers the task name
-      and assembly path at evaluation time, but the assembly is only loaded when
-      the task is actually invoked.  By that point, ProjectReference will have
-      built PresentationBuildTasks first, so the DLL will exist.
-
-      This prevents MSB4022 ("AssemblyFile value evaluated to '' is invalid")
-      on a clean checkout where no artifacts exist yet.
-    -->
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'==''">$(_PresentationBuildTasksAssemblyWithPlatform)</_PresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssembly>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssembly>
   </PropertyGroup>
 
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.MarkupCompilePass1" AssemblyFile="$(_PresentationBuildTasksAssembly)" />

@@ -39,12 +39,9 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' == 'true' and '$(TargetFramework)' == 'net472'">
-    <_PresentationBuildTasksIdeOutputDir>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\ide-bin\PresentationBuildTasks\$(Configuration)\$(TargetFramework)\'))))</_PresentationBuildTasksIdeOutputDir>
-    <_PresentationBuildTasksStableOutputDir>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(Configuration)\$(TargetFramework)\'))))</_PresentationBuildTasksStableOutputDir>
-    <_PresentationBuildTasksStableOutputPath>$(_PresentationBuildTasksStableOutputDir)PresentationBuildTasks.dll</_PresentationBuildTasksStableOutputPath>
-    <OutputPath>$(_PresentationBuildTasksIdeOutputDir)</OutputPath>
-    <OutDir>$(_PresentationBuildTasksIdeOutputDir)</OutDir>
+  <PropertyGroup>
+    <OutputPath>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\'))))</OutputPath>
+    <OutDir>$(OutputPath)</OutDir>
   </PropertyGroup>
 
 
@@ -327,22 +324,5 @@
     -->
     <PackageReference Include="System.CodeDom" Version="$(SystemCodeDomPackageVersionForPresentationBuildTasks)" />
   </ItemGroup>
-
-  <Target Name="SeedPresentationBuildTasksStableNet472OutputForVisualStudio"
-          AfterTargets="Build"
-          Condition="'$(BuildingInsideVisualStudio)' == 'true' and '$(TargetFramework)' == 'net472' and !Exists('$(_PresentationBuildTasksStableOutputPath)')">
-    <MakeDir Directories="$(_PresentationBuildTasksStableOutputDir)" />
-    <Copy SourceFiles="$(TargetPath)"
-          DestinationFiles="$(_PresentationBuildTasksStableOutputPath)"
-          SkipUnchangedFiles="true" />
-  </Target>
-
-  <!--
-    The net472 PresentationBuildTasks.dll is required by Microsoft.WinFX.targets
-    when running under .NET Framework MSBuild. The normal multi-targeting build
-    produces it. For non-x64 platforms (e.g., Any CPU), the DLL is produced at a
-    different path. Microsoft.WinFX.targets has fallback logic that resolves the
-    correct path at evaluation time.
-  -->
 
 </Project>

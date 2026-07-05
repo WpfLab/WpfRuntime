@@ -217,12 +217,9 @@
           <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
         </ProjectReference>
 
-        <!-- Ensure PresentationBuildTasks is built before PresentationUI.
-             PresentationUI imports Microsoft.WinFX.targets which requires
-             PresentationBuildTasks.dll (net472) for markup compilation. -->
-        <ProjectReference Include="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj"
-                           ReferenceOutputAssembly="false"
-                           SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
       </ItemGroup>
 
   <ItemGroup>

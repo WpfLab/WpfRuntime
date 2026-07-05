@@ -183,6 +183,9 @@
     <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationTypes\UIAutomationTypes.csproj" />
 
     <ProjectReference Include="$(WpfSourceDir)Themes\PresentationFramework.Classic\PresentationFramework.Classic.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
 
     <ProjectReference Include="$(WpfSourceDir)System.Windows.Controls.Ribbon\ref\System.Windows.Controls.Ribbon-ref.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
