@@ -64,3 +64,7 @@
 - 推荐命令形态：`msbuild <project-or-sln> -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
 - 不要调用 `C:\Program Files\Microsoft Visual Studio\2026\Professional\MSBuild\Current\Bin\MSBuild.exe`。
 - 若必须写完整路径，使用 Visual Studio 18 安装路径；否则直接使用 `msbuild`。
+
+## Origin Commit
+
+v10.0.9: 44615ed4b9f033922b3361ea02c02f173b8bf82e
