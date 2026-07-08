@@ -219,6 +219,7 @@
 
     <ProjectReference Include="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj"
                       ReferenceOutputAssembly="false"
+                       SetTargetFramework="TargetFramework=$(_PresentationBuildTasksTfm)"
                       SkipGetTargetFrameworkProperties="true" />
       </ItemGroup>
 

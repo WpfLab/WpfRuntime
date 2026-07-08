@@ -2742,7 +2742,7 @@ namespace MS.Internal
             AddEditorBrowsableAttribute(ctdClass);
             GenerateXmlComments(ctdClass, ctdClass.Name);
 
-            //         protected override object CreateInstance(Type type, CultureInfo culture)
+            //         protected internal override object CreateInstance(Type type, CultureInfo culture)
             //         {
             //             return Activator.CreateInstance(type,
             //                                             BindingFlags.Public |
@@ -2784,7 +2784,7 @@ namespace MS.Internal
             GenerateXmlComments(cmmCI, cmmCI.Name);
             ctdClass.Members.Add(cmmCI);
 
-            //         protected override object GetPropertyValue(PropertyInfo propertyInfo, object target, CultureInfo culture)
+            //         protected internal override object GetPropertyValue(PropertyInfo propertyInfo, object target, CultureInfo culture)
             //         {
             //             return propertyInfo.GetValue(target, BindingFlags.Default, null, null, culture);
             //         }
@@ -2813,7 +2813,7 @@ namespace MS.Internal
             GenerateXmlComments(cmmGPV, cmmGPV.Name);
             ctdClass.Members.Add(cmmGPV);
 
-            //         protected override void SetPropertyValue(PropertyInfo propertyInfo, object target, object value, CultureInfo culture)
+            //         protected internal override void SetPropertyValue(PropertyInfo propertyInfo, object target, object value, CultureInfo culture)
             //         {
             //             propertyInfo.SetValue(target, value, BindingFlags.Default, null, null, culture);
             //         }
@@ -2842,7 +2842,7 @@ namespace MS.Internal
             GenerateXmlComments(cmmSPV, cmmSPV.Name);
             ctdClass.Members.Add(cmmSPV);
 
-            //         protected override Delegate CreateDelegate(Type delegateType, object target, string handler)
+            //         protected internal override Delegate CreateDelegate(Type delegateType, object target, string handler)
             //         {
             //             return (Delegate)target.GetType().InvokeMember("_CreateDelegate",
             //                                                            BindingFlags.Instance |
@@ -2895,7 +2895,7 @@ namespace MS.Internal
             GenerateXmlComments(cmmCD, cmmCD.Name);
             ctdClass.Members.Add(cmmCD);
 
-            //         protected override void AddEventHandler(EventInfo eventInfo, object target, Delegate handler);
+            //         protected internal override void AddEventHandler(EventInfo eventInfo, object target, Delegate handler);
             //         {
             //             eventInfo.AddEventHandler(target, handler);
             //         }
