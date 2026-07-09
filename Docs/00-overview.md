@@ -14,7 +14,7 @@
 
 - 仓库根目录存在 `Directory.Build.props`、`Directory.Build.targets`、`global.json`、`eng/Versions.props`。
 - 当前统一目标框架为 `.NET 8`。
-- `global.json` 指定 SDK 为 `8.0.206`。
+- `global.json` 指定 SDK 为 `8.0.101`，并允许 `latestFeature` 滚动，用于避免安装了 .NET 10 SDK 的 Visual Studio 首次打开时将 `net8.0` 项目解析到本机未安装的最新 8.0 targeting/apphost 包。
 - 当前解决方案入口为 `Microsoft.Dotnet.Wpf.slnx`。
 - `Directory.Build.props` 当前定义了：
   - `WpfSourceDir=$(RepoRoot)src\Microsoft.DotNet.Wpf\src\`
@@ -24,6 +24,14 @@
   - `WpfCodeGenDir=$(RepoRoot)eng\WpfArcadeSdk\tools\`
 - 当前仓库仍依赖本地 `C:\lindexi\Lib\Microsoft.WindowsDesktop.App\` 作为部分引用路径。
 - `Directory.Build.targets` 当前包含对 `WindowsBase`、`PresentationCore`、`PresentationFramework`、`ReachFramework`、`System.Printing` 的 inbox 引用清理逻辑，用于避免仓库项目与 SDK 隐式框架引用同时进入编译图。
+
+### `global.json` SDK 选择原则
+
+`global.json` 中的 `sdk.version` 是 .NET SDK 版本，不是运行时、目标框架或 NuGet 包版本。对于 .NET 8，常见 SDK 版本形态是 `8.0.100`、`8.0.101`、`8.0.200`、`8.0.300` 等；`8.0.0` 属于运行时/包版本形态，不是合适的 SDK 版本写法。
+
+当前仓库目标框架为 `net8.0`，并包含 WPF/native/C++/CLI 构建链。`global.json` 不应使用 `rollForward: latestMajor` 来兼容“只安装 .NET 10 SDK”的机器，因为这会允许 SDK 从 8.0 直接滚动到 .NET 10。已验证在 VS/MSBuild 选中 .NET 10 SDK 时，`net8.0` 项目可能被解析到本机未安装的 `Microsoft.NETCore.App.Ref` / `Microsoft.NETCore.App.Host.win-x64` 最新 8.0 补丁包，例如 `8.0.28`，从而触发 `NETSDK1145`。
+
+更稳妥的策略是使用 .NET 8 SDK 的最低可接受版本，并限制在 .NET 8 SDK feature band 内滚动，例如 `8.0.100` 或当前已验证的 `8.0.101` 搭配 `rollForward: latestFeature`。如果机器完全没有 .NET 8 SDK，应明确失败并提示安装 .NET 8 SDK，而不是隐式滚动到 .NET 10 后产生更隐蔽的构建错误。
 
 ### 当前已存在的顶层源码目录
 
@@ -173,6 +181,9 @@
 使用当前工作区的整体构建入口重新验证后，`Microsoft.Dotnet.Wpf.slnx` 可构建：
 
 - 结果：构建成功。
+- Visual Studio 首次打开后的 native 平台映射修复：`DirectWriteForwarder.vcxproj` 在 `Microsoft.Dotnet.Wpf.slnx` 中已显式映射 `Any CPU -> x64`、`x64 -> x64`、`x86 -> Win32`、`arm64 -> ARM64`，避免 VS 设计时生成只看到 ARM64 平台引用或错误推断 C++ 项目平台。
+- SDK 选择修复：`global.json` 已绑定 .NET SDK `8.0.101`。在只写 `msbuild-sdks` 而未指定 SDK 时，VS/MSBuild 会选择已安装的 .NET 10 SDK，并为 `net8.0` 解析到本机缺失的 `Microsoft.NETCore.App.Ref` / `Microsoft.NETCore.App.Host.win-x64` `8.0.28`，导致 `NETSDK1145`。绑定 .NET 8 SDK 后，`DirectWriteForwarder` 与解决方案入口均已恢复构建。
+- 已验证命令：`msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`，结果构建成功，仅剩既有警告。
 - 额外修复：已将全部 `cycle-breakers/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.slnx`。此前 `System.Printing-ref` 通过硬编码 `artifacts` 路径读取 `PresentationFramework-System.Printing-api-cycle` / `ReachFramework-System.Printing-api-cycle` 输出，但这两个桥接项目不在解决方案中，导致“旧产物残留时偶尔可过、干净构建或刚克隆仓库时 `msbuild -restore` 失败”。纳管后，解决方案入口会稳定先生成这些桥接输出，命令行干净构建已恢复。
 - 额外修复：`Microsoft.Dotnet.Wpf.slnx` 先前缺失 `System.Xaml`、`System.Windows.Input.Manipulations`、`PresentationCore` 三个 solution folder 节点，导致 `NestedProjects` 指向不存在的父 GUID，`msbuild` 无法解析解决方案；现已补回缺失节点并重新验证解决方案入口可构建。
 - 剩余警告：`DirectWriteForwarder.vcxproj` 仍报告 `D9035`，即 `/Zc:forScope-` 已否决并将在将来版本中移除。
