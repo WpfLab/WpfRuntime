@@ -50,6 +50,16 @@
 
 当按需构建触发时，构建输出会显示高重要性消息，说明缺少的仓库自产路径、要构建的项目和目标框架。
 
+## 锁定输出处理
+
+`PresentationBuildTasks.dll` 会被 MSBuild 和 Visual Studio 进程加载。Windows 允许改名已加载的 DLL，但不允许直接删除或覆盖它。为了避免 IDE 内构建整个仓库时因为旧任务程序集被占用而失败，`PresentationBuildTasks.csproj` 在编译前会扫描输出目录下的所有 DLL：
+
+1. 优先删除旧 DLL。
+2. 如果删除因为文件占用或访问受限失败，则把旧 DLL 改名为 `.locked.<process-id>.<guid>.dll`。
+3. 清理范围包含语言资源子目录中的 `PresentationBuildTasks.resources.dll`，避免卫星程序集复制阶段被旧文件锁阻塞。
+
+该机制只处理 `artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\` 下的构建输出，不会杀 IDE 或 MSBuild 进程。
+
 ## 设计约束
 
 - 不使用 `artifacts\ide-bin`。

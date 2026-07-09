@@ -44,6 +44,65 @@
     <OutDir>$(OutputPath)</OutDir>
   </PropertyGroup>
 
+  <UsingTask TaskName="RemoveOrRenameLockedPresentationBuildTasksOutput" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.Diagnostics" />
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        foreach (var item in Files)
+        {
+            var file = item.ItemSpec;
+            if (!File.Exists(file))
+                continue;
+
+            try
+            {
+                File.Delete(file);
+                continue;
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+
+            var directory = Path.GetDirectoryName(file);
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory) || !File.Exists(file))
+                continue;
+
+            var name = Path.GetFileNameWithoutExtension(file);
+            var extension = Path.GetExtension(file);
+            var renamedFile = Path.Combine(directory, $"{name}.locked.{Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}{extension}");
+            try
+            {
+                File.Move(file, renamedFile);
+                Log.LogMessage(Microsoft.Build.Framework.MessageImportance.High, $"Renamed locked PresentationBuildTasks output '{file}' to '{renamedFile}'.");
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
+        }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="RemoveOrRenameLockedPresentationBuildTasksOutputs" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_PresentationBuildTasksOutputDll Include="$(OutDir)**\*.dll" />
+    </ItemGroup>
+    <RemoveOrRenameLockedPresentationBuildTasksOutput Files="@(_PresentationBuildTasksOutputDll)" />
+  </Target>
+
 
   <!--
     Incorporate Microsoft.WinFX.targets in nuget packages under
