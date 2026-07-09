@@ -3,28 +3,29 @@
   <PropertyGroup>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net8.0</_PresentationBuildTasksTfm>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' != 'Core'">net472</_PresentationBuildTasksTfm>
-    <UseBootstrapPresentationBuildTasks Condition="'$(UseBootstrapPresentationBuildTasks)' == ''">true</UseBootstrapPresentationBuildTasks>
+    <BuildPresentationBuildTasksOnDemand Condition="'$(BuildPresentationBuildTasksOnDemand)' == ''">true</BuildPresentationBuildTasksOnDemand>
+    <_PresentationBuildTasksProject>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)PresentationBuildTasks.csproj'))))</_PresentationBuildTasksProject>
     <_BuiltPresentationBuildTasksAssembly>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_BuiltPresentationBuildTasksAssembly>
-    <_MSBuildSDKsPathWithTrailingSlash Condition="'$(MSBuildSDKsPath)' != ''">$([MSBuild]::EnsureTrailingSlash('$(MSBuildSDKsPath)'))</_MSBuildSDKsPathWithTrailingSlash>
-    <_SdkResolverPresentationBuildTasksAssembly Condition="'$(_MSBuildSDKsPathWithTrailingSlash)' != ''">$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(_MSBuildSDKsPathWithTrailingSlash)Microsoft.NET.Sdk.WindowsDesktop\tools\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_SdkResolverPresentationBuildTasksAssembly>
-    <_DotNetSdkRoot Condition="'$(DOTNET_ROOT)' != ''">$(DOTNET_ROOT)</_DotNetSdkRoot>
-    <_DotNetSdkRoot Condition="'$(_DotNetSdkRoot)' == '' and '$(ProgramW6432)' != ''">$(ProgramW6432)\dotnet</_DotNetSdkRoot>
-    <_DotNetSdkPresentationBuildTasksAssembly Condition="'$(_DotNetSdkRoot)' != '' and '$(NETCoreSdkVersion)' != ''">$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(_DotNetSdkRoot)\sdk\$(NETCoreSdkVersion)\Sdks\Microsoft.NET.Sdk.WindowsDesktop\tools\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_DotNetSdkPresentationBuildTasksAssembly>
-    <BootstrapPresentationBuildTasksAssembly Condition="'$(BootstrapPresentationBuildTasksAssembly)' == '' and Exists('$(_SdkResolverPresentationBuildTasksAssembly)')">$(_SdkResolverPresentationBuildTasksAssembly)</BootstrapPresentationBuildTasksAssembly>
-    <BootstrapPresentationBuildTasksAssembly Condition="'$(BootstrapPresentationBuildTasksAssembly)' == '' and Exists('$(_DotNetSdkPresentationBuildTasksAssembly)')">$(_DotNetSdkPresentationBuildTasksAssembly)</BootstrapPresentationBuildTasksAssembly>
-    <BootstrapPresentationBuildTasksAssembly Condition="'$(BootstrapPresentationBuildTasksAssembly)' == ''">$(_SdkResolverPresentationBuildTasksAssembly)</BootstrapPresentationBuildTasksAssembly>
     <_PresentationBuildTasksAssembly>$(_BuiltPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
-    <_PresentationBuildTasksAssemblySource>built</_PresentationBuildTasksAssemblySource>
-    <_PresentationBuildTasksAssembly Condition="!Exists('$(_BuiltPresentationBuildTasksAssembly)') and '$(UseBootstrapPresentationBuildTasks)' == 'true' and Exists('$(BootstrapPresentationBuildTasksAssembly)')">$(BootstrapPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
-    <_PresentationBuildTasksAssemblySource Condition="'$(_PresentationBuildTasksAssembly)' == '$(BootstrapPresentationBuildTasksAssembly)'">bootstrap</_PresentationBuildTasksAssemblySource>
   </PropertyGroup>
 
+  <Target Name="BuildPresentationBuildTasksOnDemand"
+          Condition="'$(BuildPresentationBuildTasksOnDemand)' == 'true' and !Exists('$(_BuiltPresentationBuildTasksAssembly)') and Exists('$(_PresentationBuildTasksProject)')"
+          BeforeTargets="ValidatePresentationBuildTasksAssembly">
+    <Message Importance="high"
+             Text="PresentationBuildTasks.dll was not found at '$(_BuiltPresentationBuildTasksAssembly)'. Building '$(_PresentationBuildTasksProject)' for '$(_PresentationBuildTasksTfm)' once before markup compilation." />
+    <MSBuild Projects="$(_PresentationBuildTasksProject)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration);Platform=$(WpfNativePlatform);TargetFramework=$(_PresentationBuildTasksTfm);BuildPresentationBuildTasksOnDemand=false"
+             StopOnFirstFailure="true" />
+    <PropertyGroup Condition="Exists('$(_BuiltPresentationBuildTasksAssembly)')">
+      <_PresentationBuildTasksAssembly>$(_BuiltPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
+    </PropertyGroup>
+  </Target>
+
   <Target Name="ValidatePresentationBuildTasksAssembly" BeforeTargets="MarkupCompilePass1;MarkupCompilePass2;MainResourcesGeneration">
-    <Message Condition="'$(_PresentationBuildTasksAssemblySource)' == 'bootstrap'"
-             Importance="high"
-             Text="Using bootstrap PresentationBuildTasks.dll from '$(_PresentationBuildTasksAssembly)' because '$(_BuiltPresentationBuildTasksAssembly)' does not exist." />
     <Error Condition="!Exists('$(_PresentationBuildTasksAssembly)')"
-           Text="PresentationBuildTasks.dll was not found. Expected built task at '$(_BuiltPresentationBuildTasksAssembly)'. Bootstrap is enabled: '$(UseBootstrapPresentationBuildTasks)'. Bootstrap path: '$(BootstrapPresentationBuildTasksAssembly)'. Build PresentationBuildTasks first, set BootstrapPresentationBuildTasksAssembly, or set UseBootstrapPresentationBuildTasks=true with a matching WindowsDesktop SDK available." />
+           Text="PresentationBuildTasks.dll was not found at '$(_BuiltPresentationBuildTasksAssembly)'. Build PresentationBuildTasks first, or keep BuildPresentationBuildTasksOnDemand=true so Microsoft.WinFX.targets can build it before markup compilation." />
   </Target>
 
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.MarkupCompilePass1" AssemblyFile="$(_PresentationBuildTasksAssembly)" />
