@@ -25,6 +25,7 @@ using System.Text;
 
 var repoRoot = FindRepoRoot();
 var artifactsDir = Path.Join(repoRoot, "artifacts");
+var buildLogsDir = Path.Join(artifactsDir, "log", "Builder");
 var builderOutputDir = Path.Join(repoRoot, "eng", "Builder", "bin");
 var stagingDir = Path.Join(builderOutputDir, "staging");
 var nupkgOutputDir = Path.Join(builderOutputDir, "nupkg");
@@ -58,6 +59,7 @@ Log.Info($"Repo root: {repoRoot}");
 // ---- Step 1: Clean artifacts ----
 Log.Step("Cleaning artifacts folder...");
 CleanArtifacts(artifactsDir);
+Directory.CreateDirectory(buildLogsDir);
 
 // ---- Step 2: Clean staging directory ----
 Log.Step("Cleaning staging directory...");
@@ -110,15 +112,17 @@ if (!File.Exists(presentationBuildTasksPath))
 
 foreach (var platform in new[] { "x64", "x86" })
 {
+    var projectName = "PresentationBuildTasks";
+    var logPath = GetBuildLogPath(buildLogsDir, projectName, platform);
+    var arguments = $"\"{presentationBuildTasksPath}\" -restore /p:Configuration=Debug /p:Platform={platform} /p:TargetFramework=net472 /m:1 /nr:false /v:minimal /clp:ErrorsOnly{GetFileLoggerArguments(logPath)}";
     var presentationBuildTasksResult = RunProcess(
         msbuildExe,
-        $"\"{presentationBuildTasksPath}\" -restore /p:Configuration=Debug /p:Platform={platform} /p:TargetFramework=net472 /m:1 /nr:false /v:minimal /clp:ErrorsOnly",
+        arguments,
         repoRoot);
     if (presentationBuildTasksResult.ExitCode != 0)
     {
-        Log.Error($"  Build failed: PresentationBuildTasks ({platform})");
-        Log.Error(presentationBuildTasksResult.Output);
-        failedProjects.Add($"PresentationBuildTasks ({platform})");
+        LogBuildFailure(projectName, platform, msbuildExe, arguments, repoRoot, logPath, presentationBuildTasksResult);
+        failedProjects.Add($"{projectName} ({platform})");
     }
 }
 
@@ -140,14 +144,15 @@ foreach (var platform in new[] { "x64", "x86" })
             : platform;
         Log.Info($"  Building {projectName} ({platform})...");
 
+        var logPath = GetBuildLogPath(buildLogsDir, projectName, platform);
+        var arguments = $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform={projectPlatform} /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{GetFileLoggerArguments(logPath)}";
         var result = RunProcess(
             msbuildExe,
-            $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform={projectPlatform} /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly",
+            arguments,
             repoRoot);
         if (result.ExitCode != 0)
         {
-            Log.Error($"  Build failed: {projectName} ({platform})");
-            Log.Error(result.Output);
+            LogBuildFailure(projectName, platform, msbuildExe, arguments, repoRoot, logPath, result);
             failedProjects.Add($"{projectName} ({platform})");
             // Continue building remaining projects; do not abort immediately
         }
@@ -157,6 +162,7 @@ foreach (var platform in new[] { "x64", "x86" })
 if (failedProjects.Count > 0)
 {
     Log.Warn($"The following projects failed to build (their DLLs will be skipped): {string.Join(", ", failedProjects)}");
+    Log.Warn($"Diagnostic MSBuild logs: {buildLogsDir}");
 }
 else
 {
@@ -320,6 +326,97 @@ static string FindMsBuild()
     // 4. Last resort: return "msbuild" and hope it's on PATH
     Log.Warn("Could not locate MSBuild.exe via vswhere or well-known paths; falling back to 'msbuild' on PATH");
     return "msbuild";
+}
+
+static string GetBuildLogPath(string buildLogsDir, string projectName, string platform)
+{
+    var invalidFileNameChars = Path.GetInvalidFileNameChars();
+    var safeProjectName = new string(projectName.Select(character => invalidFileNameChars.Contains(character) ? '_' : character).ToArray());
+    return Path.Join(buildLogsDir, $"{safeProjectName}-{platform}.log");
+}
+
+static string GetFileLoggerArguments(string logPath) =>
+    $" /fl /flp:\"logfile={logPath};verbosity=diagnostic;encoding=UTF-8\"";
+
+static void LogBuildFailure(
+    string projectName,
+    string platform,
+    string msbuildExe,
+    string arguments,
+    string workingDirectory,
+    string logPath,
+    ProcessResult result)
+{
+    Log.Error($"Build failed: {projectName} ({platform})");
+    Log.Error($"Exit code: {result.ExitCode}; elapsed: {result.Elapsed.TotalSeconds:F1}s");
+    Log.Error($"Working directory: {workingDirectory}");
+    Log.Error($"Command: \"{msbuildExe}\" {arguments}");
+
+    if (!string.IsNullOrWhiteSpace(result.Output))
+    {
+        Log.Error("MSBuild console output:");
+        WriteIndentedErrorLines(result.Output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
+    }
+    else
+    {
+        Log.Error("MSBuild produced no console error output. Reading the diagnostic file log instead.");
+    }
+
+    if (!File.Exists(logPath))
+    {
+        Log.Error($"Diagnostic MSBuild log was not created: {logPath}");
+        return;
+    }
+
+    Log.Error($"Diagnostic MSBuild log: {logPath}");
+    var errorLines = new Queue<string>();
+    var logTail = new Queue<string>();
+    var uniqueErrorLines = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var line in File.ReadLines(logPath))
+    {
+        EnqueueWithLimit(logTail, line, 100);
+        if (IsDiagnosticErrorLine(line) && uniqueErrorLines.Add(line))
+        {
+            EnqueueWithLimit(errorLines, line, 100);
+        }
+    }
+
+    if (errorLines.Count > 0)
+    {
+        Log.Error("Error lines from diagnostic log:");
+        WriteIndentedErrorLines(errorLines);
+    }
+    else
+    {
+        Log.Error("No explicit error line was found in the diagnostic log.");
+    }
+
+    Log.Error("Last 100 lines from diagnostic log:");
+    WriteIndentedErrorLines(logTail);
+}
+
+static bool IsDiagnosticErrorLine(string line) =>
+    line.Contains(" error ", StringComparison.OrdinalIgnoreCase)
+    || line.Contains(": error", StringComparison.OrdinalIgnoreCase)
+    || line.Contains("exception", StringComparison.OrdinalIgnoreCase)
+    || (line.Contains("MSB", StringComparison.OrdinalIgnoreCase)
+        && line.Contains("error", StringComparison.OrdinalIgnoreCase));
+
+static void EnqueueWithLimit(Queue<string> lines, string line, int limit)
+{
+    lines.Enqueue(line);
+    if (lines.Count > limit)
+    {
+        lines.Dequeue();
+    }
+}
+
+static void WriteIndentedErrorLines(IEnumerable<string> lines)
+{
+    foreach (var line in lines)
+    {
+        Console.Error.WriteLine($"      {line}");
+    }
 }
 
 // ===========================================================
@@ -1035,6 +1132,7 @@ static string PackNuGet(string nuspecPath, string outputDir)
 
 static ProcessResult RunProcess(string fileName, string arguments, string workingDirectory)
 {
+    var startTime = Stopwatch.GetTimestamp();
     var psi = new ProcessStartInfo
     {
         FileName = fileName,
@@ -1051,7 +1149,7 @@ static ProcessResult RunProcess(string fileName, string arguments, string workin
     var error = process.StandardError.ReadToEnd();
     process.WaitForExit();
 
-    return new ProcessResult(process.ExitCode, output + error);
+    return new ProcessResult(process.ExitCode, output + error, Stopwatch.GetElapsedTime(startTime));
 }
 
 // ===========================================================
@@ -1065,4 +1163,4 @@ internal static class Log
     public static void Error(string message) => Console.Error.WriteLine($"    [ERROR] {message}");
 }
 
-internal readonly record struct ProcessResult(int ExitCode, string Output);
+internal readonly record struct ProcessResult(int ExitCode, string Output, TimeSpan Elapsed);
