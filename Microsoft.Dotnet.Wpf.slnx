@@ -14,6 +14,9 @@
     <File Path="README.md" />
     <Project Path="eng/Builder/Builder.csproj" />
   </Folder>
+  <Folder Name="/Build/GitHub Action/">
+    <File Path=".github/workflows/build.yml" />
+  </Folder>
   <Folder Name="/Build/WpfArcadeSdk/">
     <File Path="eng/WpfArcadeSdk/SystemResources.props" />
   </Folder>
@@ -61,10 +64,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Microsoft.DotNet.Wpf/src/DirectWriteForwarder/DirectWriteForwarder.vcxproj" Id="50a5318f-3b9a-48b9-9615-d5fa9d6d9c3e">
-      <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="Win32" />
     </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/PresentationBuildTasks.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />

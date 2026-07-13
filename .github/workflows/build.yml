@@ -2,46 +2,46 @@ name: Build WPF NuGet Package
 
 on:
   push:
-	branches: [ main, WpfReorganize ]
+    branches: [ main, WpfReorganize ]
   pull_request:
-	branches: [ main, WpfReorganize ]
+    branches: [ main, WpfReorganize ]
   workflow_dispatch:
 
 jobs:
   build:
-	runs-on: windows-latest
+    runs-on: windows-latest
 
-	steps:
-	- name: Checkout
-	  uses: actions/checkout@v4
-	  with:
-		fetch-depth: 0
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-	- name: Setup .NET 8
-	  uses: actions/setup-dotnet@v4
-	  with:
-		dotnet-version: '8.0.x'
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
 
-	- name: Add MSBuild to PATH
-	  uses: microsoft/setup-msbuild@v2
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
 
-	- name: Restore Builder project (resolves NuGet package paths)
-	  run: dotnet restore eng/Builder/Builder.csproj
+    - name: Restore Builder project (resolves NuGet package paths)
+      run: dotnet restore eng/Builder/Builder.csproj
 
-	- name: Build Builder project
-	  run: dotnet build eng/Builder/Builder.csproj --no-restore
+    - name: Build Builder project
+      run: dotnet build eng/Builder/Builder.csproj --no-restore
 
-	- name: Run full build + packaging
-	  run: >
-		dotnet run --project eng/Builder/Builder.csproj --no-build --
-		--version 1.0.0-${{ github.sha }}
+    - name: Run full build + packaging
+      run: >
+        dotnet run --project eng/Builder/Builder.csproj --no-build --
+        --version 1.0.0-${{ github.sha }}
 
-	- name: Upload NuGet package artifact
-	  uses: actions/upload-artifact@v4
-	  with:
-		name: DotNetCampus.WpfLib-nupkg
-		path: eng/Builder/bin/nupkg/*.nupkg
-		if-no-files-found: warn
+    - name: Upload NuGet package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DotNetCampus.WpfLib-nupkg
+        path: eng/Builder/bin/nupkg/*.nupkg
+        if-no-files-found: warn
 
-	- name: Run comparison against official package
-	  run: dotnet run --project eng/Builder/Builder.csproj --no-build -- compare
+    - name: Run comparison against official package
+      run: dotnet run --project eng/Builder/Builder.csproj --no-build -- compare
