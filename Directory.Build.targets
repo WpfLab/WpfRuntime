@@ -27,6 +27,14 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="RemovePrebuiltPresentationBuildTasksReference"
+          BeforeTargets="AssignProjectConfiguration;ResolveProjectReferences"
+          Condition="'$(UsePrebuiltPresentationBuildTasks)' == 'true'">
+    <ItemGroup>
+      <ProjectReference Remove="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="VerifyPerlCommand" Condition="'@(WpfPerlScript)' != ''">
     <Exec Command="where.exe $(PerlCommand)" IgnoreExitCode="true" ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low">
       <Output TaskParameter="ExitCode" PropertyName="PerlCommandExitCode" />

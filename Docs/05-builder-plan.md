@@ -7,8 +7,8 @@
 - ✅ `eng\Builder\Builder.csproj` 已实现（net8.0 控制台，LangVersion 12，独立 OutputPath）
 - ✅ `eng\Builder\Program.cs` 已实现完整编排逻辑（~280 行）
 - ✅ Builder 不构建 sln，而是按依赖顺序逐项目调用 msbuild 构建具体 csproj（避免 Builder 自锁）
-- `Microsoft.Dotnet.Wpf.sln` 已可通过 `msbuild` 成功构建（x64 + Any CPU）
-- 产物输出到 `artifacts\bin\<ProjectName>\x64\Debug\net8.0\`
+- Builder 分别构建 x64 与 x86 运行时程序集；C# 项目的 x86 平台映射到 C++/CLI 项目的 Win32 平台
+- 产物输出到 `artifacts\bin\<ProjectName>\x64\Debug\net8.0\`、`artifacts\bin\<ProjectName>\x86\Debug\net8.0\`，C++/CLI x86 产物位于 `Win32\Debug\`
 - Native 模块（PenImc、WpfGfx）不再走源码迁移，改为 NuGet 二进制接入
 - 托管项目均 target `net8.0`，native 项目（`DirectWriteForwarder`、`System.Printing`）为 C++/CLI
 - `Directory.Build.props` 定义了统一的 `WpfSourceDir`、`WpfSharedDir` 等宏
@@ -28,8 +28,8 @@
 | 作者 | `dotnet campus` | |
 | TFM | `net8.0` | 优先，后续评估多 TFM 兼容 |
 | 产物路径 | 沿用 `artifacts\bin\` | 构建完成后从此拷贝，不改变原有结构 |
-| 架构 | 单包含 win-x64 + win-x86 | 托管 DLL 无平台倾向性 |
-| ref 文件夹 | 不处理 | 无意义 |
+| 架构 | 单包含 win-x64 + win-x86 | 通过 NuGet RID 自动选择实现程序集与 native DLL |
+| ref 文件夹 | `ref/net8.0` | 为两个架构提供统一编译引用 |
 
 ---
 
@@ -37,7 +37,7 @@
 
 ```
 DotNetCampus.WpfLib.1.0.0.nupkg
-├── lib/
+├── ref/
 │   └── net8.0/
 │       ├── WindowsBase.dll
 │       ├── System.Xaml.dll
@@ -59,17 +59,14 @@ DotNetCampus.WpfLib.1.0.0.nupkg
 │       ├── PresentationFramework.Classic.dll
 │       ├── PresentationFramework.Fluent.dll
 │       ├── PresentationFramework.Luna.dll
-│       ├── PresentationFramework.Royale.dll
-│       └── DirectWriteForwarder.dll
+│       └── PresentationFramework.Royale.dll
 ├── runtimes/
-│   ├── win-x64/native/
-│   │   ├── PenImc.dll
-│   │   ├── wpfgfx_cor3.dll
-│   │   └── ...（其他 native DLL）
-│   └── win-x86/native/
-│       ├── PenImc.dll
-│       ├── wpfgfx_cor3.dll
-│       └── ...
+│   ├── win-x64/
+│   │   ├── lib/net8.0/       ← x64 WPF 实现程序集，含 DirectWriteForwarder.dll
+│   │   └── native/           ← x64 PenImc、WpfGfx 等 native DLL
+│   └── win-x86/
+│       ├── lib/net8.0/       ← x86 WPF 实现程序集，含 DirectWriteForwarder.dll
+│       └── native/           ← x86 PenImc、WpfGfx 等 native DLL
 ├── DotNetCampus.WpfLib.nuspec
 └── [Content_Types].xml
 ```
@@ -290,21 +287,20 @@ origin\NuGetPackage\
 | 步骤 2：探索 NuGet 缓存 DLL 清单 | ✅ 完成 | win-x64/win-x86 native DLL 清单已确定 |
 | 步骤 3：改造 Builder.csproj | ✅ 完成 | net8.0、LangVersion 12、独立 OutputPath |
 | 步骤 4：清理逻辑 | ✅ 完成 | 逐目录清理，跳过锁定文件 |
-| 步骤 5：构建驱动逻辑 | ✅ 完成 | 逐项目 msbuild 构建，共 22 个项目按依赖顺序 |
-| 步骤 6：托管 DLL 收集 | ✅ 完成 | 自动从 artifacts\bin 收集 20+ WPF DLL |
+| 步骤 5：构建驱动逻辑 | ✅ 完成 | 按依赖顺序分别构建 x64 与 x86；VC++ x86 使用 Win32 平台 |
+| 步骤 6：托管 DLL 收集 | ✅ 完成 | 参考程序集进入 ref/net8.0，x64/x86 实现程序集进入对应 RID 目录 |
 | 步骤 7：Native DLL 收集 | ✅ 完成 | 从 NuGet 缓存拷贝 win-x64 + win-x86 native DLL |
-| 步骤 8：.nuspec 生成与打包 | 🟡 .nuspec 生成完成，打包阻塞 | 见下方 |
+| 步骤 8：.nuspec 生成与打包 | ✅ 完成 | 临时 pack 项目位于系统临时目录，并在打包前校验两个 RID 的关键资产 |
 | 步骤 9：控制台输出与调试 | ✅ 完成 | 每个步骤有清晰的状态输出 |
-| 步骤 10：CI 流水线兼容性 | ⬜ 待验证 | Builder 已编译通过，等待打包修复后验证 |
+| 步骤 10：CI 流水线兼容性 | ✅ 完成 | GitHub Actions 在 Windows runner 上执行完整构建、打包和比较 |
 
-## 打包阻塞详情
+## 架构打包决策
 
-**现象**：`dotnet pack` 失败，因为临时 `_pack.csproj` 会通过 MSBuild 目录遍历继承仓库根的 `Directory.Build.props`，从而导入 `Microsoft.DotNet.Arcade.Sdk`（`10.0.0-beta.25411.109`）。该 SDK 要求 `PackageLicenseExpression` 等属性，而这些属性已在 `.nuspec` 中声明，但 SDK 侧的 `Workarounds.targets` 仍然报错。
+采用单个 `DotNetCampus.WpfLib` 包同时承载 win-x64 与 win-x86，而不是拆成两个包：
 
-尝试在 pack 子目录写入 local `Directory.Build.props`（空 `<Project />`）来阻断继承，但 Arcade SDK 继续从 NuGet 缓存路径被导入（通过 `Sdk.props` import）。
+1. NuGet 原生支持 `runtimes/<rid>/lib/<tfm>` 与 `runtimes/<rid>/native`，会依据项目 RID 选择正确资产。
+2. 使用方只需引用一个稳定的包 ID，不需要根据目标架构切换依赖。
+3. x64 与 x86 的 API 面由同一组 `ref/net8.0` 参考程序集定义，可避免两个包出现版本或 API 漂移。
+4. 只有在单个包体积显著影响分发，或两个架构需要独立版本生命周期时，才值得拆分架构包；当前不具备这些条件。
 
-**推荐解决方案（优先级从高到低）**：
-
-1. **查找并使用更新的 `nuget.exe`**：检查 `C:\Users\lindexi\.nuget\packages\nuget.commandline\` 下是否有较新版本（≥5.x 支持 `license type="expression"`），用 `nuget.exe pack .nuspec` 直接打包，完全绕开 MSBuild
-2. **将 `_pack.csproj` 放到 `eng\Builder\` 下**：`eng\Builder\Builder.csproj` 使用 `<Project Sdk="Microsoft.NET.Sdk">` 而非 `Microsoft.DotNet.Arcade.Sdk`，不会被 Arcade SDK 影响。通过 `<NuspecFile>` 引用 staging 目录中的 .nuspec
-3. **用 `System.IO.Compression.ZipFile` 手写 .nupkg**：完全脱离 MSBuild 和 nuget.exe
+实现程序集不能放入公共 `lib/net8.0`。经 `CorFlags` 验证，x64 构建的 WPF 托管程序集为 PE32+，x86 构建为 PE32 且设置 32BITREQ，因此全部实现程序集必须按 RID 分开放置。

@@ -65,17 +65,14 @@ if (Directory.Exists(stagingDir))
     Directory.Delete(stagingDir, recursive: true);
 
 // ---- Step 3: Build projects ----
-Log.Step("Building projects (x64)...");
+Log.Step("Building projects (x64 + x86)...");
 var srcDir = Path.Join(repoRoot, "src", "Microsoft.DotNet.Wpf", "src");
 var msbuildExe = FindMsBuild();
 Log.Info($"  MSBuild: {msbuildExe}");
-var msbuildArgs = $"-restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly";
 
 // Build in dependency order: build dependencies first, then their dependents
 var projectsToBuild = new[]
 {
-    // PresentationBuildTasks must be built first — it is the MSBuild task assembly for XAML markup compilation (MarkupCompilePass1)
-    Path.Join(srcDir, "PresentationBuildTasks", "PresentationBuildTasks.csproj"),
     Path.Join(srcDir, "WindowsBase", "WindowsBase.csproj"),
     Path.Join(srcDir, "System.Xaml", "System.Xaml.csproj"),
     Path.Join(srcDir, "UIAutomation", "UIAutomationTypes", "UIAutomationTypes.csproj"),
@@ -101,25 +98,59 @@ var projectsToBuild = new[]
 };
 
 var failedProjects = new List<string>();
-foreach (var projectPath in projectsToBuild)
+
+// PresentationBuildTasks is an MSBuild task assembly rather than a runtime asset.
+// Its lookup path includes WpfNativePlatform, so prebuild one copy per runtime architecture.
+var presentationBuildTasksPath = Path.Join(srcDir, "PresentationBuildTasks", "PresentationBuildTasks.csproj");
+if (!File.Exists(presentationBuildTasksPath))
 {
-    if (!File.Exists(projectPath))
+    Log.Error($"PresentationBuildTasks project not found: {presentationBuildTasksPath}");
+    return 1;
+}
+
+foreach (var platform in new[] { "x64", "x86" })
+{
+    var presentationBuildTasksResult = RunProcess(
+        msbuildExe,
+        $"\"{presentationBuildTasksPath}\" -restore /p:Configuration=Debug /p:Platform={platform} /p:TargetFramework=net472 /m:1 /nr:false /v:minimal /clp:ErrorsOnly",
+        repoRoot);
+    if (presentationBuildTasksResult.ExitCode != 0)
     {
-        Log.Warn($"Project not found, skipping: {projectPath}");
-        continue;
+        Log.Error($"  Build failed: PresentationBuildTasks ({platform})");
+        Log.Error(presentationBuildTasksResult.Output);
+        failedProjects.Add($"PresentationBuildTasks ({platform})");
     }
+}
 
-    var projectName = Path.GetFileNameWithoutExtension(projectPath);
-    Log.Info($"  Building {projectName}...");
+foreach (var platform in new[] { "x64", "x86" })
+{
+    Log.Info($"  --- Building {platform} runtime assemblies ---");
 
-    // PresentationBuildTasks is an MSBuild task assembly; .NET Framework MSBuild requires net472 target
-    var extraArgs = projectName == "PresentationBuildTasks" ? " /p:TargetFramework=net472" : "";
-    var result = RunProcess(msbuildExe, $"\"{projectPath}\" {msbuildArgs}{extraArgs}", repoRoot);
-    if (result.ExitCode != 0)
+    foreach (var projectPath in projectsToBuild)
     {
-        Log.Error($"  Build failed: {projectName}");
-        failedProjects.Add(projectName);
-        // Continue building remaining projects; do not abort immediately
+        if (!File.Exists(projectPath))
+        {
+            Log.Warn($"Project not found, skipping: {projectPath}");
+            continue;
+        }
+
+        var projectName = Path.GetFileNameWithoutExtension(projectPath);
+        var projectPlatform = platform == "x86" && Path.GetExtension(projectPath).Equals(".vcxproj", StringComparison.OrdinalIgnoreCase)
+            ? "Win32"
+            : platform;
+        Log.Info($"  Building {projectName} ({platform})...");
+
+        var result = RunProcess(
+            msbuildExe,
+            $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform={projectPlatform} /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly",
+            repoRoot);
+        if (result.ExitCode != 0)
+        {
+            Log.Error($"  Build failed: {projectName} ({platform})");
+            Log.Error(result.Output);
+            failedProjects.Add($"{projectName} ({platform})");
+            // Continue building remaining projects; do not abort immediately
+        }
     }
 }
 
@@ -136,22 +167,42 @@ else
 // so that partial results can be inspected, but the final exit code reflects
 // the failure (handled at the end).
 
-// ---- Step 4: Collect managed DLLs ----
-Log.Step("Collecting managed DLLs...");
-var managedDlls = CollectManagedDlls(artifactsDir);
-if (managedDlls.Count == 0)
+// ---- Step 4: Collect reference and runtime DLLs ----
+Log.Step("Collecting reference assemblies...");
+var referenceDlls = CollectReferenceDlls(artifactsDir);
+if (referenceDlls.Count == 0)
 {
-    Log.Error("No managed DLLs found; please check build artifacts");
+    Log.Error("No reference assemblies found; please check build artifacts");
     return 1;
 }
 
-var libDir = Path.Join(stagingDir, "lib", "net8.0");
-Directory.CreateDirectory(libDir);
-foreach (var (name, sourcePath) in managedDlls)
+var refDir = Path.Join(stagingDir, "ref", "net8.0");
+Directory.CreateDirectory(refDir);
+foreach (var (name, sourcePath) in referenceDlls)
 {
-    var destPath = Path.Join(libDir, name);
+    var destPath = Path.Join(refDir, name);
     File.Copy(sourcePath, destPath, overwrite: true);
-    Log.Info($"  lib/net8.0/{name}");
+    Log.Info($"  ref/net8.0/{name}");
+}
+
+Log.Step("Collecting architecture-specific runtime assemblies...");
+foreach (var (rid, platform) in new[] { ("win-x64", "x64"), ("win-x86", "x86") })
+{
+    var runtimeDlls = CollectRuntimeDlls(artifactsDir, platform);
+    if (runtimeDlls.Count == 0)
+    {
+        Log.Error($"No runtime assemblies found for {rid}; please check build artifacts");
+        return 1;
+    }
+
+    var runtimeLibDir = Path.Join(stagingDir, "runtimes", rid, "lib", "net8.0");
+    Directory.CreateDirectory(runtimeLibDir);
+    foreach (var (name, sourcePath) in runtimeDlls)
+    {
+        var destPath = Path.Join(runtimeLibDir, name);
+        File.Copy(sourcePath, destPath, overwrite: true);
+        Log.Info($"  runtimes/{rid}/lib/net8.0/{name}");
+    }
 }
 
 // ---- Step 5: Collect native DLLs ----
@@ -164,6 +215,15 @@ CopyNativeDllsFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x
 // ---- Step 6: Generate .nuspec and pack ----
 Log.Step("Generating .nuspec and packing...");
 Log.Info($"  Package version: {version}");
+try
+{
+    ValidatePackageAssets(stagingDir);
+}
+catch (InvalidOperationException exception)
+{
+    Log.Error(exception.Message);
+    return 1;
+}
 var nuspecPath = GenerateNuspec(stagingDir, version);
 var nupkgPath = PackNuGet(nuspecPath, nupkgOutputDir);
 
@@ -210,18 +270,25 @@ static string FindMsBuild()
 
     if (File.Exists(vswhere))
     {
-        var result = RunProcess(vswhere,
-            "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe",
-            AppContext.BaseDirectory);
-        if (result.ExitCode == 0)
+        foreach (var pattern in new[]
         {
-            var path = result.Output.Trim();
-            // Take the first line (vswhere may return multiple paths)
-            path = path.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            "MSBuild\\**\\Bin\\amd64\\MSBuild.exe",
+            "MSBuild\\**\\Bin\\MSBuild.exe",
+        })
+        {
+            var result = RunProcess(vswhere,
+                $"-latest -requires Microsoft.Component.MSBuild -find {pattern}",
+                AppContext.BaseDirectory);
+            if (result.ExitCode == 0)
             {
-                Log.Info($"  MSBuild found via vswhere: {path}");
-                return path;
+                var path = result.Output.Trim();
+                // Take the first line (vswhere may return multiple paths)
+                path = path.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    Log.Info($"  MSBuild found via vswhere: {path}");
+                    return path;
+                }
             }
         }
     }
@@ -282,8 +349,8 @@ static int RunCompare(string builderOutputDir, string stagingDir, bool reportOnl
         return 1;
     }
 
-    // Our built DLLs: staging/lib/net8.0/ (after build) or artifacts/bin (fallback)
-    var ourDir = Path.Join(stagingDir, "lib", "net8.0");
+    // Our reference assemblies: staging/ref/net8.0/ (after build) or artifacts/bin (fallback)
+    var ourDir = Path.Join(stagingDir, "ref", "net8.0");
     if (!Directory.Exists(ourDir))
     {
         Log.Warn($"Staging dir not found: {ourDir}; looking in artifacts/bin...");
@@ -292,7 +359,7 @@ static int RunCompare(string builderOutputDir, string stagingDir, bool reportOnl
         if (Directory.Exists(artifactsBin))
         {
             // Collect from artifacts into a temporary dictionary for comparison
-            var collected = CollectManagedDlls(Path.Join(repoRoot, "artifacts"));
+            var collected = CollectReferenceDlls(Path.Join(repoRoot, "artifacts"));
             if (collected.Count == 0)
             {
                 Log.Error("No built DLLs found; run a build first");
@@ -307,7 +374,7 @@ static int RunCompare(string builderOutputDir, string stagingDir, bool reportOnl
         }
     }
 
-    // WPF assemblies we care about (same as CollectManagedDlls wanted list)
+    // WPF assemblies we care about
     var wpfAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "WindowsBase", "System.Xaml", "PresentationCore", "PresentationFramework",
@@ -344,21 +411,6 @@ static int RunCompare(string builderOutputDir, string stagingDir, bool reportOnl
             ourDlls[name] = new FileInfo(dll).Length;
         }
     }
-    // Also scan subdirectories of artifacts/bin if ourDir was staging
-    if (Directory.Exists(Path.Combine(FindRepoRoot(), "artifacts", "bin")))
-    {
-        var artifactsDir = Path.Combine(FindRepoRoot(), "artifacts");
-        var collected = CollectManagedDlls(artifactsDir);
-        foreach (var (name, path) in collected)
-        {
-            var baseName = Path.GetFileNameWithoutExtension(name);
-            if (wpfAssemblies.Contains(baseName) && !ourDlls.ContainsKey(baseName))
-            {
-                ourDlls[baseName] = new FileInfo(path).Length;
-            }
-        }
-    }
-
     Log.Info($"  Official WPF ref assemblies: {officialDlls.Count}");
     Log.Info($"  Our built assemblies:        {ourDlls.Count}");
     Log.Info("");
@@ -688,61 +740,52 @@ static void CleanArtifacts(string artifactsDir)
     Log.Info("artifacts cleanup complete");
 }
 
-static Dictionary<string, string> CollectManagedDlls(string artifactsDir)
+static HashSet<string> GetRuntimeAssemblyNames() => new(StringComparer.OrdinalIgnoreCase)
+{
+    "WindowsBase",
+    "System.Xaml",
+    "PresentationCore",
+    "PresentationFramework",
+    "PresentationUI",
+    "ReachFramework",
+    "System.Windows.Presentation",
+    "System.Windows.Controls.Ribbon",
+    "System.Windows.Input.Manipulations",
+    "WindowsFormsIntegration",
+    "UIAutomationTypes",
+    "UIAutomationProvider",
+    "UIAutomationClient",
+    "UIAutomationClientSideProviders",
+    "PresentationFramework.Aero",
+    "PresentationFramework.Aero2",
+    "PresentationFramework.AeroLite",
+    "PresentationFramework.Classic",
+    "PresentationFramework.Fluent",
+    "PresentationFramework.Luna",
+    "PresentationFramework.Royale",
+    "DirectWriteForwarder",
+};
+
+static Dictionary<string, string> CollectReferenceDlls(string artifactsDir)
 {
     var binDir = Path.Join(artifactsDir, "bin");
     if (!Directory.Exists(binDir))
         return [];
 
-    var wantedDlls = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "WindowsBase",
-        "System.Xaml",
-        "PresentationCore",
-        "PresentationFramework",
-        "PresentationUI",
-        "ReachFramework",
-        "System.Windows.Presentation",
-        "System.Windows.Controls.Ribbon",
-        "System.Windows.Input.Manipulations",
-        "WindowsFormsIntegration",
-        "UIAutomationTypes",
-        "UIAutomationProvider",
-        "UIAutomationClient",
-        "UIAutomationClientSideProviders",
-        "PresentationFramework.Aero",
-        "PresentationFramework.Aero2",
-        "PresentationFramework.AeroLite",
-        "PresentationFramework.Classic",
-        "PresentationFramework.Fluent",
-        "PresentationFramework.Luna",
-        "PresentationFramework.Royale",
-        "DirectWriteForwarder",
-    };
-
-    var excludedDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "Builder", "Docs", "WpfDemo",
-    };
-
+    var wantedDlls = GetRuntimeAssemblyNames();
+    wantedDlls.Remove("DirectWriteForwarder");
     var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    foreach (var projectDir in Directory.GetDirectories(binDir))
+    foreach (var projectDir in Directory.GetDirectories(binDir, "*-ref"))
     {
-        var dirName = Path.GetFileName(projectDir);
-        if (excludedDirs.Contains(dirName)) continue;
-        if (dirName.EndsWith("-ref", StringComparison.OrdinalIgnoreCase)) continue;
-        if (dirName.Contains("-api-cycle", StringComparison.OrdinalIgnoreCase)) continue;
-        if (dirName.Contains("-impl-cycle", StringComparison.OrdinalIgnoreCase)) continue;
-
-        // Build uses /p:Platform=x64, so output path is artifacts\bin\<ProjectName>\x64\Debug\net8.0\
-        // Also compatible with Any CPU path: artifacts\bin\<ProjectName>\Debug\net8.0\
-        foreach (var candidate in new[] { "x64", "" })
+        foreach (var dllDir in new[]
         {
-            var dllDir = string.IsNullOrEmpty(candidate)
-                ? Path.Join(projectDir, "Debug", "net8.0")
-                : Path.Join(projectDir, candidate, "Debug", "net8.0");
-
+            Path.Join(projectDir, "x64", "Debug", "net8.0"),
+            Path.Join(projectDir, "AnyCPU", "Debug", "net8.0"),
+            Path.Join(projectDir, "Any CPU", "Debug", "net8.0"),
+            Path.Join(projectDir, "Debug", "net8.0"),
+        })
+        {
             if (!Directory.Exists(dllDir)) continue;
 
             foreach (var dllPath in Directory.GetFiles(dllDir, "*.dll"))
@@ -751,6 +794,50 @@ static Dictionary<string, string> CollectManagedDlls(string artifactsDir)
                 if (wantedDlls.Contains(dllName))
                 {
                     result[Path.GetFileName(dllPath)] = dllPath;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+static Dictionary<string, string> CollectRuntimeDlls(string artifactsDir, string platform)
+{
+    var binDir = Path.Join(artifactsDir, "bin");
+    if (!Directory.Exists(binDir))
+        return [];
+
+    var wantedDlls = GetRuntimeAssemblyNames();
+    var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var projectDir in Directory.GetDirectories(binDir))
+    {
+        var dirName = Path.GetFileName(projectDir);
+        if (dirName.EndsWith("-ref", StringComparison.OrdinalIgnoreCase)) continue;
+        if (dirName.Contains("-api-cycle", StringComparison.OrdinalIgnoreCase)) continue;
+        if (dirName.Contains("-impl-cycle", StringComparison.OrdinalIgnoreCase)) continue;
+
+        var platformCandidates = platform == "x86" ? new[] { "x86", "Win32" } : new[] { platform };
+        foreach (var platformCandidate in platformCandidates)
+        {
+            foreach (var dllDir in new[]
+            {
+                Path.Join(projectDir, platformCandidate, "Debug", "net8.0"),
+                Path.Join(projectDir, platformCandidate, "Debug"),
+                Path.Join(projectDir, "Debug", "net8.0"),
+                Path.Join(projectDir, "Debug"),
+            })
+            {
+                if (!Directory.Exists(dllDir)) continue;
+
+                foreach (var dllPath in Directory.GetFiles(dllDir, "*.dll"))
+                {
+                    var dllName = Path.GetFileNameWithoutExtension(dllPath);
+                    if (wantedDlls.Contains(dllName))
+                    {
+                        result[Path.GetFileName(dllPath)] = dllPath;
+                    }
                 }
             }
         }
@@ -807,9 +894,9 @@ static void CopyNativeDllsFromPackage(Dictionary<string, string> packagePaths, s
 
 static string GenerateNuspec(string stagingDir, string version)
 {
-    var managedDir = Path.Join(stagingDir, "lib", "net8.0");
-    var managedFiles = Directory.Exists(managedDir)
-        ? Directory.GetFiles(managedDir, "*.dll").Select(Path.GetFileName).OrderBy(x => x).ToList()
+    var referenceDir = Path.Join(stagingDir, "ref", "net8.0");
+    var referenceFiles = Directory.Exists(referenceDir)
+        ? Directory.GetFiles(referenceDir, "*.dll").Select(Path.GetFileName).OrderBy(x => x).ToList()
         : [];
 
     var sb = new StringBuilder();
@@ -827,30 +914,25 @@ static string GenerateNuspec(string stagingDir, string version)
     sb.AppendLine("  </metadata>");
     sb.AppendLine("  <files>");
 
-    foreach (var file in managedFiles)
+    foreach (var file in referenceFiles)
     {
-        sb.AppendLine($"    <file src=\"lib\\net8.0\\{file}\" target=\"lib\\net8.0\\{file}\" />");
+        sb.AppendLine($"    <file src=\"ref\\net8.0\\{file}\" target=\"ref\\net8.0\\{file}\" />");
     }
 
-    // Native DLL (win-x64)
-    var winX64NativeDir = Path.Join(stagingDir, "runtimes", "win-x64", "native");
-    if (Directory.Exists(winX64NativeDir))
+    foreach (var rid in new[] { "win-x64", "win-x86" })
     {
-        foreach (var file in Directory.GetFiles(winX64NativeDir, "*.dll"))
+        var runtimeLibDir = Path.Join(stagingDir, "runtimes", rid, "lib", "net8.0");
+        foreach (var file in Directory.GetFiles(runtimeLibDir, "*.dll").OrderBy(Path.GetFileName))
         {
             var fileName = Path.GetFileName(file);
-            sb.AppendLine($"    <file src=\"runtimes\\win-x64\\native\\{fileName}\" target=\"runtimes\\win-x64\\native\\{fileName}\" />");
+            sb.AppendLine($"    <file src=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" target=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" />");
         }
-    }
 
-    // Native DLL (win-x86)
-    var winX86NativeDir = Path.Join(stagingDir, "runtimes", "win-x86", "native");
-    if (Directory.Exists(winX86NativeDir))
-    {
-        foreach (var file in Directory.GetFiles(winX86NativeDir, "*.dll"))
+        var nativeDir = Path.Join(stagingDir, "runtimes", rid, "native");
+        foreach (var file in Directory.GetFiles(nativeDir, "*.dll").OrderBy(Path.GetFileName))
         {
             var fileName = Path.GetFileName(file);
-            sb.AppendLine($"    <file src=\"runtimes\\win-x86\\native\\{fileName}\" target=\"runtimes\\win-x86\\native\\{fileName}\" />");
+            sb.AppendLine($"    <file src=\"runtimes\\{rid}\\native\\{fileName}\" target=\"runtimes\\{rid}\\native\\{fileName}\" />");
         }
     }
 
@@ -862,6 +944,55 @@ static string GenerateNuspec(string stagingDir, string version)
     File.WriteAllText(nuspecPath, nuspecContent);
     Log.Info($"  .nuspec generated: {nuspecPath}");
     return nuspecPath;
+}
+
+static void ValidatePackageAssets(string stagingDir)
+{
+    var requiredReferenceAssemblies = new[]
+    {
+        "WindowsBase.dll",
+        "PresentationCore.dll",
+        "PresentationFramework.dll",
+    };
+    var requiredRuntimeAssemblies = new[]
+    {
+        "WindowsBase.dll",
+        "PresentationCore.dll",
+        "PresentationFramework.dll",
+        "DirectWriteForwarder.dll",
+    };
+    var requiredNativeAssemblies = new[]
+    {
+        "PenImc_cor3.dll",
+        "PresentationNative_cor3.dll",
+        "wpfgfx_cor3.dll",
+    };
+
+    foreach (var fileName in requiredReferenceAssemblies)
+    {
+        RequirePackageFile(Path.Join(stagingDir, "ref", "net8.0", fileName));
+    }
+
+    foreach (var rid in new[] { "win-x64", "win-x86" })
+    {
+        foreach (var fileName in requiredRuntimeAssemblies)
+        {
+            RequirePackageFile(Path.Join(stagingDir, "runtimes", rid, "lib", "net8.0", fileName));
+        }
+
+        foreach (var fileName in requiredNativeAssemblies)
+        {
+            RequirePackageFile(Path.Join(stagingDir, "runtimes", rid, "native", fileName));
+        }
+    }
+
+    Log.Info("  Package asset validation passed for win-x64 and win-x86");
+}
+
+static void RequirePackageFile(string path)
+{
+    if (!File.Exists(path))
+        throw new InvalidOperationException($"Required package asset not found: {path}");
 }
 
 static string PackNuGet(string nuspecPath, string outputDir)
