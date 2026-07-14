@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Xml.Linq;
 
 // ===========================================================
 // DotNetCampus.WpfLib Builder — Build driver + NuGet packaging tool
@@ -21,6 +24,10 @@ using System.Text;
 //   dotnet run --project eng\Builder\Builder.csproj -- compare
 //       Compare built DLLs against official Microsoft.WindowsDesktop.App.Ref
 //       to detect missing/extra assemblies.  Run after a build.
+//
+//   dotnet run --project eng\Builder\Builder.csproj -- test-package [--package <path>]
+//       Publish and run temporary WPF projects against the generated NuGet
+//       package.  When --package is omitted, uses the newest local .nupkg.
 // ===========================================================
 
 var repoRoot = FindRepoRoot();
@@ -35,6 +42,7 @@ var cmdArgs = Environment.GetCommandLineArgs().Skip(1).ToList();
 var command = cmdArgs.FirstOrDefault(a => !a.StartsWith("--"))?.ToLowerInvariant();
 var versionArg = cmdArgs.SkipWhile(a => a != "--version").Skip(1).FirstOrDefault();
 var version = string.IsNullOrEmpty(versionArg) ? "1.0.0" : versionArg;
+var packageArg = cmdArgs.SkipWhile(a => a != "--package").Skip(1).FirstOrDefault();
 
 if (command == "clean")
 {
@@ -49,6 +57,13 @@ if (command == "compare")
     Log.Info("=== DotNetCampus.WpfLib Builder — Compare Mode ===");
     Log.Info($"Repo root: {repoRoot}");
     return RunCompare(builderOutputDir, stagingDir);
+}
+
+if (command == "test-package")
+{
+    Log.Info("=== DotNetCampus.WpfLib Builder — Package Test Mode ===");
+    Log.Info($"Repo root: {repoRoot}");
+    return RunPackageTests(nupkgOutputDir, packageArg);
 }
 
 var startTime = Stopwatch.GetTimestamp();
@@ -217,10 +232,13 @@ var packagePaths = ReadPackagePaths(builderOutputDir);
 var runtimesDir = Path.Join(stagingDir, "runtimes");
 CopyNativeDllsFromPackage(packagePaths, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
 CopyNativeDllsFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
+CopyIjwHostFromPackage(packagePaths, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
+CopyIjwHostFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
 
 // ---- Step 6: Generate .nuspec and pack ----
 Log.Step("Generating .nuspec and packing...");
 Log.Info($"  Package version: {version}");
+GenerateBuildTransitiveTargets(stagingDir);
 try
 {
     ValidatePackageAssets(stagingDir);
@@ -248,6 +266,309 @@ return failedProjects.Count > 0 ? 2 : 0;
 // ===========================================================
 // Helper methods
 // ===========================================================
+
+static int RunPackageTests(string nupkgOutputDir, string? packageArg)
+{
+    var packagePath = ResolvePackagePath(nupkgOutputDir, packageArg);
+    var packageVersion = ReadPackageVersion(packagePath);
+    var testRoot = Path.Join(
+        Path.GetDirectoryName(nupkgOutputDir)!,
+        "package-tests",
+        DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..8]);
+    Directory.CreateDirectory(testRoot);
+    var packageSourceDir = Path.Join(testRoot, "packages");
+    Directory.CreateDirectory(packageSourceDir);
+    File.Copy(packagePath, Path.Join(packageSourceDir, Path.GetFileName(packagePath)), overwrite: true);
+    var extractedPackageDir = Path.Join(testRoot, "extracted-package");
+    ZipFile.ExtractToDirectory(packagePath, extractedPackageDir);
+
+    WritePackageTestGlobalJson(testRoot);
+    var nugetConfigPath = WritePackageTestNuGetConfig(testRoot, packageSourceDir);
+    var testProjects = CreatePackageTestProjects(testRoot, packageVersion);
+
+    Log.Info($"NuGet package: {packagePath}");
+    Log.Info($"Package version: {packageVersion}");
+    Log.Info($"Test directory: {testRoot}");
+    Log.Info($"NuGet configuration: {nugetConfigPath}");
+    foreach (var testProject in testProjects)
+    {
+        Log.Info($"Test project: {testProject.Name} ({string.Join(", ", testProject.TargetFrameworks)})");
+    }
+
+    foreach (var testProject in testProjects)
+    {
+        foreach (var targetFramework in testProject.TargetFrameworks)
+        {
+            foreach (var rid in new[] { "win-x86", "win-x64" })
+            {
+                PublishAndValidatePackageTest(testProject, targetFramework, rid, testRoot, extractedPackageDir, nugetConfigPath);
+            }
+        }
+    }
+
+    Log.Info("Package publish validation passed for all projects, target frameworks, and runtime identifiers.");
+
+    return 0;
+}
+
+static void PublishAndValidatePackageTest(
+    PackageTestProject testProject,
+    string targetFramework,
+    string rid,
+    string testRoot,
+    string extractedPackageDir,
+    string nugetConfigPath)
+{
+    var publishDir = Path.Join(testRoot, "publish", testProject.Name, targetFramework, rid);
+    var restorePackagesDir = Path.Join(testRoot, "restore-packages");
+    Directory.CreateDirectory(publishDir);
+    Log.Step($"Publishing {testProject.Name} for {targetFramework}/{rid}...");
+
+    var arguments = $"publish \"{testProject.ProjectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained true --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo";
+    var result = RunProcess("dotnet", arguments, Path.GetDirectoryName(testProject.ProjectPath)!);
+    if (result.ExitCode != 0)
+    {
+        Log.Error(result.Output);
+        throw new InvalidOperationException($"Package test publish failed for {testProject.Name} ({targetFramework}/{rid})");
+    }
+
+    ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
+    RunPublishedPackageProbe(testProject.Name, targetFramework, rid, publishDir);
+}
+
+static void ValidatePublishedPackageDlls(
+    string extractedPackageDir,
+    string publishDir,
+    string rid,
+    string projectName,
+    string targetFramework)
+{
+    var expectedDirectories = new[]
+    {
+        FindRuntimeLibDirectory(extractedPackageDir, rid),
+        Path.Join(extractedPackageDir, "runtimes", rid, "native"),
+    };
+    foreach (var directory in expectedDirectories)
+    {
+        if (!Directory.Exists(directory))
+            throw new InvalidOperationException($"Expected package asset directory was not found for {rid}: {directory}");
+    }
+
+    var expectedFiles = expectedDirectories.SelectMany(directory => Directory.GetFiles(directory, "*.dll")).ToList();
+    var duplicateFileNames = expectedFiles
+        .GroupBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
+        .Where(group => group.Count() > 1)
+        .Select(group => group.Key)
+        .ToList();
+    if (duplicateFileNames.Count > 0)
+    {
+        throw new InvalidOperationException(
+            $"Package contains duplicate DLL file names for {rid}: {string.Join(", ", duplicateFileNames)}");
+    }
+
+    var expectedDlls = expectedFiles
+        .ToDictionary(path => Path.GetFileName(path)!, StringComparer.OrdinalIgnoreCase);
+
+    if (expectedDlls.Count == 0)
+        throw new InvalidOperationException($"No expected DLLs were found in the package for {rid}");
+
+    foreach (var (fileName, expectedPath) in expectedDlls)
+    {
+        var actualPath = Path.Join(publishDir, fileName);
+        if (!File.Exists(actualPath))
+            throw new InvalidOperationException($"Published package DLL is missing for {projectName} ({targetFramework}/{rid}): {actualPath}");
+
+        var expectedHash = ComputeSha256(expectedPath);
+        var actualHash = ComputeSha256(actualPath);
+        if (!expectedHash.SequenceEqual(actualHash))
+        {
+            throw new InvalidOperationException(
+                $"Published package DLL does not match the {rid} package asset for {projectName} ({targetFramework}): {fileName}. " +
+                $"Expected {Convert.ToHexString(expectedHash)} from {expectedPath}; actual {Convert.ToHexString(actualHash)} from {actualPath}");
+        }
+    }
+
+    Log.Info($"Validated {expectedDlls.Count} package DLLs for {projectName} ({targetFramework}/{rid})");
+}
+
+static string FindRuntimeLibDirectory(string extractedPackageDir, string rid)
+{
+    var libRoot = Path.Join(extractedPackageDir, "runtimes", rid, "lib");
+    if (!Directory.Exists(libRoot))
+        throw new InvalidOperationException($"Package runtime lib directory was not found for {rid}: {libRoot}");
+
+    var frameworkDirectories = Directory.GetDirectories(libRoot);
+    if (frameworkDirectories.Length != 1)
+    {
+        throw new InvalidOperationException(
+            $"Expected exactly one runtime asset framework directory for {rid}, found {frameworkDirectories.Length}: {libRoot}");
+    }
+
+    return frameworkDirectories[0];
+}
+
+static byte[] ComputeSha256(string path)
+{
+    using var stream = File.OpenRead(path);
+    return SHA256.HashData(stream);
+}
+
+static void RunPublishedPackageProbe(string projectName, string targetFramework, string rid, string publishDir)
+{
+    var executablePath = Path.Join(publishDir, $"{projectName}.exe");
+    if (!File.Exists(executablePath))
+        throw new InvalidOperationException($"Published package test executable was not found: {executablePath}");
+
+    Log.Info($"Running {projectName} ({targetFramework}/{rid})...");
+    var result = RunProcess(executablePath, "", publishDir, TimeSpan.FromSeconds(30));
+    if (result.ExitCode != 0)
+    {
+        Log.Error(result.Output);
+        throw new InvalidOperationException(
+            $"Published package test failed for {projectName} ({targetFramework}/{rid}) with exit code {result.ExitCode}");
+    }
+
+    Log.Info($"Probe completed for {projectName} ({targetFramework}/{rid}) in {result.Elapsed.TotalSeconds:F1}s");
+}
+
+static string ReadPackageVersion(string packagePath)
+{
+    using var archive = ZipFile.OpenRead(packagePath);
+    var nuspecEntry = archive.Entries.SingleOrDefault(entry =>
+        entry.FullName.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase))
+        ?? throw new InvalidOperationException($"Package does not contain a .nuspec file: {packagePath}");
+
+    using var stream = nuspecEntry.Open();
+    var document = XDocument.Load(stream);
+    var metadata = document.Root?.Elements().SingleOrDefault(element => element.Name.LocalName == "metadata")
+        ?? throw new InvalidOperationException($"Package metadata was not found in {packagePath}");
+    var version = metadata.Elements().SingleOrDefault(element => element.Name.LocalName == "version")?.Value;
+    if (string.IsNullOrWhiteSpace(version))
+        throw new InvalidOperationException($"Package version was not found in {packagePath}");
+
+    return version;
+}
+
+static void WritePackageTestGlobalJson(string testRoot)
+{
+    var content = """
+        {
+          "sdk": {
+            "version": "9.0.100",
+            "rollForward": "latestMajor",
+            "allowPrerelease": false
+          }
+        }
+        """;
+    File.WriteAllText(Path.Join(testRoot, "global.json"), content);
+}
+
+static string WritePackageTestNuGetConfig(string testRoot, string packageSourceDir)
+{
+    var path = Path.Join(testRoot, "NuGet.Config");
+    var content = $"""
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="package-under-test" value="{XmlEscape(packageSourceDir)}" />
+            <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+          </packageSources>
+        </configuration>
+        """;
+    File.WriteAllText(path, content);
+    return path;
+}
+
+static IReadOnlyList<PackageTestProject> CreatePackageTestProjects(string testRoot, string packageVersion)
+{
+    return
+    [
+        CreatePackageTestProject(testRoot, "SingleNet8", "<TargetFramework>net8.0-windows</TargetFramework>", ["net8.0-windows"], packageVersion),
+        CreatePackageTestProject(testRoot, "SingleNet9", "<TargetFramework>net9.0-windows</TargetFramework>", ["net9.0-windows"], packageVersion),
+        CreatePackageTestProject(testRoot, "MultiTarget", "<TargetFrameworks>net8.0-windows;net9.0-windows</TargetFrameworks>", ["net8.0-windows", "net9.0-windows"], packageVersion),
+    ];
+}
+
+static PackageTestProject CreatePackageTestProject(
+    string testRoot,
+    string name,
+    string targetFrameworkProperty,
+    IReadOnlyList<string> targetFrameworks,
+    string packageVersion)
+{
+    var projectDir = Path.Join(testRoot, name);
+    Directory.CreateDirectory(projectDir);
+    var projectPath = Path.Join(projectDir, $"{name}.csproj");
+    var projectContent = $"""
+        <Project Sdk="Microsoft.NET.Sdk">
+          <PropertyGroup>
+            <OutputType>Exe</OutputType>
+            {targetFrameworkProperty}
+            <UseWPF>true</UseWPF>
+            <Nullable>enable</Nullable>
+            <ImplicitUsings>enable</ImplicitUsings>
+            <AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
+          </PropertyGroup>
+          <ItemGroup>
+            <PackageReference Include="DotNetCampus.WpfLib" Version="{XmlEscape(packageVersion)}" />
+          </ItemGroup>
+        </Project>
+        """;
+    File.WriteAllText(projectPath, projectContent);
+
+    var programContent = """
+        using System.Windows;
+        using System.Windows.Threading;
+
+        internal static class Program
+        {
+            [STAThread]
+            private static int Main()
+            {
+                var application = new Application
+                {
+                    ShutdownMode = ShutdownMode.OnExplicitShutdown,
+                };
+                application.Dispatcher.BeginInvoke(
+                    DispatcherPriority.ApplicationIdle,
+                    new Action(application.Shutdown));
+                application.Run();
+                Console.WriteLine($"WPF package probe completed on {Environment.ProcessPath}.");
+                return 0;
+            }
+        }
+        """;
+    File.WriteAllText(Path.Join(projectDir, "Program.cs"), programContent);
+
+    return new PackageTestProject(name, projectPath, targetFrameworks);
+}
+
+static string XmlEscape(string value) =>
+    value.Replace("&", "&amp;", StringComparison.Ordinal)
+        .Replace("\"", "&quot;", StringComparison.Ordinal)
+        .Replace("<", "&lt;", StringComparison.Ordinal)
+        .Replace(">", "&gt;", StringComparison.Ordinal);
+
+static string ResolvePackagePath(string nupkgOutputDir, string? packageArg)
+{
+    if (!string.IsNullOrWhiteSpace(packageArg))
+    {
+        var fullPath = Path.GetFullPath(packageArg);
+        if (!File.Exists(fullPath))
+            throw new FileNotFoundException("NuGet package not found", fullPath);
+
+        return fullPath;
+    }
+
+    if (!Directory.Exists(nupkgOutputDir))
+        throw new DirectoryNotFoundException($"NuGet package output directory not found: {nupkgOutputDir}");
+
+    return Directory.GetFiles(nupkgOutputDir, "DotNetCampus.WpfLib.*.nupkg")
+        .OrderByDescending(File.GetLastWriteTimeUtc)
+        .FirstOrDefault()
+        ?? throw new InvalidOperationException($"No DotNetCampus.WpfLib package found in {nupkgOutputDir}");
+}
 
 static string FindRepoRoot()
 {
@@ -875,6 +1196,10 @@ static Dictionary<string, string> CollectReferenceDlls(string artifactsDir)
 
     foreach (var projectDir in Directory.GetDirectories(binDir, "*-ref"))
     {
+        var assemblyName = Path.GetFileName(projectDir)[..^"-ref".Length];
+        if (!wantedDlls.Contains(assemblyName))
+            continue;
+
         foreach (var dllDir in new[]
         {
             Path.Join(projectDir, "x64", "Debug", "net8.0"),
@@ -885,13 +1210,11 @@ static Dictionary<string, string> CollectReferenceDlls(string artifactsDir)
         {
             if (!Directory.Exists(dllDir)) continue;
 
-            foreach (var dllPath in Directory.GetFiles(dllDir, "*.dll"))
+            var dllPath = Path.Join(dllDir, $"{assemblyName}.dll");
+            if (File.Exists(dllPath))
             {
-                var dllName = Path.GetFileNameWithoutExtension(dllPath);
-                if (wantedDlls.Contains(dllName))
-                {
-                    result[Path.GetFileName(dllPath)] = dllPath;
-                }
+                result[Path.GetFileName(dllPath)] = dllPath;
+                break;
             }
         }
     }
@@ -914,6 +1237,7 @@ static Dictionary<string, string> CollectRuntimeDlls(string artifactsDir, string
         if (dirName.EndsWith("-ref", StringComparison.OrdinalIgnoreCase)) continue;
         if (dirName.Contains("-api-cycle", StringComparison.OrdinalIgnoreCase)) continue;
         if (dirName.Contains("-impl-cycle", StringComparison.OrdinalIgnoreCase)) continue;
+        if (!wantedDlls.Contains(dirName)) continue;
 
         var platformCandidates = platform == "x86" ? new[] { "x86", "Win32" } : new[] { platform };
         foreach (var platformCandidate in platformCandidates)
@@ -928,13 +1252,11 @@ static Dictionary<string, string> CollectRuntimeDlls(string artifactsDir, string
             {
                 if (!Directory.Exists(dllDir)) continue;
 
-                foreach (var dllPath in Directory.GetFiles(dllDir, "*.dll"))
+                var dllPath = Path.Join(dllDir, $"{dirName}.dll");
+                if (File.Exists(dllPath))
                 {
-                    var dllName = Path.GetFileNameWithoutExtension(dllPath);
-                    if (wantedDlls.Contains(dllName))
-                    {
-                        result[Path.GetFileName(dllPath)] = dllPath;
-                    }
+                    result[Path.GetFileName(dllPath)] = dllPath;
+                    break;
                 }
             }
         }
@@ -989,6 +1311,19 @@ static void CopyNativeDllsFromPackage(Dictionary<string, string> packagePaths, s
     }
 }
 
+static void CopyIjwHostFromPackage(Dictionary<string, string> packagePaths, string rid, string destDir)
+{
+    var packageKey = $"host-{rid}";
+    if (!packagePaths.TryGetValue(packageKey, out var packageRoot))
+        throw new InvalidOperationException($".NET host package path '{packageKey}' not found. Available keys: {string.Join(", ", packagePaths.Keys.Order())}");
+
+    var sourcePath = Path.Join(packageRoot, "runtimes", rid, "native", "ijwhost.dll");
+    RequirePackageFile(sourcePath);
+    Directory.CreateDirectory(destDir);
+    File.Copy(sourcePath, Path.Join(destDir, "ijwhost.dll"), overwrite: true);
+    Log.Info($"  runtimes/{rid}/native/ijwhost.dll");
+}
+
 static string GenerateNuspec(string stagingDir, string version)
 {
     var referenceDir = Path.Join(stagingDir, "ref", "net8.0");
@@ -1033,6 +1368,8 @@ static string GenerateNuspec(string stagingDir, string version)
         }
     }
 
+    sb.AppendLine("    <file src=\"buildTransitive\\DotNetCampus.WpfLib.targets\" target=\"buildTransitive\\DotNetCampus.WpfLib.targets\" />");
+
     sb.AppendLine("  </files>");
     sb.AppendLine("</package>");
 
@@ -1043,8 +1380,63 @@ static string GenerateNuspec(string stagingDir, string version)
     return nuspecPath;
 }
 
+static void GenerateBuildTransitiveTargets(string stagingDir)
+{
+    var targetsDir = Path.Join(stagingDir, "buildTransitive");
+    Directory.CreateDirectory(targetsDir);
+    var targetsPath = Path.Join(targetsDir, "DotNetCampus.WpfLib.targets");
+    var content = """
+        <Project>
+          <ItemGroup>
+            <FrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
+          </ItemGroup>
+
+          <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == 'win-x64'">
+            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(RuntimeIdentifier)\lib\net8.0\*.dll" />
+            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(RuntimeIdentifier)\native\*.dll" />
+          </ItemGroup>
+
+          <ItemGroup>
+            <_DotNetCampusWpfReferenceDll Include="$(MSBuildThisFileDirectory)..\ref\net8.0\*.dll" />
+          </ItemGroup>
+
+          <Target Name="RemoveInboxWpfReferencesForDotNetCampusWpfLib"
+                  AfterTargets="ResolveReferences">
+            <ItemGroup>
+              <ReferencePath Remove="@(ReferencePath)"
+                             Condition="'%(ReferencePath.Filename)' == 'WindowsBase' Or '%(ReferencePath.Filename)' == 'PresentationCore' Or '%(ReferencePath.Filename)' == 'PresentationFramework' Or '%(ReferencePath.Filename)' == 'ReachFramework' Or '%(ReferencePath.Filename)' == 'System.Printing'" />
+              <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
+                                               Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing'" />
+              <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
+              <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
+            </ItemGroup>
+          </Target>
+
+          <Target Name="CopyDotNetCampusWpfRuntimeDllsToOutput"
+                  AfterTargets="Build"
+                  Condition="'@(_DotNetCampusWpfRuntimeDll)' != ''">
+            <Copy SourceFiles="@(_DotNetCampusWpfRuntimeDll)"
+                  DestinationFolder="$(TargetDir)"
+                  SkipUnchangedFiles="true" />
+          </Target>
+
+          <Target Name="CopyDotNetCampusWpfRuntimeDllsToPublish"
+                  AfterTargets="Publish"
+                  Condition="'@(_DotNetCampusWpfRuntimeDll)' != '' And '$(PublishDir)' != ''">
+            <Copy SourceFiles="@(_DotNetCampusWpfRuntimeDll)"
+                  DestinationFolder="$(PublishDir)"
+                  SkipUnchangedFiles="true" />
+          </Target>
+        </Project>
+        """;
+    File.WriteAllText(targetsPath, content);
+    Log.Info("  buildTransitive/DotNetCampus.WpfLib.targets");
+}
+
 static void ValidatePackageAssets(string stagingDir)
 {
+    RequirePackageFile(Path.Join(stagingDir, "buildTransitive", "DotNetCampus.WpfLib.targets"));
+
     var requiredReferenceAssemblies = new[]
     {
         "WindowsBase.dll",
@@ -1060,6 +1452,7 @@ static void ValidatePackageAssets(string stagingDir)
     };
     var requiredNativeAssemblies = new[]
     {
+        "ijwhost.dll",
         "PenImc_cor3.dll",
         "PresentationNative_cor3.dll",
         "wpfgfx_cor3.dll",
@@ -1130,7 +1523,7 @@ static string PackNuGet(string nuspecPath, string outputDir)
     return nupkgPath;
 }
 
-static ProcessResult RunProcess(string fileName, string arguments, string workingDirectory)
+static ProcessResult RunProcess(string fileName, string arguments, string workingDirectory, TimeSpan? timeout = null)
 {
     var startTime = Stopwatch.GetTimestamp();
     var psi = new ProcessStartInfo
@@ -1144,12 +1537,24 @@ static ProcessResult RunProcess(string fileName, string arguments, string workin
         CreateNoWindow = true,
     };
 
-    using var process = Process.Start(psi)!;
-    var output = process.StandardOutput.ReadToEnd();
-    var error = process.StandardError.ReadToEnd();
-    process.WaitForExit();
+    using var process = Process.Start(psi)
+        ?? throw new InvalidOperationException($"Failed to start process: {fileName}");
+    var outputTask = process.StandardOutput.ReadToEndAsync();
+    var errorTask = process.StandardError.ReadToEndAsync();
+    var exited = timeout is null
+        ? process.WaitForExit(int.MaxValue)
+        : process.WaitForExit((int) timeout.Value.TotalMilliseconds);
+    if (!exited)
+    {
+        process.Kill(entireProcessTree: true);
+        process.WaitForExit();
+        System.Threading.Tasks.Task.WaitAll(outputTask, errorTask);
+        throw new TimeoutException($"Process timed out after {timeout!.Value.TotalSeconds:F0} seconds: {fileName} {arguments}");
+    }
 
-    return new ProcessResult(process.ExitCode, output + error, Stopwatch.GetElapsedTime(startTime));
+    System.Threading.Tasks.Task.WaitAll(outputTask, errorTask);
+
+    return new ProcessResult(process.ExitCode, outputTask.Result + errorTask.Result, Stopwatch.GetElapsedTime(startTime));
 }
 
 // ===========================================================
@@ -1164,3 +1569,5 @@ internal static class Log
 }
 
 internal readonly record struct ProcessResult(int ExitCode, string Output, TimeSpan Elapsed);
+
+internal sealed record PackageTestProject(string Name, string ProjectPath, IReadOnlyList<string> TargetFrameworks);

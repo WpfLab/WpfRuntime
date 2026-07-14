@@ -17,10 +17,12 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup .NET 8
+    - name: Setup .NET SDKs
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: |
+          8.0.x
+          9.0.x
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
@@ -35,6 +37,17 @@ jobs:
       run: >
         dotnet run --project eng/Builder/Builder.csproj --no-build --
         --version 1.0.0-${{ github.sha }}
+
+    - name: Test generated NuGet package
+      run: dotnet run --project eng/Builder/Builder.csproj --no-build -- test-package
+
+    - name: Upload package test diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: DotNetCampus.WpfLib-package-tests
+        path: eng/Builder/bin/package-tests
+        if-no-files-found: warn
 
     - name: Upload NuGet package artifact
       uses: actions/upload-artifact@v4

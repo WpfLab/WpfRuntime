@@ -227,7 +227,7 @@ DotNetCampus.WpfLib.1.0.0.nupkg
 
 ## Native DLL 清单（已通过步骤 2 验证）
 
-从 `Microsoft.WindowsDesktop.App.Runtime.win-x64@8.0.6` 包中确认的 native DLL：
+从 `Microsoft.WindowsDesktop.App.Runtime.win-x64@8.0.6` 与 `Microsoft.NETCore.App.Host.win-x64@8.0.6` 包中确认的 native DLL：
 
 | DLL | win-x64 | win-x86 | win-arm64 |
 |-----|---------|---------|-----------|
@@ -236,6 +236,7 @@ DotNetCampus.WpfLib.1.0.0.nupkg
 | `PresentationNative_cor3.dll` | ✅ | ✅ | ✅ |
 | `vcruntime140_cor3.dll` | ✅ | ✅ | ✅ |
 | `wpfgfx_cor3.dll` | ✅ | ✅ | ✅ |
+| `ijwhost.dll` | ✅ | ✅ | ✅ |
 
 > 注意：win-arm64 缺少 `D3DCompiler_47_cor3.dll`。
 
@@ -304,3 +305,37 @@ origin\NuGetPackage\
 4. 只有在单个包体积显著影响分发，或两个架构需要独立版本生命周期时，才值得拆分架构包；当前不具备这些条件。
 
 实现程序集不能放入公共 `lib/net8.0`。经 `CorFlags` 验证，x64 构建的 WPF 托管程序集为 PE32+，x86 构建为 PE32 且设置 32BITREQ，因此全部实现程序集必须按 RID 分开放置。
+
+## NuGet 产物端到端验证
+
+Builder 提供以下命令验证最终生成的包：
+
+```powershell
+dotnet run --project eng\Builder\Builder.csproj --no-build -- test-package
+```
+
+默认选择 `eng\Builder\bin\nupkg\` 中最新的 `DotNetCampus.WpfLib.*.nupkg`。也可显式指定包：
+
+```powershell
+dotnet run --project eng\Builder\Builder.csproj --no-build -- test-package --package <nupkg-path>
+```
+
+验证逻辑在仓库配置作用域之外生成隔离的临时消费项目，覆盖：
+
+- 单目标框架项目：`net8.0-windows`、`net9.0-windows`
+- 多目标框架项目：`net8.0-windows;net9.0-windows`
+- 每个目标框架分别发布 `win-x86` 与 `win-x64`
+- 将发布目录中的包内托管 DLL 和 native DLL 与对应 RID 的 nupkg 资产逐文件进行 SHA-256 比对
+- 实际运行每个发布后的 WPF 探针程序，启动 `Application` 和 Dispatcher 后正常退出
+- 单个探针执行超过 30 秒、退出码非零、DLL 缺失或哈希不匹配均视为失败
+
+测试输出保存在 `eng\Builder\bin\package-tests\`。GitHub Actions 在打包后自动执行该命令，并在失败时上传此目录作为诊断产物。
+
+### 2026-07-14 本地验证记录
+
+- 修复 WPF 实现程序集仍使用 `6.0.2.0`、参考程序集使用 `8.0.0.0` 的身份不一致问题。
+- 修复 DLL 收集器遍历项目输出目录时，被复制依赖覆盖正确主输出的问题；现在每个项目只收集自身程序集。
+- 为 C++/CLI `DirectWriteForwarder.dll` 增加对应 RID 的 `ijwhost.dll`，解决运行时模块加载失败。
+- 隔离消费项目使用独立 `global.json`，避免继承仓库固定的 .NET 8 SDK。
+- `net8.0-windows` 的 win-x86 与 win-x64 已完成发布资产 SHA-256 比对和实际启动测试。
+- `net9.0-windows` 已暴露并修复 SDK inbox WPF 引用与包内 WPF 引用的版本冲突；最终矩阵需由 CI 或未被取消的本地长任务再次确认。
