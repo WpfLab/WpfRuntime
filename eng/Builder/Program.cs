@@ -248,7 +248,8 @@ catch (InvalidOperationException exception)
     Log.Error(exception.Message);
     return 1;
 }
-var nuspecPath = GenerateNuspec(stagingDir, version);
+var runtimePackageDependencies = ReadRuntimePackageDependencies(repoRoot);
+var nuspecPath = GenerateNuspec(stagingDir, version, runtimePackageDependencies);
 var nupkgPath = PackNuGet(nuspecPath, nupkgOutputDir);
 
 // ---- Step 7: Compare against official package ----
@@ -281,6 +282,8 @@ static int RunPackageTests(string nupkgOutputDir, string? packageArg)
     File.Copy(packagePath, Path.Join(packageSourceDir, Path.GetFileName(packagePath)), overwrite: true);
     var extractedPackageDir = Path.Join(testRoot, "extracted-package");
     ZipFile.ExtractToDirectory(packagePath, extractedPackageDir);
+    var runtimePackageDependencies = ReadRuntimePackageDependencies(FindRepoRoot());
+    ValidatePackageDependencies(packagePath, runtimePackageDependencies, PackageMetadata.TargetFrameworks);
 
     WritePackageTestGlobalJson(testRoot);
     var nugetConfigPath = WritePackageTestNuGetConfig(testRoot, packageSourceDir);
@@ -301,7 +304,14 @@ static int RunPackageTests(string nupkgOutputDir, string? packageArg)
         {
             foreach (var rid in new[] { "win-x86", "win-x64" })
             {
-                PublishAndValidatePackageTest(testProject, targetFramework, rid, testRoot, extractedPackageDir, nugetConfigPath);
+                PublishAndValidatePackageTest(
+                    testProject,
+                    targetFramework,
+                    rid,
+                    testRoot,
+                    extractedPackageDir,
+                    nugetConfigPath,
+                    runtimePackageDependencies);
             }
         }
     }
@@ -317,7 +327,8 @@ static void PublishAndValidatePackageTest(
     string rid,
     string testRoot,
     string extractedPackageDir,
-    string nugetConfigPath)
+    string nugetConfigPath,
+    IReadOnlyList<PackageDependency> runtimePackageDependencies)
 {
     var publishDir = Path.Join(testRoot, "publish", testProject.Name, targetFramework, rid);
     var restorePackagesDir = Path.Join(testRoot, "restore-packages");
@@ -333,7 +344,56 @@ static void PublishAndValidatePackageTest(
     }
 
     ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
+    foreach (var dependency in runtimePackageDependencies)
+    {
+        ValidatePublishedDependencyDll(publishDir, $"{dependency.Id}.dll", testProject.Name, targetFramework, rid);
+    }
     RunPublishedPackageProbe(testProject.Name, targetFramework, rid, publishDir);
+}
+
+static void ValidatePackageDependencies(
+    string packagePath,
+    IReadOnlyList<PackageDependency> expectedDependencies,
+    IReadOnlyList<string> targetFrameworks)
+{
+    using var archive = ZipFile.OpenRead(packagePath);
+    var nuspecEntry = archive.Entries.SingleOrDefault(entry =>
+        entry.FullName.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase))
+        ?? throw new InvalidOperationException($"Package does not contain a .nuspec file: {packagePath}");
+
+    using var stream = nuspecEntry.Open();
+    var document = XDocument.Load(stream);
+    var dependencyGroups = document
+        .Descendants()
+        .Where(element => element.Name.LocalName == "group")
+        .ToList();
+
+    foreach (var targetFramework in targetFrameworks)
+    {
+        var group = dependencyGroups.SingleOrDefault(element =>
+            string.Equals((string?)element.Attribute("targetFramework"), targetFramework, StringComparison.OrdinalIgnoreCase));
+        if (group is null)
+            throw new InvalidOperationException($"Package dependency group is missing for {targetFramework}");
+
+        foreach (var expectedDependency in expectedDependencies)
+        {
+            var dependency = group
+                .Elements()
+                .SingleOrDefault(element =>
+                    element.Name.LocalName == "dependency" &&
+                    string.Equals((string?)element.Attribute("id"), expectedDependency.Id, StringComparison.OrdinalIgnoreCase));
+            var actualVersion = (string?)dependency?.Attribute("version");
+            var expectedVersionRange = $"[{expectedDependency.Version}, )";
+            if (!string.Equals(actualVersion, expectedDependency.Version, StringComparison.Ordinal) &&
+                !string.Equals(RemoveWhitespace(actualVersion), RemoveWhitespace(expectedVersionRange), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Package dependency '{expectedDependency.Id}' for {targetFramework} must be {expectedDependency.Version} or {expectedVersionRange}, actual: {actualVersion ?? "missing"}");
+            }
+        }
+    }
+
+    Log.Info($"Validated {expectedDependencies.Count} package dependencies for {string.Join(", ", targetFrameworks)}");
 }
 
 static void ValidatePublishedPackageDlls(
@@ -389,6 +449,23 @@ static void ValidatePublishedPackageDlls(
     }
 
     Log.Info($"Validated {expectedDlls.Count} package DLLs for {projectName} ({targetFramework}/{rid})");
+}
+
+static void ValidatePublishedDependencyDll(
+    string publishDir,
+    string fileName,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    var dependencyPath = Path.Join(publishDir, fileName);
+    if (!File.Exists(dependencyPath))
+    {
+        throw new InvalidOperationException(
+            $"Published NuGet dependency is missing for {projectName} ({targetFramework}/{rid}): {dependencyPath}");
+    }
+
+    Log.Info($"Validated published dependency {fileName} for {projectName} ({targetFramework}/{rid})");
 }
 
 static string FindRuntimeLibDirectory(string extractedPackageDir, string rid)
@@ -549,6 +626,45 @@ static string XmlEscape(string value) =>
         .Replace("\"", "&quot;", StringComparison.Ordinal)
         .Replace("<", "&lt;", StringComparison.Ordinal)
         .Replace(">", "&gt;", StringComparison.Ordinal);
+
+static string RemoveWhitespace(string? value) =>
+    value is null ? string.Empty : string.Concat(value.Where(character => !char.IsWhiteSpace(character)));
+
+static string ReadMsBuildProperty(XDocument document, string propsPath, string propertyName)
+{
+    var values = document
+        .Descendants()
+        .Where(element =>
+            element.Parent?.Name.LocalName == "PropertyGroup" &&
+            element.Name.LocalName == propertyName)
+        .Select(element => element.Value)
+        .ToList();
+    if (values.Count == 0 || string.IsNullOrWhiteSpace(values[0]))
+        throw new InvalidOperationException($"MSBuild property '{propertyName}' was not found in {propsPath}");
+    if (values.Count > 1)
+        throw new InvalidOperationException($"MSBuild property '{propertyName}' is defined multiple times in {propsPath}");
+
+    return values[0];
+}
+
+static IReadOnlyList<PackageDependency> ReadRuntimePackageDependencies(string repoRoot)
+{
+    var versionsPropsPath = Path.Join(repoRoot, "eng", "Versions.props");
+    var document = XDocument.Load(versionsPropsPath);
+    return
+    [
+        new("System.Configuration.ConfigurationManager", ReadMsBuildProperty(document, versionsPropsPath, "SystemConfigurationConfigurationManagerPackageVersion")),
+        new("System.Diagnostics.EventLog", ReadMsBuildProperty(document, versionsPropsPath, "SystemDiagnosticsEventLogPackageVersion")),
+        new("System.DirectoryServices", ReadMsBuildProperty(document, versionsPropsPath, "SystemDirectoryServicesVersion")),
+        new("System.Drawing.Common", ReadMsBuildProperty(document, versionsPropsPath, "SystemDrawingCommonVersion")),
+        new("System.Formats.Nrbf", ReadMsBuildProperty(document, versionsPropsPath, "SystemFormatsNrbfVersion")),
+        new("System.IO.Packaging", ReadMsBuildProperty(document, versionsPropsPath, "SystemIOPackagingVersion")),
+        new("System.Resources.Extensions", ReadMsBuildProperty(document, versionsPropsPath, "SystemResourcesExtensionsVersion")),
+        new("System.Security.Cryptography.Xml", ReadMsBuildProperty(document, versionsPropsPath, "SystemSecurityCryptographyXmlPackageVersion")),
+        new("System.Security.Permissions", ReadMsBuildProperty(document, versionsPropsPath, "SystemSecurityPermissionsPackageVersion")),
+        new("System.Windows.Extensions", ReadMsBuildProperty(document, versionsPropsPath, "SystemWindowsExtensionsPackageVersion")),
+    ];
+}
 
 static string ResolvePackagePath(string nupkgOutputDir, string? packageArg)
 {
@@ -1324,7 +1440,10 @@ static void CopyIjwHostFromPackage(Dictionary<string, string> packagePaths, stri
     Log.Info($"  runtimes/{rid}/native/ijwhost.dll");
 }
 
-static string GenerateNuspec(string stagingDir, string version)
+static string GenerateNuspec(
+    string stagingDir,
+    string version,
+    IReadOnlyList<PackageDependency> runtimePackageDependencies)
 {
     var referenceDir = Path.Join(stagingDir, "ref", "net8.0");
     var referenceFiles = Directory.Exists(referenceDir)
@@ -1343,6 +1462,17 @@ static string GenerateNuspec(string stagingDir, string version)
     sb.AppendLine("    <license type=\"expression\">MIT</license>");
     sb.AppendLine("    <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>");
     sb.AppendLine("    <tags>WPF WindowsDesktop</tags>");
+    sb.AppendLine("    <dependencies>");
+    foreach (var targetFramework in PackageMetadata.TargetFrameworks)
+    {
+        sb.AppendLine($"      <group targetFramework=\"{targetFramework}\">");
+        foreach (var dependency in runtimePackageDependencies)
+        {
+            sb.AppendLine($"        <dependency id=\"{dependency.Id}\" version=\"[{dependency.Version}, )\" />");
+        }
+        sb.AppendLine("      </group>");
+    }
+    sb.AppendLine("    </dependencies>");
     sb.AppendLine("  </metadata>");
     sb.AppendLine("  <files>");
 
@@ -1570,4 +1700,11 @@ internal static class Log
 
 internal readonly record struct ProcessResult(int ExitCode, string Output, TimeSpan Elapsed);
 
+internal sealed record PackageDependency(string Id, string Version);
+
 internal sealed record PackageTestProject(string Name, string ProjectPath, IReadOnlyList<string> TargetFrameworks);
+
+internal static class PackageMetadata
+{
+    public static IReadOnlyList<string> TargetFrameworks { get; } = ["net8.0", "net9.0"];
+}
