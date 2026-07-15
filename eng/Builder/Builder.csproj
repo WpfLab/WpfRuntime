@@ -19,6 +19,11 @@
     <PackageDownload Include="Microsoft.NETCore.App.Host.win-x86" Version="[8.0.6]" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="DotNetCampus.CommandLine" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.11.0" PrivateAssets="all" />
+  </ItemGroup>
+
   <Target Name="WritePackagePaths" BeforeTargets="Build">
     <WriteLinesToFile File="$(OutputPath)PackagePaths.txt"
                       Lines="win-x64=$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\8.0.6\;win-x86=$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x86\8.0.6\;host-win-x64=$(NuGetPackageRoot)microsoft.netcore.app.host.win-x64\8.0.6\;host-win-x86=$(NuGetPackageRoot)microsoft.netcore.app.host.win-x86\8.0.6\;ref=$(NuGetPackageRoot)microsoft.windowsdesktop.app.ref\8.0.6\"
