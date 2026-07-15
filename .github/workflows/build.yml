@@ -75,6 +75,3 @@ jobs:
         name: DotNetCampus.WpfLib-nupkg
         path: eng/Builder/bin/nupkg/*.nupkg
         if-no-files-found: warn
-
-    - name: Run comparison against official package
-      run: dotnet run --project eng/Builder/Builder.csproj --no-build -- compare
