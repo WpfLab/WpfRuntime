@@ -69,9 +69,17 @@ jobs:
         path: eng/Builder/bin/package-tests
         if-no-files-found: warn
 
+    - name: Generate artifact suffix
+      id: artifact-metadata
+      shell: pwsh
+      run: |
+        $timestamp = Get-Date -AsUTC -Format 'yyyyMMddHHmmss'
+        $gitCommit = $env:GITHUB_SHA.Substring(0, 7)
+        "suffix=$timestamp-$gitCommit" >> $env:GITHUB_OUTPUT
+
     - name: Upload NuGet package artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DotNetCampus.WpfLib-nupkg
+        name: DotNetCampus.WpfLib-nupkg-${{ steps.artifact-metadata.outputs.suffix }}
         path: eng/Builder/bin/nupkg/*.nupkg
         if-no-files-found: warn
