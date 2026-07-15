@@ -117,35 +117,21 @@ public static string GenerateNuspec(
         ? Directory.GetFiles(referenceDir, "*.dll").Select(Path.GetFileName).OrderBy(x => x).ToList()
         : [];
 
-    var sb = new StringBuilder();
-    sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-    sb.AppendLine("<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">");
-    sb.AppendLine("  <metadata>");
-    sb.AppendLine("    <id>DotNetCampus.WpfLib</id>");
-    sb.AppendLine($"    <version>{version}</version>");
-    sb.AppendLine("    <authors>dotnet campus</authors>");
-    sb.AppendLine("    <description>Custom-built WPF managed assemblies and native runtimes.</description>");
-    sb.AppendLine("    <copyright>dotnet campus</copyright>");
-    sb.AppendLine("    <license type=\"expression\">MIT</license>");
-    sb.AppendLine("    <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>");
-    sb.AppendLine("    <tags>WPF WindowsDesktop</tags>");
-    sb.AppendLine("    <dependencies>");
+    var dependencyGroups = new StringBuilder();
     foreach (var targetFramework in PackageMetadata.TargetFrameworks)
     {
-        sb.AppendLine($"      <group targetFramework=\"{targetFramework}\">");
+        dependencyGroups.AppendLine($"      <group targetFramework=\"{targetFramework}\">");
         foreach (var dependency in runtimePackageDependencies)
         {
-            sb.AppendLine($"        <dependency id=\"{dependency.Id}\" version=\"[{dependency.Version}, )\" />");
+            dependencyGroups.AppendLine($"        <dependency id=\"{dependency.Id}\" version=\"[{dependency.Version}, )\" />");
         }
-        sb.AppendLine("      </group>");
+        dependencyGroups.AppendLine("      </group>");
     }
-    sb.AppendLine("    </dependencies>");
-    sb.AppendLine("  </metadata>");
-    sb.AppendLine("  <files>");
 
+    var files = new StringBuilder();
     foreach (var file in referenceFiles)
     {
-        sb.AppendLine($"    <file src=\"ref\\net8.0\\{file}\" target=\"ref\\net8.0\\{file}\" />");
+        files.AppendLine($"    <file src=\"ref\\net8.0\\{file}\" target=\"ref\\net8.0\\{file}\" />");
     }
 
     foreach (var rid in new[] { "win-x64", "win-x86" })
@@ -154,23 +140,38 @@ public static string GenerateNuspec(
         foreach (var file in Directory.GetFiles(runtimeLibDir, "*.dll").OrderBy(Path.GetFileName))
         {
             var fileName = Path.GetFileName(file);
-            sb.AppendLine($"    <file src=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" target=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" />");
+            files.AppendLine($"    <file src=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" target=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" />");
         }
 
         var nativeDir = Path.Join(stagingDir, "runtimes", rid, "native");
         foreach (var file in Directory.GetFiles(nativeDir, "*.dll").OrderBy(Path.GetFileName))
         {
             var fileName = Path.GetFileName(file);
-            sb.AppendLine($"    <file src=\"runtimes\\{rid}\\native\\{fileName}\" target=\"runtimes\\{rid}\\native\\{fileName}\" />");
+            files.AppendLine($"    <file src=\"runtimes\\{rid}\\native\\{fileName}\" target=\"runtimes\\{rid}\\native\\{fileName}\" />");
         }
     }
 
-    sb.AppendLine("    <file src=\"buildTransitive\\DotNetCampus.WpfLib.targets\" target=\"buildTransitive\\DotNetCampus.WpfLib.targets\" />");
+    files.AppendLine("    <file src=\"buildTransitive\\DotNetCampus.WpfLib.targets\" target=\"buildTransitive\\DotNetCampus.WpfLib.targets\" />");
 
-    sb.AppendLine("  </files>");
-    sb.AppendLine("</package>");
-
-    var nuspecContent = sb.ToString();
+    var nuspecContent = $$"""
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+          <metadata>
+            <id>DotNetCampus.WpfLib</id>
+            <version>{{version}}</version>
+            <authors>dotnet campus</authors>
+            <description>Custom-built WPF managed assemblies and native runtimes.</description>
+            <copyright>dotnet campus</copyright>
+            <license type="expression">MIT</license>
+            <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>
+            <tags>WPF WindowsDesktop</tags>
+            <dependencies>
+        {{dependencyGroups}}    </dependencies>
+          </metadata>
+          <files>
+        {{files}}  </files>
+        </package>
+        """ + Environment.NewLine;
     var nuspecPath = Path.Join(stagingDir, "DotNetCampus.WpfLib.nuspec");
     File.WriteAllText(nuspecPath, nuspecContent);
     Log.Info($"  .nuspec generated: {nuspecPath}");
