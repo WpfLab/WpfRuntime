@@ -25,7 +25,7 @@ public static int Run(BuilderContext context, string? packageArg)
 
     WritePackageTestGlobalJson(testRoot);
     var nugetConfigPath = WritePackageTestNuGetConfig(testRoot, packageSourceDir);
-    var testProjects = CreatePackageTestProjects(testRoot, packageVersion);
+    var testProjects = CreatePackageTestProjects(context.RepoRoot, testRoot, packageVersion);
 
     Log.Info($"NuGet package: {packagePath}");
     Log.Info($"Package version: {packageVersion}");
@@ -243,6 +243,9 @@ static void RunPublishedPackageProbe(string projectName, string targetFramework,
             $"Published package test failed for {projectName} ({targetFramework}/{rid}) with exit code {result.ExitCode}");
     }
 
+    if (!string.IsNullOrWhiteSpace(result.Output))
+        Log.Info(result.Output.Trim());
+
     Log.Info($"Probe completed for {projectName} ({targetFramework}/{rid}) in {result.Elapsed.TotalSeconds:F1}s");
 }
 
@@ -295,68 +298,64 @@ static string WritePackageTestNuGetConfig(string testRoot, string packageSourceD
     return path;
 }
 
-static IReadOnlyList<PackageTestProject> CreatePackageTestProjects(string testRoot, string packageVersion)
+static IReadOnlyList<PackageTestProject> CreatePackageTestProjects(string repoRoot, string testRoot, string packageVersion)
 {
     return
     [
-        CreatePackageTestProject(testRoot, "SingleNet8", "<TargetFramework>net8.0-windows</TargetFramework>", ["net8.0-windows"], packageVersion),
-        CreatePackageTestProject(testRoot, "SingleNet9", "<TargetFramework>net9.0-windows</TargetFramework>", ["net9.0-windows"], packageVersion),
-        CreatePackageTestProject(testRoot, "MultiTarget", "<TargetFrameworks>net8.0-windows;net9.0-windows</TargetFrameworks>", ["net8.0-windows", "net9.0-windows"], packageVersion),
+        CreatePackageTestProject(repoRoot, testRoot, "SingleNet8", "TargetFramework", "net8.0-windows", ["net8.0-windows"], packageVersion),
+        CreatePackageTestProject(repoRoot, testRoot, "SingleNet9", "TargetFramework", "net9.0-windows", ["net9.0-windows"], packageVersion),
+        CreatePackageTestProject(repoRoot, testRoot, "MultiTarget", "TargetFrameworks", "net8.0-windows;net9.0-windows", ["net8.0-windows", "net9.0-windows"], packageVersion),
     ];
 }
 
 static PackageTestProject CreatePackageTestProject(
+    string repoRoot,
     string testRoot,
     string name,
-    string targetFrameworkProperty,
+    string targetFrameworkPropertyName,
+    string targetFrameworkPropertyValue,
     IReadOnlyList<string> targetFrameworks,
     string packageVersion)
 {
+    var templateDir = Path.Join(repoRoot, "eng", "Builder", "PackageTestApp");
+    if (!Directory.Exists(templateDir))
+        throw new DirectoryNotFoundException($"Package test application template was not found: {templateDir}");
+
     var projectDir = Path.Join(testRoot, name);
-    Directory.CreateDirectory(projectDir);
-    var projectPath = Path.Join(projectDir, $"{name}.csproj");
-    var projectContent = $"""
-        <Project Sdk="Microsoft.NET.Sdk">
-          <PropertyGroup>
-            <OutputType>Exe</OutputType>
-            {targetFrameworkProperty}
-            <UseWPF>true</UseWPF>
-            <Nullable>enable</Nullable>
-            <ImplicitUsings>enable</ImplicitUsings>
-            <AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
-          </PropertyGroup>
-          <ItemGroup>
-            <PackageReference Include="DotNetCampus.WpfLib" Version="{XmlEscape(packageVersion)}" />
-          </ItemGroup>
-        </Project>
-        """;
-    File.WriteAllText(projectPath, projectContent);
+    CopyPackageTestProjectTemplate(templateDir, projectDir);
 
-    var programContent = """
-        using System.Windows;
-        using System.Windows.Threading;
+    var projectPath = Path.Join(projectDir, "PackageTestApp.csproj");
+    var document = XDocument.Load(projectPath);
+    var propertyGroup = document.Root?.Elements("PropertyGroup").FirstOrDefault()
+        ?? throw new InvalidOperationException($"Package test project has no PropertyGroup: {projectPath}");
+    propertyGroup.Element("TargetFramework")?.Remove();
+    propertyGroup.Element("TargetFrameworks")?.Remove();
+    propertyGroup.Add(new XElement(targetFrameworkPropertyName, targetFrameworkPropertyValue));
+    propertyGroup.SetElementValue("AssemblyName", name);
 
-        internal static class Program
-        {
-            [STAThread]
-            private static int Main()
-            {
-                var application = new Application
-                {
-                    ShutdownMode = ShutdownMode.OnExplicitShutdown,
-                };
-                application.Dispatcher.BeginInvoke(
-                    DispatcherPriority.ApplicationIdle,
-                    new Action(application.Shutdown));
-                application.Run();
-                Console.WriteLine($"WPF package probe completed on {Environment.ProcessPath}.");
-                return 0;
-            }
-        }
-        """;
-    File.WriteAllText(Path.Join(projectDir, "Program.cs"), programContent);
+    var packageReference = document
+        .Descendants("PackageReference")
+        .SingleOrDefault(element => string.Equals((string?)element.Attribute("Include"), "DotNetCampus.WpfLib", StringComparison.Ordinal))
+        ?? throw new InvalidOperationException($"Package test project does not reference DotNetCampus.WpfLib: {projectPath}");
+    packageReference.SetAttributeValue("Version", packageVersion);
+    document.Save(projectPath);
 
     return new PackageTestProject(name, projectPath, targetFrameworks);
+}
+
+static void CopyPackageTestProjectTemplate(string sourceDir, string destinationDir)
+{
+    Directory.CreateDirectory(destinationDir);
+    foreach (var sourcePath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+    {
+        var relativePath = Path.GetRelativePath(sourceDir, sourcePath);
+        if (relativePath.Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj"))
+            continue;
+
+        var destinationPath = Path.Join(destinationDir, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+        File.Copy(sourcePath, destinationPath, overwrite: true);
+    }
 }
 
 static string XmlEscape(string value) =>

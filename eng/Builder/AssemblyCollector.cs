@@ -40,6 +40,7 @@ internal static class AssemblyCollector
 
         var wantedDlls = GetRuntimeAssemblyNames();
         wantedDlls.Remove("DirectWriteForwarder");
+        wantedDlls.Remove("WindowsFormsIntegration");
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var projectDir in Directory.GetDirectories(binDir, "*-ref"))
