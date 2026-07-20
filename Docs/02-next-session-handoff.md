@@ -2,71 +2,80 @@
 
 ## 交接目标
 
-该文档用于让后续 AI 直接接手当前仓库，不需要重复调查仓库结构。
-
-> **⚠️ 首先阅读 `Docs\03-session-exploration-2024-06.md`**，其中记录了最近一次会话的详细探索、已完成的修复、当前阻塞点和推荐的前进策略。
+该文档用于让后续 AI 直接接手当前仓库。WpfDemo Debug|x64 仓库 WPF 消费链路已经实施并通过命令行构建、静态产物和真实启动验证；不要重新回到“标准 SDK WPF + 系统共享框架”的旧方案。
 
 ## 当前构建基线
 
-```bash
-# 删除 artifacts 后执行（每次验证前必须清理，不要删除 .vs）
-Remove-Item -Recurse -Force artifacts
-msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly
+需要干净状态时使用 Builder clean，不要使用 `git clean -xdf`：
+
+```powershell
+dotnet run --project eng\Builder\Builder.csproj -- clean
+msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal /clp:ErrorsOnly
+msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /nr:false /v:minimal /clp:ErrorsOnly
 ```
 
-结果：命令行清理后构建曾验证成功；Visual Studio 打开解决方案后构建出现新的 IDE 项目级构建顺序问题，需继续在 Visual Studio 中复验。
+两条解决方案命令当前均已验证成功。Builder clean 可能报告 Visual Studio 锁定的目录；应关闭 VS 后重试，不要依赖反复增量构建“凑”出成功结果。
 
-Visual Studio 清理后 restore 需要所有被 `ProjectReference` 引用的 `ref/*.csproj` 纳入 `Microsoft.Dotnet.Wpf.slnx`。当前 `WindowsBase-ref`、`PresentationFramework-ref`、`PresentationUI-ref`、`ReachFramework-ref`、`UIAutomationTypes-ref`、`UIAutomationProvider-ref`、`UIAutomationClient-ref`、`UIAutomationClientSideProviders-ref`、各主题 ref 项目等均已纳入解决方案，避免 `NU1105` 和后续 `CS0006`/`MC1000` 级联失败。
+## WpfDemo 当前状态
 
-Visual Studio 构建日志中的 `PresentationUI` `MC1000` 已确认不是 XAML 内容本身错误，而是上游输出缺失的级联错误：`ReachFramework-ref` 缺少 `project.assets.json`，导致 `ReachFramework` ref 输出缺失、`PresentationFramework.dll` 未生成，最后 `PresentationUI` 标记编译找不到完整 `PresentationFramework.dll`。当前已在以下引用上显式加入 `Targets="Restore;Build"`：`ReachFramework -> ReachFramework-ref`、`PresentationFramework-ref -> ReachFramework-ref`、`PresentationFramework -> ReachFramework`、`PresentationUI -> PresentationFramework`。这些项目文件已通过 XML 静态验证，尚需在 Visual Studio 中验证“生成解决方案”。
+### 已完成
 
-> **⚠️ 重要教训**：验证构建是否通过时，**必须每次先删除 artifacts 目录**，然后直接执行 `msbuild` 面向 sln 文件一次性构建。不能通过多次不断尝试构建、依赖前一次构建残留的产物来"凑"出构建成功。这是之前犯过的错误，会导致虚假的"构建通过"假象。
+- `Demo/WpfDemo/global.json` 已删除，WpfDemo 继承根 `global.json` 的 .NET SDK 8.0.101。
+- Demo 的 `Directory.Build.props/targets` 显式继承根配置，并导入 `eng/WpfDemo/RepoWpfConsumer.props/targets`。
+- WpfDemo 首期限定 `Debug|x64`；解决方案将 WpfDemo 的 `Any CPU` 和 `x64` 均映射到项目 x64。
+- `PresentationFramework.csproj` 作为 `Targets="Restore;Build"` 的顶层构建依赖，且 `ReferenceOutputAssembly=false`。
+- C# 和 XAML 使用实现项目自动生成的 `artifacts/obj/<Project>/x64/Debug/net8.0/ref/*.dll`，不以手工 `*-ref.csproj` 作为新增 API 试验契约。
+- WpfDemo 在 SDK targets 后显式导入仓库 `PresentationBuildTasks/Microsoft.WinFX.targets`；已验证实际任务程序集是 `artifacts/bin/PresentationBuildTasks/x64/Debug/net472/PresentationBuildTasks.dll`。
+- 仓库实现程序集被登记到 `.deps.json` 并复制到 WpfDemo 输出；WindowsDesktop runtime native DLL、`ijwhost.dll` 和本地化资源也会部署。
+- `WpfDemo.runtimeconfig.json` 只声明 `Microsoft.NETCore.App`，不声明 `Microsoft.WindowsDesktop.App`。
+- `eng/WpfRuntimeDependencies.props` 是 Builder 与 WpfDemo 共用的 runtime 版本、PackageReference、managed/native 文件清单；不要再在两处新增常量。
+- 已临时在 `PresentationCore` 新增 public API 并由 WpfDemo 调用，一条 WpfDemo 构建成功；临时测试代码已回退，证明自动 ref 传播契约成立。
 
-### Visual Studio 构建已知问题
+### 构建与真实运行验证
 
-```bash
-msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /v:minimal
+```powershell
+msbuild Demo\WpfDemo\WpfDemo.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal /clp:ErrorsOnly
+
+$dir = Resolve-Path artifacts\bin\WpfDemo\x64\Debug\net8.0-windows
+$process = Start-Process -FilePath "$dir\WpfDemo.exe" -ArgumentList '--verify-repo-wpf' -WorkingDirectory $dir -Wait -PassThru
+$process.ExitCode
+Get-Content "$dir\WpfDemo.repo-wpf-validation.txt"
 ```
 
-`Any CPU` 命令行构建曾通过 `WpfNativePlatform` 映射到 `x64` 收敛。当前需要优先复验的是 Visual Studio 打开解决方案后的构建顺序：确认 `ReachFramework-ref` 的 restore assets 会在 `ReachFramework` / `PresentationFramework` / `PresentationUI` 之前生成，且 `PresentationUI` 不再因缺少 `PresentationFramework.dll` 报 `MC1000`。
+已验证真实退出码为 0。报告确认以下模块均从 WpfDemo 输出目录加载：
 
-## 下一步工作（已排好优先级，可直接开始）
+- `WindowsBase.dll`
+- `PresentationCore.dll`
+- `PresentationFramework.dll`
+- `DirectWriteForwarder.dll`
+- `PenImc_cor3.dll`
+- `PresentationNative_cor3.dll`
+- `wpfgfx_cor3.dll`
 
-### 优先级 0：完善 Builder 构建器项目，打通 NuGet 打包
+注意：WpfDemo 是 WinExe，PowerShell 直接使用 `& WpfDemo.exe` 不会可靠等待 GUI 进程，也不能用当时的 `$LASTEXITCODE` 判断成功；必须使用 `Start-Process -Wait -PassThru`。
 
-Builder 项目（`eng\Builder\Builder.csproj`）是驱动构建 + NuGet 打包的入口工具。详细计划见 `Docs\05-builder-plan.md`。
+### 关键实现文件
 
-**当前进度（已实现，打包已打通）：**
+| 文件 | 作用 |
+|---|---|
+| `eng/WpfRuntimeDependencies.props` | Builder/WpfDemo 共用版本、包和资产清单 |
+| `eng/WpfDemo/RepoWpfConsumer.props` | 评估期平台、WinFX 开关、PackageReference/PackageDownload |
+| `eng/WpfDemo/RepoWpfConsumer.targets` | 自动 ref 替换、runtime/deps、native/资源复制和产物校验 |
+| `Demo/WpfDemo/WpfDemo.csproj` | x64 构建根、移除 WindowsDesktop WPF FrameworkReference、导入仓库 WinFX targets |
+| `Demo/WpfDemo/Diagnostics/WpfRuntimeProbe.cs` | 托管与 native app-local 加载来源断言 |
+| `eng/Builder/WpfRuntimeDefinition.cs` | Builder 读取共享 MSBuild 资产定义 |
 
-- ✅ `Builder.csproj` 已配置（net8.0、LangVersion 12、独立 OutputPath、无 ImplicitUsings）
-- ✅ `Program.cs` 已实现完整的编排逻辑（~440 行）
-- ✅ 步骤 1 & 2：探索 `origin\NuGetPackage\` 和 NuGet 缓存 DLL 清单已完成
-- ✅ 清理逻辑：逐目录清理 artifacts\bin 和 artifacts\obj，跳过锁定文件
-- ✅ 构建驱动：按依赖顺序逐个项目调用 msbuild 构建（不走 sln），共 22 个项目
-- ✅ 托管 DLL 收集：从 artifacts\bin 自动收集 20+ 个 WPF 托管 DLL
-- ✅ Native DLL 收集：通过 `PackageDownload` + `WritePackagePaths` target 明确拉取运行时包，不再依赖 NuGet 缓存
-- ✅ `.nuspec` 生成：动态生成 `DotNetCampus.WpfLib.nuspec`
-- ✅ **打包已打通**：`_pack.csproj` 放在 `%TEMP%\WpfBuilderPack\<guid>\` 下，完全隔离于仓库 `Directory.Build.props` 链，`dotnet pack` 成功生成 `.nupkg`
+## 下一步工作（按优先级）
 
-**设计决策：**
+### 优先级 0：Visual Studio F5 验收
 
-- Builder **不构建 sln**，而是按依赖顺序逐项目调用 msbuild 构建具体 csproj，避免 Builder 自锁
-- 构建 `/p:Platform=x64`，产物在 `artifacts\bin\<Project>\x64\Debug\net8.0\`
-- 包 ID `DotNetCampus.WpfLib`，版本 `1.0.0`，作者 `dotnet campus`，TFM `net8.0`
-- Native DLL 来源：通过 `PackageDownload` 从 NuGet 拉取 `microsoft.windowsdesktop.app.runtime.win-x64/win-x86@8.0.6`，路径写入 `PackagePaths.txt` 供 Program.cs 读取
+1. 打开 `Microsoft.Dotnet.Wpf.slnx`。
+2. 选择 Debug/x64；再验证解决方案 `Any CPU` 映射场景。
+3. 将 WpfDemo 设为启动项目并 F5。
+4. 确认窗口中的加载来源报告全部指向 WpfDemo 输出目录。
+5. 修改一个 `PresentationCore` 方法体后再次 F5，确认依赖重建和断点命中。
 
-**打包方案：** `_pack.csproj` 放在 `%TEMP%\WpfBuilderPack\<guid>\` 下，该目录在仓库树之外，不会继承 `Directory.Build.props` 中的 Arcade SDK 导入。`dotnet pack` 可直接成功。
-
-**Builder 项目文件：**
-
-| 文件 | 说明 |
-|------|------|
-| `eng\Builder\Builder.csproj` | 项目文件，net8.0 控制台，含 `PackageDownload` + `WritePackagePaths` target |
-| `eng\Builder\Program.cs` | 完整编排逻辑 |
-| `eng\Builder\bin\` | Builder 自身输出（不在 artifacts\ 内） |
-| `eng\Builder\bin\staging\` | 打包暂存目录（lib/ + runtimes/ + .nuspec） |
-| `eng\Builder\bin\nupkg\` | 最终 .nupkg 输出目录 |
-| `eng\Builder\bin\PackagePaths.txt` | 由 MSBuild target 生成的运行时包路径 |
+当前命令行与真实进程验证均已通过，但 Visual Studio F5 尚未人工执行。若失败，优先查看首个真实错误，不要移除 WpfDemo 的 repo consumer 配置或重新加入 `Microsoft.WindowsDesktop.App.WPF`。
 
 ### 优先级 1：恢复 `PresentationUI` 的 XAML 标记编译链路
 
@@ -135,7 +144,7 @@ Builder 项目（`eng\Builder\Builder.csproj`）是驱动构建 + NuGet 打包�
 - 尝试在当前的 `PresentationUI.csproj` 中配置标记编译
 - 如果能成功生成 `.g.cs`，`InstallationErrorPage` 和 `FindToolBar` 的基类就不需要手动写了
 
-### 本轮已验证但尚未处理的静态问题（做个备忘）
+### 其他已知问题
 
 - **`System.Printing` C++/CLI 项目仍未独立构建成功**，当前首个错误面在 bridge 缺少 `GeometryHelper`、`PrintSystemException`、`GDIExporter` 等更深层 API。这个项目在主链上不阻塞任何其他项目（`PresentationUI` 通过 `System.Printing-ref` 绕过了它），可以留在妥协代码清理之后处理。
 - **`WindowsFormsIntegration` 显式 HintPath 仍未收敛**，但路径已从硬编码 `x64` 统一到 `$(WpfNativePlatform)`。当前不阻塞构建。
@@ -147,10 +156,12 @@ Builder 项目（`eng\Builder\Builder.csproj`）是驱动构建 + NuGet 打包�
 1. `Docs/README.md`
 2. `Docs/00-overview.md`
 3. `Docs/01-phase-plan.md`
-4. `Docs/03-origin-diff-audit.md`（注意其中"XAML partial 占位"的措辞不够准确，实际应以本交接文档为准）
-5. `Docs/05-builder-plan.md`（Builder 构建器项目完善计划）
-6. `Docs/04-NuGet-Binary.md`（native 模块 NuGet 二进制接入方案）
-7. `Docs/cycle-breaker.md`
+4. `Docs/06-wpfdemo-build-run-plan.md`
+5. `Docs/07-wpfdemo-implementation.md`
+6. `Docs/03-origin-diff-audit.md`（其中“XAML partial 占位”的措辞不够准确，实际状态见本文件）
+7. `Docs/05-builder-plan.md`
+8. `Docs/04-NuGet-Binary.md`
+9. `Docs/cycle-breaker.md`
 
 ## 当前需要持续遵守的约束
 
@@ -158,10 +169,13 @@ Builder 项目（`eng\Builder\Builder.csproj`）是驱动构建 + NuGet 打包�
 - 若出现 `Rect`、`Point`、`DependencyObject` 等基础类型错误，先检查是否同时引用了仓库项目和 SDK inbox 程序集。
 - 不要通过把项目从解决方案中移除来制造"构建通过"。
 - 清理妥协代码时，**始终对照 origin 对应文件**，不要凭记忆改。
+- WpfDemo 编译必须继续使用实现项目自动 ref，运行必须继续使用 bin 实现；不要把普通 ProjectReference 输出直接作为 XAML 编译引用。
+- WpfDemo 首期只支持 Debug|x64；在未参数化 native 包和 C++ 平台映射前，不要宣称 x86/arm64 已支持。
 
 ## 推荐命令
 
-- 解决方案：`msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
+- 解决方案：`msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal /clp:ErrorsOnly`
+- WpfDemo：`msbuild Demo\WpfDemo\WpfDemo.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal /clp:ErrorsOnly`
 - 单个项目：`msbuild <project>.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly`
 - 运行 Builder：`dotnet run --project eng\Builder\Builder.csproj`
 - 对比 origin：`git diff --no-index -- origin\src\...\File.cs src\...\File.cs`

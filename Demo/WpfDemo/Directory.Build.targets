@@ -1,5 +1,5 @@
 <Project>
-  <PropertyGroup>
-
-  </PropertyGroup>
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)..\'))" />
+  <Import Project="$(RepoRoot)eng\WpfDemo\RepoWpfConsumer.targets"
+		  Condition="Exists('$(RepoRoot)eng\WpfDemo\RepoWpfConsumer.targets')" />
 </Project>

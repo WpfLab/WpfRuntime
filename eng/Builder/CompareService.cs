@@ -41,7 +41,7 @@ internal static class CompareService
             if (Directory.Exists(artifactsBin))
             {
                 // Collect from artifacts into a temporary dictionary for comparison
-                var collected = AssemblyCollector.CollectReferenceDlls(Path.Join(repoRoot, "artifacts"));
+                var collected = AssemblyCollector.CollectReferenceDlls(repoRoot, Path.Join(repoRoot, "artifacts"));
                 if (collected.Count == 0)
                 {
                     Log.Error("No built DLLs found; run a build first");
@@ -58,20 +58,8 @@ internal static class CompareService
         }
 
         // WPF assemblies we care about
-        var wpfAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "WindowsBase", "System.Xaml", "PresentationCore", "PresentationFramework",
-            "PresentationUI", "ReachFramework", "System.Windows.Presentation",
-            "System.Windows.Controls.Ribbon", "System.Windows.Input.Manipulations",
-            "WindowsFormsIntegration", "UIAutomationTypes", "UIAutomationProvider",
-            "UIAutomationClient", "UIAutomationClientSideProviders",
-            "PresentationFramework.Aero", "PresentationFramework.Aero2",
-            "PresentationFramework.AeroLite", "PresentationFramework.Classic",
-            "PresentationFramework.Fluent", "PresentationFramework.Luna",
-            "PresentationFramework.Royale", "DirectWriteForwarder",
-            // Official package also includes these:
-            "System.Printing",
-        };
+        var wpfAssemblies = WpfRuntimeDefinition.ReadRuntimeAssemblyNames(repoRoot);
+        wpfAssemblies.Add("System.Printing");
 
         // Get official DLL list (filter to WPF-relevant only)
         var officialDlls = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);

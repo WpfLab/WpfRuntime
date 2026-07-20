@@ -6,41 +6,13 @@ namespace WpfReorganize.Builder;
 
 internal static class AssemblyCollector
 {
-    private static HashSet<string> GetRuntimeAssemblyNames() => new(StringComparer.OrdinalIgnoreCase)
-    {
-        "WindowsBase",
-        "System.Xaml",
-        "PresentationCore",
-        "PresentationFramework",
-        "PresentationUI",
-        "ReachFramework",
-        "System.Windows.Presentation",
-        "System.Windows.Controls.Ribbon",
-        "System.Windows.Input.Manipulations",
-        "WindowsFormsIntegration",
-        "UIAutomationTypes",
-        "UIAutomationProvider",
-        "UIAutomationClient",
-        "UIAutomationClientSideProviders",
-        "PresentationFramework.Aero",
-        "PresentationFramework.Aero2",
-        "PresentationFramework.AeroLite",
-        "PresentationFramework.Classic",
-        "PresentationFramework.Fluent",
-        "PresentationFramework.Luna",
-        "PresentationFramework.Royale",
-        "DirectWriteForwarder",
-    };
-
-    public static Dictionary<string, string> CollectReferenceDlls(string artifactsDir)
+    public static Dictionary<string, string> CollectReferenceDlls(string repoRoot, string artifactsDir)
     {
         var binDir = Path.Join(artifactsDir, "bin");
         if (!Directory.Exists(binDir))
             return [];
 
-        var wantedDlls = GetRuntimeAssemblyNames();
-        wantedDlls.Remove("DirectWriteForwarder");
-        wantedDlls.Remove("WindowsFormsIntegration");
+        var wantedDlls = WpfRuntimeDefinition.ReadReferenceAssemblyNames(repoRoot);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var projectDir in Directory.GetDirectories(binDir, "*-ref"))
@@ -71,13 +43,13 @@ internal static class AssemblyCollector
         return result;
     }
 
-    public static Dictionary<string, string> CollectRuntimeDlls(string artifactsDir, string platform)
+    public static Dictionary<string, string> CollectRuntimeDlls(string repoRoot, string artifactsDir, string platform)
     {
         var binDir = Path.Join(artifactsDir, "bin");
         if (!Directory.Exists(binDir))
             return [];
 
-        var wantedDlls = GetRuntimeAssemblyNames();
+        var wantedDlls = WpfRuntimeDefinition.ReadRuntimeAssemblyNames(repoRoot);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var projectDir in Directory.GetDirectories(binDir))

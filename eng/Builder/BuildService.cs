@@ -129,7 +129,7 @@ else
 
 // ---- Step 4: Collect reference and runtime DLLs ----
 Log.Step("Collecting reference assemblies...");
-var referenceDlls = AssemblyCollector.CollectReferenceDlls(context.ArtifactsDir);
+var referenceDlls = AssemblyCollector.CollectReferenceDlls(context.RepoRoot, context.ArtifactsDir);
 if (referenceDlls.Count == 0)
 {
     Log.Error("No reference assemblies found; please check build artifacts");
@@ -148,7 +148,7 @@ foreach (var (name, sourcePath) in referenceDlls)
 Log.Step("Collecting architecture-specific runtime assemblies...");
 foreach (var (rid, platform) in new[] { ("win-x64", "x64"), ("win-x86", "x86") })
 {
-    var runtimeDlls = AssemblyCollector.CollectRuntimeDlls(context.ArtifactsDir, platform);
+    var runtimeDlls = AssemblyCollector.CollectRuntimeDlls(context.RepoRoot, context.ArtifactsDir, platform);
     if (runtimeDlls.Count == 0)
     {
         Log.Error($"No runtime assemblies found for {rid}; please check build artifacts");

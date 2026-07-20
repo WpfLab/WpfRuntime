@@ -31,41 +31,8 @@ internal static class NuGetPackageService
         return result;
     }
 
-private static string ReadMsBuildProperty(XDocument document, string propsPath, string propertyName)
-{
-    var values = document
-        .Descendants()
-        .Where(element =>
-            element.Parent?.Name.LocalName == "PropertyGroup" &&
-            element.Name.LocalName == propertyName)
-        .Select(element => element.Value)
-        .ToList();
-    if (values.Count == 0 || string.IsNullOrWhiteSpace(values[0]))
-        throw new InvalidOperationException($"MSBuild property '{propertyName}' was not found in {propsPath}");
-    if (values.Count > 1)
-        throw new InvalidOperationException($"MSBuild property '{propertyName}' is defined multiple times in {propsPath}");
-
-    return values[0];
-}
-
-public static IReadOnlyList<PackageDependency> ReadRuntimePackageDependencies(string repoRoot)
-{
-    var versionsPropsPath = Path.Join(repoRoot, "eng", "Versions.props");
-    var document = XDocument.Load(versionsPropsPath);
-    return
-    [
-        new("System.Configuration.ConfigurationManager", ReadMsBuildProperty(document, versionsPropsPath, "SystemConfigurationConfigurationManagerPackageVersion")),
-        new("System.Diagnostics.EventLog", ReadMsBuildProperty(document, versionsPropsPath, "SystemDiagnosticsEventLogPackageVersion")),
-        new("System.DirectoryServices", ReadMsBuildProperty(document, versionsPropsPath, "SystemDirectoryServicesVersion")),
-        new("System.Drawing.Common", ReadMsBuildProperty(document, versionsPropsPath, "SystemDrawingCommonVersion")),
-        new("System.Formats.Nrbf", ReadMsBuildProperty(document, versionsPropsPath, "SystemFormatsNrbfVersion")),
-        new("System.IO.Packaging", ReadMsBuildProperty(document, versionsPropsPath, "SystemIOPackagingVersion")),
-        new("System.Resources.Extensions", ReadMsBuildProperty(document, versionsPropsPath, "SystemResourcesExtensionsVersion")),
-        new("System.Security.Cryptography.Xml", ReadMsBuildProperty(document, versionsPropsPath, "SystemSecurityCryptographyXmlPackageVersion")),
-        new("System.Security.Permissions", ReadMsBuildProperty(document, versionsPropsPath, "SystemSecurityPermissionsPackageVersion")),
-        new("System.Windows.Extensions", ReadMsBuildProperty(document, versionsPropsPath, "SystemWindowsExtensionsPackageVersion")),
-    ];
-}
+public static IReadOnlyList<PackageDependency> ReadRuntimePackageDependencies(string repoRoot) =>
+    WpfRuntimeDefinition.ReadRuntimePackageDependencies(repoRoot);
 
 
 public static void CopyNativeDllsFromPackage(Dictionary<string, string> packagePaths, string rid, string destDir)

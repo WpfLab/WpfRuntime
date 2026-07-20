@@ -206,6 +206,18 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 两条命令当前均可重复执行并通过，不再依赖预先残留的 `artifacts` 桥接产物。
 
+`WpfDemo` 已完成仓库 WPF 开发宿主的 Debug|x64 首期改造：
+
+- 构建命令：`msbuild Demo\WpfDemo\WpfDemo.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal /clp:ErrorsOnly`。
+- 在 Builder clean 后，仅执行上述一条命令即可传递构建 `PresentationFramework` 主链，并成功生成 WpfDemo。
+- 编译和 XAML 使用实现项目自动生成的 `artifacts/obj/<Project>/x64/Debug/net8.0/ref/*.dll`，运行时使用各实现项目的 `artifacts/bin` 主输出；临时新增 `PresentationCore` public API 并由 WpfDemo 调用的验证已通过，测试代码随后已回退。
+- WpfDemo 显式使用仓库 `PresentationBuildTasks/Microsoft.WinFX.targets`；最终求值的任务程序集为 `artifacts/bin/PresentationBuildTasks/x64/Debug/net472/PresentationBuildTasks.dll`。
+- `WpfDemo.runtimeconfig.json` 仅声明 `Microsoft.NETCore.App`，不再声明 `Microsoft.WindowsDesktop.App`；`WpfDemo.deps.json` 已登记 app-local WPF 实现与共享 runtime PackageReference。
+- 自动运行验证：使用 `WpfDemo.exe --verify-repo-wpf`，真实进程退出码为 0。报告确认 `WindowsBase`、`PresentationCore`、`PresentationFramework`、`DirectWriteForwarder`、`PenImc_cor3`、`PresentationNative_cor3`、`wpfgfx_cor3` 均从 WpfDemo 输出目录加载。
+- `eng/WpfRuntimeDependencies.props` 现在是 Builder 与 WpfDemo 共用的 runtime 版本、包、managed/native 资产清单；Builder 不再单独硬编码 WindowsDesktop runtime 8.0.6 和运行时程序集名称。
+- `Microsoft.Dotnet.Wpf.slnx` 已将 WpfDemo 的 `Any CPU` 与 `x64` 解决方案配置映射到项目 `x64`；x86/arm64 尚未支持。
+- 尚未执行的验收项：在 Visual Studio 中把 WpfDemo 设为启动项目后实际 F5，并验证修改 `PresentationCore` 后再次 F5 的依赖重建与断点命中。
+
 `ReachFramework-ref` 已补齐 `PresentationFramework-System.Printing-api-cycle` 中的 `ISerializerFactory` 与 `XpsDocumentWriter` 桥接 API，并可独立构建：
 
 - 命令：`msbuild C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf\src\ReachFramework\ref\ReachFramework-ref.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
@@ -275,6 +287,7 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 4. 多个主链项目已可独立构建，但仍存在 cycle-breaker、显式 HintPath 与同名程序集 API 暴露边界，后续仍需继续收敛。
 5. `System.Printing` C++/CLI 项目已继续推进到 `GDIExporter` / ReachFramework 更深层源码编译阶段，但尚未构建成功；`PresentationUI` 当前通过 `System.Printing-ref` 绕过实现程序集阻塞。
 6. Visual Studio 工作区“生成解决方案”当前仍存在单独阻塞：`PresentationBuildTasks.dll` 在 `net472` 输出复制阶段被多个 `MSBuild.exe` 进程锁定。该问题不会阻止命令行 `msbuild -restore` 成功，但仍属于 IDE 构建链待继续收敛的真实阻塞。
+7. WpfDemo 已能作为仓库 WPF 的 app-local x64 开发测试宿主；命令行构建、自动 ref 新 API 传播、XAML、deps/runtimeconfig 和真实加载来源均已验证。
 
 ## 当前主要缺口
 
@@ -299,14 +312,15 @@ Visual Studio 默认 `Any CPU` 构建也已重新验证可通过：
 
 ## 建议的当前优先级
 
-1. 保持当前 `Microsoft.Dotnet.Wpf.slnx` 可构建基线，不要为扩大纳管范围破坏现有项目。
-2. 清理迁移妥协代码：
+1. 在 Visual Studio 中完成 WpfDemo 的 F5 验收，确认 `Any CPU -> x64` 映射、依赖重建、仓库 PresentationBuildTasks 与调试断点均正常。
+2. 保持当前 `Microsoft.Dotnet.Wpf.slnx` 和 WpfDemo 命令行构建基线，不要为扩大纳管范围破坏现有项目。
+3. 清理迁移妥协代码：
    - 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换当前 XAML partial 占位成员。
    - 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界和同名程序集解析。
    - 逐项评估 bridge 文件是否可替换为更接近 origin 的方案或更稳定的项目引用。
-3. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，当前优先补齐 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri` 等更深层 API。
-4. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
-5. 为 `PenImc` 和 `WpfGfx` 接入 NuGet 二进制 DLL（按 `Docs/04-NuGet-Binary.md` 的方案），确保 `DllImport` 和 native 依赖在主链编译中闭合。
+4. 继续处理 `System.Printing` C++/CLI 的 bridge 边界问题，当前优先补齐 `System.Windows.Xps.Serialization.GeometryHelper`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri` 等更深层 API。
+5. 继续收敛 Ribbon、主题项目、`PresentationUI` 与 `WindowsFormsIntegration` 对完整 `PresentationFramework` 显式 HintPath 的依赖。
+6. 在 x64 验收稳定后，再参数化扩展 WpfDemo 的 x86/arm64 资产与解决方案映射。
 
 ## 当前执行约束
 

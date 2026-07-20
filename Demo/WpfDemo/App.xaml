@@ -4,6 +4,6 @@
              xmlns:local="clr-namespace:WpfDemo"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
     </Application.Resources>
 </Application>

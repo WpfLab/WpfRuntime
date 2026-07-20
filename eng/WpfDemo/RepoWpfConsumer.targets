@@ -1,0 +1,156 @@
+<Project>
+  <Target Name="ValidateRepoWpfConsumerConfiguration"
+		  BeforeTargets="PrepareForBuild"
+		  Condition="'$(RepoWpfConsumerEnabled)' == 'true'">
+	<Error Condition="'$(RepoWpfPlatform)' != 'x64'"
+		   Text="WpfDemo repository-WPF mode currently supports x64 only. Actual platform: $(RepoWpfPlatform). Build with /p:Platform=x64." />
+	<Error Condition="'$(RepoWpfConfiguration)' != 'Debug'"
+		   Text="WpfDemo repository-WPF mode currently supports Debug only. Actual configuration: $(RepoWpfConfiguration). Build with /p:Configuration=Debug." />
+	<Error Condition="'$(RepoWpfWindowsDesktopRuntimeVersion)' == ''"
+		   Text="RepoWpfWindowsDesktopRuntimeVersion is required. Define it in eng\WpfRuntimeDependencies.props." />
+	<Error Condition="'%(RepoWpfRuntimePackage.Version)' == ''"
+		   Text="Runtime package '%(RepoWpfRuntimePackage.Identity)' has no version. Check eng\WpfRuntimeDependencies.props and eng\Versions.props." />
+  </Target>
+
+  <Target Name="UseRepoWpfReferences"
+		  AfterTargets="ResolveReferences"
+		  Condition="'$(RepoWpfConsumerEnabled)' == 'true'">
+	<ItemGroup>
+	  <_RepoWpfCompileReference Include="$(ArtifactsDir)obj\%(RepoWpfCompileAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\ref\%(RepoWpfCompileAssembly.Identity).dll" />
+	</ItemGroup>
+
+	<Error Condition="'$(DesignTimeBuild)' != 'true' And !Exists('%(_RepoWpfCompileReference.Identity)')"
+		   Text="Repository WPF reference assembly is missing: %(_RepoWpfCompileReference.Identity). The owning implementation project must generate its automatic ref output before WpfDemo compiles." />
+
+	<ItemGroup>
+	  <ReferencePath Remove="@(ReferencePath)"
+					 Condition="'%(ReferencePath.Filename)' == 'WindowsBase' Or
+								'%(ReferencePath.Filename)' == 'System.Xaml' Or
+								'%(ReferencePath.Filename)' == 'System.Windows.Input.Manipulations' Or
+								'%(ReferencePath.Filename)' == 'UIAutomationTypes' Or
+								'%(ReferencePath.Filename)' == 'UIAutomationProvider' Or
+								'%(ReferencePath.Filename)' == 'PresentationCore' Or
+								'%(ReferencePath.Filename)' == 'PresentationFramework'" />
+	  <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
+					 Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' Or
+								'%(ReferencePathWithRefAssemblies.Filename)' == 'System.Xaml' Or
+								'%(ReferencePathWithRefAssemblies.Filename)' == 'System.Windows.Input.Manipulations' Or
+								'%(ReferencePathWithRefAssemblies.Filename)' == 'UIAutomationTypes' Or
+								'%(ReferencePathWithRefAssemblies.Filename)' == 'UIAutomationProvider' Or
+								'%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' Or
+								'%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework'" />
+	  <ReferenceDependencyPaths Remove="@(ReferenceDependencyPaths)"
+					 Condition="'%(ReferenceDependencyPaths.Filename)' == 'WindowsBase' Or
+								'%(ReferenceDependencyPaths.Filename)' == 'System.Xaml' Or
+								'%(ReferenceDependencyPaths.Filename)' == 'System.Windows.Input.Manipulations' Or
+								'%(ReferenceDependencyPaths.Filename)' == 'UIAutomationTypes' Or
+								'%(ReferenceDependencyPaths.Filename)' == 'UIAutomationProvider' Or
+								'%(ReferenceDependencyPaths.Filename)' == 'PresentationCore' Or
+								'%(ReferenceDependencyPaths.Filename)' == 'PresentationFramework'" />
+
+	  <ReferencePath Include="@(_RepoWpfCompileReference)"
+					 Private="false"
+					 IncludeRuntimeDependency="false"
+					 ReferenceSourceTarget="RepoWpfConsumer" />
+	  <ReferencePathWithRefAssemblies Include="@(_RepoWpfCompileReference)"
+									  Private="false"
+									  IncludeRuntimeDependency="false"
+									  ReferenceSourceTarget="RepoWpfConsumer" />
+	</ItemGroup>
+
+	<Error Condition="'%(RepoWpfRuntimeAssembly.WpfDemoRequired)' == 'true' And
+					  '%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder' And
+					  !Exists('$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll')"
+		   Text="Required repository WPF implementation assembly is missing: $(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll" />
+	<Error Condition="'%(RepoWpfRuntimeAssembly.Identity)' == 'DirectWriteForwarder' And
+					  '%(RepoWpfRuntimeAssembly.WpfDemoRequired)' == 'true' And
+					  !Exists('$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll')"
+		   Text="Required repository WPF implementation assembly is missing: $(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll" />
+
+	<ItemGroup>
+	  <_RepoWpfRuntimeAssembly Include="$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll"
+							   Condition="'%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder' And Exists('$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll')" />
+	  <_RepoWpfRuntimeAssembly Include="$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll"
+							   Condition="Exists('$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll')" />
+
+	  <ReferenceDependencyPaths Include="@(_RepoWpfRuntimeAssembly)"
+								CopyLocal="true"
+								IncludeRuntimeDependency="true"
+								ReferenceSourceTarget="RepoWpfConsumer" />
+	  <ReferenceCopyLocalPaths Include="@(_RepoWpfRuntimeAssembly)"
+							   CopyLocal="true"
+							   ReferenceSourceTarget="RepoWpfConsumer" />
+	</ItemGroup>
+
+	<Message Importance="high" Text="Repo WPF compile reference: %(_RepoWpfCompileReference.Identity)" />
+	<Message Importance="high" Text="Repo WPF runtime assembly: %(_RepoWpfRuntimeAssembly.Identity)" />
+	<Message Importance="high" Text="Repo PresentationBuildTasks: $(_PresentationBuildTasksAssembly)" />
+  </Target>
+
+  <Target Name="CopyRepoWpfRuntimeAssets"
+		  AfterTargets="Build"
+		  Condition="'$(RepoWpfConsumerEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'">
+	<ItemGroup>
+	  <_RepoWpfRuntimeResource Include="$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\*\%(RepoWpfRuntimeAssembly.Identity).resources.dll"
+							   Condition="'%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder'" />
+	  <_RepoWpfNativeRuntime Include="$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\runtimes\win-x64\native\%(RepoWpfNativeRuntimeFile.Identity)" />
+	  <_RepoWpfIjwHost Include="$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\Ijwhost.dll" />
+	</ItemGroup>
+
+	<Error Condition="!Exists('%(_RepoWpfNativeRuntime.Identity)')"
+		   Text="Required repository WPF native runtime file is missing: %(_RepoWpfNativeRuntime.Identity). Restore Microsoft.WindowsDesktop.App.Runtime.win-x64 $(RepoWpfWindowsDesktopRuntimeVersion)." />
+	<Error Condition="!Exists('%(_RepoWpfIjwHost.Identity)')"
+		   Text="Required C++/CLI host is missing: %(_RepoWpfIjwHost.Identity). Build DirectWriteForwarder for $(RepoWpfPlatform)." />
+
+	<Copy SourceFiles="@(_RepoWpfRuntimeResource)"
+		  DestinationFiles="@(_RepoWpfRuntimeResource->'$(TargetDir)%(RecursiveDir)%(Filename)%(Extension)')"
+		  SkipUnchangedFiles="true"
+		  Condition="'@(_RepoWpfRuntimeResource)' != ''" />
+	<Copy SourceFiles="@(_RepoWpfNativeRuntime)"
+		  DestinationFolder="$(TargetDir)"
+		  SkipUnchangedFiles="true" />
+	<Copy SourceFiles="@(_RepoWpfIjwHost)"
+		  DestinationFiles="@(_RepoWpfIjwHost->'$(TargetDir)ijwhost.dll')"
+		  SkipUnchangedFiles="true" />
+
+	<Message Importance="high" Text="Repo WPF native runtime: %(_RepoWpfNativeRuntime.Identity)" />
+  </Target>
+
+  <Target Name="ValidateRepoWpfConsumerOutput"
+		  AfterTargets="CopyRepoWpfRuntimeAssets"
+		  Condition="'$(RepoWpfConsumerEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'">
+	<Error Condition="!Exists('$(TargetDir)WpfDemo.runtimeconfig.json')"
+		   Text="WpfDemo runtimeconfig was not generated: $(TargetDir)WpfDemo.runtimeconfig.json" />
+	<Error Condition="!Exists('$(TargetDir)WpfDemo.deps.json')"
+		   Text="WpfDemo deps file was not generated: $(TargetDir)WpfDemo.deps.json" />
+
+	<ReadLinesFromFile File="$(TargetDir)WpfDemo.runtimeconfig.json">
+	  <Output TaskParameter="Lines" ItemName="_RepoWpfRuntimeConfigLines" />
+	</ReadLinesFromFile>
+	<ReadLinesFromFile File="$(TargetDir)WpfDemo.deps.json">
+	  <Output TaskParameter="Lines" ItemName="_RepoWpfDepsLines" />
+	</ReadLinesFromFile>
+	<PropertyGroup>
+	  <_RepoWpfRuntimeConfigContent>@(_RepoWpfRuntimeConfigLines, '')</_RepoWpfRuntimeConfigContent>
+	  <_RepoWpfDepsContent>@(_RepoWpfDepsLines, '')</_RepoWpfDepsContent>
+	</PropertyGroup>
+
+	<Error Condition="$([System.String]::Copy('$(_RepoWpfRuntimeConfigContent)').Contains('Microsoft.WindowsDesktop.App'))"
+		   Text="WpfDemo.runtimeconfig.json still references Microsoft.WindowsDesktop.App; repository WPF would not be app-local." />
+	<Error Condition="!$([System.String]::Copy('$(_RepoWpfDepsContent)').Contains('WindowsBase.dll')) Or
+					  !$([System.String]::Copy('$(_RepoWpfDepsContent)').Contains('PresentationCore.dll')) Or
+					  !$([System.String]::Copy('$(_RepoWpfDepsContent)').Contains('PresentationFramework.dll')) Or
+					  !$([System.String]::Copy('$(_RepoWpfDepsContent)').Contains('DirectWriteForwarder.dll'))"
+		   Text="WpfDemo.deps.json does not contain the required app-local WPF runtime assemblies." />
+
+	<Error Condition="!Exists('$(TargetDir)WindowsBase.dll') Or
+					  !Exists('$(TargetDir)PresentationCore.dll') Or
+					  !Exists('$(TargetDir)PresentationFramework.dll') Or
+					  !Exists('$(TargetDir)DirectWriteForwarder.dll') Or
+					  !Exists('$(TargetDir)ijwhost.dll') Or
+					  !Exists('$(TargetDir)PenImc_cor3.dll') Or
+					  !Exists('$(TargetDir)PresentationNative_cor3.dll') Or
+					  !Exists('$(TargetDir)wpfgfx_cor3.dll')"
+		   Text="WpfDemo output is missing one or more required managed/native repository WPF files in $(TargetDir)." />
+  </Target>
+</Project>
