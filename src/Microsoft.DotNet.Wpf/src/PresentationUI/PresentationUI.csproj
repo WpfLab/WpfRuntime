@@ -270,7 +270,6 @@
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-  <Import Project="$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets" />
 
   <ItemGroup>
     <WpfPerlScript Include="ThemeGenerator.pl" />

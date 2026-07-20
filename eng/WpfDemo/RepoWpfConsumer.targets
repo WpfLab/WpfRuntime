@@ -1,4 +1,69 @@
 <Project>
+	<UsingTask TaskName="ValidateRepoWpfThemeAssemblies"
+			 TaskFactory="RoslynCodeTaskFactory"
+			 AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+	<ParameterGroup>
+	  <AssemblyPaths ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+	  <DepsFile ParameterType="System.String" Required="true" />
+	</ParameterGroup>
+	<Task>
+	  <Reference Include="$(MSBuildToolsPath)\System.Collections.Immutable.dll" />
+	  <Reference Include="$(MSBuildToolsPath)\System.Reflection.Metadata.dll" />
+	  <Using Namespace="System" />
+	  <Using Namespace="System.IO" />
+	  <Using Namespace="System.Reflection.Metadata" />
+	  <Using Namespace="System.Reflection.PortableExecutable" />
+	  <Code Type="Fragment" Language="cs"><![CDATA[
+		string depsContent = File.ReadAllText(DepsFile);
+		foreach (Microsoft.Build.Framework.ITaskItem item in AssemblyPaths)
+		{
+			string assemblyPath = item.ItemSpec;
+			string assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
+			string expectedResourceName = assemblyName + ".g.resources";
+			string assemblyFileName = Path.GetFileName(assemblyPath);
+
+			if (!File.Exists(assemblyPath))
+			{
+				Log.LogError($"Required repository WPF theme assembly is missing: {assemblyPath}");
+				continue;
+			}
+
+			if (depsContent.IndexOf(assemblyFileName, StringComparison.OrdinalIgnoreCase) < 0)
+			{
+				Log.LogError($"WpfDemo.deps.json does not contain repository WPF theme assembly '{assemblyFileName}'.");
+			}
+
+			using (var stream = new FileStream(assemblyPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+			using (var peReader = new PEReader(stream))
+			{
+				if (!peReader.HasMetadata)
+				{
+					Log.LogError($"Repository WPF theme file is not a managed assembly: {assemblyPath}");
+					continue;
+				}
+
+				MetadataReader metadataReader = peReader.GetMetadataReader();
+				bool resourceFound = false;
+				foreach (ManifestResourceHandle resourceHandle in metadataReader.ManifestResources)
+				{
+					ManifestResource resource = metadataReader.GetManifestResource(resourceHandle);
+					if (string.Equals(metadataReader.GetString(resource.Name), expectedResourceName, StringComparison.OrdinalIgnoreCase))
+					{
+						resourceFound = true;
+						break;
+					}
+				}
+
+				if (!resourceFound)
+				{
+					Log.LogError($"Repository WPF theme assembly '{assemblyPath}' is missing manifest resource '{expectedResourceName}'. Verify InternalMarkupCompilation and the repository Microsoft.WinFX.targets import.");
+				}
+			}
+		}
+	  ]]></Code>
+	</Task>
+  </UsingTask>
+
   <Target Name="ValidateRepoWpfConsumerConfiguration"
 		  BeforeTargets="PrepareForBuild"
 		  Condition="'$(RepoWpfConsumerEnabled)' == 'true'">
@@ -119,6 +184,11 @@
   <Target Name="ValidateRepoWpfConsumerOutput"
 		  AfterTargets="CopyRepoWpfRuntimeAssets"
 		  Condition="'$(RepoWpfConsumerEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'">
+	<ItemGroup>
+	  <_RepoWpfDeployedThemeAssembly Include="$(TargetDir)%(RepoWpfRuntimeAssembly.Identity).dll"
+								 Condition="'%(RepoWpfRuntimeAssembly.WpfThemeAssembly)' == 'true'" />
+	</ItemGroup>
+
 	<Error Condition="!Exists('$(TargetDir)WpfDemo.runtimeconfig.json')"
 		   Text="WpfDemo runtimeconfig was not generated: $(TargetDir)WpfDemo.runtimeconfig.json" />
 	<Error Condition="!Exists('$(TargetDir)WpfDemo.deps.json')"
@@ -152,5 +222,8 @@
 					  !Exists('$(TargetDir)PresentationNative_cor3.dll') Or
 					  !Exists('$(TargetDir)wpfgfx_cor3.dll')"
 		   Text="WpfDemo output is missing one or more required managed/native repository WPF files in $(TargetDir)." />
+
+	<ValidateRepoWpfThemeAssemblies AssemblyPaths="@(_RepoWpfDeployedThemeAssembly)"
+								DepsFile="$(TargetDir)WpfDemo.deps.json" />
   </Target>
 </Project>

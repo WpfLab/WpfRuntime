@@ -23,6 +23,9 @@
     <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj"
                       Targets="Restore;Build"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="@(RepoWpfThemeProject)"
+                      Targets="Restore;Build"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

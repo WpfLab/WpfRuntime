@@ -11,6 +11,8 @@
 - Debug|x64 消费链路已实现并通过干净构建、增量构建、自动 ref 新 API、XAML、deps/runtimeconfig、静态闭包和真实启动验证。
 - Builder 与 WpfDemo 已共用 `eng/WpfRuntimeDependencies.props` 中的 runtime 版本、包和资产清单。
 - `WpfRuntimeProbe` 已实现托管与 native app-local 来源断言，并支持 `--verify-repo-wpf` 自动退出模式。
+- 外部主题项目现在由 WpfDemo 显式构建，公共 `InternalMarkupCompilation` 链会导入仓库 `Microsoft.WinFX.targets`；输出校验会拒绝不含 `<Assembly>.g.resources` 的主题 DLL。
+- `PresentationCore` 会在模块初始化时加载 `dwrite.dll` 的 `DWriteCreateFactory` 函数指针，并在进程退出时释放；`DirectWriteForwarder` 使用 MicrosoftShared 公钥签名以满足 `WindowsBase` 的友元访问契约。
 - Visual Studio F5 尚待人工验收；x86/arm64 尚未实现。
 
 ## 目标构建模型
@@ -29,6 +31,7 @@ WpfDemo
 │  ├─ ReachFramework.csproj
 │  ├─ System.Printing-ref.csproj
 │  └─ cycle-breakers
+├─ 主题构建依赖：PresentationFramework.Aero/Aero2/AeroLite/Classic/Fluent/Luna/Royale
 ├─ 编译/XAML 引用：artifacts/obj/<project>/x64/Debug/net8.0/ref/*.dll
 ├─ 托管运行时：artifacts/bin/<project>/x64/Debug/net8.0/*.dll
 ├─ C++/CLI：DirectWriteForwarder.dll + ijwhost.dll
@@ -93,6 +96,13 @@ eng/WpfRuntimeDependencies.props
   - 诊断输出。
 
 `RepoWpfConsumer.props/targets` 负责消费管线，`WpfRuntimeDependencies.props` 由 Builder 与 WpfDemo 共用，避免版本和资产清单分叉。
+
+根 `Directory.Build.targets` 还恢复了原 WPF Arcade SDK 的两项公共职责：
+
+- 对 `InternalMarkupCompilation=true` 的项目导入仓库 `PresentationBuildTasks/Microsoft.WinFX.targets`。
+- 对 `NoInternalTypeHelper=true` 的项目从临时程序集编译项中移除 `GeneratedInternalTypeHelper.g.cs`。
+
+这两项必须保持为公共条件逻辑；若只在 WpfDemo 或单个主题项目中补丁，会让 Ribbon、其他主题或后续内部 XAML 项目再次生成无 BAML 的程序集。
 
 ## Directory.Build.props 继承方式
 
@@ -220,6 +230,8 @@ The assembly 'System.Xaml ...' has already been loaded into this MetadataLoadCon
 ```
 
 这里保留 `Targets="Restore;Build"` 是针对当前仓库已观察到的 Visual Studio 项目级构建问题：部分上游 ref 项目若只执行 Build，可能缺少 `project.assets.json`。命令行入口仍应使用顶层 `msbuild ... -restore`；待 IDE restore 顺序彻底收敛后，可评估将该引用缩减为 `Targets="Build"`，但不能在未复验 Visual Studio F5 前提前移除 Restore。
+
+七个 `PresentationFramework.*` 主题项目也作为 `ReferenceOutputAssembly=false` 的 `Restore;Build` 依赖加入 WpfDemo。`PresentationFramework` 只会在运行时根据系统主题拼接并加载外部程序集名，例如 Windows 8 及更高版本的 Aero 会映射为 `PresentationFramework.Aero2`，因此仅构建主框架无法保证主题产物存在或为当前源码生成。
 
 ### 运行时包
 
@@ -440,6 +452,14 @@ artifacts/bin/PresentationFramework/x64/Debug/net8.0/
 
 已用最小探针验证：`IncludeRuntimeDependency=true` 会把 app-local `WindowsBase.dll` 写入 `.deps.json`，应用可从输出目录加载它。
 
+主题程序集增加了更严格的构建后验证：
+
+- 七个主题 DLL 都必须存在于 WpfDemo 输出目录。
+- 每个主题 DLL 文件名都必须写入 `WpfDemo.deps.json`。
+- 通过 `System.Reflection.Metadata` 直接读取 PE manifest，确认存在 `<AssemblyName>.g.resources`。读取使用共享文件模式，不会像 `Assembly.LoadFile` 一样锁定输出。
+
+该校验用于捕获“项目声明了 `Page` 但未运行 `MarkupCompilePass1`”的情况；仅检查 DLL 存在不足以证明其中包含主题 BAML。
+
 ### 本地化资源
 
 当前 WPF 输出包含：
@@ -479,6 +499,10 @@ artifacts/bin/DirectWriteForwarder/x64/Debug/ijwhost.dll
 ```
 
 注意现有输出文件名可能显示为 `Ijwhost.dll`，Windows 文件系统不区分大小写；文档和清单应统一为官方名称 `ijwhost.dll`。
+
+`DirectWriteForwarder.dll` 还必须保留 MicrosoftShared 公钥身份。`WindowsBase` 的 `InternalsVisibleTo` 指向带 `31bf3856ad364e35` 公钥标记的 `DirectWriteForwarder`；若 C++/CLI 链接阶段丢失 `/keyfile` 与 `/delaysign`，字体路径调用 `MS.Internal.Invariant` 时会抛出 `MethodAccessException`。
+
+`PresentationCore/ModuleInitializer.cs` 必须在创建任何字体对象前调用 `DWriteLoader.LoadDWrite()`。缺少该调用时，`Factory.Initialize` 会调用空的 `DWriteCreateFactory` 函数指针，并以 `0xC0000005` 在 `coreclr.dll` 中终止，托管异常处理无法捕获。
 
 ### 复制时机
 

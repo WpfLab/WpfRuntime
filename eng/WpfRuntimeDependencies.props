@@ -51,6 +51,23 @@
   </ItemGroup>
 
   <ItemGroup>
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Aero\PresentationFramework.Aero.csproj"
+						 WpfAssemblyName="PresentationFramework.Aero" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Aero2\PresentationFramework.Aero2.csproj"
+						 WpfAssemblyName="PresentationFramework.Aero2" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.AeroLite\PresentationFramework.AeroLite.csproj"
+						 WpfAssemblyName="PresentationFramework.AeroLite" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Classic\PresentationFramework.Classic.csproj"
+						 WpfAssemblyName="PresentationFramework.Classic" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Fluent\PresentationFramework.Fluent.csproj"
+						 WpfAssemblyName="PresentationFramework.Fluent" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Luna\PresentationFramework.Luna.csproj"
+						 WpfAssemblyName="PresentationFramework.Luna" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Royale\PresentationFramework.Royale.csproj"
+						 WpfAssemblyName="PresentationFramework.Royale" />
+  </ItemGroup>
+
+  <ItemGroup>
 	<RepoWpfRuntimeAssembly Include="WindowsBase" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="System.Xaml" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="PresentationCore" WpfDemoRequired="true" />
@@ -65,13 +82,13 @@
 	<RepoWpfRuntimeAssembly Include="UIAutomationProvider" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="UIAutomationClient" />
 	<RepoWpfRuntimeAssembly Include="UIAutomationClientSideProviders" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.Aero" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.Aero2" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.AeroLite" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.Classic" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.Fluent" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.Luna" />
-	<RepoWpfRuntimeAssembly Include="PresentationFramework.Royale" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Aero" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Aero2" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.AeroLite" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Classic" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Fluent" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Luna" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Royale" WpfDemoRequired="true" WpfThemeAssembly="true" />
 	<RepoWpfRuntimeAssembly Include="DirectWriteForwarder" WpfDemoRequired="true" PackReference="false" />
   </ItemGroup>
 

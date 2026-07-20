@@ -1,6 +1,30 @@
 <Project>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
+  <Import Project="$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets"
+          Condition="'$(InternalMarkupCompilation)' == 'true' And '$(_PresentationBuildTasksAssembly)' == '' And Exists('$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets')" />
+
+  <Target Name="UpdateInternalMarkupGeneratedFiles"
+          AfterTargets="MarkupCompilePass1"
+          Condition="'$(InternalMarkupCompilation)' == 'true'">
+    <ItemGroup Condition="'$(NoInternalTypeHelper)' == 'true'">
+      <Compile Remove="@(Compile)"
+               Condition="'%(Compile.FileName)%(Compile.Extension)' == 'GeneratedInternalTypeHelper.g.cs'" />
+      <_GeneratedCodeFiles Remove="@(_GeneratedCodeFiles)"
+                           Condition="'%(_GeneratedCodeFiles.FileName)%(_GeneratedCodeFiles.Extension)' == 'GeneratedInternalTypeHelper.g.cs'" />
+    </ItemGroup>
+    <ItemGroup>
+      <_GeneratedCodeFiles Include="@(EmbeddedResource->'%(StronglyTypedFileName)')"
+                           Condition="'%(EmbeddedResource.StronglyTypedFileName)' != ''" />
+    </ItemGroup>
+  </Target>
+
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'DirectWriteForwarder' And '$(AssemblyOriginatorKeyFile)' != ''">
+    <Link>
+      <AdditionalOptions>%(AdditionalOptions) /keyfile:&quot;$(AssemblyOriginatorKeyFile)&quot; /delaysign</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+
   <!--
     Resolve WinForms references (Accessibility, System.Windows.Forms, etc.)
     via a target instead of a top-level ItemGroup so that the inline task in

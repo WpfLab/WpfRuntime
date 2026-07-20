@@ -20,6 +20,8 @@ Debug|x64 首期代码已实施，命令行和真实进程验证已通过：
 - C#/XAML 已使用实现项目自动 ref；临时新增 `PresentationCore` public API 并由 WpfDemo 调用的验证已通过。
 - XAML 已使用仓库 `PresentationBuildTasks.dll`，运行时已切换为 app-local 仓库 WPF 与 NuGet native DLL。
 - `WpfDemo.exe --verify-repo-wpf` 真实退出码为 0，核心托管/native 模块加载路径均位于 WpfDemo 输出目录。
+- 七个外部主题项目已纳入 WpfDemo 的项目级构建依赖；构建会验证每个主题 DLL 都包含 `<Assembly>.g.resources` 并登记在 `.deps.json`，避免缺失 BAML 的主题程序集造成启动黑屏。
+- `PresentationCore` 模块初始化已恢复 `DWriteLoader.LoadDWrite()` 与进程退出清理；`DirectWriteForwarder` 已恢复 MicrosoftShared 公钥签名，字体/DirectWrite 初始化和首屏文本布局已通过真实进程验证。
 - 解决方案 `Any CPU` 和 `x64` 已映射到 WpfDemo 项目 x64。
 - 尚未完成的验收项只有 Visual Studio F5，以及 x86/arm64 扩展。
 
@@ -147,7 +149,8 @@ WpfDemo 的 props/targets 应复用或抽取这套清单，避免 Demo 与 NuGet
    - `Targets="Restore;Build"`
    - `ReferenceOutputAssembly="false"`
 3. 确保该构建根能传递构建 `PresentationCore`、`WindowsBase`、`System.Xaml`、UIAutomation、ReachFramework、cycle-breaker 和 `DirectWriteForwarder`。
-4. 对关键输出增加构建前验证，缺少时给出明确错误路径。
+4. 显式构建 `PresentationFramework.Aero`、`Aero2`、`AeroLite`、`Classic`、`Fluent`、`Luna` 和 `Royale`；这些程序集由 `PresentationFramework` 在运行时按主题名加载，不在主框架的传递构建图中。
+5. 对关键输出增加构建前验证，缺少时给出明确错误路径。
 
 完成标准：改动 PresentationCore 后，仅构建 WpfDemo 会重建 PresentationCore 及其自动 ref 输出。
 
@@ -191,7 +194,8 @@ WpfDemo 的 props/targets 应复用或抽取这套清单，避免 Demo 与 NuGet
    - `PresentationBuildTasks`
    - `mcwpf`
 4. 复制各程序集本地化资源子目录。
-5. 验证 `.deps.json` 包含 `WindowsBase.dll`、`PresentationCore.dll`、`PresentationFramework.dll` 和 `DirectWriteForwarder.dll`。
+5. 验证 `.deps.json` 包含 `WindowsBase.dll`、`PresentationCore.dll`、`PresentationFramework.dll`、`DirectWriteForwarder.dll` 和全部外部主题 DLL。
+6. 使用 PE 元数据检查每个主题 DLL 都包含与程序集同名的 `.g.resources` manifest resource。
 
 完成标准：WpfDemo 输出包含一致架构的完整仓库 WPF 托管闭包，runtimeconfig 不再声明 WindowsDesktop 共享框架。
 
