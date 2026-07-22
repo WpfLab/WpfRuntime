@@ -1,341 +1,191 @@
-# Builder 项目完善计划：构建驱动 + NuGet 打包
+# Builder 构建、打包与包验证
 
-## 技术背景
+## 文档定位
 
-### 当前状态
+本文说明 `eng/Builder` 当前已经落地的命令、服务边界、逐项目构建、NuGet 组包和隔离消费验证。仓库整体项目清单与根解决方案构建状态仍以 [00-overview.md](00-overview.md) 为准，本文不重复或外推根 `Microsoft.Dotnet.Wpf.slnx` 的整体状态。
 
-- ✅ `eng\Builder\Builder.csproj` 已实现（net8.0 控制台，LangVersion 12，独立 OutputPath）
-- ✅ `eng\Builder\Program.cs` 已实现完整编排逻辑（~280 行）
-- ✅ Builder 不构建 sln，而是按依赖顺序逐项目调用 msbuild 构建具体 csproj（避免 Builder 自锁）
-- Builder 分别构建 x64 与 x86 运行时程序集；C# 项目的 x86 平台映射到 C++/CLI 项目的 Win32 平台
-- 产物输出到 `artifacts\bin\<ProjectName>\x64\Debug\net8.0\`、`artifacts\bin\<ProjectName>\x86\Debug\net8.0\`，C++/CLI x86 产物位于 `Win32\Debug\`
-- Native 模块（PenImc、WpfGfx）不再走源码迁移，改为 NuGet 二进制接入
-- 托管项目均 target `net8.0`，native 项目（`DirectWriteForwarder`、`System.Printing`）为 C++/CLI
-- `Directory.Build.props` 定义了统一的 `WpfSourceDir`、`WpfSharedDir` 等宏
+Builder 是 `net8.0` 控制台项目，自身输出固定在 `eng/Builder/bin/`，避免清理 `artifacts/` 时删除正在运行的工具。它只实现 Windows 上的 x64 和 x86 构建、打包与验证路径；arm64 尚未实现。
 
-### 工具限制（重要，后续对话需注意）
+## 命令入口
 
-- `origin\NuGetPackage\` 被 `origin\.gitignore` 忽略，**只能用命令行（dir / Get-ChildItem / type）查询**，不能用工具调用访问
-- `Documentation\packaging.md`、`eng\copy-wpf.ps1` 等文件同样受 gitignore 影响，`get_file` 无法直接读取，但 `code_search` 可匹配到片段
-- 后续对话中如需查看 `origin\NuGetPackage\` 内容，必须通过 `run_command_in_terminal` 执行命令行
-
-### 设计决策
-
-| 项 | 值 | 说明 |
-|---|---|---|
-| 包 ID | `DotNetCampus.WpfLib` | 与旧 `DotnetCampus.CustomWpf` 区分 |
-| 版本 | `1.0.x` | 若多 TFM 不可行则改为 `8.0.x.xx` |
-| 作者 | `dotnet campus` | |
-| TFM | `net8.0` | 优先，后续评估多 TFM 兼容 |
-| 产物路径 | 沿用 `artifacts\bin\` | 构建完成后从此拷贝，不改变原有结构 |
-| 架构 | 单包含 win-x64 + win-x86 | 通过 NuGet RID 自动选择实现程序集与 native DLL |
-| ref 文件夹 | `ref/net8.0` | 为两个架构提供统一编译引用 |
-
----
-
-## NuGet 包目标结构
-
-```
-DotNetCampus.WpfLib.1.0.0.nupkg
-├── ref/
-│   └── net8.0/
-│       ├── WindowsBase.dll
-│       ├── System.Xaml.dll
-│       ├── PresentationCore.dll
-│       ├── PresentationFramework.dll
-│       ├── PresentationUI.dll
-│       ├── ReachFramework.dll
-│       ├── System.Windows.Presentation.dll
-│       ├── System.Windows.Controls.Ribbon.dll
-│       ├── System.Windows.Input.Manipulations.dll
-│       ├── WindowsFormsIntegration.dll
-│       ├── UIAutomationTypes.dll
-│       ├── UIAutomationProvider.dll
-│       ├── UIAutomationClient.dll
-│       ├── UIAutomationClientSideProviders.dll
-│       ├── PresentationFramework.Aero.dll
-│       ├── PresentationFramework.Aero2.dll
-│       ├── PresentationFramework.AeroLite.dll
-│       ├── PresentationFramework.Classic.dll
-│       ├── PresentationFramework.Fluent.dll
-│       ├── PresentationFramework.Luna.dll
-│       └── PresentationFramework.Royale.dll
-├── runtimes/
-│   ├── win-x64/
-│   │   ├── lib/net8.0/       ← x64 WPF 实现程序集，含 DirectWriteForwarder.dll
-│   │   └── native/           ← x64 PenImc、WpfGfx 等 native DLL
-│   └── win-x86/
-│       ├── lib/net8.0/       ← x86 WPF 实现程序集，含 DirectWriteForwarder.dll
-│       └── native/           ← x86 PenImc、WpfGfx 等 native DLL
-├── DotNetCampus.WpfLib.nuspec
-└── [Content_Types].xml
-```
-
----
-
-## 步骤
-
-### 步骤 1：用命令行探索 `origin\NuGetPackage\` 目录结构
-
-使用 `dir` / `Get-ChildItem -Recurse` 了解原始 NuGet 包的组织方式：
-- 有哪些 `.nuspec` 模板
-- `Directory.Build.props` / `Directory.Build.targets` 的内容
-- 文件夹布局（`lib/`、`runtimes/`、`ref/` 等）
-- 打包脚本或 MSBuild 目标
-
-作为 Builder 设计依据。
-
-### 步骤 2：用命令行探索 NuGet 缓存中的 DLL 清单
-
-枚举以下路径的完整 DLL 列表：
-- `C:\Users\{user}\.nuget\packages\microsoft.windowsdesktop.app.runtime.win-x64\{version}\runtimes\win-x64\lib\net8.0\`
-- `C:\Users\{user}\.nuget\packages\microsoft.windowsdesktop.app.runtime.win-x64\{version}\runtimes\win-x64\native\`
-- `C:\Users\{user}\.nuget\packages\microsoft.windowsdesktop.app.runtime.win-x86\{version}\runtimes\win-x86\native\`
-
-确定：
-- 需要打包的托管 DLL 完整清单
-- 需要打包的 native DLL 完整清单（PenImc、WpfGfx 等）
-- 各平台 native DLL 的差异
-
-### 步骤 3：改造 `Builder.csproj`
-
-- 添加 `Microsoft.WindowsDesktop.App.Runtime.win-x64` 和 `win-x86` 的 `PackageReference`，带 `GeneratePathProperty="true"`
-- 添加 `System.Text.Json` 源生成支持（AOT 兼容）
-- 配置输出目录不落在 `artifacts\` 内（避免清空时自毁）
-- 设置 `OutputPath` 为 `eng\Builder\bin\` 或类似独立路径
-
-### 步骤 4：实现清理逻辑
-
-每次构建前：
-- 删除 `artifacts\bin\` 和 `artifacts\obj\`（或整个 `artifacts\`）
-- 确保工作干净，避免旧产物污染
-- 注意：Builder 自身输出不能落在 `artifacts\` 内
-
-### 步骤 5：实现构建驱动逻辑
-
-调用 `msbuild` 构建解决方案：
-- 命令：`msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
-- 捕获构建输出和退出码
-- 构建失败时输出错误信息并中止
-
-### 步骤 6：实现托管 DLL 收集逻辑
-
-从 `artifacts\bin\` 收集产物到 staging 目录：
-- 遍历 `artifacts\bin\*\Debug\net8.0\*.dll`
-- 按项目名映射到托管 DLL 清单
-- 拷贝到 staging `lib\net8.0\` 目录
-- 排除 ref 项目、测试项目、工具项目（如 `PresentationBuildTasks`、`mcwpf`）
-- 输出收集到的文件列表
-
-### 步骤 7：实现 Native DLL 收集逻辑
-
-从 NuGet 包路径拷贝 native DLL：
-- 源路径：`$(PkgMicrosoft_WindowsDesktop_App_Runtime_win_x64)\runtimes\win-x64\native\`
-- 源路径：`$(PkgMicrosoft_WindowsDesktop_App_Runtime_win_x86)\runtimes\win-x86\native\`
-- 目标：staging `runtimes\win-x64\native\` 和 `runtimes\win-x86\native\`
-- 通过 MSBuild 属性 `PkgMicrosoft_WindowsDesktop_App_Runtime_win_x64` 获取路径
-- 或直接在 C# 代码中通过 `Environment.GetFolderPath` 拼接 NuGet 缓存路径
-
-### 步骤 8：实现 `.nuspec` 生成与打包
-
-动态生成 `.nuspec` 文件：
-- 包 ID：`DotNetCampus.WpfLib`
-- 版本：从配置或命令行参数读取
-- 作者：`dotnet campus`
-- 描述：WPF 自定义构建的托管程序集与 native 运行时
-- 文件列表：根据 staging 目录动态生成
-
-使用 `dotnet pack` 或 `nuget.exe pack` 生成最终 `.nupkg`。
-
-### 步骤 9：添加控制台输出与调试支持
-
-每个步骤输出清晰的状态信息：
-- 构建进度（msbuild 输出摘要）
-- 收集的文件列表（托管 DLL + native DLL）
-- 打包结果（`.nupkg` 路径和大小）
-- 耗时统计
-
-确保 `dotnet run --project eng\Builder\Builder.csproj` 可直接用于调试。
-
-### 步骤 10：验证 CI 流水线兼容性
-
-- 确保 Builder 可在无交互环境下运行
-- 所有路径使用相对路径或 MSBuild 属性解析
-- 不依赖 Visual Studio 安装
-- 退出码正确反映构建结果（成功 0，失败非 0）
-
----
-
-## 托管 DLL 完整清单（待步骤 2 验证）
-
-### 核心托管程序集
-
-| 程序集 | 项目路径 |
-|--------|----------|
-| `WindowsBase.dll` | `src\Microsoft.DotNet.Wpf\src\WindowsBase\` |
-| `System.Xaml.dll` | `src\Microsoft.DotNet.Wpf\src\System.Xaml\` |
-| `PresentationCore.dll` | `src\Microsoft.DotNet.Wpf\src\PresentationCore\` |
-| `PresentationFramework.dll` | `src\Microsoft.DotNet.Wpf\src\PresentationFramework\` |
-| `PresentationUI.dll` | `src\Microsoft.DotNet.Wpf\src\PresentationUI\` |
-| `ReachFramework.dll` | `src\Microsoft.DotNet.Wpf\src\ReachFramework\` |
-| `System.Windows.Presentation.dll` | `src\Microsoft.DotNet.Wpf\src\System.Windows.Presentation\` |
-| `System.Windows.Controls.Ribbon.dll` | `src\Microsoft.DotNet.Wpf\src\System.Windows.Controls.Ribbon\` |
-| `System.Windows.Input.Manipulations.dll` | `src\Microsoft.DotNet.Wpf\src\System.Windows.Input.Manipulations\` |
-| `WindowsFormsIntegration.dll` | `src\Microsoft.DotNet.Wpf\src\WindowsFormsIntegration\` |
-
-### UIAutomation 系列
-
-| 程序集 | 项目路径 |
-|--------|----------|
-| `UIAutomationTypes.dll` | `src\Microsoft.DotNet.Wpf\src\UIAutomation\UIAutomationTypes\` |
-| `UIAutomationProvider.dll` | `src\Microsoft.DotNet.Wpf\src\UIAutomation\UIAutomationProvider\` |
-| `UIAutomationClient.dll` | `src\Microsoft.DotNet.Wpf\src\UIAutomation\UIAutomationClient\` |
-| `UIAutomationClientSideProviders.dll` | `src\Microsoft.DotNet.Wpf\src\UIAutomation\UIAutomationClientSideProviders\` |
-
-### 主题程序集
-
-| 程序集 | 项目路径 |
-|--------|----------|
-| `PresentationFramework.Aero.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.Aero\` |
-| `PresentationFramework.Aero2.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.Aero2\` |
-| `PresentationFramework.AeroLite.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.AeroLite\` |
-| `PresentationFramework.Classic.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.Classic\` |
-| `PresentationFramework.Fluent.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.Fluent\` |
-| `PresentationFramework.Luna.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.Luna\` |
-| `PresentationFramework.Royale.dll` | `src\Microsoft.DotNet.Wpf\src\Themes\PresentationFramework.Royale\` |
-
-### 混合程序集
-
-| 程序集 | 项目路径 | 说明 |
-|--------|----------|------|
-| `DirectWriteForwarder.dll` | `src\Microsoft.DotNet.Wpf\src\DirectWriteForwarder\` | C++/CLI 混合 |
-
-### 排除项
-
-以下项目不打包到 NuGet 中：
-
-| 项目 | 原因 |
-|------|------|
-| `PresentationBuildTasks` | MSBuild 任务程序集，非运行时 |
-| `mcwpf` | 追踪工具，非运行时 |
-| `OSVersionHelper` | Native helper，非运行时 |
-| `System.Printing` | C++/CLI 实现，当前未独立构建成功 |
-| 所有 `*-ref` 项目 | 参考程序集，不打包 |
-| `cycle-breakers` | 桥接项目，不打包 |
-
----
-
-## Native DLL 清单（已通过步骤 2 验证）
-
-从 `Microsoft.WindowsDesktop.App.Runtime.win-x64@8.0.6` 与 `Microsoft.NETCore.App.Host.win-x64@8.0.6` 包中确认的 native DLL：
-
-| DLL | win-x64 | win-x86 | win-arm64 |
-|-----|---------|---------|-----------|
-| `D3DCompiler_47_cor3.dll` | ✅ | ✅ | ❌ |
-| `PenImc_cor3.dll` | ✅ | ✅ | ✅ |
-| `PresentationNative_cor3.dll` | ✅ | ✅ | ✅ |
-| `vcruntime140_cor3.dll` | ✅ | ✅ | ✅ |
-| `wpfgfx_cor3.dll` | ✅ | ✅ | ✅ |
-| `ijwhost.dll` | ✅ | ✅ | ✅ |
-
-> 注意：win-arm64 缺少 `D3DCompiler_47_cor3.dll`。
-
-## 步骤 1 & 2 探索结论
-
-### `origin\NuGetPackage\` 结构
-
-```
-origin\NuGetPackage\
-├── lib\net6.0\          ← 托管 DLL（含 facade）+ 本地化资源子目录
-├── ref\net6.0\          ← 参考程序集（不处理）
-├── runtimes\win-x86\native\  ← 仅 win-x86 native DLL
-├── LICENSE.TXT
-├── THIRD-PARTY-NOTICES.TXT
-├── runtime.json
-└── version.txt
-```
-
-关键发现：
-- **无 `.nuspec`、`.targets`、`.props` 文件** — 原始包是直接按目录结构组织的
-- 包含 facade 程序集：`PresentationFramework-SystemCore.dll`、`-SystemData.dll`、`-SystemDrawing.dll`、`-SystemXml.dll`、`-SystemXmlLinq.dll`
-- 包含 `System.Printing.dll`（当前仓库未构建成功，暂不打包）
-- 包含本地化资源子目录（`cs/`、`de/`、`ja/`、`zh-Hans/` 等）
-- `runtime.json` 引用包 ID `Microsoft.DotNet.Wpf.GitHub`，版本 `6.0.26-ci`
-
-### NuGet 缓存中的托管 DLL 清单（`lib\net8.0\`）
-
-官方 `Microsoft.WindowsDesktop.App.Runtime.win-x64@8.0.6` 的 `lib\net8.0\` 包含大量非 WPF 专属的 WindowsDesktop 程序集（如 `System.Windows.Forms.dll`、`System.Drawing.dll` 等），这些不应打包到 `DotNetCampus.WpfLib` 中。我们只打包当前仓库构建的 WPF 程序集。
-
----
-
-## 风险与待确认
-
-1. **`origin\NuGetPackage\` 无法通过工具访问**：已记录，步骤 1 用命令行探索
-2. **`System.Printing` 未独立构建成功**：当前不打包，后续构建恢复后加入
-3. **`DirectWriteForwarder` 是 C++/CLI 项目**：需确认其输出 DLL 是否应放入 `lib/net8.0/` 还是 `runtimes/`
-4. **多 TFM 兼容性**：当前仅 `net8.0`，后续评估是否需要 `net6.0`、`net5.0` 等
-5. **强签名**：当前仓库使用 WCP 公钥，需确认 NuGet 包中的 DLL 签名是否与官方一致
-6. **`PresentationBuildTasks.dll` 锁文件问题**：IDE 构建时可能锁定，命令行构建不受影响
-7. **打包步骤阻塞**（详见下文）
-
----
-
-## 当前实现进度
-
-| 步骤 | 状态 | 说明 |
-|------|------|------|
-| 步骤 1：探索 origin\NuGetPackage\ | ✅ 完成 | 通过命令行完成探索，结构已记录 |
-| 步骤 2：探索 NuGet 缓存 DLL 清单 | ✅ 完成 | win-x64/win-x86 native DLL 清单已确定 |
-| 步骤 3：改造 Builder.csproj | ✅ 完成 | net8.0、LangVersion 12、独立 OutputPath |
-| 步骤 4：清理逻辑 | ✅ 完成 | 逐目录清理，跳过锁定文件 |
-| 步骤 5：构建驱动逻辑 | ✅ 完成 | 按依赖顺序分别构建 x64 与 x86；VC++ x86 使用 Win32 平台 |
-| 步骤 6：托管 DLL 收集 | ✅ 完成 | 参考程序集进入 ref/net8.0，x64/x86 实现程序集进入对应 RID 目录 |
-| 步骤 7：Native DLL 收集 | ✅ 完成 | 从 NuGet 缓存拷贝 win-x64 + win-x86 native DLL |
-| 步骤 8：.nuspec 生成与打包 | ✅ 完成 | 临时 pack 项目位于系统临时目录，并在打包前校验两个 RID 的关键资产 |
-| 步骤 9：控制台输出与调试 | ✅ 完成 | 每个步骤有清晰的状态输出 |
-| 步骤 10：CI 流水线兼容性 | ✅ 完成 | GitHub Actions 在 Windows runner 上执行完整构建、打包和比较 |
-
-## 架构打包决策
-
-采用单个 `DotNetCampus.WpfLib` 包同时承载 win-x64 与 win-x86，而不是拆成两个包：
-
-1. NuGet 原生支持 `runtimes/<rid>/lib/<tfm>` 与 `runtimes/<rid>/native`，会依据项目 RID 选择正确资产。
-2. 使用方只需引用一个稳定的包 ID，不需要根据目标架构切换依赖。
-3. x64 与 x86 的 API 面由同一组 `ref/net8.0` 参考程序集定义，可避免两个包出现版本或 API 漂移。
-4. 只有在单个包体积显著影响分发，或两个架构需要独立版本生命周期时，才值得拆分架构包；当前不具备这些条件。
-
-实现程序集不能放入公共 `lib/net8.0`。经 `CorFlags` 验证，x64 构建的 WPF 托管程序集为 PE32+，x86 构建为 PE32 且设置 32BITREQ，因此全部实现程序集必须按 RID 分开放置。
-
-## NuGet 产物端到端验证
-
-Builder 提供以下命令验证最终生成的包：
+先还原并构建 Builder，使 `PackageDownload` 资产完成还原，并由 MSBuild 生成 `eng/Builder/bin/PackagePaths.txt`：
 
 ```powershell
-dotnet run --project eng\Builder\Builder.csproj --no-build -- test-package
+dotnet restore eng/Builder/Builder.csproj
+dotnet build eng/Builder/Builder.csproj --no-restore
 ```
 
-默认选择 `eng\Builder\bin\nupkg\` 中最新的 `DotNetCampus.WpfLib.*.nupkg`。也可显式指定包：
+可用命令如下：
 
-```powershell
-dotnet run --project eng\Builder\Builder.csproj --no-build -- test-package --package <nupkg-path>
+| 命令 | 作用 |
+|---|---|
+| `dotnet run --project eng/Builder/Builder.csproj --no-build -- --version 1.0.0` | 执行默认构建命令：清理 `artifacts/bin`、`artifacts/obj` 与 staging，逐项目构建 x64/x86、收集资产、打包并生成比较报告 |
+| `dotnet run --project eng/Builder/Builder.csproj --no-build -- clean` | 清理已知构建输出；详细边界见 [05-builder-clean.md](05-builder-clean.md) |
+| `dotnet run --project eng/Builder/Builder.csproj --no-build -- compare` | 将 staging 中已收集的参考程序集与官方 `Microsoft.WindowsDesktop.App.Ref` 做缺失项和大小差异比较；应先完成默认 Builder 构建 |
+| `dotnet run --project eng/Builder/Builder.csproj --no-build -- test-package` | 选择 `eng/Builder/bin/nupkg/` 中最新的包并执行隔离消费矩阵 |
+| `dotnet run --project eng/Builder/Builder.csproj --no-build -- test-package --package <nupkg-path>` | 验证显式指定的包 |
+
+命令从 Builder 输出目录向上查找 `.git` 来定位仓库根。若直接使用 `--no-build`，调用方必须保证 Builder 已构建且 `PackagePaths.txt` 与当前还原结果一致。
+
+## 服务拆分
+
+| 组件 | 当前职责 |
+|---|---|
+| `Program.cs` | 注册默认构建、`clean`、`compare` 和 `test-package` 命令 |
+| `BuildService` | 编排清理、逐项目构建、资产收集、包校验、打包和报告比较 |
+| `MsBuildService` | 通过 `vswhere`、`PATH` 和 Visual Studio 常见安装目录查找 `MSBuild.exe`，并管理逐项目诊断日志 |
+| `CleanService` | 清理已知输出，并对锁定文件或目录进行跳过和统计 |
+| `AssemblyCollector` | 从每个项目自己的输出目录收集参考程序集和实现程序集；实现收集优先使用目标平台目录，最后允许通用 Debug 输出回退 |
+| `WpfRuntimeDefinition` | 读取 `eng/WpfRuntimeDependencies.props` 与 `eng/Versions.props` 中的托管程序集和运行时 NuGet 依赖定义 |
+| `NuGetPackageService` | 解析还原包路径、收集 native 资产、生成 `buildTransitive` targets 与 nuspec、校验包资产并执行打包 |
+| `CompareService` | 与官方参考程序集做清单和尺寸级报告比较；不进行 API 二进制兼容性证明 |
+| `PackageTestService` | 动态创建隔离消费项目，发布、校验包资产哈希并运行 WPF 探针 |
+| `ProcessRunner` | 运行外部进程、合并标准输出和错误输出，并对探针执行超时终止 |
+
+## Visual Studio MSBuild 依赖
+
+Builder 当前明确依赖 Visual Studio MSBuild。构建清单包含 C++/CLI 项目 `DirectWriteForwarder.vcxproj`，因此需要带 MSBuild 和相应 C++ 工具链的 Visual Studio 或 Visual Studio Build Tools 环境。
+
+`MsBuildService` 优先调用 Visual Studio Installer 提供的 `vswhere.exe` 查找 MSBuild，随后才检查 `PATH` 和常见安装目录。CI 也通过 `microsoft/setup-msbuild` 配置 Visual Studio MSBuild。仅安装 .NET SDK 不能保证 C++/CLI 路径可用。
+
+## 逐项目 x64/x86 构建
+
+默认构建命令不调用根 `Microsoft.Dotnet.Wpf.slnx`，而是在 `BuildService` 中按硬编码依赖顺序逐个调用 MSBuild：
+
+1. 先分别为 x64 和 x86 构建 `PresentationBuildTasks.csproj`，目标框架为 `net472`。
+2. 再分别遍历 x64 和 x86，构建核心 WPF、UIAutomation、`DirectWriteForwarder`、扩展程序集和七个主题项目。
+3. 所有项目使用 `Debug`、`-restore`、`/m:1`、`/nr:false`；除 `PresentationBuildTasks` 自身外，后续项目要求使用预构建的任务程序集。
+4. C# 项目使用 `x64` 或 `x86` 平台；C++ 项目在 x86 路径中映射为 `Win32`，因此当前 `DirectWriteForwarder` 的两条 native 平台路径是 `x64` 和 `Win32`。
+5. 每个项目的诊断日志写入 `artifacts/log/Builder/<Project>-<Platform>.log`。
+
+项目构建失败后，Builder 会记录失败项并继续尝试其余项目，以便保留可诊断的部分结果。若后续仍能完成打包，最终退出码为 `2`；任一 RID 的实现程序集收集结果为空、参考程序集收集结果为空，或硬编码的关键包资产缺失时会直接失败。该行为不能把部分打包解释为全部项目构建成功，也不能证明所有非关键资产均已收齐。
+
+当前项目构建顺序仍由 `BuildService` 的数组维护，尚未迁入共享项目图或 `eng/WpfRuntimeDependencies.props`。新增、删除或重命名打包项目时，必须同时检查该硬编码清单。
+
+## ref、RID 实现与 native 资产收集
+
+### 参考程序集
+
+`AssemblyCollector` 根据 `eng/WpfRuntimeDependencies.props` 的 `RepoWpfRuntimeAssembly` 清单筛选 `artifacts/bin/*-ref/`，优先查找 x64、AnyCPU 和通用 Debug 输出中的项目主 DLL，写入：
+
+```text
+eng/Builder/bin/staging/ref/net8.0/
 ```
 
-验证逻辑在仓库配置作用域之外生成隔离的临时消费项目，覆盖：
+标记为 `PackReference="false"` 的程序集不会进入 `ref/net8.0`。
 
-- 单目标框架项目：`net8.0-windows`、`net9.0-windows`
-- 多目标框架项目：`net8.0-windows;net9.0-windows`
-- 每个目标框架分别发布 `win-x86` 与 `win-x64`
-- 将发布目录中的包内托管 DLL 和 native DLL 与对应 RID 的 nupkg 资产逐文件进行 SHA-256 比对
-- 实际运行每个发布后的 WPF 探针程序，启动 `Application` 和 Dispatcher 后正常退出
-- 单个探针执行超过 30 秒、退出码非零、DLL 缺失或哈希不匹配均视为失败
+### RID 实现程序集
 
-测试输出保存在 `eng\Builder\bin\package-tests\`。GitHub Actions 在打包后自动执行该命令，并在失败时上传此目录作为诊断产物。
+实现程序集同样按共享的 `RepoWpfRuntimeAssembly` 名称筛选，并只取与项目目录同名的主 DLL，避免项目目录中的传递副本覆盖正确产物。搜索顺序优先使用目标平台目录，随后允许通用 Debug 输出回退：
 
-### 2026-07-14 本地验证记录
+```text
+artifacts/bin/<Project>/x64/Debug/net8.0/<Project>.dll
+artifacts/bin/<Project>/x64/Debug/<Project>.dll
+artifacts/bin/<Project>/x86/Debug/net8.0/<Project>.dll
+artifacts/bin/<Project>/x86/Debug/<Project>.dll
+artifacts/bin/<Project>/Win32/Debug/<Project>.dll
+artifacts/bin/<Project>/Debug/net8.0/<Project>.dll
+artifacts/bin/<Project>/Debug/<Project>.dll
+```
 
-- 修复 WPF 实现程序集仍使用 `6.0.2.0`、参考程序集使用 `8.0.0.0` 的身份不一致问题。
-- 修复 DLL 收集器遍历项目输出目录时，被复制依赖覆盖正确主输出的问题；现在每个项目只收集自身程序集。
-- 为 C++/CLI `DirectWriteForwarder.dll` 增加对应 RID 的 `ijwhost.dll`，解决运行时模块加载失败。
-- 隔离消费项目使用独立 `global.json`，避免继承仓库固定的 .NET 8 SDK。
-- `net8.0-windows` 的 win-x86 与 win-x64 已完成发布资产 SHA-256 比对和实际启动测试。
-- `net9.0-windows` 已暴露并修复 SDK inbox WPF 引用与包内 WPF 引用的版本冲突；最终矩阵需由 CI 或未被取消的本地长任务再次确认。
+收集结果分别进入：
+
+```text
+eng/Builder/bin/staging/runtimes/win-x64/lib/net8.0/
+eng/Builder/bin/staging/runtimes/win-x86/lib/net8.0/
+```
+
+x86 收集会依次接受 `x86` 和 `Win32` 输出，以覆盖托管项目与 C++/CLI 项目的平台命名差异。由于 x64 与 x86 最后都允许通用输出回退，资产被放入不同 RID 目录并不单独证明其二进制按架构隔离；需要结合产物架构或运行验证判断。
+
+### Native 资产
+
+当前 WindowsDesktop native 版本由 `eng/WpfRuntimeDependencies.props` 固定为 `8.0.6`。`Builder.csproj` 使用以下 `PackageDownload`，而不是 `PackageReference GeneratePathProperty`：
+
+- `Microsoft.WindowsDesktop.App.Runtime.win-x64`
+- `Microsoft.WindowsDesktop.App.Runtime.win-x86`
+- `Microsoft.WindowsDesktop.App.Ref`
+- `Microsoft.NETCore.App.Host.win-x64`
+- `Microsoft.NETCore.App.Host.win-x86`
+
+Builder 构建时使用 `$(NuGetPackageRoot)` 和共享版本写出 `PackagePaths.txt`。打包阶段从两个 WindowsDesktop runtime 包的 `runtimes/<rid>/native/` 复制 DLL，并从对应 host 包补充 `ijwhost.dll`。
+
+共享 props 已定义 `RepoWpfNativeRuntimeFile`，但 Builder 当前仍会复制 runtime 包 native 目录中的全部 DLL，并在 `ValidatePackageAssets` 中硬编码检查 `ijwhost.dll`、`PenImc_cor3.dll`、`PresentationNative_cor3.dll` 和 `wpfgfx_cor3.dll`。因此 Builder 的 native 必需文件规则与共享清单尚未完全统一。
+
+## NuGet 包结构与消费逻辑
+
+包 ID 为 `DotNetCampus.WpfLib`。当前包布局为：
+
+```text
+DotNetCampus.WpfLib.<version>.nupkg
+├─ ref/net8.0/*.dll
+├─ runtimes/win-x64/lib/net8.0/*.dll
+├─ runtimes/win-x64/native/*.dll
+├─ runtimes/win-x86/lib/net8.0/*.dll
+├─ runtimes/win-x86/native/*.dll
+└─ buildTransitive/DotNetCampus.WpfLib.targets
+```
+
+nuspec 为 `net8.0` 和 `net9.0` 写入运行时包依赖组，依赖版本来自 `eng/WpfRuntimeDependencies.props` 和 `eng/Versions.props`。实现程序集仍是 `net8.0` 资产并写入 RID 目录；公共 `lib/net8.0` 不承载这些实现。通用输出回退可能让同一托管 DLL 同时进入两个 RID，不能仅凭目录布局断言二进制架构不同。
+
+`buildTransitive/DotNetCampus.WpfLib.targets` 承担以下消费行为：
+
+- 移除 `Microsoft.WindowsDesktop.App.WPF` FrameworkReference。
+- 在解析引用后按文件名移除选定的 WPF 同名引用，并注入包内 `ref/net8.0`；当前实现不区分这些引用来自 inbox、显式引用还是其他包。
+- 当 `RuntimeIdentifier` 为 `win-x64` 或 `win-x86` 时，选择对应的托管实现和 native DLL。
+- 在普通 Build 与 Publish 后把 RID 资产复制到应用输出目录。
+
+打包前会校验两个 RID 的核心 ref、实现、native 和 `buildTransitive` 文件。实际 `dotnet pack` 使用系统临时目录中的最小 SDK 项目，避免临时 pack 项目继承仓库根构建导入；生成的包写入 `eng/Builder/bin/nupkg/`。
+
+构建末尾还会以报告模式比较官方 `Microsoft.WindowsDesktop.App.Ref`。该比较只检查清单缺失与显著尺寸差异，且报告模式不会让完整构建命令失败，不能替代 API、加载或运行验证。独立运行 `compare` 时应先确保 `staging/ref/net8.0` 已由完整 Builder 构建生成；当前无 staging 的回退只选择收集结果中一个目录，可能产生不完整报告。
+
+## PackageTestApp 隔离消费模板
+
+`eng/Builder/PackageTestApp/PackageTestApp.csproj` 是动态隔离消费模板，不是仓库 WPF 主链实现项目，因此未直接纳入根 `Microsoft.Dotnet.Wpf.slnx`。`Builder.csproj` 只把模板文件作为内容纳入自身项目；`PackageTestService` 在每次验证时将模板复制到新的 `eng/Builder/bin/package-tests/<timestamp>-<id>/` 目录，再动态修改目标框架、程序集名和待测包版本。
+
+隔离目录还会生成独立的：
+
+- `global.json`：选择 .NET 9 SDK，并允许向更高主版本滚动。
+- `NuGet.Config`：只显式配置待测包目录和 nuget.org。
+- `restore-packages/`：与仓库常规还原目录隔离。
+- `extracted-package/`：用于将发布文件与 nupkg 内资产逐文件比较。
+
+模板会创建窗口、加载 XAML 控件和资源、触发路由事件，并确认 `WindowsBase`、`PresentationCore`、`PresentationFramework` 从发布目录加载。探针还要求这些包内 WPF 实现程序集保持 `.NETCoreApp,Version=v8.0`，即使消费应用目标为 .NET 9。
+
+## 包验证矩阵
+
+`test-package` 动态创建三个消费项目：
+
+| 项目 | 目标框架 |
+|---|---|
+| `SingleNet8` | `net8.0-windows` |
+| `SingleNet9` | `net9.0-windows` |
+| `MultiTarget` | `net8.0-windows;net9.0-windows` |
+
+验证服务先检查 nuspec 中 net8.0/net9.0 依赖组和共享运行时包版本。随后，每个目标框架都分别执行 `win-x86` 和 `win-x64` 的 self-contained Publish，共形成八个发布与运行组合；每个组合执行：
+
+1. 校验发布目录包含每个运行时 NuGet 依赖的主 DLL。
+2. 将包内对应 RID 的实现和 native DLL 与发布目录逐文件做 SHA-256 比较。
+3. 启动发布后的 WPF 应用，验证 XAML、资源、控件、事件和程序集加载来源。
+4. 对单个探针设置 30 秒超时；超时会终止整个进程树，非零退出码视为失败。
+
+该矩阵验证的是生成包的隔离消费契约，不等同于根解决方案全部项目、Visual Studio F5、非自包含发布或 arm64 验证。
+
+## CI 路径
+
+`.github/workflows/build.yml` 包含两个相互独立的 Windows job：
+
+- `build-solution`：安装 .NET 8/9 和 Visual Studio MSBuild，然后对根 `Microsoft.Dotnet.Wpf.slnx` 执行 `Debug|x64` Restore + Build。
+- `build`：还原并构建 Builder，运行默认 x64/x86 构建与打包命令，再运行 `test-package`。
+
+`build` job 中任一此前步骤失败时，带 `failure()` 条件的诊断步骤会尝试上传 `eng/Builder/bin/package-tests`；构建与包测试均成功时，后续步骤上传 `eng/Builder/bin/nupkg/*.nupkg`。workflow 中配置了这些步骤，不代表任意本地工作区或最新远端运行已经通过，实际结论必须以对应运行日志和产物为准。
+
+## 当前验证边界
+
+- Builder 已实现 x64 和 x86；arm64 没有 PackageDownload、构建循环、包目录或测试矩阵实现。
+- C++/CLI 路径依赖 Visual Studio MSBuild、`vswhere` 可发现的安装和对应 C++ 工具链，不能仅以 `dotnet` SDK 可用推断 Builder 可运行。
+- 默认 Builder 构建使用自己的逐项目硬编码清单，不代表根 `Microsoft.Dotnet.Wpf.slnx` 的完整构建状态；整体状态只查阅 [00-overview.md](00-overview.md)。
+- native runtime 版本当前为 `8.0.6`；路径来自 `PackageDownload`、`$(NuGetPackageRoot)` 和 `PackagePaths.txt`，未使用 `GeneratePathProperty`。
+- 托管程序集名和运行时包依赖已读取共享定义；逐项目构建顺序、native 全量复制和关键 native 文件校验仍有 Builder 内部硬编码，尚未完全收敛到共享清单。
+- `compare` 是清单/尺寸报告，不证明 API 兼容、强名称一致或运行时行为；没有完整 staging 时的回退结果也不能作为完整清单依据。
+- 未显式传入 `--package` 时，`test-package` 只选择输出目录中最后写入的包；应结合包路径和时间戳确认验证对象。
+- 当前工作区检查时，`eng/Builder/bin/nupkg/` 与 `eng/Builder/bin/package-tests/` 均不存在，因此本文不宣称刚完成了全矩阵包验证。需要当前证据时，应重新生成包、执行 `test-package` 并保留对应日志与产物。

@@ -1,192 +1,86 @@
-# 与 origin 的差异审计
+# 当前树与 origin 快照的结构差异审计
 
-## 目标
+## 文档职责
 
-该文档用于记录当前重组仓库与 `C:\lindexi\Code\God\WpfReorganize\origin\src\Microsoft.DotNet.Wpf` 原始代码之间，已经验证过的结构差异、潜在风险和优先修复方向，避免后续迁移在不知情的情况下继续偏离原始 WPF 仓库。
+该文档只记录当前工作树与本地 `origin` 快照之间的结构差异、统计方法和后续复核方法。完整仓库状态以 [00-overview.md](00-overview.md) 为准，后续实施顺序以 [01-phase-plan.md](01-phase-plan.md) 为准；这里不复制整体构建状态，也不把历史构建结果提升为当前结论。
 
-## 审计范围与方法
+## 来源与保护边界
 
-### 对比范围
+- 来源树按仓库相对路径记为 `origin/src/`，当前主源码树按 `src/` 统计；一级 WPF 模块对比使用 `origin/src/` 与 `src/Microsoft.DotNet.Wpf/src/`。
+- `origin/.gitignore` 明确忽略 `src/`。因此 `origin/src/` 不受外层 Git 状态保护，内容被修改或删除时，外层仓库不一定给出变更提示。
+- 来源声明记录的 origin commit 为 `44615ed4b9f033922b3361ea02c02f173b8bf82e`。
+- 当前外层仓库对象库无法通过 `git cat-file` 验证该 commit。该值只能作为来源声明，不能据此证明当前 `origin/src/` 与该 Git 对象完全一致，也不能把它当作外层仓库可恢复的快照。
+- 每次开始结构审计前必须先确认 `origin/` 非空；若 `origin/` 或 `origin/src/` 被清空，应立即停止迁移相关操作。
 
-- 原始目录：`C:\lindexi\Code\God\WpfReorganize\origin\src\Microsoft.DotNet.Wpf`
-- 当前目录：`C:\lindexi\Code\God\WpfReorganize\src\Microsoft.DotNet.Wpf`
-- 解决方案入口：`C:\lindexi\Code\God\WpfReorganize\Microsoft.Dotnet.Wpf.sln`
+## 统一统计口径
 
-### 已验证方法
+### 口径定义
 
-1. 先确认 `origin` 目录存在且非空。
-2. 使用 `git diff --no-index` 对 `origin` 与当前仓库做目录级对比。
-3. 排除 `obj` / `bin` / `artifacts` / `TestResults` 后，重新统计项目、源码和顶层目录差异。
-4. 针对当前仓库独有补丁文件，抽样检查其是否存在于 `origin`，用于识别"迁移性桥接"与"潜在长期偏离"。
+- 递归排除路径中的 `bin/`、`obj/`、`artifacts/`、`TestResults/`。
+- “项目”只统计 `*.csproj`、`*.vcxproj`、`*.proj`。
+- “文件”统计排除上述输出目录后的全部普通文件，项目文件也包含在文件数中。
+- “当前仓库主要项目根”合并统计 `src/`、`cycle-breakers/`、`Demo/`、`Docs/`、`eng/`。
+- 根解决方案统计以 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 中唯一的 `<Project Path="...">` 声明为准，不与磁盘项目数混用。
 
-## 当前已验证事实
+### 当前结果
 
-### `origin` 目录状态正常
+| 范围 | 项目数 | 文件数 | 说明 |
+|---|---:|---:|---|
+| `origin/src/` | 90 | 6380 | 本地来源快照 |
+| 当前主源码树 `src/` | 56 | 4980 | 不含根级 `cycle-breakers/` 等其他项目根 |
+| 当前仓库主要项目根合计 | 68 | — | 合并 `src/`、`cycle-breakers/`、`Demo/`、`Docs/`、`eng/` |
+| 根 `slnx` | 57 | — | 解决方案声明数，不代表磁盘项目总数或 IDE 加载状态 |
 
-- `origin` 目录存在。
-- `origin` 顶层当前至少包含：
-  - `src`
-  - `.gitignore`
-- `origin` 没有被清空，可以作为当前迁移对照基线。
+这些数字是树状态的瞬时结果。新增、迁移、删除项目或生成文件后必须按同一口径重算，不能长期沿用旧数字，也不能仅用项目数差值推导“遗漏项目数”。
 
-### 顶层模块差异
+## 已验证的重点结构差异
 
-当前仓库仍缺少以下原始顶层模块的源码目录，但它们后续不再作为源码迁移目标：
+### 一级模块边界
 
-- `PenImc`：通过 NuGet 二进制 DLL 接入（详见 `Docs/04-NuGet-Binary.md`）
-- `WpfGfx`：通过 NuGet 二进制 DLL 接入（详见 `Docs/04-NuGet-Binary.md`）
+对 `origin/src/` 与 `src/Microsoft.DotNet.Wpf/src/` 的一级目录名进行集合比较后，origin 比当前树额外包含以下三个模块：
 
-这两个 native 模块不再纳入源码迁移清单；当前仓库的差异重点已从"缺失模块"转为"迁移妥协代码"。
+| 模块 | 当前处置 | 审计判读 |
+|---|---|---|
+| `PenImc` | 采用 binary 资产方案 | 不作为待复制的源码模块；后续检查资产清单、平台覆盖和消费链 |
+| `WpfGfx` | 采用 binary 资产方案 | 不作为待复制的源码模块；后续检查资产清单、平台覆盖和消费链 |
+| `System.Windows.Primitives` | 尚未确定是否迁入 | 是否属于目标树取决于目标 WPF/.NET 版本和兼容边界，不能直接判定为必迁或应排除 |
 
-### 项目文件数量差异
+因此，一级目录缺失不等同于三个迁移遗漏：`PenImc` 和 `WpfGfx` 是源码边界改为 binary 资产边界，`System.Windows.Primitives` 则是待版本决策项。
 
-排除 `obj/bin` 后，已验证到：
+### 根 `slnx` 未直接纳管的 11 个项目
 
-- `origin` 项目文件数：`103`
-- 当前仓库项目文件数：`51`
+磁盘 68 个项目与根 `slnx` 57 个项目之间的 11 项差额，分类与当前定位以 [00-overview.md 的项目清单](00-overview.md#未直接纳入根-slnx-的-11-个项目) 为准：
 
-差量主要集中在 `WpfGfx`、`PenImc`、`redist` 和 `tests`。
+| 分类 | 数量 | 当前定位 |
+|---|---:|---|
+| `System.Printing.vcxproj` | 1 | 真实实现尚未纳入根 `slnx` |
+| `Extensions` 下的项目 | 5 | 是否保留取决于目标版本和兼容范围 |
+| `OSVersionHelper.vcxproj` | 1 | 是否已由 binary 方案替代仍待确认 |
+| `eng/Builder/PackageTestApp/PackageTestApp.csproj` | 1 | Builder 使用的模板项目，不是待迁入的主链实现 |
+| `ThemeGenerator.proj` | 2 | 生成工具项目 |
+| `wpf-etw.proj` | 1 | 生成工具项目 |
+| 合计 | 11 | 必须逐类判读，不能统一称为遗漏 |
 
-### 可比源码文件规模
+模板项目和生成项目是否进入根入口取决于其职责，不应仅因未被根 `slnx` 直接纳管就归类为缺失实现。
 
-排除 `obj` / `bin` / `artifacts` / `TestResults` 后：
+### `PresentationUI` 生成边界
 
-- `origin` 清洗后文件数：`6119`
-- 当前仓库清洗后文件数：`4632`
+- `PresentationUI.csproj` 已启用 `InternalMarkupCompilation`，并已纳入 `InstallationError.xaml`、`TenFeetInstallationError.xaml`、`TenFeetInstallationProgress.xaml` 和 `MS/Internal/Documents/FindToolBar.xaml`。
+- 当前产物树中已有对应的 4 个 `.g.cs`；这证明生成链和现存生成结果已经存在，但不能证明清理输出后仍可稳定重现。
+- 对应的 4 个 `.xaml.cs` 仍显式声明基类。剩余审计重点是验证干净状态下的可重复生成，再依据生成结果逐个收敛显式基类差异。
 
-差量约 `1487` 个文件，主要集中在 `WpfGfx`（约 1381）、`PenImc`（约 52）、`tests`（约 189）。
+### 当前重组层
 
-### `git` 目录级差异量级
+- 根 `cycle-breakers/` 下的 8 个项目属于当前重组树维护的桥接层，并全部纳入根 `slnx`；它们计入 68 个磁盘项目和 57 个解决方案项目，但不计入 `src/` 的 56 个主源码项目。
+- 各桥接项目的直接消费者、状态和退出条件见 [cycle-breaker.md](cycle-breaker.md)。结构审计不得仅凭名称判断某个桥接项目或其中某个文件与来源树的关系。
+- `System.Printing.vcxproj` 真实实现仍位于磁盘但未被根 `slnx` 直接纳管。该事实应与 cycle-breaker 的暂时桥接职责分开记录。
 
-对可比的 `src` 子树执行 `git diff --no-index --shortstat` 后：
+## 后续审计方法
 
-- `2426 files changed`
-- `14729 insertions(+)`
-- `532883 deletions(-)`
-
-该差异量级主要反映"尚未迁移"和"重组变更"，不能直接解读为"错误删除"。
-
-## 当前仓库相对 origin 的主要偏离类型
-
-### 1. 结构性缺失（已不再作为源码迁移目标）
-
-- `WpfGfx` 源码未迁入，改为 NuGet 二进制接入
-- `PenImc` 源码未迁入，改为 NuGet 二进制接入
-- `tests` 目录下的关键单元测试与 DRT 项目未迁入
-- `redist` 目录下的几个原始项目未迁入
-
-### 2. 迁移妥协代码（新工作重心）
-
-当前仓库存在一批 `origin` 中不存在的文件，用于暂时绕开引用环、C++/CLI 编译边界或目标框架差异。这些是需要逐项清理的迁移妥协代码：
-
-**Bridge 文件（`origin` 中不存在）：**
-
-- `src\Microsoft.DotNet.Wpf\src\ReachFramework\MS\Internal\Printing\Configuration\SafeMemoryHandle.cs`
-- `src\Microsoft.DotNet.Wpf\src\ReachFramework\PrintConfig\PrintQueueBridge.cs`
-- `src\Microsoft.DotNet.Wpf\src\ReachFramework\Serialization\manager\DocumentReferenceBridge.cs`
-- `src\Microsoft.DotNet.Wpf\src\WindowsBase\MS\Internal\IO\Packaging\CaseInsensitiveOrdinalStringComparer.cs`
-- `src\Microsoft.DotNet.Wpf\src\System.Xaml\System\Windows\Markup\StaticExtensionConverter.cs`
-
-**XAML partial 占位（origin 由 `.g.cs` 生成）：**
-
-- `PresentationUI` 中的 `InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar` XAML partial 占位成员
-
-**动态调用边界：**
-
-- `PresentationFramework` 打印链路中 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 的动态调用
-- `ReachFramework` 中 `XpsSerializerWriter` 调用 `XpsDocumentWriter` 的动态边界（**已验证阻塞**：三个 `PrintTicket` 类型身份不一致，详见下方专项分析）
-
-### 2.1 `XpsSerializerWriter` 动态调用边界专项分析（已验证）
-
-`src\Microsoft.DotNet.Wpf\src\ReachFramework\SerializerFactory\XpsSerializerWriter.cs` 中的 `(dynamic)` 转换已被确认为当前架构下的**必要迁移妥协**。
-
-**对比事实：**
-
-- origin 的 `XpsSerializerWriter.cs` 无任何 `(dynamic)`，所有 `PrintTicket` 方法使用 `override` + 直接传参
-- 当前版本移除了 `override`（部分方法）并添加 `(dynamic)` 转换
-
-**根因：**
-
-三个不同的 `PrintTicket` 类型身份在当前架构中共存：
-1. `ReachFramework` 自行编译的 `PrtTicket_Public_Simple.cs`（定义 `System.Printing.PrintTicket`）
-2. cycle-breaker `ReachFramework-PresentationFramework-api-cycle` 中的 stub `PrintTicket`
-3. SDK inbox `System.Printing.dll` 中的 `PrintTicket`（`XpsDocumentWriter` 使用）
-
-**origin 如何避免：**
-
-`System.Printing.vcxproj`（C++/CLI）作为真实 DLL 编译后，`XpsDocumentWriter` 引用 `ReachFramework.dll` 的 `PrintTicket`，所有类型身份统一。
-
-**解除阻塞条件：**
-
-需要 `System.Printing.vcxproj` C++/CLI 项目独立构建成功。此前 `(dynamic)` 无法消除。
-
-**已验证过的修复尝试：**
-
-将 `ReachFramework.csproj` 的 `ProjectReference` 配置完全对齐 origin（移除 `PrivateAssets`、`<Private>false</Private>` 和额外 `PresentationFramework-System.Printing-api-cycle` 引用）→ 仍然失败（12 个 CS0115）。
-
-**显式 HintPath 引用：**
-
-- 主题项目、Ribbon、`PresentationUI`、`WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath
-- `ReachFramework-ref` 对 `System.Printing-ref` 的显式 HintPath
-
-### 3. 解决方案纳管与原始仓库边界不一致
-
-当前仓库已把 `ReachFramework`、`PresentationFramework`、`PresentationUI`、主题项目、`WindowsFormsIntegration`、`cycle-breakers` 等主链项目纳入 `Microsoft.Dotnet.Wpf.sln`，组织方式已不同于 origin 的原始入口结构。这对当前仓库是必要的，但需要持续对照 origin 避免长期分叉。
-
-## 潜在问题清单
-
-### 高优先级
-
-1. 迁移妥协代码持续累积
-   - 影响：Bridge 文件、XAML partial 占位、动态调用边界、显式 HintPath 引用等，都是当前"为迁移而补"的代码。
-   - 风险：这些妥协代码长期存在会让仓库行为越来越偏离 origin，且新增开发人员难以区分哪些是临时补丁、哪些是真实实现。
-   - 建议：逐项评估每个妥协代码是否可替换为更接近 origin 的方案。部分补丁（如 XAML partial 占位）当前仍是构建所必需，应先恢复对应的生成链再移除。
-
-2. `PresentationUI` 的 XAML 标记编译链尚未恢复
-   - 影响：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar` 仍依赖手写最小 partial 占位成员。
-   - 风险：占位长期保留会掩盖真实的标记编译接线缺口。
-   - 建议：优先恢复 `PresentationUI` 的 `InternalMarkupCompilation` 生成链；在链路恢复前不要删除这些占位。
-
-3. `System.Printing` / `ReachFramework` / `PresentationFramework` 的动态边界过多
-   - 影响：部分打印链路依赖动态边界和 API-cycle bridge。
-   - 风险：编译通过不代表行为等价。
-   - 建议：处理打印链时应始终与 `origin` 源文件逐段对照。
-
-4. 测试工程未迁入
-   - 影响：缺少与 origin 对应的回归验证能力。
-   - 建议：至少优先迁入 `System.Xaml.Tests`、`PresentationCore.Tests`。
-
-### 中优先级
-
-5. Bridge 文件可能长期固化
-   - 建议：每推进一个主链阻塞点，回看对应 origin 文件判断 bridge 是"最小占位"还是"错误替代"。
-
-6. 显式 HintPath 引用仍未完全消除
-   - 建议：已收敛到 `$(WpfNativePlatform)`，后续继续消除对产物路径的依赖。
-
-### 低优先级
-
-7. `WpfGfx` 与 `PenImc` 暂未通过 NuGet 二进制接入
-   - 建议：在妥协代码清理到一定程度后按 `Docs/04-NuGet-Binary.md` 接入。
-
-8. 局部文件命名或位置与 origin 不完全一致
-   - 建议：收敛 bridge 或恢复真实实现时尽量回归 origin 命名和目录结构。
-
-## 当前建议的修复顺序
-
-1. 清理迁移妥协代码，按优先级逐项处理：
-   - 先恢复 `PresentationUI` 的真实标记编译生成链路，替换 XAML partial 占位
-   - 再收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界
-   - 逐项评估 bridge 文件是否可替换为更接近 origin 的方案
-   - 消除显式 HintPath 引用，改为更稳定的项目引用
-2. 并行处理 `System.Printing` C++/CLI 的 bridge 边界问题
-3. 补齐高价值测试工程：`System.Xaml.Tests`、`PresentationCore.Tests`
-4. 在妥协代码清理到一定程度后，为 `PenImc` 和 `WpfGfx` 接入 NuGet 二进制 DLL
-
-## 当前执行结论
-
-- 当前仓库与 origin 的差异仍然很大，但差异主要由"缺失模块 + 迁移性桥接 + 测试缺席"构成。
-- `System.Windows.Presentation` 已完成迁入；`PenImc` 和 `WpfGfx` 不再走源码迁移路线。
-- 新的工作重心已从"补齐缺失模块"转为"清理迁移妥协代码"。
-- 主题项目和 Ribbon 对完整 `PresentationFramework` 的显式引用路径已从硬编码 `x64` 收敛到 `$(WpfNativePlatform)`。
-- `PresentationUI` 的 XAML partial 占位当前仍是构建所必需，应在恢复真实标记编译链后再移除。
+1. **保护来源**：确认 `origin/` 和 `origin/src/` 非空，检查 `origin/.gitignore`，不得依赖外层 `git status` 判断来源树是否安全。
+2. **记录来源身份边界**：保留来源声明 commit，同时用外层对象库验证；验证失败时明确标为“仅来源声明”。需要可追溯快照时，另行保存文件清单或哈希，不能假设外层 Git 可恢复 `origin/src/`。
+3. **重算统一统计**：按同一排除目录和项目扩展名分别统计 `origin/src/`、`src/`、五个主要项目根及根 `slnx` 声明。
+4. **比较一级模块**：只比较逻辑模块根的目录名，并为每个差异记录“源码迁入”“binary 资产”“目标版本排除”或“待确认”，避免把目录差集直接转换为迁移清单。
+5. **核对解决方案边界**：枚举根 `slnx` 的项目路径并验证磁盘存在性；再对未直接纳管项目按真实实现、兼容扩展、模板、生成工具分类。
+6. **执行针对性文件审计**：只有在处理具体模块或桥接时才做文件级差异，结论必须附带当前路径、消费者或生成链证据；不保留无法复核的文件数量归因和来源缺失断言。
+7. **维护职责分离**：结构统计和差异留在该文档；当前构建事实更新到 [00-overview.md](00-overview.md)；后续动作更新到 [01-phase-plan.md](01-phase-plan.md)。

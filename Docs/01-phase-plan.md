@@ -1,279 +1,211 @@
-# 分阶段计划
+# 后续阶段计划
 
-## 总体策略
+当前事实与已落地能力统一见 [00-overview.md](00-overview.md)。该文件只定义后续工作，不保存完成历史。执行时按阶段顺序连续推进；同一阶段的验证通过后，立即进入下一阶段。
 
-当前命令行解决方案基线和 WpfDemo Debug|x64 仓库宿主链路均已打通。后续按“先完成 Visual Studio F5 验收，再恢复 `PresentationUI` 真实标记编译，继续收敛 cycle-breaker/System.Printing，最后扩展平台和清理剩余迁移妥协”的顺序推进。
-
-原因如下：
-
-1. `Microsoft.Dotnet.Wpf.slnx` 的 Debug|x64 与 Debug|Any CPU 命令行入口均已验证通过。
-2. WpfDemo 已能从干净状态自动构建仓库 WPF、使用自动 ref 编译，并在运行时 app-local 加载托管和 native WPF。
-3. 当前剩余风险主要集中在 Visual Studio F5/锁文件、`PresentationUI` 内部标记编译和 `System.Printing` C++/CLI bridge，而不再是 WpfDemo 命令行消费模型。
-
-## 执行模式
-
-当前计划默认按无人值守模式执行，后续 AI 应持续推进，而不是把任务理解为一次性的文档维护或单点验证。
-
-### 执行要求
-
-1. 每次工作开始后，应先确认：
-   - 命令行构建是否通过
-	  - `Microsoft.Dotnet.Wpf.slnx` 中声明的关键项目是否在 IDE 中成功加载
-   - 当前最高优先级阻塞是否仍然存在
-2. 若某项验证通过，不应立即结束，而应继续处理同一主线上的下一个阻塞点。
-3. 若当前选择的子问题无法推进，应立即切换到同阶段内的下一个可落地任务，而不是只更新文档后退出。
-4. 若最终只能停在文档更新，必须把“已尝试但未完成的迁移动作”和“下一步首选落点”写入交接文档，避免后续 AI 再次空转。
-5. 结束一次工作时，应优先达到“代码/项目迁移有实质推进”而不是“文档已同步”。
-
-## 当前建议执行顺序
-
-1. 在 Visual Studio 中将 WpfDemo 设为启动项目，验证 Debug|x64 和 `Any CPU -> x64` 映射下的 F5、依赖重建与断点命中。
-2. 恢复 `PresentationUI` 的真实 `InternalMarkupCompilation` 输出，移除 `InstallationError` / `FindToolBar` 等文件为缺失 `.g.cs` 增加的基类差异。
-3. 继续打通 `System.Printing` C++/CLI，统一 `PrintTicket` 类型身份后回退 `XpsSerializerWriter` 动态调用边界。
-4. 逐项清理 bridge 文件、显式 HintPath 和同名程序集解析妥协。
-5. WpfDemo x64 稳定后，再按同一消费契约扩展 x86/arm64。
-
----
-
-## 阶段 0：基线与清单重校验
+## 阶段 1：修复当前首错并复验完整解决方案构建
 
 ### 目标
 
-确认当前文档、当前磁盘状态和当前解决方案状态一致，避免后续工作建立在过期记录上。
+修复当前 `WindowsBase` 的 `Accessibility.IAccessible` 编译引用错误，并取得根 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 在 `Debug|x64` 和 `Debug|Any CPU` 下可重复的完整 Restore + Build 结论。
 
-### 已完成
+### 动作
 
-- 已重新核对 `Docs/README.md`、`00-overview.md`、`01-phase-plan.md`、`02-next-session-handoff.md`。
-- 已重新核对 `Microsoft.Dotnet.Wpf.slnx` 当前实际纳入项目。
-- 已重新盘点 `src/Microsoft.DotNet.Wpf/src/` 顶层目录。
-- 已重新盘点 `cycle-breakers/` 当前存在的桥接项目。
-
-### 完成标准
-
-- 文档中的“已纳入解决方案项目”“磁盘已有项目”“缺失顶层模块”三份清单相互一致。
-- 后续构建记录以最新验证结果为准，不再保留互相矛盾的历史描述。
-
----
-
-## 阶段 1：恢复当前解决方案构建基线
-
-### 目标
-
-先让 `Microsoft.Dotnet.Wpf.slnx` 的现有纳管项目重新回到可诊断、可复现的状态。
-
-### 当前状态
-
-- `Microsoft.Dotnet.Wpf.slnx` 已恢复可构建。
-- 已验证命令：`msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal /clp:ErrorsOnly`。
-- `Any CPU` 命令行入口已验证可通过：`msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform="Any CPU" /m:1 /nr:false /v:minimal /clp:ErrorsOnly`。
-- 已将全部 `cycle-breakers/*.csproj` 纳入解决方案，修复了打印桥接输出只在旧 `artifacts` 残留时可用、干净 `msbuild -restore` 会失败的问题。
-- `.pl` 文件弹窗已定位为缺少 Perl 时 `Exec` 直接执行 `ThemeGenerator.pl` / `PreprocessXAML.pl` 触发 Windows 文件关联；当前改为先检测 `PerlCommand`，缺少 Perl 时跳过脚本并输出警告。
-- `UIAutomationClient` 可独立构建，`UIAutomationClientSideProviders` 下游缺失参考程序集的问题没有复现。
-- `ReachFramework`、`PresentationFramework`、`PresentationUI`、`PresentationFramework.Classic` 与 `System.Windows.Controls.Ribbon` 纳入解决方案后，解决方案完整重建仍可通过。
-- 当前解决方案级剩余警告为 `DirectWriteForwarder.vcxproj` 的 `/Zc:forScope-` 已否决警告。
-- IDE 工作区“生成解决方案”当前仍会在 `PresentationBuildTasks.dll` 复制到 `artifacts\bin\PresentationBuildTasks\Debug\net472\` 时被多进程锁定，这是独立于命令行 `msbuild -restore` 的现存阻塞。
-
-### 任务
-
-1. 保持现有解决方案构建基线可复现。
-2. 若再次出现 `UIAutomationClientSideProviders` 下游 `CS0006`，先独立构建 `UIAutomationClient`，再检查解决方案增量状态和构建顺序。
-3. 基线验证不能只看命令行 `msbuild`；还要检查 Visual Studio 中是否存在项目加载失败、未加载项目或 `.sln` 与 IDE 已加载项目不一致的情况。
-4. 不要在基线未验证时继续扩大解决方案纳管范围。
+1. 定位 `UnsafeNativeMethodsCLR.cs` 中 `Accessibility.IAccessible` 的预期程序集和当前引用来源，检查仓库实现、SDK inbox 引用与目标框架引用是否发生缺失或冲突。
+2. 以最小改动恢复正确的编译引用或类型边界，不通过删除代码、移除项目或扩大 stub API 绕过错误。
+3. 保留现有 Git 修改，不执行 `git clean -xdf`；只清理确认可再生成且与验证直接相关的输出。
+4. 执行完整 `Debug|x64` Restore + Build，保存二进制日志或文本日志。
+5. x64 成功后执行完整 `Debug|Any CPU` Restore + Build，保存日志。
+6. 若首错变化，更新 [00-overview.md](00-overview.md) 后继续修复；不要把 Restore、配置验证或独立项目成功当作完整构建成功。
 
 ### 完成标准
 
-- `Microsoft.Dotnet.Wpf.slnx` 恢复可构建。
-- 当前已纳入项目可通过同一条 `msbuild` 命令复现。
+- 两个平台均有退出码为 0 的完整 Restore + Build 记录。
+- 重复执行不依赖偶然残留产物，且 `Accessibility.IAccessible` 引用来源有明确、可维护的解释。
+- 警告与失败分开记录，未强制重编译的 native 项目不作外推结论。
 
 ### 风险
 
-- 当前解决方案基线恢复后，继续纳管 `ReachFramework`、`PresentationFramework` 等项目会暴露新的依赖问题。
-- `ref` 项目与实现项目的输出链可能不只受项目引用影响，还受自定义 targets 影响。
+- 修复引用时可能暴露同名 `Accessibility` 程序集、FrameworkReference 或目标框架引用冲突。
+- 清理范围过大会破坏未受 Git 保护的 `origin/src`，因此不得使用仓库级强制清理。
+- `Any CPU` 可能暴露不同于 x64 的平台映射或 native 依赖问题。
 
----
-
-## 阶段 2：解决方案纳管与项目清单收敛
+## 阶段 2：验证 Visual Studio 项目加载与 WpfDemo F5
 
 ### 目标
 
-让解决方案入口逐步跟上磁盘现状，避免“目录里已经有项目，但解决方案看不到”的长期分裂状态。
+确认根 `slnx` 中声明的项目在 Visual Studio 中实际加载，并验证 WpfDemo 的调试启动链路。
 
-### 任务
+### 动作
 
-1. 记录当前所有关键项目的状态：
-   - 已在解决方案中
-   - 已在磁盘中但未纳入解决方案
-   - 目录尚未迁入
-   - 已写入 `.sln` 但在 IDE 中加载失败或未成功加载
-2. 优先纳管与当前主链直接相关的现存项目：
-   - `System.Windows.Presentation`：已从 `origin` 迁入，并已纳入解决方案；后续需确认其与原始仓库的强签名/友元边界在当前仓库长期保持一致。
-   - `ReachFramework`：已纳入解决方案。
-   - `PresentationFramework`：已纳入解决方案。
-   - `PresentationUI`：已纳入解决方案。
-	  - `System.Windows.Controls.Ribbon`：已纳入解决方案。
-   - `PresentationFramework.Classic`：已纳入解决方案。
-   - `PresentationFramework.Aero` / `Aero2` / `AeroLite` / `Fluent` / `Luna` / `Royale`：已纳入解决方案。
-   - `WindowsFormsIntegration`：已纳入解决方案，且已重新验证可独立构建；后续需收敛其对完整 `PresentationFramework` 输出的显式 HintPath 依赖。
-   - `System.Printing`：C++/CLI 实现项目仍未独立构建；已先收敛掉大面积类型重定义与 `System.IO.Packaging` 缺失，当前转为补齐 ReachFramework / PresentationFramework 打印桥接 API。
-   - `cycle-breakers`：已全部纳入解决方案；不再属于“磁盘已存在但未纳管”的清单。
-3. 对暂不纳入解决方案的项目，明确写出原因，不要只写“待处理”。
-4. 对已经写入 `.sln` 但在 IDE 中加载失败的项目，优先当作真实阻塞处理，不能因为命令行构建暂时通过就搁置。
+1. 使用 Visual Studio 打开根 `slnx`，逐项检查是否存在未加载、加载失败或需要重新加载的项目。
+2. 将 IDE 状态与 57 条解决方案声明路径对照，记录任何差异及首个加载错误。
+3. 在 `Debug|x64` 下将 WpfDemo 设为启动项目并执行 F5。
+4. 验证依赖构建、app-local 加载来源、断点命中和进程退出行为。
+5. 核对文化资源程序集是否保留文化子目录，修正可能导致同名卫星程序集扁平复制或覆盖的收集规则。
+6. 再验证解决方案 `Any CPU` 映射下的 WpfDemo F5；若不支持，记录准确的平台映射或启动阻塞。
 
 ### 完成标准
 
-- 有一份清晰的项目纳管清单。
-- 能说明每个未纳入项目的阻塞原因。
-- 解决方案中的项目清单与文档保持同步。
+- 57 个声明项目均有明确的 Visual Studio 加载状态；加载失败项已修复或记录可复现阻塞。
+- WpfDemo `Debug|x64` F5 成功，能够命中仓库实现代码断点。
+- WpfDemo 输出中的文化资源程序集保留正确子目录，并有至少一个可重复的本地化资源验证。
+- `Any CPU` F5 有经过实际执行的结论，不从命令行构建结果推断。
 
 ### 风险
 
-- 直接把过多项目一次性纳入解决方案会引入大量新失败点。
-- 某些项目虽然已经在磁盘中存在，但其真实依赖链仍未闭合。
+- 设计时构建、项目系统和命令行 MSBuild 的行为可能不同。
+- F5 可能重新触发输出文件锁或暴露增量构建顺序问题。
 
----
-
-## 阶段 3：`PresentationFramework` 主链打通
+## 阶段 3：验证 PresentationUI 干净生成并收敛补丁
 
 ### 目标
 
-围绕 `PresentationFramework` 建立后续迁移主线，为 `WindowsFormsIntegration`、主题项目和更上层模块打基础。
+证明 `InternalMarkupCompilation` 能从干净状态稳定生成所需 `.g.cs`，并在证据充分后收敛 4 个 `.xaml.cs` 的显式基类差异。
 
-### 优先顺序
+### 动作
 
-1. `ReachFramework-ref`
-2. `System.Printing-ref`
-3. `PresentationFramework`
-4. `PresentationUI`
-5. `WindowsFormsIntegration`
-6. 主题项目
-
-### 任务
-
-1. 重新验证 `ReachFramework-ref` 与 `System.Printing-ref` 的最新构建结果。
-2. 对照 `cycle-breakers/` 当前桥接项目，确认缺口是：
-   - 缺类型
-   - 缺引用
-   - 缺项目纳管
-   - 缺生成步骤
-3. 继续确认 `AvTrace` 代码生成目标是否已完整接入，而不是仅仅跳过导入失败。
-4. 在 `PresentationFramework` 到达稳定阻塞点后，再判断 `WindowsFormsIntegration` 是否具备重新纳管条件。
-
-### 当前已验证状态
-
-- `ReachFramework-ref` 与 `System.Printing-ref` 可独立构建，但仍有 cycle-breaker 相关的同名类型警告。
-- 打印相关 `cycle-breakers` 已纳入 `Microsoft.Dotnet.Wpf.slnx`，命令行 `msbuild -restore` 已不再依赖旧 `artifacts` 产物顺序。
-- `ReachFramework-ref` 对 `System.Windows.Xps.XpsDocumentWriter`、`System.Windows.Documents.Serialization.ISerializerFactory` 等 API 的解析已由 `PresentationFramework-System.Printing-api-cycle` 补齐。
-- `ReachFramework` 实现项目已可独立构建。当前采用动态调用边界绕开 `XpsSerializerWriter` 与 `XpsDocument` 调用 `XpsDocumentWriter` 时的 `PrintTicket` / `XpsDocument` 类型身份不一致。
-- `PresentationFramework` 已抑制实现项目中的 `WPF0001`，并已可独立构建。当前采用动态调用边界绕开打印相关 `XpsDocumentWriter`、`SerializerWriter`、`ISerializerFactory` 与 `PresentationUI` 中 `FindToolBar` 的迁移边界阻塞。
-- `PresentationUI` 已可独立构建。当前通过 `System.Printing-ref` 绕过 `System.Printing` C++/CLI 实现项目，并显式引用完整 `PresentationFramework` 输出，避免 `PresentationFramework-System.Printing-api-cycle` 同名程序集覆盖完整控件 API。
-- `PresentationUI` 当前仍有 XAML partial 占位成员，说明 `InternalMarkupCompilation` 生成链路还未完全恢复，后续需要用真实标记编译产物替代占位。
-- `PresentationFramework.Classic`、`PresentationFramework.Aero`、`PresentationFramework.Aero2`、`PresentationFramework.AeroLite`、`PresentationFramework.Fluent`、`PresentationFramework.Luna`、`PresentationFramework.Royale` 与 `System.Windows.Controls.Ribbon` 已可独立构建并已纳入解决方案。当前通过显式完整 `PresentationFramework` x64 输出补齐主题和 Ribbon 所需控件 API，并避免解决方案内部 AnyCPU 构建落到缺失输出目录。
-- `System.Printing-ref` 已移除 `System.Windows.Xps.Packaging.XpsDocument` 占位，避免 `PresentationUI` 同时从 `ReachFramework` 与 `System.Printing` 解析到同名类型。
-- `BuildInfo.SystemWindowsControlsRibbon` 当前使用 WCP 公钥，使 `PresentationCore` / `PresentationFramework` 对 Ribbon 的友元访问声明与当前输出程序集强命名一致。
-- `WindowsFormsIntegration` 已加入解决方案,随解决方案入口构建通过,且已重新验证可独立构建。
-- `PresentationBuildTasks` 已完成 SDK 目标框架调整 (从 `net9.0` 改为 `net8.0`),并已加入解决方案。
-- `mcwpf` 已完成现代化改造 (从旧非 SDK 风格改为 SDK 风格),并已加入解决方案。
-- `PresentationBuildTasks` 与 `mcwpf` 已重新验证可独立构建，不再是当前阻塞点。
-- `ReachFramework-System.Printing-api-cycle` 已继续补齐 `PackagingProgressEventArgs.Action` / `NumberCompleted`、`PrintingCanceledException`、`PrintJobException`、`System.Printing.Interop` 占位命名空间、`PrintTicket.SaveTo/Clone`、`XpsDocument` 最小构造器与序列化管理器成员、`IXpsFixedDocumentSequenceReader` / `IXpsFixedDocumentReader` / `IXpsFixedPageReader` 最小读取属性、`IXpsOMPackageWriter.Close`、`IPrintDocumentPackageTarget.Cancel`、`PrintDocumentPackageStatusProvider.JobIdAcquiredEvent` / `JobId`；bridge 项目已重新验证可独立构建。
-- `System.Windows.Presentation` 已从 `origin` 迁入到 `src/Microsoft.DotNet.Wpf/src/System.Windows.Presentation/`，并已纳入 `Microsoft.Dotnet.Wpf.slnx`。为匹配当前仓库实际强签名输出，`BuildInfo.SystemWindowsPresentation` 已调整为 WCP 公钥；项目独立构建与解决方案入口构建已重新验证通过。
-- 在迁入 `System.Windows.Presentation` 过程中，`ReachFramework-ref` 暴露出 `System.Windows.Xps.XpsDocumentWriter` 解析仍依赖项目引用顺序的问题。当前 `ReachFramework-ref.csproj` 已显式绑定 `System.Printing-ref` 的 ref 输出，避免后续增量构建或解决方案拓扑变化再次触发 `CS0234`。
-- Visual Studio 打开解决方案后构建出现 `PresentationUI` `MC1000` 时，已确认错误来自上游输出缺失：`ReachFramework-ref` restore assets 缺失导致 `ReachFramework` ref 输出缺失，继而导致 `PresentationFramework.dll` 未产出。当前 `ReachFramework -> ReachFramework-ref`、`PresentationFramework-ref -> ReachFramework-ref`、`PresentationFramework -> ReachFramework`、`PresentationUI -> PresentationFramework` 已显式指定 `Targets="Restore;Build"`，使 IDE 项目级构建路径也会还原并构建关键上游项目。
-- `System.Printing` 当前已越过前一组打印 bridge 与 `XpsDocument` 缺口，新的首个失败面已前移到 `GDIExporter` / ReachFramework 更深层 API：`System.Windows.Xps.Serialization.GeometryHelper.ArcToBezier`、`PrintSystemException`、`Microsoft.Internal.GDIExporter.CNativeMethods.ExtTextOutW`、`Microsoft.Internal.AlphaFlattener.Utility.GetFontUri`。
-- 后续仍需继续处理 `ReachFramework` / `System.Printing` / `PresentationFramework` / `PresentationUI` 四方 cycle-breaker 的 API 边界，优先用明确桥接契约替换动态边界，并继续恢复 `PresentationUI` 的真实标记编译生成链路。
-- Visual Studio 工作区全量构建仍需复验：`PresentationBuildTasks.dll` 锁文件问题已有代码侧处理，`PresentationUI` `MC1000` 的上游构建顺序问题也已有项目引用侧处理；复验时应避免反复全量构建破坏状态，优先依据首个真实错误继续收敛。
+1. 记录现有 4 个 `.g.cs` 的路径和对应 XAML，确认它们属于可再生成产物。
+2. 仅清理 `PresentationUI` 相关可再生成输出，执行独立 Restore + Build。
+3. 验证 4 个 `.g.cs` 均重新生成，且包含所需基类和 `InitializeComponent` 等成员。
+4. 在生成链稳定后，逐个回退对应 `.xaml.cs` 的显式基类补丁，并逐项构建验证。
+5. 对照 `origin` 确认最终差异；无法回退的内容记录具体原因，不以旧产物掩盖生成失败。
 
 ### 完成标准
 
-- `PresentationFramework` 能进入稳定、可重复的构建诊断状态。
-- `ReachFramework-ref` / `System.Printing-ref` / `cycle-breakers` 的阻塞已被分类记录。
+- 无预存 `artifacts` 依赖时，4 个 `.g.cs` 可重复生成。
+- `PresentationUI` 独立 Restore + Build 成功。
+- 4 个 `.xaml.cs` 的显式基类已回退，或每个保留项均有当前可复现的技术依据。
 
 ### 风险
 
-- `PresentationFramework` 依赖面很广，任何上游变化都会联动多个项目。
-- 代码生成、主题资源、桥接项目可能共同决定其最终构建顺序。
+- 现存 `.g.cs` 可能来自旧构建，不能证明当前配置完整。
+- 回退基类可能暴露标记编译顺序、任务程序集加载或同名程序集解析问题。
 
----
-
-## 阶段 4：迁移妥协代码清理与 native 二进制接入
+## 阶段 4：构建并纳管 System.Printing 实现
 
 ### 目标
 
-在现有主链稳定后，不再迁入 `PenImc`、`WpfGfx` 这两个高维护成本 native 模块的源码，而是改为通过 NuGet 包获取已构建好的 DLL。同时，把之前为了构建通过而引入的妥协代码（bridge 文件、XAML partial 占位、动态调用边界、显式 HintPath）逐一收敛或替换为更接近 origin 的方案。
+取得 `System.Printing.vcxproj` 的当前可复现构建结论，修复真实实现缺口，并在依赖闭合后纳入根 `slnx`。
 
-### 目标
+### 动作
 
-- 迁移妥协代码清理：
-  - `ReachFramework` 内的 bridge 文件：`SafeMemoryHandle.cs`、`PrintQueueBridge.cs`、`DocumentReferenceBridge.cs`
-  - `WindowsBase` 内的 `CaseInsensitiveOrdinalStringComparer.cs`
-  - `System.Xaml` 内的 `StaticExtensionConverter.cs`
-  - `PresentationUI` 的 XAML partial 占位成员：`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar`
-  - `PresentationFramework` 打印链路的动态调用边界
-  - 主题项目 / Ribbon / `PresentationUI` / `WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath
-- Native 二进制接入：
-  - `PenImc`：改为通过 NuGet 获取已构建 DLL，不再做源码迁移
-  - `WpfGfx`：改为通过 NuGet 获取已构建 DLL，不再做源码迁移
-
-### 任务
-
-1. 优先恢复 `PresentationUI` 的真实标记编译生成链路，替换当前 XAML partial 占位。
-2. 逐项评估 bridge 文件是否可替换为更接近 origin 的方案或更稳定的项目引用。
-3. 收敛 `ReachFramework` / `PresentationFramework` / `PresentationUI` 的动态边界。
-4. 完善 `eng\Builder\Builder.csproj` 构建器项目，将构建驱动、产物收集和 NuGet 打包整合为统一入口（详见 `Docs\05-builder-plan.md`）。
-5. 为 `PenImc`、`WpfGfx` 盘点现有 NuGet 包来源、目标框架、平台版本和 DLL 清单。
-6. 调整托管侧引用与构建逻辑，使其从 NuGet 包解析二进制依赖。
+1. 在当前工具链下独立 Restore + Build `System.Printing.vcxproj`，保存首个真实错误；旧错误仅用于排查线索。
+2. 按源码、C++/CLI、平台工具集、引用和 cycle-breaker 边界分类处理错误。
+3. 每解决一个错误面后重跑独立构建，避免一次引入大范围 bridge。
+4. 独立构建稳定后，将项目加入根 `slnx` 并配置 x64、x86、Any CPU 映射；arm64 映射留待对应平台能力具备后处理。
+5. 重新执行根 `slnx` 的相关配置构建，确认纳管没有破坏既有主链。
 
 ### 完成标准
 
-- 迁移妥协代码清单中的每一项都有明确状态：已清理、已替换、或已确认当前无法清理并记录阻塞原因。
-- `PenImc` 与 `WpfGfx` 的依赖已经切换为 NuGet 二进制接入方案。
-- 能说明每个模块对应的包来源、平台版本、目标框架，以及当前是否仍有托管侧编译阻塞。
+- `System.Printing.vcxproj` 在目标配置下独立构建成功。
+- 项目已直接纳入根 `slnx`，不存在依赖删除项目来维持构建的做法。
+- 根 `slnx` 构建能够覆盖该实现项目；打印类型身份和直接消费者使用真实输出或有明确过渡边界。
 
----
+### 风险
 
-## 阶段 5：解决方案级构建与文档持续交接
+- C++/CLI 与当前 .NET、工具集及平台组合可能暴露新的编译或链接缺口。
+- 为快速通过而扩大 stub API 会增加同名类型和程序集身份风险。
+- 纳管后可能改变现有打印相关项目的构建顺序。
+
+## 阶段 5：确定目标版本与兼容边界
 
 ### 目标
 
-让 Visual Studio 构建和命令行 `msbuild` 构建都能围绕统一入口稳定复现，并让后续 AI 不需要再次重建上下文。
+对 `System.Windows.Primitives` 和 `Extensions` 作出有证据的迁移或排除决策，避免把版本差异误判为遗漏。
 
-### 当前状态
+### 动作
 
-- WpfDemo 项目级 Debug|x64 干净构建、增量构建、自动 ref 新 API、XAML、静态闭包和真实启动验证均已通过。
-- 解决方案 Debug|x64 与 Debug|Any CPU 命令行 restore/build 均已回归通过。
-- Visual Studio F5 尚未在当前环境中人工执行，仍是此阶段首个待验收项。
+1. 明确仓库目标 WPF/.NET 版本、需要支持的 API 面和兼容场景。
+2. 对比当前树、`origin` 与目标版本中的 `System.Windows.Primitives` 所属关系、消费者和构建入口。
+3. 盘点 `Extensions` 下 5 个项目的用途、消费者、目标框架和发布需求。
+4. 为每个项目记录“迁入并纳管”“保留但不纳入根入口”或“不属于目标边界”的决定及证据。
+5. 对决定迁入的项目安排构建与纳管；对排除项确保没有悬空引用。
 
-### WpfDemo Debug|x64 首期实现
+### 完成标准
 
-- 已删除 `Demo/WpfDemo/global.json`，并让 Demo 的 `Directory.Build.props/targets` 显式继承仓库根配置。
-- 已新增 `eng/WpfRuntimeDependencies.props`、`eng/WpfDemo/RepoWpfConsumer.props` 和 `eng/WpfDemo/RepoWpfConsumer.targets`，集中维护 runtime 包版本、自动 ref、实现程序集、native 文件、deps 登记、复制和校验逻辑。
-- Builder 已改为读取同一份共享 runtime 定义，不再分别硬编码 WindowsDesktop runtime 8.0.6、runtime PackageReference 和程序集名称。
-- WpfDemo 以 `PresentationFramework.csproj` 作为 `Restore;Build` 构建根，且 `ReferenceOutputAssembly=false`；C#/XAML 使用实现项目自动生成的 ref，运行时使用各实现项目 bin 主输出。
-- WpfDemo 显式导入仓库 `PresentationBuildTasks/Microsoft.WinFX.targets`，任务路径验证为 `artifacts/bin/PresentationBuildTasks/x64/Debug/net472/PresentationBuildTasks.dll`。
-- `runtimeconfig.json` 仅声明 `Microsoft.NETCore.App`；`deps.json` 登记核心 WPF 实现和 8.0 runtime 包；required managed/native 文件与本地化资源均部署到输出目录。
-- 已通过临时 `PresentationCore` public API + WpfDemo 调用验证自动 ref 传播；测试改动已回退。
-- `WpfDemo.exe --verify-repo-wpf` 的真实等待式启动退出码为 0，加载报告确认核心托管与 native WPF 全部来自 `artifacts/bin/WpfDemo/x64/Debug/net8.0-windows/`。
-- `Microsoft.Dotnet.Wpf.slnx` 已将 WpfDemo 的 `Any CPU` 和 `x64` 映射到项目 x64；x86/arm64 暂不支持。
-- 尚待完成：Visual Studio F5 人工验收，以及修改 `PresentationCore` 后再次 F5 的增量重建/断点验证。
+- `System.Windows.Primitives` 是否迁入已有明确版本依据，不再使用“必迁”或“必不迁”的未经验证结论。
+- `Extensions` 下 5 个项目逐项有兼容目标、消费者和处置状态。
+- 决策与根 `slnx` 项目清单、发布范围和测试范围一致。
 
-### 每次结束前必须更新
+### 风险
 
-- `00-overview.md`：当前状态、当前构建结果、主要缺口。
-- `01-phase-plan.md`：优先级、阶段顺序、阻塞变化。
-- `02-next-session-handoff.md`：建议起手任务、最新构建入口、必读文件。
+- 目标版本定义不清会导致迁入过多旧模块或遗漏兼容 API。
+- 某些项目可能只在特定打包、测试或内部工具链中被间接消费。
 
-### 推荐记录格式
+## 阶段 6：收敛 cycle-breaker
 
-- 最近新增或修改的项目/目录
-- 最近验证过的构建入口与命令
-- 当前首个真实失败点
-- 后续第一步该做什么
-- 若中断，后续 AI 先读哪些文件
+### 目标
 
-## 当前执行约束
+在真实实现和项目引用逐步闭合后，减少或移除不再需要的 cycle-breaker，同时保持可构建拓扑。
 
-1. 只要仓库中已经存在 `WindowsBase.csproj`、`PresentationCore.csproj`、`PresentationFramework.csproj` 等同名项目，就必须先排查是否又从 SDK 隐式引用拿到了第二份同名程序集。
-2. 禁止再次通过修改 `eng/Versions.props` 中 `AssemblyVersion` 的方式掩盖程序集冲突。
-3. 涉及 native/WPF 主链时优先使用 `msbuild`，不要默认使用 `dotnet msbuild`。
-4. 不能通过把项目从解决方案中移除来制造“构建通过”；应尽量保留项目并修复构建。
+### 动作
 
+1. 为 8 个 cycle-breaker 建立直接消费者、暴露 API 和替代路径清单。
+2. 优先调查当前没有直接消费者的 `PresentationFramework-System.Printing-impl-cycle`，确认是否存在生成期或间接消费。
+3. 从叶节点开始，用真实项目引用或更小的稳定契约替换 bridge。
+4. 每次只移除一个依赖边，验证相关独立项目和根 `slnx`。
+5. 删除确认无用途的 cycle-breaker；无法移除的项目记录保留原因和退出条件。
 
+### 完成标准
+
+- 8 个项目均有明确消费者与保留状态。
+- 无消费者且无生成期用途的项目已移除并同步更新根 `slnx`。
+- 保留的 cycle-breaker 只包含打破实际循环所需的最小 API。
+
+### 风险
+
+- 静态搜索可能遗漏反射、生成任务或硬编码输出路径消费者。
+- 同名程序集替换可能改变编译期类型身份或运行时绑定。
+
+## 阶段 7：迁移测试
+
+### 目标
+
+建立覆盖核心托管项目、WpfDemo 消费链和关键 native 边界的可运行测试基线。
+
+### 动作
+
+1. 盘点目标版本中的测试项目、测试基础设施、数据依赖和平台限制。
+2. 先迁移能够在当前 x64 环境稳定运行的核心单元测试，再处理集成、图形和打印测试。
+3. 将测试项目纳入合适的解决方案或测试入口，不把测试专用模板误纳为产品实现。
+4. 为 WpfDemo 运行探针、PresentationUI 生成和打印类型身份增加可重复验证。
+5. 记录跳过测试的明确环境原因和恢复条件。
+
+### 完成标准
+
+- 存在可重复执行的测试命令和结果记录。
+- 核心主链至少有冒烟验证，新增或修改的公开行为有对应测试。
+- 跳过项按平台或环境分类，不以永久跳过掩盖产品缺陷。
+
+### 风险
+
+- 上游测试可能依赖内部基础设施、特定字体、图形环境、打印机或桌面交互。
+- 测试迁移可能暴露当前实现与目标版本的行为差异。
+
+## 阶段 8：扩展 WpfDemo x86、arm64、Publish 与旧生成工具
+
+### 目标
+
+在 x64/Any CPU 主链稳定后补齐 WpfDemo x86、端到端 arm64、发布流程和仍需保留的旧生成工具。
+
+### 动作
+
+1. 为 WpfDemo 补齐 x86 项目配置、解决方案映射、runtime/native 资产选择和探针架构断言。
+2. 参数化共享 native 清单、Builder、WpfDemo 和解决方案平台映射以支持 arm64。
+3. 实现并验证 WpfDemo Publish，确认托管、native、本地化资源及运行配置完整。
+4. 评估 `OSVersionHelper.vcxproj` 是否已被 binary 方案完全替代。
+5. 评估两个 `ThemeGenerator.proj` 和 `wpf-etw.proj` 是否需要构建、现代化或仅保留为生成入口。
+6. 对需要保留的工具建立可复现命令；不需要进入根产品构建的项目明确其独立入口。
+
+### 完成标准
+
+- WpfDemo x86 的构建、资产部署和运行探针有实际验证。
+- arm64 的构建、资产部署和运行探针有实际验证，或有明确的环境阻塞证据。
+- WpfDemo Publish 输出可启动，并确认加载目标仓库资产。
+- `OSVersionHelper`、ThemeGenerator 和 `wpf-etw` 均有明确处置与验证入口。
+
+### 风险
+
+- arm64 native 二进制、C++ 工具链或 NuGet 资产可能不齐全。
+- Publish 的裁剪、自包含设置和运行时资产选择可能改变 WPF 加载行为。
+- 旧生成工具可能依赖 Perl、内部 MSBuild 任务或不可用的历史环境。

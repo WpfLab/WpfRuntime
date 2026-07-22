@@ -1,137 +1,63 @@
-# cycle-breaker 评估记录
+# cycle-breaker 专题审计
 
-## 背景
+## 职责与结论边界
 
-当前仓库处于 WPF 工程迁移阶段，目标是优先完成原始结构的重建，并保证解决方案可构建。在这一阶段，`cycle-breaker` 相关项目是否保留，需要基于现有项目引用关系进行评估。
+根 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 当前纳入 8 个 `cycle-breaker` 项目。这些项目是当前重组树为打断构建依赖循环而维护的桥接，不是长期替代真实实现的产品边界。
 
-## 结论
+该文档只记录当前项目引用关系、保留条件和退出条件。完整仓库状态以 [00-overview.md](00-overview.md) 为准，实施顺序以 [01-phase-plan.md](01-phase-plan.md) 为准。
 
-在当前迁移阶段，`cycle-breaker` 应继续保留。
+“直接消费者”在这里特指项目文件中的直接 `ProjectReference`。该口径不能覆盖生成任务、反射、硬编码产物路径或其他间接消费，因此“未找到直接消费者”不等同于“可以立即删除”。
 
-原因如下：
+## 根 `slnx` 中的 8 个项目
 
-1. 现有工程中已明确存在多个 `cycle-breaker` 项目，说明这不是偶发性的项目配置问题，而是原始工程结构的一部分。
-2. 当前依赖关系中不仅存在实现层循环，还存在 API 层循环，无法仅依靠调整构建顺序解决。
-3. 若在迁移阶段强行移除 `cycle-breaker`，通常需要进行跨程序集的架构重构，风险高，且会削弱与原始 WPF 工程结构的对照性。
+针对项目文件的定向引用搜索显示：7 个项目存在直接消费者；`PresentationFramework-System.Printing-impl-cycle` 当前未找到直接消费者，状态为待确认。
 
-## 已识别的 cycle-breaker 项目
+| 项目 | 直接消费者 / 状态 | 保留条件 |
+|---|---|---|
+| `PresentationFramework-PresentationUI-api-cycle.csproj` | `PresentationUI-PresentationFramework-impl-cycle.csproj`；有直接消费者 | 在 `PresentationUI` 实现桥仍需要最小 `PresentationFramework` API、且真实项目引用会形成循环时保留 |
+| `PresentationFramework-ReachFramework-impl-cycle.csproj` | `ReachFramework.csproj`、`ReachFramework-ref.csproj`；有直接消费者 | 在 `ReachFramework` 实现层或 ref 层仍不能直接使用闭合后的 `PresentationFramework` 边界时保留 |
+| `PresentationFramework-System.Printing-api-cycle.csproj` | `ReachFramework-System.Printing-api-cycle.csproj`、`System.Printing-ref.csproj`、`System.Printing.vcxproj`、`ReachFramework.csproj`、`ReachFramework-ref.csproj`；有直接消费者 | 在打印相关消费者仍需要最小 `PresentationFramework` API，且真实 `System.Printing` / `PresentationFramework` 引用边界尚未闭合时保留 |
+| `PresentationFramework-System.Printing-impl-cycle.csproj` | 定向搜索未找到直接消费者；**待确认** | 先排查生成期、间接引用和硬编码输出路径；只有确认均无消费且替代拓扑明确后才可删除，不因静态搜索为空直接删除 |
+| `PresentationUI-PresentationFramework-impl-cycle.csproj` | `PresentationFramework.csproj`；有直接消费者 | 在 `PresentationFramework` 仍需通过桥接消费 `PresentationUI` 实现面、直接项目引用会形成循环时保留 |
+| `ReachFramework-PresentationFramework-api-cycle.csproj` | `PresentationFramework-ReachFramework-impl-cycle.csproj`、`PresentationFramework-System.Printing-api-cycle.csproj`、`PresentationFramework-System.Printing-impl-cycle.csproj`；有直接消费者 | 在这些桥接项目仍需要最小 `ReachFramework` / 打印契约时保留；应随其消费者收敛而缩小或退出 |
+| `ReachFramework-System.Printing-api-cycle.csproj` | `System.Printing-ref.csproj`、`System.Printing.vcxproj`；有直接消费者 | 在 `System.Printing` 实现与 ref 尚不能使用真实、类型身份一致的 `ReachFramework` 契约时保留 |
+| `System.Printing-PresentationFramework-api-cycle.csproj` | `PresentationFramework-System.Printing-api-cycle.csproj`、`PresentationFramework-System.Printing-impl-cycle.csproj`；有直接消费者 | 在 `PresentationFramework` 的打印桥仍需要最小 `System.Printing` API，且真实实现尚未接管时保留 |
 
-当前仓库磁盘上已确认存在以下 `cycle-breaker` 项目：
+上述“有直接消费者”只说明当前引用边存在，不证明项目内容已经最小化，也不证明所有桥接都需要永久保留。
 
-- `PresentationFramework-PresentationUI-api-cycle.csproj`
-- `PresentationFramework-ReachFramework-impl-cycle.csproj`
-- `PresentationFramework-System.Printing-api-cycle.csproj`
-- `PresentationFramework-System.Printing-impl-cycle.csproj`
-- `PresentationUI-PresentationFramework-impl-cycle.csproj`
-- `ReachFramework-PresentationFramework-api-cycle.csproj`
-- `ReachFramework-System.Printing-api-cycle.csproj`
-- `System.Printing-PresentationFramework-api-cycle.csproj`
+## 与 origin 的表述边界
 
-从命名可以看出，这些项目分别用于打断实现层或 API 层的循环依赖，不应视为临时性产物。
+- 不以“origin 不含 cycle-breaker 项目”作为笼统前提，也不从当前目录位置或项目名称反推 origin 的项目组织。
+- 这里只能确认列出的 8 个项目由当前重组树维护，并被根 `slnx` 纳管。
+- 对桥接项目中的具体源文件，必须逐文件取得路径、历史或内容对比证据后才能判断来源关系；该文档不对 `XpsDocument` 等文件作来源缺失判断。
+- origin 结构差异的统计方法和来源保护边界见 [03-origin-diff-audit.md](03-origin-diff-audit.md)。
 
-## 当前可确认的循环关系
+## `System.Printing` 真实实现缺口
 
-### 1. PresentationFramework ↔ PresentationUI
+- `src/Microsoft.DotNet.Wpf/src/System.Printing/System.Printing.vcxproj` 当前尚未纳入根 `slnx`，真实实现仍未接管根构建图中的打印边界。
+- 打印相关 cycle-breaker 只用于暂时闭合编译依赖和最小契约，不能作为 `System.Printing` 真实实现的长期替代。
+- 收敛打印桥接前，应先按 [01-phase-plan.md 的阶段 4](01-phase-plan.md#阶段-4构建并纳管-systemprinting-实现) 构建并纳管真实实现，再逐个迁移消费者，检查同名程序集和类型身份，最后评估删除桥接项目。
+- 不应通过持续扩充 stub API 来模拟完整 `System.Printing`；新增桥接成员必须有当前消费者证据和明确退出条件。
 
-证据：
+## 移除或收敛条件
 
-- `PresentationUI.csproj` 引用 `PresentationFramework.csproj`
-- `PresentationFramework.csproj` 引用 `PresentationUI-PresentationFramework-impl-cycle.csproj`
-- 当前仓库还存在 `PresentationFramework-PresentationUI-api-cycle.csproj`
+每个 cycle-breaker 只能在以下条件均满足后评估移除：
 
-判断：
+1. 已核对直接 `ProjectReference`、生成期依赖、间接消费和硬编码产物路径。
+2. 真实实现项目或稳定的 ref/API 边界已经提供所需契约，消费者能够迁移且不会重新形成项目循环。
+3. 已检查同名程序集、重复类型和运行时绑定风险，不以扩大 bridge 内容掩盖类型身份问题。
+4. 每次只移除一个引用边或一个项目，并同步更新根 `slnx`；相关独立项目和根入口均需重新验证。
+5. 删除后仍能说明公开 API、资源、标记编译和打印链分别由哪个真实项目提供。
 
-- 该循环属于实现层循环
-- 同时可以看到 API 层桥接项目也已存在
-- 不应假设只需保留单一桥接项目即可
+`PresentationFramework-System.Printing-impl-cycle` 应优先完成消费审计，但在上述证据齐全前保持“待确认”，不直接删除。
 
-### 2. PresentationFramework ↔ ReachFramework
+## 低优先级项目元数据维护项
 
-证据：
+当前发现两个 `PackageId` 与项目文件名不一致：
 
-- `PresentationFramework.csproj` 引用 `ReachFramework.csproj`
-- `ReachFramework.csproj` 引用 `PresentationFramework-ReachFramework-impl-cycle.csproj`
-- `PresentationFramework-ref.csproj` 引用 `ReachFramework-ref.csproj`
-- `ReachFramework-ref.csproj` 引用 `PresentationFramework-ReachFramework-impl-cycle.csproj`
-- 当前仓库还存在 `ReachFramework-PresentationFramework-api-cycle.csproj`
+| 项目 | 当前 `PackageId` | 不一致点 |
+|---|---|---|
+| `PresentationFramework-System.Printing-impl-cycle.csproj` | `PresentationFramework-ReachFramework` | 与项目所表达的 `System.Printing` 边界不一致 |
+| `ReachFramework-System.Printing-api-cycle.csproj` | `ReachFramework-SystemPrinting-api-cycle` | 与项目文件名中的 `System.Printing` 拼写不一致 |
 
-判断：
-
-- 该循环是 `PresentationFramework` 与 `ReachFramework` 之间的双向依赖
-- 问题同时影响实现层、ref 层以及 API 桥接层
-
-### 3. PresentationFramework ↔ System.Printing
-
-证据：
-
-- `PresentationFramework.csproj` 引用 `System.Printing-ref.csproj`
-- `System.Printing-ref.csproj` 反向引用 `PresentationFramework-System.Printing-api-cycle.csproj`
-- 当前仓库还存在 `PresentationFramework-System.Printing-impl-cycle.csproj`
-- 当前仓库还存在 `System.Printing-PresentationFramework-api-cycle.csproj`
-
-判断：
-
-- 该循环属于 API 层循环
-- 当前至少同时存在 API 层与实现层桥接项目，后续排查时不能只检查单个方向
-
-### 4. ReachFramework ↔ System.Printing
-
-证据：
-
-- `ReachFramework.csproj` 引用 `System.Printing-ref.csproj`
-- `ReachFramework-ref.csproj` 引用 `System.Printing-ref.csproj`
-- `System.Printing-ref.csproj` 反向引用 `ReachFramework-System.Printing-api-cycle.csproj`
-
-判断：
-
-- 该循环同样属于 API 层循环
-- 对应的打断方式为 `api-cycle`
-
-## 对迁移工作的影响
-
-当前阶段的优先目标是"忠实重建 + 可构建"。若立即移除 `cycle-breaker`，通常需要进行以下类型的调整：
-
-- 迁移类型到新的程序集
-- 拆分公共 API 到新的基础程序集
-- 修改公开依赖边界
-- 调整资源、标记编译或打印相关装配边界
-
-以上调整均属于架构层重构，不属于当前迁移阶段的最小必要修改，且会显著增加迁移风险。
-
-## 当前建议
-
-现阶段建议按以下顺序推进：
-
-1. 保留现有 `cycle-breaker` 设计
-2. 补齐缺失的 `cycle-breaker` 项目（当前 8 个桥接项目已全部纳入 `Microsoft.Dotnet.Wpf.sln`，命令行 `msbuild -restore` 已可稳定通过）
-3. 在处理 `PresentationFramework` / `ReachFramework` / `System.Printing` / `PresentationUI` 构建错误时，优先检查桥接项目是否已纳管、是否已被正确引用、是否缺少最小占位类型
-4. 先打通迁移链路并保证仓库可稳定构建
-5. 在构建稳定后，再单独评估是否进行"去 cycle-breaker 化"重构
-
-## 与 origin 的偏移说明
-
-当前 cycle-breaker 项目的组织方式已经偏离 origin：
-
-- origin 的 cycle-breaker 位于 `src/Microsoft.DotNet.Wpf/cycle-breakers/`，但当前仓库将其提升到根目录 `cycle-breakers/`。
-- 当前 `PresentationFramework-System.Printing-api-cycle`、`ReachFramework-System.Printing-api-cycle` 等桥接项目中包含了一批 origin 不存在的 bridge 文件（如 `SerializationManagers.cs`、`XpsDocument.cs`、`IXpsOMPackageWriter.cs`、`PrintTicketManager.cs`），这些是当前迁移阶段为绕过 C++/CLI 和打印链编译阻塞而引入的最小占位。
-- 这些 bridge 文件本身属于迁移妥协代码的一部分，应在后续清理阶段逐项评估是否可以回归到 origin 的模块边界。
-
-## 何时可以评估移除 cycle-breaker
-
-仅在满足以下条件时，才建议考虑移除 `cycle-breaker`：
-
-- 已确认其仅为历史遗留，而非当前公开 API 的必要结构
-- 可以将共享契约下沉到更底层的公共程序集
-- 不会破坏与原始 WPF 工程结构的对照关系
-- 已具备完整的构建验证与回归验证能力
-
-在不满足上述条件之前，迁移阶段不应主动删除 `cycle-breaker`。
-
-## 后续工作
-
-下一步可继续整理以下内容：
-
-- 四组循环依赖的明确项目依赖图
-- 各 `cycle-breaker` 项目在解决方案中的纳管状态（已全部纳管）
-- 各 `cycle-breaker` 项目是否已产出目标程序集
-- `PresentationFramework` / `ReachFramework` / `System.Printing` 当前仍缺少哪些桥接类型或生成步骤
+这些是低优先级维护项。`PackageId` 还参与 `TargetOutputRelPath`，修改前应先核对产物路径和消费者；该专题只记录问题，不修改项目文件。

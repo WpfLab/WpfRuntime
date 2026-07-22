@@ -1,63 +1,77 @@
-# Builder 清理工具
+# Builder clean 命令与清理边界
 
-## 背景
+## 命令入口
 
-在 WPF 仓库重组过程中，经常需要在干净状态下验证 `msbuild -restore` 是否能通过。由于 Visual Studio 会锁定 `.vs/` 等目录中的文件，直接使用 `git clean -xdf` 经常失败，且需要用户手动确认。
-
-为此，在 `eng/Builder/` 项目中新增了 `clean` 命令，用 C# 代码实现清理逻辑，可容忍锁定文件。
-
-## 用法
+直接运行独立清理命令：
 
 ```powershell
-dotnet run --project eng\Builder\Builder.csproj -- clean
+dotnet run --project eng/Builder/Builder.csproj -- clean
 ```
 
-## 清理范围
-
-`clean` 命令会删除以下内容：
-
-| 目标 | 说明 |
-|------|------|
-| `artifacts/` | 整个目录递归删除（构建输出、中间产物） |
-| `src/**/bin/` | `src/` 下所有 `bin/` 目录递归删除 |
-| `src/**/obj/` | `src/` 下所有 `obj/` 目录递归删除 |
-| `Demo/**/bin/`、`Demo/**/obj/` | Demo 目录下的构建产物 |
-| `cycle-breakers/**/bin/`、`cycle-breakers/**/obj/` | cycle-breakers 目录下的构建产物 |
-| `.vs/` | Visual Studio 缓存目录（可能部分锁定） |
-| `*.log` | 仓库根目录下的散落日志文件 |
-
-## 锁定文件处理
-
-当文件被 Visual Studio 或其他进程锁定时，`clean` 命令会跳过该文件并继续清理其他内容，不会中断。清理结束后会输出统计：
-
-```
-=== Clean summary ===
-  Directories deleted: 605
-  Directories skipped (locked): 5
-  Files deleted: 0
-  Files skipped (locked): 0
-[WARN] Some files/directories were locked (likely by Visual Studio).
-[WARN] Close Visual Studio and re-run 'clean' for a fully clean state.
-```
-
-如需完全清理，请先关闭 Visual Studio，再重新运行 `clean` 命令。
-
-## 实现说明
-
-- `clean` 命令不会删除 `eng/Builder/bin/`（Builder 自身的输出目录），避免正在运行的程序自删。
-- 清理逻辑通过递归遍历目录树实现，先删除子目录中的文件，再删除空目录。
-- 对 `UnauthorizedAccessException` 和 `IOException` 进行捕获，将锁定文件标记为"跳过"而非失败。
-
-## 后续 AI 对话使用指引
-
-当需要在干净状态下验证构建时，不要使用 `git clean -xdf`（会因 VS 锁定失败），而是使用：
+如果 Builder 已完成还原和构建，也可避免重复构建：
 
 ```powershell
-dotnet run --project eng\Builder\Builder.csproj -- clean
+dotnet restore eng/Builder/Builder.csproj
+dotnet build eng/Builder/Builder.csproj --no-restore
+dotnet run --project eng/Builder/Builder.csproj --no-build -- clean
 ```
 
-清理后即可用以下命令验证干净构建：
+仓库根解决方案入口统一为 `Microsoft.Dotnet.Wpf.slnx`。`clean` 只负责删除已知可再生成输出，不调用根解决方案、不执行 Restore/Build，也不验证项目加载或编译状态。
+
+## 独立 clean 的清理范围
+
+`CleanService.Run` 当前处理以下路径：
+
+| 范围 | 行为 |
+|---|---|
+| `artifacts/` | 递归删除整个目录；无法删除的文件或目录会被保留 |
+| `src/**/bin/`、`src/**/obj/` | 在 `src/` 树中查找并递归删除名为 `bin` 或 `obj` 的目录 |
+| `Demo/**/bin/`、`Demo/**/obj/` | 清理 Demo 项目的局部输出 |
+| `cycle-breakers/**/bin/`、`cycle-breakers/**/obj/` | 清理 cycle-breaker 项目的局部输出 |
+| `.vs/` | 尝试递归删除 Visual Studio 缓存 |
+| 仓库根 `*.log` | 只删除仓库根目录直接包含的日志文件，不递归搜索 |
+
+Builder 自身的 `eng/Builder/bin/` 不在独立 `clean` 清单中，因此命令不会删除正在运行的 Builder、已生成的 `nupkg/` 或 `package-tests/`。其他未列出的工具缓存、用户目录和未跟踪文件也不会被清理。
+
+## 默认构建命令的内置清理
+
+默认 Builder 构建不会调用上述完整 `clean` 命令。`BuildService` 开始时只执行：
+
+1. 尝试删除 `artifacts/bin/`。
+2. 尝试删除 `artifacts/obj/`。
+3. 尝试删除 `artifacts/` 根目录直接包含的文件。
+4. 删除 `eng/Builder/bin/staging/`；后续资产收集按需重新创建其中的目录。
+
+它会保留 `artifacts/log/` 等其他子目录，也不会扫描 `src/`、`Demo/`、`cycle-breakers/` 或 `.vs/`。因此需要更广的已知输出清理时，应显式运行 `clean`，不能把默认构建开头的清理等同于独立命令。
+
+## 锁定文件和进程边界
+
+清理代码对 `UnauthorizedAccessException` 和 `IOException` 采用“跳过并继续”的策略。独立 `clean` 会在结尾输出删除和跳过数量，但该统计是尽力而为：部分文件删除失败或目录无法枚举时不会形成完整的文件级计数。只要命令本身没有未处理异常，当前 `CleanCommand` 返回 `0`，即使仍有锁定文件或目录。因此：
+
+- `clean` 返回成功不等于所有目标都已删除。
+- 必须查看 `Directories skipped (locked)`、`Files skipped (locked)` 和警告输出；零跳过也不能证明所有目标均已成功枚举和删除。
+- Visual Studio、正在调试的应用、测试进程或其他持有 DLL/缓存句柄的程序都可能阻止删除。
+- Windows PowerShell 或 PowerShell 启动的 WPF 进程也可能持有 `WpfDemo` 输出 DLL；仅关闭 Visual Studio 不一定解除所有锁。
+- 若需要更完整的清理，应先正常停止构建、调试和相关应用，再关闭持有文件的 Visual Studio/PowerShell 进程，随后重新运行 `clean`。
+
+不要通过结束不相关进程、强制删除来源不明的文件或扩大清理范围来掩盖锁问题。先根据错误中的路径和进程信息确认实际持有者。
+
+## 安全约束
+
+禁止在仓库级执行：
 
 ```powershell
-msbuild Microsoft.Dotnet.Wpf.sln -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal /clp:ErrorsOnly
+git clean -xdf
 ```
+
+该命令会越过 Builder 的已知输出白名单，并可能删除被忽略但不可安全重建的迁移源或本地材料。需要补充清理项时，应先确认目录可再生成，再把范围明确加入受控清理实现或使用针对该目录的安全操作。
+
+## 清理后的验证
+
+清理完成后，如需验证根入口，应单独运行目标配置，例如：
+
+```powershell
+msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal
+```
+
+这条命令只是示例验证入口。`clean` 不保证后续 Restore/Build 成功；锁定文件被跳过、工具链缺失、还原问题或源码错误都可能使构建失败。构建结论必须依据实际执行的入口、配置、日志和退出码，不能从清理结果外推。

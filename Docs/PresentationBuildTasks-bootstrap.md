@@ -1,74 +1,58 @@
 # PresentationBuildTasks 按需构建机制
 
-## 目标
+## 适用范围
 
-`PresentationBuildTasks.dll` 是 WPF XAML 标记编译所需的 MSBuild 任务程序集。仓库重组过程中，内部标记编译项目会在 `MarkupCompilePass1`、`MarkupCompilePass2` 或资源生成阶段加载该任务程序集。
+`PresentationBuildTasks.dll` 是仓库内部 XAML/BAML 与资源生成使用的 MSBuild 任务程序集。本文件只规范它的宿主匹配、定位、自举和锁定输出处理；仓库整体构建状态以 [00-overview.md](00-overview.md) 为准。
 
-当仓库自产的 `PresentationBuildTasks.dll` 尚未生成时，标记编译无法继续。构建链会尝试按需构建仓库内的 `PresentationBuildTasks.csproj`，生成匹配当前 MSBuild 宿主的任务程序集。
+实现依据：
 
-## 加载优先级
+- [`Microsoft.WinFX.targets`](../src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/Microsoft.WinFX.targets)
+- [`PresentationBuildTasks.csproj`](../src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/PresentationBuildTasks.csproj)
+- 根 [`Directory.Build.targets`](../Directory.Build.targets)
 
-`Microsoft.WinFX.targets` 按以下顺序选择任务程序集：
+## 宿主 TFM 与唯一 DLL 路径
 
-1. 仓库自产 DLL：
-   - `artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll`
-2. 如果仓库自产 DLL 不存在、启用了按需构建且仓库内项目文件存在，则在首次标记编译前构建：
-   - `src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\PresentationBuildTasks.csproj`
-	 - 构建目标为 `Build`，构建属性包含 `TargetFramework=$(_PresentationBuildTasksTfm)` 和 `BuildPresentationBuildTasksOnDemand=false`
-3. 如果上述路径都不存在，则构建失败并输出明确错误。
+`Microsoft.WinFX.targets` 按当前 MSBuild 宿主选择任务程序集 TFM：
 
-该机制不是无边界 fallback。只有仓库自产路径和仓库内 `PresentationBuildTasks.csproj` 按需构建两个来源。
+- `$(MSBuildRuntimeType) == Core`：`net8.0`
+- 其他宿主：`net472`
 
-## TFM 选择
+任务加载与项目输出共用唯一仓库自产路径：
 
-`_PresentationBuildTasksTfm` 根据当前 MSBuild 宿主运行时确定：
+`artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll`
 
-- `$(MSBuildRuntimeType) == Core` 时使用 `net8.0`
-- 其他情况使用 `net472`
+不从 GAC、Visual Studio 安装目录、WindowsDesktop SDK tools、其他平台目录或历史输出中探测备用 DLL，也不使用 `artifacts\ide-bin` 或额外 Copy 路径。
 
-这保证 .NET MSBuild 使用 `net8.0` 任务程序集，Visual Studio / .NET Framework MSBuild 使用 `net472` 任务程序集。
+## 缺失时的自举与失败行为
 
-## 开关
+`BuildPresentationBuildTasksOnDemand` 未赋值时默认为 `true`。唯一 DLL 缺失且仓库内 `PresentationBuildTasks.csproj` 存在时，`Microsoft.WinFX.targets` 会在验证任务程序集之前嵌套执行该项目的 `Build`，并传入：
 
-默认启用按需构建：
+- 当前 `Configuration`
+- `Platform=$(WpfNativePlatform)`
+- `TargetFramework=$(_PresentationBuildTasksTfm)`
+- `BuildPresentationBuildTasksOnDemand=false`
 
-```text
-/p:BuildPresentationBuildTasksOnDemand=true
-```
+最后一项阻止嵌套构建再次触发同一自举链。嵌套构建失败会直接传播失败；项目不存在、按需构建关闭或构建后唯一 DLL 仍不存在时，`ValidatePresentationBuildTasksAssembly` 会在标记编译或主资源生成前报告明确错误，不静默回退到其他任务程序集。
 
-可以关闭按需构建来验证仓库是否已经具备完全自举能力，或避免嵌套构建：
+## 开关职责
 
-```text
-/p:BuildPresentationBuildTasksOnDemand=false
-```
-
-按需构建会把自身属性设置为 `false` 传给 `PresentationBuildTasks.csproj`，避免递归触发。
-
-关闭按需构建后，如果仓库自产 `PresentationBuildTasks.dll` 不存在，构建会直接失败。
-
-## 构建输出提示
-
-当按需构建触发时，构建输出会显示高重要性消息，说明缺少的仓库自产路径、要构建的项目和目标框架。
+| 开关 | 默认/当前设置方式 | 职责 | 不负责 |
+|---|---|---|---|
+| `BuildPresentationBuildTasksOnDemand` | 在仓库 `Microsoft.WinFX.targets` 中默认为 `true` | 唯一 DLL 缺失时构建仓库内 `PresentationBuildTasks.csproj`；嵌套构建时传入 `false` 防止递归 | 不改变 DLL 路径，不选择 SDK 或外部任务程序集 |
+| `ImportFrameworkWinFXTargets` | 通常未设置；WpfDemo 的仓库消费模式将其设为 `true` | 这是反向开关：设为 `true` 时，阻止 WindowsDesktop SDK 自动导入 SDK 自带的 `Microsoft.WinFX.targets`，以便项目显式导入仓库版本 | 不会自行导入仓库 targets，也不构建或定位 `PresentationBuildTasks.dll` |
+| `UsePrebuiltPresentationBuildTasks` | 默认未启用；Builder 在预先生成任务 DLL 后构建其他项目时设为 `true` | 根 `Directory.Build.targets` 据此移除产品项目到 `PresentationBuildTasks.csproj` 的 `ProjectReference`，避免每个项目通过项目引用重复调度任务项目 | 不代表使用外部 DLL，不改变唯一加载路径，也不替代缺失 DLL 校验；若同时关闭按需构建而 DLL 不存在，构建会失败 |
 
 ## 锁定输出处理
 
-`PresentationBuildTasks.dll` 会被 MSBuild 和 Visual Studio 进程加载。Windows 允许改名已加载的 DLL，但不允许直接删除或覆盖它。为了避免 IDE 内构建整个仓库时因为旧任务程序集被占用而失败，`PresentationBuildTasks.csproj` 在编译前会扫描输出目录下的所有 DLL：
+`PresentationBuildTasks.csproj` 在 `CoreCompile` 前扫描当前 `OutDir` 及其子目录中的 DLL：
 
-1. 优先删除旧 DLL。
-2. 如果删除因为文件占用或访问受限失败，则把旧 DLL 改名为 `.locked.<process-id>.<guid>.dll`。
-3. 清理范围包含语言资源子目录中的 `PresentationBuildTasks.resources.dll`，避免卫星程序集复制阶段被旧文件锁阻塞。
+1. 先尝试删除旧 DLL。
+2. 删除因 `IOException` 或 `UnauthorizedAccessException` 失败时，将原文件改名为 `<name>.locked.<process-id>.<guid>.dll`。
+3. 该范围也覆盖语言资源子目录中的卫星 DLL；后续编译仍写入同一个规范输出目录。
 
-该机制只处理 `artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\` 下的构建输出，不会杀 IDE 或 MSBuild 进程。
+该策略不终止 Visual Studio 或 MSBuild 进程，也没有 IDE 专用输出分支。若改名本身失败且不属于文件或目录已消失，错误会继续暴露，不能以跳过清理掩盖问题。
 
-## 设计约束
+## 验证边界
 
-- 不使用 `artifacts\ide-bin`。
-- 不通过 Copy 复制 DLL 到目标路径。
-- 不搜索 GAC、Visual Studio 安装目录、WindowsDesktop SDK tools 或历史构建产物。
-- 不恢复 `$(Platform)`、无平台路径、IDE 路径等多级探测。
-
-## 与 native 二进制接入的区别
-
-`PenImc`、`WpfGfx` 等 native 模块可使用外部二进制满足运行时或链接需求。`PresentationBuildTasks.dll` 是构建时任务程序集，会直接影响 XAML/BAML 和资源生成结果，因此不使用外部 SDK 任务程序集作为回退。
-
-长期目标仍是优先使用仓库自产 `PresentationBuildTasks.dll`。
+- 锁定 DLL 的删除失败后改名逻辑已存在于项目文件；Visual Studio 内完整构建是否不再受任务 DLL 锁影响，待 Visual Studio 验证。
+- WpfDemo F5 是否在设计时构建、增量构建和调试启动全过程稳定使用仓库 targets 与唯一任务 DLL，待 Visual Studio 验证。

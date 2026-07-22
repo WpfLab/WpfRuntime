@@ -1,75 +1,62 @@
-# WPF 重组计划文档
+# WPF 重组文档
 
-本文档目录用于记录当前仓库的重组状态、构建现状和交接信息，目标是让后续 AI 对话可以直接接手，而不是重新调查一遍仓库。
+本目录只维护当前事实、后续阶段和无人值守交接。仓库根入口统一为 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx)。根目录没有与该入口同名的传统解决方案文件；仓库内其他模块可以保留各自独立的 `.sln`。
 
-## 文档列表
+## 目录索引
 
-- [00-overview.md](00-overview.md)：当前仓库的已验证事实、解决方案现状、主要缺口。
-- [01-phase-plan.md](01-phase-plan.md)：后续执行顺序、每个阶段的目标、完成标准与风险。
-- [02-next-session-handoff.md](02-next-session-handoff.md)：给后续 AI 直接使用的起手顺序、必读文件、当前阻塞点。
-- [03-session-exploration-2024-06.md](03-session-exploration-2024-06.md)：最近一次会话的详细探索记录、已完成的修复、当前阻塞点和推荐的前进策略。
-- [03-origin-diff-audit.md](03-origin-diff-audit.md)：当前仓库与 `origin` 原始 WPF 代码的差异审计、潜在风险与优先收敛方向。
-- [04-NuGet-Binary.md](04-NuGet-Binary.md)：`PenImc` 和 `WpfGfx` 等 native 模块的 NuGet 二进制 DLL 接入方案。
-- [05-builder-plan.md](05-builder-plan.md)：Builder 构建器项目完善计划，驱动构建与 NuGet 打包。
-- [06-wpfdemo-build-run-plan.md](06-wpfdemo-build-run-plan.md)：将 WpfDemo 改造成仓库 WPF 开发测试宿主的实施计划、验证矩阵和完成标准。
-- [07-wpfdemo-implementation.md](07-wpfdemo-implementation.md)：WpfDemo 的项目引用、自动 ref 编译、app-local 运行时和 native 部署实现设计。
-- [PresentationBuildTasks-bootstrap.md](PresentationBuildTasks-bootstrap.md)：`PresentationBuildTasks.dll` 的 bootstrap 机制、开关、路径来源和约束。
-- [backlog.md](backlog.md)：后备待办记录，用于保存工作过程中发现但不属于当前优先任务范围的问题。
-- [cycle-breaker.md](cycle-breaker.md)：`PresentationFramework` / `ReachFramework` / `System.Printing` / `PresentationUI` 之间桥接项目的保留原因与使用建议。
+### 核心文档
 
-## 建议阅读顺序
+- [00-overview.md](00-overview.md)：唯一的当前状态事实源，记录项目清单、构建状态、已落地能力、未决项和验证边界。
+- [01-phase-plan.md](01-phase-plan.md)：只记录后续阶段、执行动作、完成标准和风险。
+- [02-next-session-handoff.md](02-next-session-handoff.md)：只记录接手时的安全检查、首个阻塞、连续推进顺序和停止条件。
 
-1. 先阅读 `Docs/README.md`，了解文档结构和维护规则。
-1. 再阅读 `00-overview.md`，确认当前磁盘状态、解决方案纳管状态和最新构建结论。
-1. 再阅读 `01-phase-plan.md`，确认下一步应该先解决什么问题。
-1. 阅读 `03-origin-diff-audit.md`，了解当前仓库与 `origin` 的结构差距、迁移性补丁和优先收敛方向。
-1. 如果需要处理 native 模块依赖或 NuGet 打包，阅读 `04-NuGet-Binary.md` 和 `05-builder-plan.md`，了解 binary 接入方案和 Builder 构建器计划。
-1. 如果需要处理 XAML 标记编译或 `PresentationBuildTasks.dll` 加载问题，阅读 `PresentationBuildTasks-bootstrap.md`，了解 bootstrap 机制和关闭方式。
-1. 如果需要让 WpfDemo 直接验证仓库内 WPF 实现或新增 API，阅读 `06-wpfdemo-build-run-plan.md` 和 `07-wpfdemo-implementation.md`。
-1. 阅读 `backlog.md`，了解已经记录但暂不打断当前迁移顺序的后备待办。
-1. 如果准备处理 `PresentationFramework`、`ReachFramework`、`System.Printing` 或 `PresentationUI`，继续阅读 `cycle-breaker.md`。
-1. 开始新的 AI 对话前，将 `02-next-session-handoff.md` 作为交接输入基础。
+### 活跃专题
 
-## 更新规则
+- [03-origin-diff-audit.md](03-origin-diff-audit.md)：维护与 `origin` 的已验证差异、迁移妥协和收敛依据，不承担仓库整体状态汇总。
+- [05-builder-clean.md](05-builder-clean.md)：说明 Builder 清理命令的使用方式、清理范围和安全边界。
+- [05-builder-plan.md](05-builder-plan.md)：记录 Builder 的构建、资产收集和打包设计及专题实施细节。
+- [07-wpfdemo-implementation.md](07-wpfdemo-implementation.md)：记录 WpfDemo 消费仓库 WPF 的实现结构、MSBuild 数据流和扩展约束。
+- [PresentationBuildTasks-bootstrap.md](PresentationBuildTasks-bootstrap.md)：说明 `PresentationBuildTasks` 的任务程序集选择、按需构建和锁定输出处理机制。
+- [cycle-breaker.md](cycle-breaker.md)：记录循环依赖证据、cycle-breaker 的职责、保留条件和退出条件。
+- [backlog.md](backlog.md)：记录不打断正式阶段顺序的已观察问题；进入正式计划的事项以 `01-phase-plan.md` 为准。
 
-- 只记录已经验证过的事实；未验证内容必须明确写成“待确认”或“不确定”。
-- 若新的构建结果与旧记录冲突，应直接改写旧结论，不要把互相矛盾的描述同时保留。
-- 优先记录以下信息：
-  - 当前解决方案实际纳入的项目
-  - 当前磁盘上已存在但尚未纳管的项目
-  - 最新构建入口、构建命令和首个真实失败点
-  - 项目引用、cycle-breaker、共享目录、代码生成链的变化
-- 每次推进后都要更新“当前状态”“阻塞点”“下一步建议”。
-- 文档中不要写“本轮”“本次”之类依赖上下文轮次的描述，应直接写当前状态和后续动作。
-- 工作过程中发现的问题若不属于当前优先任务范围，应记录到 `backlog.md`，不要打断当前迁移顺序。
+### 历史归档
 
-## 当前维护原则
+- [archive/README.md](archive/README.md)：历史材料索引，只用于追溯设计演变，不作为当前状态或执行顺序依据。
 
-1. 整个 WPF 仓库非常大，不要试图一次性加载全部文件，优先围绕当前阻塞模块收集上下文。
-2. 对 `origin/src` 原始文件的迁移，优先采用拷贝到当前仓库的方式，不要让当前解决方案长期直接引用 `origin/src`。
-3. 涉及 native/WPF 主链构建时，优先使用 `msbuild`，不要默认使用 `dotnet msbuild`。
-4. 不要通过把项目从解决方案中移除来制造“构建通过”；应尽量把真实项目纳入解决方案并修复构建。
-5. 若仓库中已经存在 `WindowsBase.csproj`、`PresentationCore.csproj`、`PresentationFramework.csproj` 等同名项目，排查构建错误时必须先检查是否又从 SDK 隐式框架引用拿到了第二份同名程序集。
+三份核心文档分别负责当前事实、后续计划和接手操作；活跃专题只维护各自机制、证据与约束，不重复仓库整体状态；历史归档不参与当前状态判定。
 
-## 无人值守执行原则
+## 阅读顺序
 
-1. 当前仓库迁移任务默认处于无人值守模式。后续 AI 不应等待用户把任务拆细，而应主动围绕总目标“完成整个 WPF 仓库的重组迁移”持续推进。
-2. 一次工作中不应只做文档整理、状态复述或单点验证；只要没有遇到已验证的真实阻塞，就应继续选择下一个最高优先级迁移点并迭代推进。
-3. 不要因为某个局部验证通过就结束工作。命令行 `msbuild` 成功只说明一部分问题已经通过，不能替代对解决方案纳管状态、Visual Studio 项目加载状态、主链迁移缺口的继续排查。
-4. 每次开始时，除检查命令行构建外，还应检查 `Microsoft.Dotnet.Wpf.sln` 声明的项目与 IDE 实际已加载项目是否一致；若发现项目加载失败、未加载或解决方案清单与 IDE 状态不一致，应优先记录并处理，不能视而不见。
-5. 只有在已经尝试推进代码、项目或构建迁移并遇到明确阻塞时，才允许以文档更新作为阶段性收尾。若最终只更新了文档，必须在文档中写清：已经尝试了哪些迁移动作、为什么无法继续、当前首个真实阻塞点是什么、下一次应从哪里接着做。
-6. 结束一次工作前，优先确保至少完成以下事项之一：
-   - 修复一个真实构建/加载阻塞
-   - 完成一个项目或模块的迁移/纳管
-   - 收敛一个 cycle-breaker、引用顺序或代码生成链问题
-   - 明确验证并记录一个无法继续推进的真实技术阻塞
+1. 阅读 `Docs/README.md`，确认文档职责和安全约束。
+2. 阅读 [00-overview.md](00-overview.md)，取得当前工作区事实。
+3. 阅读 [01-phase-plan.md](01-phase-plan.md)，按优先级选择后续阶段。
+4. 执行前阅读 [02-next-session-handoff.md](02-next-session-handoff.md)，完成起手检查并从首个阻塞继续。
+5. 核心三份文档阅读完成后，根据任务主题选择对应的活跃专题；专题中的状态描述若与 `00-overview.md` 冲突，以 `00-overview.md` 为准。
+6. 只有在追溯设计演变、旧决策来源或历史问题线索时，才查阅 [archive/README.md](archive/README.md) 及其归档材料。
 
-## 命令使用提示
+## 事实维护规则
 
-- 推荐命令形态：`msbuild <project-or-sln> -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal`
-- 不要调用 `C:\Program Files\Microsoft Visual Studio\2026\Professional\MSBuild\Current\Bin\MSBuild.exe`。
-- 若必须写完整路径，使用 Visual Studio 18 安装路径；否则直接使用 `msbuild`。
+- 只记录已经验证的事实；没有直接证据的内容明确标为“待确认”或“待 Visual Studio 验证”。
+- 新证据推翻旧结论时直接改写旧结论，不并列保留互相矛盾的状态。
+- `00-overview.md` 负责当前状态；`01-phase-plan.md` 不保存完成历史；`02-next-session-handoff.md` 不写会话流水。
+- 项目计数必须注明统计口径；解决方案声明、磁盘项目和 IDE 加载状态必须分开表述。
+- 构建成功只覆盖实际执行过的配置、平台和入口；增量构建、独立项目构建、还原成功均不能外推为完整解决方案构建成功。
+- 避免依赖对话轮次的措辞、个人机器绝对路径和未经验证的完成宣称。
+- Markdown 链接使用相对路径。历史材料完成分类后迁入 `archive/`，并同步修正索引。
 
-## Origin Commit
+## 无人值守原则
 
-v10.0.9: 44615ed4b9f033922b3361ea02c02f173b8bf82e
+- 不等待用户拆分任务；完成安全检查后，按 [01-phase-plan.md](01-phase-plan.md) 的优先级连续推进。
+- 局部验证通过后继续处理同一主线的下一个真实阻塞，不以状态复述代替实施。
+- 遇到可诊断的构建、加载或环境问题时先收集首个真实错误并尝试解决；只有满足交接文档中的停止条件才中止。
+- 实际状态发生变化后更新 `00-overview.md`；只有阶段顺序或接手流程发生变化时，才分别更新 `01-phase-plan.md` 或 `02-next-session-handoff.md`，避免复制易变化的状态。
+
+## 安全约束
+
+- 开始迁移前必须确认 `origin/` 非空；若为空，立即停止迁移。
+- `origin/src` 被 `origin/.gitignore` 排除，不受外层 Git 状态保护。迁移源文件时优先使用可核对的脚本复制，并在复制前后检查源目录。
+- 修改前检查 Git 变更并保护已有工作，不覆盖来源不明的修改。
+- 禁止执行 `git clean -xdf`；清理必须限定到已确认可再生成的输出目录。
+- 不通过移除项目制造构建成功。真实实现项目应在依赖闭合后纳入根 `slnx`，无法纳入时记录明确原因。
+- 涉及 native/WPF 主链时优先使用 `msbuild`。出现基础类型或同名程序集冲突时，先检查仓库实现与 SDK inbox 引用是否同时进入编译图。

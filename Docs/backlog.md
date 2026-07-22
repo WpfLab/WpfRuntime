@@ -1,61 +1,39 @@
 # 后备待办记录
 
-该文档用于记录工作过程中发现、但不属于当前优先任务范围的问题。记录在这里的问题不代表当前构建基线失败，也不应打断当前迁移顺序；后续在主链迁移稳定后再逐项评估和处理。
+该文档只记录不应打断 [01-phase-plan.md](01-phase-plan.md) 主线的低优先级事项。进入正式阶段计划的工作应从这里移除，当前构建事实仍以 [00-overview.md](00-overview.md) 为准。
 
-## 记录规则
+## 固定可验证的 origin 快照元数据与哈希
 
-- 只记录已经观察到的问题、明确的改进方向或需要后续验证的事项。
-- 不写依赖对话轮次的描述，例如“本轮”“本次”。
-- 每个条目应说明：问题、当前影响、建议处理时机、后续动作。
-- 若某个条目已经进入正式阶段计划，应在这里标记为“已转入计划”，不要保留含糊的重复记录。
+- 背景：`origin/` 是迁移与差异审计的来源，但仅确认目录非空不足以保证不同时间、机器或恢复过程使用的是同一份源快照。
+- 证据：`origin/` 当前包含 `src/` 与 `.gitignore`，没有可读取的 `.git` 提交元数据；[03-origin-diff-audit.md](03-origin-diff-audit.md) 记录了来源声明 commit，但该对象无法由外层仓库验证，且仍缺少可复验的获取方式和内容哈希清单；`origin/src` 还处于外层 Git 保护之外。
+- 触发条件：替换或刷新 `origin/`、重新开展大范围差异审计，或需要让审计结论可跨机器复验时，先记录来源标识、获取时间、过滤规则，并生成确定性的文件清单与哈希。
 
-## 待办事项
+## 统一 Builder 与 WpfDemo 的 native 必需文件清单
 
-### 收敛 Visual Studio 中 `PresentationBuildTasks.dll` 锁文件
+- 背景：native 文件的复制、打包校验和 WpfDemo 输出校验应基于同一份带用途信息的声明，避免增删文件时多处清单漂移。
+- 证据：[`eng/WpfRuntimeDependencies.props`](../eng/WpfRuntimeDependencies.props) 定义了 5 个 `RepoWpfNativeRuntimeFile`；WpfDemo 用该项复制文件，但输出校验另行硬编码 3 个文件；[`NuGetPackageService.cs`](../eng/Builder/NuGetPackageService.cs) 会复制包内全部 native DLL，并以独立数组硬编码 4 个必需文件，`ijwhost.dll` 还来自另一类 host 包。
+- 触发条件：native 文件集合、运行时包版本、打包校验规则或消费入口发生变化时，先让 Builder 与 WpfDemo 读取同一份结构化清单，并保留 runtime 包与 host 包来源差异，消除 Builder 的文件名硬编码。该维护项针对现有 x64/x86 规则收敛，不替代阶段计划中的平台扩展。
 
-- 状态：代码侧已处理，待在 Visual Studio 中复验。
-- 问题：Visual Studio 工作区“生成解决方案”此前会在 `artifacts\bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll` 复制阶段报 `MSB3027/MSB3021`，提示文件被多个 `MSBuild.exe` 进程锁定。
-- 已验证处理：
-  - `PresentationBuildTasks.csproj` 在 `BuildingInsideVisualStudio=true` 且 `TargetFramework=net472` 时，改为输出到 `artifacts\ide-bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll`，避免把 IDE 构建产物直接复制到稳定任务程序集加载路径。
-  - 构建结束后仅在稳定路径缺失时，补种一次 `artifacts\bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll`，避免稳定 `UsingTask` 加载路径与当前 IDE 编译输出争用同一文件。
-  - `Microsoft.WinFX.targets` 保留对 `artifacts\bin` 稳定路径的优先加载；仅当稳定路径不存在且处于 IDE 构建时，才回退到 `artifacts\ide-bin` 路径。
-- 当前影响：
-  - `msbuild src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\PresentationBuildTasks.csproj -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /v:minimal` 仍可成功构建。
-  - 使用 `/p:BuildingInsideVisualStudio=true /p:TargetFramework=net472` 单独构建 `PresentationBuildTasks` 时，输出已写入 `artifacts\ide-bin\PresentationBuildTasks\Debug\net472\PresentationBuildTasks.dll`，且稳定路径与 IDE 路径可并存，不再需要把正在被任务加载的稳定 DLL 作为本次编译输出目标。
-  - 继续以 `/p:BuildingInsideVisualStudio=true` 构建 `PresentationUI` 时，首个失败点已前移为 `MC1000`：`PresentationFramework-PresentationUI-api-cycle` 相关输出路径缺失；未再复现 `PresentationBuildTasks.dll` 复制锁文件错误。
-- 后续动作：在 Visual Studio 中再次执行“生成解决方案”确认锁文件问题已消失；若仍有 IDE 构建失败，优先转向排查 `PresentationUI` 标记编译阶段缺失的 `PresentationFramework.dll` 引用路径，而不是回退本条修改。
+## 修正 Builder `compare` 的无 staging 回退
 
-### 移除 Perl 构建依赖
+- 背景：`compare` 应比较完整的仓库参考程序集清单；在 staging 不存在时生成看似完整但实际只覆盖单个输出目录的报告会误导缺失项判断。
+- 证据：`CompareService` 调用 `AssemblyCollector.CollectReferenceDlls` 后，只把收集结果第一项所在目录作为 `ourDir`，随后仅枚举该目录中的 DLL。
+- 触发条件：需要允许脱离默认 Builder 构建独立运行 `compare` 时，改为直接比较完整收集字典或先汇总到临时目录；修复前只把具有完整 `staging/ref/net8.0` 的结果作为有效报告。
 
-- 状态：待后续处理。
-- 问题：当前主题生成链路仍存在 `ThemeGenerator.pl`、`PreprocessXAML.pl` 等 Perl 脚本依赖。缺少 Perl 时，当前构建通过 `VerifyPerlCommand` 跳过脚本执行并输出警告，避免 Windows 通过 `.pl` 文件关联弹窗。
-- 当前影响：解决方案基线可以构建，但如果需要重新生成主题产物，仍需要安装 Perl 或设置 `PerlCommand` 指向有效 Perl 可执行文件。
-- 目标：等待项目完成迁移之后，移除整个 WPF 仓库对 Perl 的依赖，使仓库只需 `msbuild` 即可执行构建，不再需要额外工具。
-- 建议处理时机：主链项目迁移稳定、主题生成链路和标记编译链路完成梳理之后。
-- 后续动作：评估将 Perl 脚本改写为 MSBuild task、托管工具或内置目标；确认生成产物是否应纳入源码、作为中间产物生成，或由新的托管生成器统一输出。
+## 核对两个 cycle-breaker 的 `PackageId` 命名
 
-### 迁移妥协代码清理
+- 背景：cycle-breaker 的项目名、关系名和 `PackageId` 应可相互对应；`TargetOutputRelPath` 又直接包含 `PackageId`，命名偏差可能形成难以识别的输出目录。
+- 证据：`ReachFramework-System.Printing-api-cycle.csproj` 的 `PackageId` 是 `ReachFramework-SystemPrinting-api-cycle`，缺少项目名中的点号；`PresentationFramework-System.Printing-impl-cycle.csproj` 的 `PackageId` 是 `PresentationFramework-ReachFramework`，与文件名表达的依赖关系不一致。
+- 触发条件：阶段计划完成相关 cycle-breaker 的去留判断且项目需要保留，或打包、缓存、输出路径逻辑开始依赖这些标识时，再核对消费者与现有产物路径后统一命名；不要仅为命名整洁打断当前依赖闭合工作。
 
-- 状态：待后续处理。已转入阶段计划（`Docs/01-phase-plan.md` 阶段 4），但具体执行顺序尚未排定。
-- 问题：当前仓库存在一批为迁移通过而临时写入的妥协代码，长期保留会掩盖与 origin 的真实偏差：
-  - `ReachFramework` bridge 文件：`SafeMemoryHandle.cs`、`PrintQueueBridge.cs`、`DocumentReferenceBridge.cs`
-  - `WindowsBase` 独有补丁：`CaseInsensitiveOrdinalStringComparer.cs`
-  - `System.Xaml` 独有补丁：`StaticExtensionConverter.cs`
-  - `PresentationUI` XAML partial 占位成员（`InstallationError`、`TenFeetInstallationError`、`TenFeetInstallationProgress`、`FindToolBar`）
-  - `PresentationFramework` 打印链路动态调用边界
-  - 主题项目 / Ribbon / `PresentationUI` / `WindowsFormsIntegration` 对完整 `PresentationFramework` 输出的显式 HintPath
-- 当前影响：构建可通过，但代码已与 origin 分叉；新开发人员难以区分临时补丁和真实实现。
-- 建议处理时机：在当前主链构建稳定后，按优先级逐项清理。
-- 后续动作：
-  1. 先恢复 `PresentationUI` 的真实标记编译生成链路，替换 XAML partial 占位
-  2. 收敛打印链路动态边界，替换为更接近 origin 的实现
-  3. 逐项评估 bridge 文件是否可替换为更稳定的项目引用或 origin 方案
-  4. 消除显式 HintPath 引用
+## 调查 `DWriteLoader.UnloadDWrite` 的生命周期意图
 
-### PenImc 和 WpfGfx 的 NuGet 二进制接入
+- 背景：显式加载 `dwrite.dll` 后是否需要在某个生命周期节点释放，应由宿主生命周期和上游设计决定，不能仅凭存在一个清理方法推断应调用或删除。
+- 证据：[`DWriteLoader.cs`](../src/Microsoft.DotNet.Wpf/src/PresentationCore/MS/internal/Text/TextInterface/DWriteLoader.cs) 定义了 `UnloadDWrite`；当前工作区搜索只发现该定义，没有已确认调用点，而 `LoadDWrite` 由 `PresentationCore` 的模块初始化路径调用。
+- 触发条件：出现 native 模块卸载、进程关闭、可卸载加载上下文或相关资源生命周期问题，或准备调整该方法时，先对照固定的 origin 快照并验证实际生命周期，再决定补充调用、保留或移除。
 
-- 状态：已转入正式计划。Builder 构建器项目（`eng\Builder\Builder.csproj`）将作为实现载体，详细方案见 `Docs\05-builder-plan.md`。原始方案见 `Docs\04-NuGet-Binary.md`。
-- 问题：`PenImc` 和 `WpfGfx` 不再走源码迁移路线，但当前尚未通过 NuGet 包接入已构建 DLL。
-- 当前影响：主链编译不直接依赖这些模块的源码，但如果遇到 `DllImport` 缺失或运行时加载问题，需要知道是二进制 DLL 未接入造成的。
-- 建议处理时机：Builder 项目完善后，随构建器一起接入。
-- 后续动作：按 `Docs\05-builder-plan.md` 的计划步骤推进。
+## 为专题验证结果建立可持久日志约定
+
+- 背景：专题结论需要能够关联到命令、环境、退出码和原始日志；只在文档中保留摘要，难以复查结论边界或比较后续回归。
+- 证据：[00-overview.md](00-overview.md) 明确指出部分构建结果没有持久化独立日志；Builder 的诊断日志写入 `artifacts/log/Builder`，而 `artifacts/` 被 `.gitignore` 排除；现有专题材料主要保存文字化验证摘要，尚无统一命名、元数据、保留位置和校验方式。
+- 触发条件：某项验证结果需要作为长期事实引用、需要跨机器复验，或同一专题产生第二份可比较记录时，建立统一约定，至少保存命令、工具链与环境、时间、退出码、日志位置和日志哈希；具体阶段验证动作仍由 [01-phase-plan.md](01-phase-plan.md) 管理。
