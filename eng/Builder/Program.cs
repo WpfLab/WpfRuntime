@@ -9,6 +9,7 @@ try
         .AddHandler<CleanCommand>()
         .AddHandler<CompareCommand>()
         .AddHandler<TestPackageCommand>()
+        .AddHandler<RelayPullRequestCommand>()
         .RunAsync();
 }
 catch (CommandLineParseException exception)

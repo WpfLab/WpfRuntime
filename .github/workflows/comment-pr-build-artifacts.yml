@@ -1,0 +1,298 @@
+name: Comment PR Build Artifacts
+
+on:
+  workflow_run:
+    workflows: [Build WPF NuGet Package]
+    types: [completed]
+
+permissions:
+  actions: read
+  pull-requests: write
+
+concurrency:
+  group: comment-wpf-artifacts-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: >-
+      github.event.workflow_run.event == 'pull_request_target' &&
+      github.event.workflow_run.repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Update PR artifact comment
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          const run = context.payload.workflow_run;
+          const { owner, repo } = context.repo;
+          const repositoryFullName = `${owner}/${repo}`;
+          const supportedBases = new Set(['main', 'WpfReorganize']);
+          const artifactPrefix = 'DotNetCampus.WpfLib-nupkg-';
+          const maxArtifacts = 5;
+
+          async function skip(reason) {
+            core.info(`Skipping PR comment: ${reason}`);
+            await core.summary
+              .addHeading('PR build artifact comment')
+              .addRaw(`Skipped: ${escapeMarkdown(reason)}`)
+              .write();
+          }
+
+          function escapeMarkdown(value) {
+            return String(value)
+              .replace(/[\u0000-\u001f\u007f]/g, '')
+              .slice(0, 120)
+              .replace(/\\/g, '\\\\')
+              .replace(/([`*_[\]()<>{}#+.!|~-])/g, '\\$1')
+              .replace(/@/g, '@\u200b');
+          }
+
+          function formatBytes(value) {
+            const bytes = Number(value);
+            if (!Number.isFinite(bytes) || bytes < 0) {
+              return 'unknown';
+            }
+            const units = ['B', 'KiB', 'MiB', 'GiB'];
+            let amount = bytes;
+            let unitIndex = 0;
+            while (amount >= 1024 && unitIndex < units.length - 1) {
+              amount /= 1024;
+              unitIndex += 1;
+            }
+            return `${amount.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+          }
+
+          function compareRunIdentity(leftId, leftAttempt, rightId, rightAttempt) {
+            const left = BigInt(String(leftId));
+            const right = BigInt(String(rightId));
+            if (left !== right) {
+              return left > right ? 1 : -1;
+            }
+            return Number(leftAttempt) - Number(rightAttempt);
+          }
+
+          if (run.event !== 'pull_request_target' || run.repository?.full_name !== repositoryFullName) {
+            await skip('workflow_run did not originate from this repository pull_request_target workflow.');
+            return;
+          }
+
+          const associations = run.pull_requests ?? [];
+          if (associations.length !== 1) {
+            await skip(`workflow_run.pull_requests contained ${associations.length} entries; exactly one is required.`);
+            return;
+          }
+
+          const association = associations[0];
+          const prNumber = Number(association.number);
+          if (!Number.isSafeInteger(prNumber) || prNumber <= 0) {
+            await skip('The associated pull request number is invalid.');
+            return;
+          }
+
+          const { data: currentRun } = await github.rest.actions.getWorkflowRun({
+            owner,
+            repo,
+            run_id: run.id,
+          });
+          const runAttempt = Number(run.run_attempt ?? currentRun.run_attempt ?? 1);
+          if (currentRun.repository?.full_name !== repositoryFullName ||
+              currentRun.event !== 'pull_request_target' ||
+              Number(currentRun.workflow_id) !== Number(run.workflow_id) ||
+              Number(currentRun.run_attempt ?? 1) !== runAttempt ||
+              currentRun.status !== 'completed') {
+            await skip('The workflow run identity could not be re-confirmed through the Actions API.');
+            return;
+          }
+          const confirmedAssociations = currentRun.pull_requests ?? [];
+          if (confirmedAssociations.length !== 1 ||
+              Number(confirmedAssociations[0].number) !== prNumber ||
+              confirmedAssociations[0].head?.sha !== association.head?.sha ||
+              confirmedAssociations[0].base?.ref !== association.base?.ref) {
+            await skip('The workflow run pull request association could not be re-confirmed through the Actions API.');
+            return;
+          }
+
+          const createdAt = Date.parse(currentRun.created_at);
+          if (!Number.isFinite(createdAt) || createdAt > Date.now() + 5 * 60 * 1000) {
+            await skip('The workflow run creation time is invalid.');
+            return;
+          }
+
+          async function readPullRequest() {
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+            return pullRequest;
+          }
+
+          function validatePullRequest(pullRequest) {
+            if (pullRequest.state !== 'open') {
+              return 'The associated pull request is no longer open.';
+            }
+            if (!supportedBases.has(pullRequest.base?.ref)) {
+              return `The pull request base '${pullRequest.base?.ref ?? 'unknown'}' is not supported.`;
+            }
+            if (association.head?.sha !== pullRequest.head?.sha) {
+              return 'The workflow run source head no longer matches the current pull request head.';
+            }
+            if (association.base?.ref !== pullRequest.base?.ref) {
+              return 'The workflow run base no longer matches the current pull request base.';
+            }
+            if (createdAt < Date.parse(pullRequest.created_at)) {
+              return 'The workflow run predates the associated pull request.';
+            }
+            return null;
+          }
+
+          async function findNewerAssociatedRun() {
+            const workflowRuns = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner,
+              repo,
+              workflow_id: run.workflow_id,
+              event: 'pull_request_target',
+              created: `>=${currentRun.created_at}`,
+              per_page: 100,
+            });
+            return workflowRuns.find(candidate => {
+              const candidateAttempt = Number(candidate.run_attempt ?? 1);
+              if (Number(candidate.id) === Number(run.id)) {
+                return candidateAttempt > runAttempt;
+              }
+              if (compareRunIdentity(candidate.id, candidateAttempt, run.id, runAttempt) <= 0) {
+                return false;
+              }
+              const candidateAssociations = candidate.pull_requests ?? [];
+              return candidateAssociations.length === 1 &&
+                Number(candidateAssociations[0].number) === prNumber;
+            });
+          }
+
+          let pullRequest = await readPullRequest();
+          let pullRequestError = validatePullRequest(pullRequest);
+          if (pullRequestError) {
+            await skip(pullRequestError);
+            return;
+          }
+
+          const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+            owner,
+            repo,
+            run_id: run.id,
+            per_page: 100,
+          });
+          const artifactPattern = new RegExp(
+            `^DotNetCampus\\.WpfLib-nupkg-pr-${prNumber}-sha-([0-9a-fA-F]{40})-run-${run.id}-attempt-${runAttempt}$`);
+          const validArtifacts = artifacts
+            .filter(artifact => artifact.name.startsWith(artifactPrefix))
+            .filter(artifact => artifact.expired === false && Number(artifact.size_in_bytes) > 0)
+            .map(artifact => ({ artifact, match: artifactPattern.exec(artifact.name) }))
+            .filter(item => item.match !== null)
+            .sort((left, right) => Number(left.artifact.id) - Number(right.artifact.id));
+          const testedShas = new Set(validArtifacts.map(item => item.match[1].toLowerCase()));
+          const testedSha = testedShas.size === 1 ? [...testedShas][0] : null;
+
+          pullRequest = await readPullRequest();
+          pullRequestError = validatePullRequest(pullRequest);
+          if (pullRequestError) {
+            await skip(pullRequestError);
+            return;
+          }
+          const newerRun = await findNewerAssociatedRun();
+          if (newerRun) {
+            await skip(`A newer associated workflow run exists: ${newerRun.id}.`);
+            return;
+          }
+
+          const marker = `<!-- wpf-nuget-artifacts workflow=build pr=${prNumber} -->`;
+          const runMarker = `<!-- wpf-nuget-artifacts-run id=${run.id} attempt=${runAttempt} -->`;
+          const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${run.id}`;
+          const conclusion = currentRun.conclusion ?? run.conclusion ?? 'unknown';
+          const conclusionLabels = {
+            success: '成功',
+            failure: '失败',
+            cancelled: '已取消',
+            timed_out: '超时',
+            action_required: '需要操作',
+            neutral: '中性',
+            skipped: '已跳过',
+            stale: '已过期',
+          };
+          const hasValidSuccessArtifacts = conclusion === 'success' && validArtifacts.length > 0 && testedSha !== null;
+          const resultLabel = hasValidSuccessArtifacts
+            ? '成功'
+            : conclusion === 'success'
+              ? '异常：workflow 成功，但没有唯一且有效的 nupkg artifact'
+              : (conclusionLabels[conclusion] ?? escapeMarkdown(conclusion));
+          const body = [
+            marker,
+            runMarker,
+            '## WPF NuGet 构建',
+            '',
+            `- 结果：${resultLabel}`,
+            `- PR head：\`${pullRequest.head.sha}\``,
+            `- 测试合并提交：${testedSha ? `\`${testedSha}\`` : '无可验证产物身份'}`,
+            `- Actions run：[${run.id}（attempt ${runAttempt}）](${runUrl})`,
+          ];
+
+          if (hasValidSuccessArtifacts) {
+            for (const { artifact } of validArtifacts.slice(0, maxArtifacts)) {
+              const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${run.id}/artifacts/${artifact.id}`;
+              const expiresAt = artifact.expires_at
+                ? new Date(artifact.expires_at).toISOString()
+                : 'unknown';
+              body.push(
+                `- NuGet artifact：[${escapeMarkdown(artifact.name)}](${artifactUrl})`,
+                `  - 大小：${formatBytes(artifact.size_in_bytes)}`,
+                `  - 过期时间：${escapeMarkdown(expiresAt)}`);
+            }
+            if (validArtifacts.length > maxArtifacts) {
+              body.push(`- 另有 ${validArtifacts.length - maxArtifacts} 个有效 artifact 未展示。`);
+            }
+            body.push('', '下载需要 GitHub 登录和仓库读取权限；链接随 artifact 保留期失效。');
+          }
+
+          const commentBody = body.join('\n');
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number: prNumber,
+            per_page: 100,
+          });
+          const existing = comments.find(comment =>
+            comment.user?.login?.toLowerCase() === 'github-actions[bot]' &&
+            comment.body?.includes(marker));
+
+          if (existing) {
+            const existingRun = /<!-- wpf-nuget-artifacts-run id=(\d+) attempt=(\d+) -->/.exec(existing.body ?? '');
+            if (existingRun && compareRunIdentity(existingRun[1], existingRun[2], run.id, runAttempt) > 0) {
+              await skip(`The existing bot comment already records newer run ${existingRun[1]}.`);
+              return;
+            }
+            await github.rest.issues.updateComment({
+              owner,
+              repo,
+              comment_id: existing.id,
+              body: commentBody,
+            });
+            core.info(`Updated artifact comment ${existing.id} for PR #${prNumber}.`);
+          }
+          else {
+            const { data: createdComment } = await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: commentBody,
+            });
+            core.info(`Created artifact comment ${createdComment.id} for PR #${prNumber}.`);
+          }
+
+          await core.summary
+            .addHeading('PR build artifact comment')
+            .addRaw(`Updated PR #${prNumber} for workflow run ${run.id}, attempt ${runAttempt}.`)
+            .write();

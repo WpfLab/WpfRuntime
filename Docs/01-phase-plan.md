@@ -2,33 +2,6 @@
 
 当前事实与已落地能力统一见 [00-overview.md](00-overview.md)。该文件只定义后续工作，不保存完成历史。执行时按阶段顺序连续推进；同一阶段的验证通过后，立即进入下一阶段。
 
-## 阶段 1：修复当前首错并复验完整解决方案构建
-
-### 目标
-
-修复当前 `WindowsBase` 的 `Accessibility.IAccessible` 编译引用错误，并取得根 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 在 `Debug|x64` 和 `Debug|Any CPU` 下可重复的完整 Restore + Build 结论。
-
-### 动作
-
-1. 定位 `UnsafeNativeMethodsCLR.cs` 中 `Accessibility.IAccessible` 的预期程序集和当前引用来源，检查仓库实现、SDK inbox 引用与目标框架引用是否发生缺失或冲突。
-2. 以最小改动恢复正确的编译引用或类型边界，不通过删除代码、移除项目或扩大 stub API 绕过错误。
-3. 保留现有 Git 修改，不执行 `git clean -xdf`；只清理确认可再生成且与验证直接相关的输出。
-4. 执行完整 `Debug|x64` Restore + Build，保存二进制日志或文本日志。
-5. x64 成功后执行完整 `Debug|Any CPU` Restore + Build，保存日志。
-6. 若首错变化，更新 [00-overview.md](00-overview.md) 后继续修复；不要把 Restore、配置验证或独立项目成功当作完整构建成功。
-
-### 完成标准
-
-- 两个平台均有退出码为 0 的完整 Restore + Build 记录。
-- 重复执行不依赖偶然残留产物，且 `Accessibility.IAccessible` 引用来源有明确、可维护的解释。
-- 警告与失败分开记录，未强制重编译的 native 项目不作外推结论。
-
-### 风险
-
-- 修复引用时可能暴露同名 `Accessibility` 程序集、FrameworkReference 或目标框架引用冲突。
-- 清理范围过大会破坏未受 Git 保护的 `origin/src`，因此不得使用仓库级强制清理。
-- `Any CPU` 可能暴露不同于 x64 的平台映射或 native 依赖问题。
-
 ## 阶段 2：验证 Visual Studio 项目加载与 WpfDemo F5
 
 ### 目标

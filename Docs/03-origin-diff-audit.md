@@ -75,6 +75,13 @@
 - 各桥接项目的直接消费者、状态和退出条件见 [cycle-breaker.md](cycle-breaker.md)。结构审计不得仅凭名称判断某个桥接项目或其中某个文件与来源树的关系。
 - `System.Printing.vcxproj` 真实实现仍位于磁盘但未被根 `slnx` 直接纳管。该事实应与 cycle-breaker 的暂时桥接职责分开记录。
 
+### 主题引用程序集边界
+
+- 7 个主题 ref 项目当前均使用 `PresentationUI`、`System.Xaml`、`WindowsBase`、`PresentationCore` 的 ref 项目作为编译依赖。
+- 它们对 `PresentationFramework-ref.csproj` 的项目引用只承担构建排序，设置 `ReferenceOutputAssembly="false"` 和 `PrivateAssets="all"`；实际编译引用显式指向 `$(ArtifactsObjDir)PresentationFramework-ref\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\ref\PresentationFramework.dll`。
+- 该差异有当前强制重建证据：若直接让项目引用参与程序集解析，打印相关 `PresentationFramework-System.Printing-api-cycle` 会以同名 `PresentationFramework.dll` 传递进入主题 ref，`PresentationFramework.Royale-ref` 会因选中不完整 bridge 而出现 53 个缺少控件类型的 `CS0234`。
+- 该显式引用是当前 cycle-breaker 阶段的隔离边界，不是长期目标。只有在打印真实实现与 ref 依赖闭合、同名 bridge 不再泄漏到非打印消费者，并且双平台强制重建仍成功后，才能回退为普通 ref-to-ref 项目引用。
+
 ## 后续审计方法
 
 1. **保护来源**：确认 `origin/` 和 `origin/src/` 非空，检查 `origin/.gitignore`，不得依赖外层 `git status` 判断来源树是否安全。

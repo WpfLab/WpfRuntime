@@ -2,7 +2,7 @@
 
 ## 文档定位
 
-本文定义 `eng/Builder` 后续增加 GitHub PR 搬运命令的行为契约，并定义一个与本地搬运命令解耦的 GitHub Actions 产物回写流程。本文是实施设计，不表示对应 C#、项目文件或 workflow 已经落地。
+本文定义并说明 `eng/Builder` GitHub PR 搬运命令的行为契约，以及与本地搬运命令解耦的 GitHub Actions 产物回写流程。对应 C#、项目文件和两个 workflow 已落地；真实 GitHub push、PR 创建、fork 权限和评论矩阵仍需在专用低权限环境中验收。
 
 现有 Builder 的构建、打包与包验证能力见 [05-builder-plan.md](05-builder-plan.md)，仓库整体状态仍以 [00-overview.md](00-overview.md) 为准。
 
@@ -57,16 +57,16 @@ Builder 应完成以下动作：
 
 ## 已确认的当前基础
 
-- `eng/Builder/Builder.csproj` 是 `net8.0` 控制台项目，当前注册默认构建、`clean`、`compare` 和 `test-package` 命令。
+- `eng/Builder/Builder.csproj` 是 `net8.0` 控制台项目，当前注册默认构建、`clean`、`compare`、`test-package` 和 `relay-pr` 命令。
 - 默认 Builder 构建会构建 x64/x86、收集程序集与 native 资产、生成 `DotNetCampus.WpfLib` NuGet 包，并在项目构建不完整时返回非零退出码。
 - `test-package` 会对 net8.0/net9.0 与 win-x86/win-x64 组合执行隔离 Publish、哈希校验和运行探针。
-- `.github/workflows/build.yml` 已有根解决方案构建、Builder 构建、包验证和 artifact 上传，但当前没有 PR 评论流程。
+- `.github/workflows/build.yml` 使用只读 `pull_request_target` 受信任定义显式构建 PR merge ref；`.github/workflows/comment-pr-build-artifacts.yml` 在 `workflow_run` 受信任上下文中只读取元数据并回写 PR 评论。
 - 当前仓库有多个远端，因此不能用“列表中的第一个 GitHub 远端”猜测目标仓库。命令使用显式目标 remote，默认值为 `origin`。
 - 示例 PR 页面显示其 base 为 `dotnet/wpf:main`，head 为 `TFGSUMIT/wpf:fix/issue-11774`，页面展示的缩写提交为 `4ce6f21`。实现不得硬编码这些值，必须在每次执行时通过 API 获取完整 head SHA。
 
 ## 命令行契约
 
-建议新增独立命令 `relay-pr`，避免默认构建命令意外执行远端写操作：
+独立命令 `relay-pr` 避免默认构建命令意外执行远端写操作：
 
 ```powershell
 dotnet restore eng/Builder/Builder.csproj
@@ -391,9 +391,9 @@ InputValidated
 - PR 创建失败但 push 已成功：保留状态和分支 URL，重试时先复用同一分支，不能重复生成其他命名分支。
 - 取消：终止当前子进程树，保留 `state.json` 和日志，返回非零退出码。
 
-## 建议的 Builder 实现拆分
+## Builder 实现拆分
 
-后续实施保持内部可见性并避免不必要的接口层：
+实现保持内部可见性并避免不必要的接口层：
 
 | 文件 | 职责 |
 |---|---|
@@ -406,7 +406,7 @@ InputValidated
 | `ProcessRunner.cs` | 增加异步、`ArgumentList`、取消、超时、进程树终止与受控环境支持；现有同步调用可逐步复用安全内核 |
 | `Resources.resx` | 保存新增 CLI 错误、帮助和 PR 模板中的用户可见文本 |
 
-`Builder.csproj` 后续需要增加 Octokit.NET 包引用；版本在实施时按当前 NuGet 源选择与 net8.0 兼容的稳定版本，不为了该功能修改 TFM、SDK 或 C# 版本。
+`Builder.csproj` 使用与 net8.0 兼容的稳定版 Octokit.NET 14.0.0；没有为该功能修改 TFM、SDK 或 C# 版本。
 
 网络与进程 I/O 应 async end-to-end。命令取消时不允许遗留继续运行的 build、test 或 Git 子进程。
 
@@ -458,7 +458,7 @@ push 与 `workflow_dispatch` 仍可构建和上传 artifact，但不会触发 PR
 
 ### 回写工作流
 
-建议新增 `.github/workflows/comment-pr-build-artifacts.yml`：
+已新增 `.github/workflows/comment-pr-build-artifacts.yml`：
 
 ```text
 on:
@@ -566,7 +566,7 @@ workflow 失败、取消或成功但无有效 nupkg artifact 时，也更新同�
 
 ### Builder 单元测试
 
-后续新增独立测试项目 `eng/Builder.Tests`，使用仓库确定的测试框架；当前解决方案没有可复用测试项目时，优先使用 xUnit。至少覆盖：
+独立测试项目 `eng/Builder.Tests` 使用 xUnit，并通过 `eng/Builder.ProcessTestHelper` 验证参数和进程树边界。当前 40 项测试通过，覆盖：
 
 - 标准 PR URL、子页面 URL、大小写 host、无效 scheme/host/path/number 和无效转义。
 - GitHub HTTPS/SSH remote 解析，以及 fetch/push 指向不同仓库的拒绝逻辑。
@@ -618,7 +618,7 @@ GitHub 网络 API 不应成为普通单元测试前置条件。Octokit 外部调
 4. 增加完整本地构建门禁和构建后提交校验。
 5. 增加安全 push、来源冲突检查与 Octokit PR 创建/复用。
 6. 增加单元测试和本地 bare repository 集成测试。
-7. 在示例 PR 上执行端到端人工验收。
+7. 在示例 PR 上执行端到端人工验收。前 6 项已实现并通过本地自动化验证；该项仍待专用环境执行。
 
 ### 阶段 B：通用 PR 构建与产物回写
 
@@ -626,7 +626,7 @@ GitHub 网络 API 不应成为普通单元测试前置条件。Octokit 外部调
 2. 让 artifact 名稳定包含 PR/run/attempt 身份。
 3. 新增只处理元数据的 `workflow_run` 回写工作流。
 4. 实现最新 run 判定、artifact 过滤和幂等评论。
-5. 依次验证同仓库 PR、fork PR、失败、rerun 和新提交场景。
+5. 依次验证同仓库 PR、fork PR、失败、rerun 和新提交场景。前 4 项已实现并通过静态契约测试；该项仍待真实 PR 矩阵执行。
 
 两个阶段独立交付。阶段 A 创建的 PR 只要进入目标仓库，就与其他人创建的 PR 一样由阶段 B 处理；阶段 B 不依赖 PR 是否由 Builder 创建。
 

@@ -13,9 +13,12 @@
     <File Path="NuGet.config" />
     <File Path="README.md" />
     <Project Path="eng/Builder/Builder.csproj" />
+    <Project Path="eng/Builder.ProcessTestHelper/Builder.ProcessTestHelper.csproj" />
+    <Project Path="eng/Builder.Tests/Builder.Tests.csproj" />
   </Folder>
   <Folder Name="/Build/GitHub Action/">
     <File Path=".github/workflows/build.yml" />
+    <File Path=".github/workflows/comment-pr-build-artifacts.yml" />
   </Folder>
   <Folder Name="/Build/WpfArcadeSdk/">
     <File Path="eng/WpfArcadeSdk/SystemResources.props" />

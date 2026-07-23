@@ -5,6 +5,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>WpfReorganize.Builder</RootNamespace>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <!-- Builder 自身输出不能落在 artifacts\ 内，避免清空时自毁 -->
@@ -28,6 +29,7 @@
   <ItemGroup>
     <PackageReference Include="DotNetCampus.CommandLine" Version="4.2.0" />
     <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.11.0" PrivateAssets="all" />
+    <PackageReference Include="Octokit" Version="14.0.0" />
   </ItemGroup>
 
   <ItemGroup>

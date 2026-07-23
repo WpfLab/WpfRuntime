@@ -15,9 +15,9 @@
 
 ## 项目清单
 
-排除 `origin/`、`artifacts/`、`bin/`、`obj/` 后，磁盘共有 **68** 个项目文件。
+排除 `origin/`、`artifacts/`、`bin/`、`obj/` 后，磁盘共有 **70** 个项目文件。
 
-根 `slnx` 声明 **57** 个唯一项目，且 57 条声明路径当前均存在：
+根 `slnx` 声明 **59** 个唯一项目，且 59 条声明路径当前均存在：
 
 | 所在区域 | 数量 |
 |---|---:|
@@ -25,10 +25,10 @@
 | `cycle-breakers/` | 8 |
 | `Demo/` | 1 |
 | `Docs/` | 1 |
-| `eng/` | 1 |
-| 合计 | 57 |
+| `eng/` | 3 |
+| 合计 | 59 |
 
-IDE 接口只枚举出与根 `slnx` 对应的 57 条项目路径，没有提供 `Loaded` 或 `LoadFailed` 状态。因此只能确认项目被枚举，实际加载成功状态 **待 Visual Studio 验证**，不得表述为 57 个项目均已加载。
+IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚未重新枚举；只能确认根 `slnx` 的 59 条声明路径均存在，实际加载成功状态 **待 Visual Studio 验证**，不得表述为 59 个项目均已加载。
 
 ### 未直接纳入根 `slnx` 的 11 个项目
 
@@ -44,31 +44,34 @@ IDE 接口只枚举出与根 `slnx` 对应的 57 条项目路径，没有提供 
 
 ## 当前构建状态
 
-以下结果来自当前工作区验证，但没有持久化独立日志文件；需要长期引用时应重新执行并保存日志。
+以下结果来自当前工作区验证。最终双平台强制重建日志保存在 `artifacts/logs/Microsoft.Dotnet.Wpf-Debug-x64-final.{log,binlog}` 和 `artifacts/logs/Microsoft.Dotnet.Wpf-Debug-AnyCPU-final.{log,binlog}`；`artifacts/` 属于可再生成输出，不作为源码事实源。
 
 | 范围 | 配置 | 结果 | 结论边界 |
 |---|---|---|---|
 | `ValidateSolutionConfiguration` | `Debug|x64` | 成功 | 只证明解决方案配置映射可解析 |
 | `ValidateSolutionConfiguration` | `Debug|Any CPU` | 成功 | 只证明解决方案配置映射可解析 |
-| 根 `slnx` Restore | `Debug|x64` | 成功 | 只证明完整 x64 还原成功 |
-| 根 `slnx` Restore + Build | `Debug|x64` | 失败：`CS0234` | 当前首错位于 `src/Microsoft.DotNet.Wpf/src/Shared/MS/Win32/UnsafeNativeMethodsCLR.cs(310,127)`：`Accessibility.IAccessible` 不存在，所属项目为 `WindowsBase.csproj` |
-| 根 `slnx` Restore + Build | `Debug|Any CPU` | 未验证 | 不得从配置验证或 x64 结果外推 |
+| 根 `slnx` Restore + Rebuild | `Debug|x64` | 成功：3445 个警告，0 个错误 | 完整强制重建，退出码为 0 |
+| 根 `slnx` Restore + Rebuild | `Debug|Any CPU` | 成功：3445 个警告，0 个错误 | 完整强制重建，退出码为 0；解决方案项目映射和 native 资产使用 x64 |
+| `WindowsBase` | `Debug|x64` | Restore/Build 成功 | `Accessibility.dll` 从已安装的 `Microsoft.WindowsDesktop.App.Ref/8.0.1/ref/net8.0` 解析；此前的 `CS0234` 当前不可复现 |
 | `PresentationFramework` | `Debug|x64` | Restore/Build 成功 | 独立项目验证 |
 | `PresentationUI` | `Debug|x64` | Restore/Build 成功 | 独立项目验证 |
 | `WindowsFormsIntegration` | `Debug|x64` | Restore/Build 成功 | 独立项目验证 |
-| `DirectWriteForwarder` | `Debug|x64` | 仅增量 Build 成功 | 未证明干净构建或强制重编译成功 |
+| `DirectWriteForwarder` | `Debug|x64` | 根解决方案强制重建覆盖 | 最终日志仍包含 `D9035`，但没有导致失败 |
 | `System.Printing` | 未执行 | 未构建 | 旧错误只能作为历史线索，不能当作当前首个错误 |
 
-完整 x64 验证命令为：
+最终强制重建命令为：
 
-`msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal`
+- `msbuild Microsoft.Dotnet.Wpf.slnx -restore /t:Rebuild /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal`
+- `msbuild Microsoft.Dotnet.Wpf.slnx -restore /t:Rebuild /p:Configuration=Debug "/p:Platform=Any CPU" /m:1 /nr:false /v:minimal`
 
-当前可能出现但不一定导致失败的警告包括：
+强制重建曾暴露 7 个主题引用程序集依赖预存 `PresentationFramework.dll` 的问题：打印相关 cycle-breaker 与完整引用程序集同名，`PresentationFramework.Royale-ref` 因选中不完整 bridge 而出现 53 个 `CS0234`。当前 7 个主题 ref 项目使用 ref-to-ref 项目依赖，并显式编译引用 `$(ArtifactsObjDir)PresentationFramework-ref\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\ref\PresentationFramework.dll`，双平台强制重建均已通过。
+
+当前可能出现但不导致最终双平台强制重建失败的警告包括：
 
 - `NU1603`。
 - `MSB3243`。
 - 缺少 Perl 时跳过相关脚本的警告。
-- `D9035` 尚未通过 `DirectWriteForwarder` 强制重编译复验，不能根据增量构建结果判断其当前状态。
+- `D9035`。
 
 此前观察到的 WpfDemo 输出文件锁在最新复验中未再出现；它保留为历史环境线索，不再是当前首个阻塞。
 
@@ -78,6 +81,10 @@ IDE 接口只枚举出与根 `slnx` 对应的 57 条项目路径，没有提供 
 
 - 已实现共享 native 资产清单。
 - Builder 已实现 x64 和 x86 路径。
+- Builder 已注册独立 `relay-pr` 命令，使用 Octokit 14.0.0 读取来源 PR，并在独立 clone 中执行固定 SHA fetch、`--no-ff` merge、本地门禁、精确 SHA push 和目标 PR 创建/复用；命令缺少 `--allow-untrusted-build` 或 `GITHUB_TOKEN` 时会在 clone、构建和远端写入前退出。
+- 本地门禁在隔离 HOME/NuGet/AppData/TEMP 环境中依次执行 Builder Restore/Build、x64/x86 构建打包、精确 nupkg `test-package` 和根 `Debug|x64` Rebuild，并校验构建前后 HEAD、tree、index 和 tracked working tree。
+- `eng/Builder.Tests` 与 `eng/Builder.ProcessTestHelper` 已纳入根 `slnx`；40 项单元、进程和本地 bare repository 集成测试通过，覆盖 URL/remote 解析、敏感环境、取消/超时、PR ref fallback、冲突、共同历史、提交范围、精确 SHA push、lease 竞争和 workflow 安全契约。
+- `.github/workflows/build.yml` 已改为只读 `pull_request_target` 受信任编排，并显式构建 PR merge ref；`.github/workflows/comment-pr-build-artifacts.yml` 只读取 run/artifact 元数据并幂等更新 bot 评论，不 checkout 或下载 artifact。
 - arm64 尚未实现。
 
 ### WpfDemo
@@ -103,23 +110,23 @@ IDE 接口只枚举出与根 `slnx` 对应的 57 条项目路径，没有提供 
 
 ## 当前未决项
 
-1. 修复 `WindowsBase` 对 `Accessibility.IAccessible` 的编译引用边界，并重新验证完整 `Debug|x64` 构建。
-2. x64 成功后验证完整 `Debug|Any CPU` 构建；当前只有解决方案配置映射验证成功。
-3. 在 Visual Studio 中确认 57 个项目的实际加载状态，并复验 WpfDemo F5。
-4. 验证并修正 WpfDemo 文化资源程序集的子目录部署，避免不同文化的同名资源被覆盖。
-5. 在干净输出下验证 `PresentationUI` 的 4 个 `.g.cs` 可重复生成，再决定是否回退 4 个 `.xaml.cs` 的显式基类。
-6. 构建 `System.Printing.vcxproj`，依据当前首个真实错误决定修复与纳管方式。
-7. 确定目标版本边界：
+1. 在 Visual Studio 中确认 59 个项目的实际加载状态，并复验 WpfDemo F5。
+2. 验证并修正 WpfDemo 文化资源程序集的子目录部署，避免不同文化的同名资源被覆盖。
+3. 在干净输出下验证 `PresentationUI` 的 4 个 `.g.cs` 可重复生成，再决定是否回退 4 个 `.xaml.cs` 的显式基类。
+4. 构建 `System.Printing.vcxproj`，依据当前首个真实错误决定修复与纳管方式。
+5. 确定目标版本边界：
    - `System.Windows.Primitives` 只存在于 `origin`，当前仓库缺失；是否迁入取决于目标版本边界，不能直接认定为必迁模块。
    - `Extensions` 下 5 个项目的去留取决于兼容目标。
-8. 判断无直接消费者的 `PresentationFramework-System.Printing-impl-cycle` 是否仍有保留价值。
-9. 补齐测试迁移、WpfDemo x86、arm64、Publish 和旧生成工具的目标范围；这些能力当前均未完成。
+6. 判断无直接消费者的 `PresentationFramework-System.Printing-impl-cycle` 是否仍有保留价值，并继续隔离同名 cycle-breaker 对非打印 ref 消费者的影响。
+7. 补齐产品测试迁移、WpfDemo x86、arm64、Publish 和旧生成工具的目标范围；Builder PR relay 自身测试已落地，但不代表 WPF 产品测试迁移完成。
+8. 在专用低权限/可销毁环境中对 `relay-pr` 执行真实 GitHub 示例 PR 端到端验收，并按专题文档矩阵验证同仓库 PR、fork PR、失败、rerun、新提交和 artifact 评论场景。
 
 ## 验证边界
 
-- 根 `slnx` 的 x64 Restore 成功不等于完整 x64 Build 成功。
-- 最新复验中的失败是当前源码编译图错误；在修复并重跑成功前，完整解决方案仍处于未通过状态。
-- 独立项目成功不能替代根 `slnx` 成功；增量成功不能替代干净构建成功。
+- 根 `slnx` 的 `Debug|x64` 和 `Debug|Any CPU` Restore + Rebuild 已在当前工作区成功；该结论不外推到其他配置、平台或 Visual Studio 设计时/F5 行为。
+- Builder PR relay 的本地自动化验证不包含真实 GitHub push、PR 创建或不可信外部 PR 构建；Actions 权限、fork 与评论行为仍需真实 PR 验收。
+- 主题 ref 的成功依赖当前显式完整 `PresentationFramework-ref` 引用边界；在同名打印 cycle-breaker 收敛前，不应移除该隔离并退回条件式预存实现输出。
+- 独立项目成功不能替代根 `slnx` 成功；增量成功不能替代强制重建成功。
 - IDE 枚举项目路径不能证明项目已加载；必须由 Visual Studio 的加载状态和实际构建验证。
 - `artifacts` 中已有生成文件不能证明从干净状态可重现。
 - 没有重新执行的历史命令、旧错误和专题文档不得提升为当前结论。
