@@ -24,14 +24,19 @@ dotnet build eng/Builder/Builder.csproj --no-restore
 | `dotnet run --project eng/Builder/Builder.csproj --no-build -- compare` | 将 staging 中已收集的参考程序集与官方 `Microsoft.WindowsDesktop.App.Ref` 做缺失项和大小差异比较；应先完成默认 Builder 构建 |
 | `dotnet run --project eng/Builder/Builder.csproj --no-build -- test-package` | 选择 `eng/Builder/bin/nupkg/` 中最新的包并执行隔离消费矩阵 |
 | `dotnet run --project eng/Builder/Builder.csproj --no-build -- test-package --package <nupkg-path>` | 验证显式指定的包 |
+| `dotnet eng/Builder/bin/Builder.dll ci-build --repository <tested-repository> --target solution` | GitHub Actions 受信任入口：复核事件与 checkout 身份、检查凭据残留，并在脱敏环境中重建根解决方案 |
+| `dotnet eng/Builder/bin/Builder.dll ci-build --repository <tested-repository> --target package` | GitHub Actions 受信任入口：计算版本与 artifact 身份，完整构建/打包/验证，并安全写入 `GITHUB_OUTPUT` |
+| `dotnet eng/Builder/bin/Builder.dll comment-pr-artifacts` | `workflow_run` 受信任入口：通过 Octokit 复核 run/PR/artifact 元数据并幂等创建或更新 bot 评论 |
 
 命令从 Builder 输出目录向上查找 `.git` 来定位仓库根。若直接使用 `--no-build`，调用方必须保证 Builder 已构建且 `PackagePaths.txt` 与当前还原结果一致。
+
+`ci-build` 与 `comment-pr-artifacts` 默认读取 GitHub Actions 提供的 `GITHUB_EVENT_PATH`、`GITHUB_EVENT_NAME`、`GITHUB_SHA`、`GITHUB_RUN_ID`、`GITHUB_RUN_ATTEMPT`、`GITHUB_REPOSITORY`、`GITHUB_OUTPUT` 和 `GITHUB_STEP_SUMMARY`；评论命令另从环境变量读取 `GITHUB_TOKEN`，不接受把 token 放入命令行。只执行元数据或受信任编排命令时，可以用 `-p:RestoreWpfRuntimePackages=false` 还原/构建 Builder，跳过默认构建才需要的 WindowsDesktop `PackageDownload`；默认值仍为 `true`。
 
 ## 服务拆分
 
 | 组件 | 当前职责 |
 |---|---|
-| `Program.cs` | 注册默认构建、`clean`、`compare` 和 `test-package` 命令 |
+| `Program.cs` | 注册默认构建、`clean`、`compare`、`test-package`、`relay-pr`、`ci-build` 和 `comment-pr-artifacts` 命令 |
 | `BuildService` | 编排清理、逐项目构建、资产收集、包校验、打包和报告比较 |
 | `MsBuildService` | 通过 `vswhere`、`PATH` 和 Visual Studio 常见安装目录查找 `MSBuild.exe`，并管理逐项目诊断日志 |
 | `CleanService` | 清理已知输出，并对锁定文件或目录进行跳过和统计 |
@@ -41,6 +46,9 @@ dotnet build eng/Builder/Builder.csproj --no-restore
 | `CompareService` | 与官方参考程序集做清单和尺寸级报告比较；不进行 API 二进制兼容性证明 |
 | `PackageTestService` | 动态创建隔离消费项目，发布、校验包资产哈希并运行 WPF 探针 |
 | `ProcessRunner` | 运行外部进程、合并标准输出和错误输出，并对探针执行超时终止 |
+| `GitHubActionsBuildService` | 由受信任 Builder 校验 tested checkout 的凭据、事件 SHA/merge 双亲与 Git 状态，并在脱敏隔离环境中执行 solution 或 package 门禁 |
+| `GitHubArtifactCommentService` | 通过 Octokit 分页读取 workflow run、PR、artifact 与评论元数据，执行最新运行判定、artifact 身份筛选和 bot 评论幂等回写 |
+| `GitHubWorkflowRunEvent` / `GitHubArtifactCommentFormatter` | 严格解析事件 JSON，并集中生成 marker、Markdown 安全文本、大小与链接展示 |
 
 ## Visual Studio MSBuild 依赖
 
@@ -174,10 +182,12 @@ nuspec 为 `net8.0` 和 `net9.0` 写入运行时包依赖组，依赖版本来�
 
 `.github/workflows/build.yml` 包含两个相互独立的 Windows job：
 
-- `build-solution`：安装 .NET 8/9 和 Visual Studio MSBuild，然后对根 `Microsoft.Dotnet.Wpf.slnx` 执行 `Debug|x64` Restore + Build。
-- `build`：还原并构建 Builder，运行默认 x64/x86 构建与打包命令，再运行 `test-package`。
+- `build-solution`：分别 checkout `github.sha` 的受信任 Builder 与待测试 commit/PR merge ref；轻量构建受信任 Builder 后，由 `ci-build --target solution` 复核身份并对 tested checkout 执行根 `Debug|x64` Rebuild。
+- `build-package`：使用相同的 trusted/tested 双 checkout，由 `ci-build --target package` 在脱敏环境中还原并构建 tested Builder、运行默认 x64/x86 构建与打包、验证精确 nupkg，并生成 artifact 名称和绝对包路径。
 
-`build` job 中任一此前步骤失败时，带 `failure()` 条件的诊断步骤会尝试上传 `eng/Builder/bin/package-tests`；构建与包测试均成功时，后续步骤上传 `eng/Builder/bin/nupkg/*.nupkg`。workflow 中配置了这些步骤，不代表任意本地工作区或最新远端运行已经通过，实际结论必须以对应运行日志和产物为准。
+两个 job 的 YAML 只保留固定版本 Action、环境准备和单行 Builder 调用，不再维护 PowerShell 身份计算或构建脚本。`build-package` 中任一此前步骤失败时，带 `failure()` 条件的诊断步骤会尝试上传 tested checkout 的 `eng/Builder/bin/package-tests`；构建与包测试均成功时，后续步骤按 C# 输出的精确路径上传 nupkg。workflow 中配置了这些步骤，不代表任意本地工作区或最新远端运行已经通过，实际结论必须以对应运行日志和产物为准。
+
+`.github/workflows/comment-pr-build-artifacts.yml` 只 checkout `github.sha` 的受信任 Builder，不 checkout PR ref，也不下载 artifact；它在 Ubuntu 上轻量构建 Builder，再以单行命令调用 `comment-pr-artifacts`。只有该最终命令步骤获得 `GITHUB_TOKEN`，Restore/Build 步骤不持有写 token。
 
 ## 当前验证边界
 

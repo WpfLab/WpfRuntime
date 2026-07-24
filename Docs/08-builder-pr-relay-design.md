@@ -60,7 +60,7 @@ Builder 应完成以下动作：
 - `eng/Builder/Builder.csproj` 是 `net8.0` 控制台项目，当前注册默认构建、`clean`、`compare`、`test-package` 和 `relay-pr` 命令。
 - 默认 Builder 构建会构建 x64/x86、收集程序集与 native 资产、生成 `DotNetCampus.WpfLib` NuGet 包，并在项目构建不完整时返回非零退出码。
 - `test-package` 会对 net8.0/net9.0 与 win-x86/win-x64 组合执行隔离 Publish、哈希校验和运行探针。
-- `.github/workflows/build.yml` 使用只读 `pull_request_target` 受信任定义显式构建 PR merge ref；`.github/workflows/comment-pr-build-artifacts.yml` 在 `workflow_run` 受信任上下文中只读取元数据并回写 PR 评论。
+- `.github/workflows/build.yml` 使用只读 `pull_request_target` 受信任定义，将 `github.sha` 的 Builder 与 PR merge ref 分别 checkout 到 `trusted/` 和 `tested/`，再由受信任 C# 命令校验并构建 tested checkout；`.github/workflows/comment-pr-build-artifacts.yml` 在 `workflow_run` 受信任上下文中只 checkout `github.sha` 的 Builder、读取元数据并回写 PR 评论。
 - 当前仓库有多个远端，因此不能用“列表中的第一个 GitHub 远端”猜测目标仓库。命令使用显式目标 remote，默认值为 `origin`。
 - 示例 PR 页面显示其 base 为 `dotnet/wpf:main`，head 为 `TFGSUMIT/wpf:fix/issue-11774`，页面展示的缩写提交为 `4ce6f21`。实现不得硬编码这些值，必须在每次执行时通过 API 获取完整 head SHA。
 
@@ -402,6 +402,9 @@ InputValidated
 | `GitHubPullRequestService.cs` | 创建 Octokit client、解析 PR 元数据、查询/创建/复用目标 PR |
 | `GitService.cs` | 使用分项参数执行 clone/fetch/merge/status/push，并实现 SHA 与来源标记校验 |
 | `LocalBuildValidationService.cs` | 运行固定本地门禁、计算精确包路径并记录日志 |
+| `GitHubActionsBuildCommand.cs` / `GitHubActionsBuildService.cs` | 作为 Actions 的受信任构建入口，复核事件/checkout 身份、凭据与 Git 状态，并编排 solution/package 门禁 |
+| `GitHubArtifactCommentCommand.cs` / `GitHubArtifactCommentService.cs` | 作为 `workflow_run` 的受信任回写入口，复核 run、PR、artifact 和评论元数据并幂等回写 |
+| `GitHubWorkflowRunEvent.cs` / `GitHubArtifactCommentFormatter.cs` | 严格解析事件文件，筛选 artifact 身份并生成安全评论正文与 marker |
 | `PullRequestAddress.cs` | PR URL 与 GitHub remote 地址的不可变解析结果；优先使用 record |
 | `ProcessRunner.cs` | 增加异步、`ArgumentList`、取消、超时、进程树终止与受控环境支持；现有同步调用可逐步复用安全内核 |
 | `Resources.resx` | 保存新增 CLI 错误、帮助和 PR 模板中的用户可见文本 |
@@ -416,8 +419,8 @@ InputValidated
 
 GitHub Actions 部分拆为两个安全主体：
 
-1. **受信任编排的构建工作流**：处理 `pull_request_target`，使用 base 分支中的固定 workflow 定义显式 checkout PR 测试合并 ref，再执行不可信代码；只授予只读权限，不持有评论权限或仓库 secrets。
-2. **回写工作流**：处理构建工作流的 `workflow_run: completed`，在默认分支的受信任上下文中只读取 run/artifact 元数据并评论 PR；不 checkout PR，不下载 artifact，不执行 artifact 内容。
+1. **受信任编排的构建工作流**：处理 `pull_request_target`，分别 checkout base `github.sha` 的受信任 Builder 和 PR 测试合并 ref；由受信任 Builder 复核 tested checkout 后再执行不可信代码。工作流只授予只读权限，不持有评论权限或仓库 secrets。
+2. **回写工作流**：处理构建工作流的 `workflow_run: completed`，在默认分支的受信任上下文中 checkout `github.sha` 的 Builder，再只读取 run/artifact 元数据并评论 PR；不 checkout PR，不下载 artifact，不执行 artifact 内容。
 
 这种拆分让同仓库和 fork PR 都使用默认分支定义的只读构建编排，同时让构建完成后的评论拥有最小写权限。
 
@@ -431,28 +434,28 @@ GitHub Actions 部分拆为两个安全主体：
 
 - 把 PR 入口改为 `pull_request_target`，保留对 `main` 和 `WpfReorganize` 的 base 过滤；这里的“任何人”指任意贡献者或 fork，不改变仓库当前受支持的 base 范围。
 - workflow 顶层显式设置 `permissions: contents: read`，其他权限为 `none`，并在仓库或组织设置中把 `GITHUB_TOKEN` 默认权限强制为只读。
-- PR job 使用 `refs/pull/<number>/merge` 显式 checkout 测试合并提交；merge ref 不存在时失败并报告不可合并状态，不退化为只构建 base。
-- `actions/checkout` 设置 `persist-credentials: false`，checkout 后确认 `.git/config` 不含认证 header。
+- 每个 job 先把 `github.sha` checkout 到 `trusted/`，再把 `refs/pull/<number>/merge` 显式 checkout 到 `tested/`；merge ref 不存在时失败并报告不可合并状态，不退化为只构建 base。
+- 两个 `actions/checkout` 都设置 `persist-credentials: false`；受信任 `ci-build` 命令检查 tested checkout 的 `.git/config` 与 remote URL 不含凭据。
 - workflow 不引用任何 Actions secret、environment secret 或 OIDC，不把 `github.token` 传入构建环境。
 - 不向 `t/bot/*` 等搬运分支的 PR 提供 Actions secrets；同仓库来源不能被视为可信代码。
-- 不调用来自 PR checkout 目录的 local action；第三方 action 固定到经过审计的完整 commit SHA。
+- 不调用来自 PR checkout 目录的 local action 或安全编排器；第三方 action 固定到经过审计的完整 commit SHA。
 - 只使用 GitHub-hosted 临时 runner，不在持久化 self-hosted runner 上执行不可信 PR。
 - 不授予 OIDC、packages、contents、actions 或其他写权限。
 - 不为不可信 PR 恢复可被其他安全上下文消费的可写缓存。
-- 根解决方案 job 和 Builder/package-test job 均成功，workflow 才是 success。
+- 根解决方案 job 和 Builder/package-test job 均由 `trusted/eng/Builder` 中构建出的 `ci-build` 命令驱动，两个 job 均成功时 workflow 才是 success。
 - NuGet artifact 只在 Builder 与 `test-package` 成功后上传。
 - `if-no-files-found` 从 `warn` 改为 `error`，避免 workflow success 但没有包。
-- artifact 名加入 PR 编号、run ID 和 run attempt，避免 rerun 名称冲突。
+- artifact 名加入 PR 编号、tested SHA、run ID 和 run attempt，避免来源混淆和 rerun 名称冲突。
 - artifact 保留期使用仓库策略或显式配置，并由回写工作流读取 API 返回的 `expires_at` 展示。
 - 对同一 PR 使用 concurrency，新的提交到达时取消旧构建。
 
 建议 artifact 名：
 
 ```text
-DotNetCampus.WpfLib-nupkg-pr-<pr-number>-run-<run-id>-attempt-<run-attempt>
+DotNetCampus.WpfLib-nupkg-pr-<pr-number>-sha-<tested-sha>-run-<run-id>-attempt-<run-attempt>
 ```
 
-在 `pull_request_target` 中，`github.sha` 是 base 分支提交，不是被构建提交。构建日志和包版本必须在显式 checkout 后用 `git rev-parse HEAD` 记录测试合并 SHA，并另行记录 `github.event.pull_request.head.sha` 作为贡献者 head；三者不能混用。
+在 `pull_request_target` 中，`github.sha` 是 base 分支提交，不是被构建提交。受信任 `ci-build` 命令从事件文件读取贡献者 head SHA，从 tested checkout 读取 merge SHA，并要求该 merge commit 恰好以 `github.sha` 和贡献者 head SHA 为两个有序双亲；包版本与 artifact 名使用 tested merge SHA，三者不能混用。
 
 push 与 `workflow_dispatch` 仍可构建和上传 artifact，但不会触发 PR 评论。
 
@@ -470,10 +473,11 @@ on:
 最小权限：
 
 - `actions: read`：读取触发 run 和 artifacts。
+- `contents: read`：checkout `github.sha` 对应的受信任 Builder 源码。
 - `pull-requests: write`：创建或更新 PR 评论。
 - 如果 GitHub API 对 Issue Comment 路径要求额外权限，只增加必要的 `issues: write`；不授予 `contents: write`。
 
-回写 job 使用 Ubuntu 或其他轻量 hosted runner 即可，不需要 WPF 构建环境。
+回写 job 使用 Ubuntu 或其他轻量 hosted runner 即可，不需要 WPF 构建环境。Builder 使用 `-p:RestoreWpfRuntimePackages=false` 轻量还原/构建，避免下载仅默认 WPF 打包命令需要的 WindowsDesktop `PackageDownload`；只有最终 `comment-pr-artifacts` 命令步骤接收 `GITHUB_TOKEN`。
 
 ### run 与 PR 关联
 
@@ -566,7 +570,7 @@ workflow 失败、取消或成功但无有效 nupkg artifact 时，也更新同�
 
 ### Builder 单元测试
 
-独立测试项目 `eng/Builder.Tests` 使用 xUnit，并通过 `eng/Builder.ProcessTestHelper` 验证参数和进程树边界。当前 40 项测试通过，覆盖：
+独立测试项目 `eng/Builder.Tests` 使用 xUnit，并通过 `eng/Builder.ProcessTestHelper` 验证参数和进程树边界。当前 59 项测试通过，覆盖：
 
 - 标准 PR URL、子页面 URL、大小写 host、无效 scheme/host/path/number 和无效转义。
 - GitHub HTTPS/SSH remote 解析，以及 fetch/push 指向不同仓库的拒绝逻辑。
@@ -579,6 +583,9 @@ workflow 失败、取消或成功但无有效 nupkg artifact 时，也更新同�
 - 参数分项传递，包含空格、引号和以 `-` 开头输入时不形成参数注入。
 - 取消和超时会终止进程树。
 - Token 和敏感环境不会进入构建子进程或日志。
+- GitHub Actions 事件 JSON、版本/包路径/artifact 身份和 `GITHUB_OUTPUT` 单行约束。
+- trusted/tested checkout 凭据检测、非 PR 精确 SHA 与 PR merge 双亲身份校验。
+- `workflow_run` 关联解析、artifact SHA/名称筛选、Markdown 转义、评论 marker 与 run/attempt 排序。
 
 ### Git 集成测试
 
@@ -647,7 +654,7 @@ GitHub 网络 API 不应成为普通单元测试前置条件。Octokit 外部调
 
 - 同仓库和 fork PR 都在只读、无 secrets 的构建上下文中完成根解决方案与 Builder 包验证。
 - workflow success 时必有非空 nupkg artifact。
-- 回写工作流不 checkout、不下载、不执行 PR 代码或 artifact。
+- 回写工作流只 checkout `github.sha` 的受信任 Builder，不 checkout PR，不下载、不执行 PR 代码或 artifact。
 - PR 中存在一条可更新的构建结果评论，包含最新 run 和未过期 artifact 页面链接。
 - 评论明确说明登录权限与过期限制。
 - 失败、取消、rerun 和新提交不会产生误导性成功链接或重复评论。

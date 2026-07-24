@@ -10,6 +10,8 @@ try
         .AddHandler<CompareCommand>()
         .AddHandler<TestPackageCommand>()
         .AddHandler<RelayPullRequestCommand>()
+        .AddHandler<GitHubActionsBuildCommand>()
+        .AddHandler<GitHubArtifactCommentCommand>()
         .RunAsync();
 }
 catch (CommandLineParseException exception)

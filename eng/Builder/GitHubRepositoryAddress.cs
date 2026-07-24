@@ -6,6 +6,36 @@ internal sealed record GitHubRepositoryAddress(string Owner, string Repository)
 
     public string HttpsUrl => $"https://github.com/{Uri.EscapeDataString(Owner)}/{Uri.EscapeDataString(Repository)}.git";
 
+    public static GitHubRepositoryAddress ParseFullName(string value)
+    {
+        if (!TryParseFullName(value, out var address))
+        {
+            throw new ArgumentException(BuilderResources.InvalidGitHubRepositoryFullName, nameof(value));
+        }
+
+        return address;
+    }
+
+    public static bool TryParseFullName(string? value, out GitHubRepositoryAddress address)
+    {
+        address = null!;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var segments = value.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length != 2
+            || !PullRequestAddress.TryDecodeRepositorySegment(Uri.EscapeDataString(segments[0]), out var owner)
+            || !PullRequestAddress.TryDecodeRepositorySegment(Uri.EscapeDataString(segments[1]), out var repository))
+        {
+            return false;
+        }
+
+        address = new GitHubRepositoryAddress(owner, repository);
+        return true;
+    }
+
     public static GitHubRepositoryAddress ParseRemote(string value)
     {
         if (!TryParseRemote(value, out var address))

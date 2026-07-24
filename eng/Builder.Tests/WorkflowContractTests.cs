@@ -8,12 +8,19 @@ public sealed class WorkflowContractTests
     public void BuildWorkflow_UsesTrustedReadOnlyPullRequestTargetContract()
     {
         var workflow = ReadWorkflow("build.yml");
+        var normalized = NormalizeNewLines(workflow);
 
         Assert.Contains("  pull_request_target:", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("  pull_request:\n", NormalizeNewLines(workflow), StringComparison.Ordinal);
-        Assert.Contains("permissions:\n  contents: read", NormalizeNewLines(workflow), StringComparison.Ordinal);
-        Assert.Equal(2, CountOccurrences(workflow, "persist-credentials: false"));
+        Assert.DoesNotContain("  pull_request:\n", normalized, StringComparison.Ordinal);
+        Assert.Contains("permissions:\n  contents: read", normalized, StringComparison.Ordinal);
+        Assert.Equal(4, CountOccurrences(workflow, "persist-credentials: false"));
         Assert.Equal(2, CountOccurrences(workflow, "refs/pull/{0}/merge"));
+        Assert.Equal(2, CountOccurrences(normalized, "        path: trusted\n        fetch-depth: 1"));
+        Assert.Equal(2, CountOccurrences(normalized, "        path: tested\n        fetch-depth: 0"));
+        Assert.Equal(2, CountOccurrences(workflow, "Builder.dll ci-build"));
+        Assert.DoesNotContain("shell:", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("run: |", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("github.event.pull_request.head.sha", workflow, StringComparison.Ordinal);
         Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
         Assert.Contains("github.run_attempt", workflow, StringComparison.Ordinal);
     }
@@ -47,32 +54,43 @@ public sealed class WorkflowContractTests
 
         Assert.Contains("  workflow_run:", workflow, StringComparison.Ordinal);
         Assert.Contains("  actions: read", workflow, StringComparison.Ordinal);
+        Assert.Contains("  contents: read", workflow, StringComparison.Ordinal);
         Assert.Contains("  pull-requests: write", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("contents: write", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("issues: write", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("actions/checkout", workflow, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(workflow, "uses: actions/checkout@"));
+        Assert.Contains("        ref: ${{ github.sha }}", workflow, StringComparison.Ordinal);
+        Assert.Contains("        path: trusted\n        fetch-depth: 1", normalized, StringComparison.Ordinal);
+        Assert.Contains("        persist-credentials: false", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("download-artifact", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("downloadArtifact", workflow, StringComparison.Ordinal);
-        Assert.Contains("listWorkflowRunArtifacts", workflow, StringComparison.Ordinal);
-        Assert.Contains("artifact.expired === false", workflow, StringComparison.Ordinal);
-        Assert.Contains("github-actions[bot]", workflow, StringComparison.Ordinal);
-        Assert.Contains("findNewerAssociatedRun", workflow, StringComparison.Ordinal);
-        Assert.Contains("workflow_run.pull_requests", normalized, StringComparison.Ordinal);
+        Assert.DoesNotContain("actions/github-script", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("script:", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("run: |", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("refs/pull/", workflow, StringComparison.Ordinal);
+        Assert.Contains("Builder.dll comment-pr-artifacts", workflow, StringComparison.Ordinal);
+        Assert.Contains("GITHUB_TOKEN: ${{ github.token }}", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void CommentWorkflow_PinsGitHubScriptToAFullCommit()
+    public void CommentWorkflow_PinsEveryThirdPartyActionToAFullCommit()
     {
         var workflow = ReadWorkflow("comment-pr-build-artifacts.yml");
-        const string prefix = "uses: actions/github-script@";
-        var line = NormalizeNewLines(workflow)
-            .Split('\n')
+        var actionLines = NormalizeNewLines(workflow)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(value => value.Trim())
-            .Single(value => value.StartsWith(prefix, StringComparison.Ordinal));
-        var revision = line[prefix.Length..];
+            .Where(value => value.StartsWith("uses:", StringComparison.Ordinal))
+            .ToArray();
 
-        Assert.Equal(40, revision.Length);
-        Assert.All(revision, character => Assert.True(Uri.IsHexDigit(character)));
+        Assert.NotEmpty(actionLines);
+        Assert.All(actionLines, line =>
+        {
+            var separator = line.LastIndexOf('@');
+            Assert.True(separator > 0, line);
+            var revision = line[(separator + 1)..];
+            Assert.Equal(40, revision.Length);
+            Assert.All(revision, character => Assert.True(Uri.IsHexDigit(character), line));
+        });
     }
 
     private static string ReadWorkflow(string fileName) =>
