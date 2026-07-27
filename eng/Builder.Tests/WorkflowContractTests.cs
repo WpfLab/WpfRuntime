@@ -26,6 +26,14 @@ public sealed class WorkflowContractTests
     }
 
     [Fact]
+    public void RepositoryAttributes_PreserveCommittedLineEndings()
+    {
+        var attributes = File.ReadAllText(Path.Join(RepositoryRoot, ".gitattributes"));
+
+        Assert.Equal("* -text\n", NormalizeNewLines(attributes));
+    }
+
+    [Fact]
     public void BuildWorkflow_PinsEveryThirdPartyActionToAFullCommit()
     {
         var workflow = ReadWorkflow("build.yml");
