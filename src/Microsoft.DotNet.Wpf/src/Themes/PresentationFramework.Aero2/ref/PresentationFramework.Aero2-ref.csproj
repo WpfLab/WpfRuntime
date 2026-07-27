@@ -22,15 +22,16 @@
 
   <!-- Project References -->
   <ItemGroup>
-    <ProjectReference Include="$(WpfSourceDir)PresentationUI\PresentationUI.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationUI\ref\PresentationUI-ref.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)System.Xaml\ref\System.Xaml-ref.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)WindowsBase\ref\WindowsBase-ref.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationCore\ref\PresentationCore-ref.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\ref\PresentationFramework-ref.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
     <Reference Include="PresentationFramework"
-               HintPath="$(ArtifactsBinDir)PresentationFramework\x64\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
-               Private="false"
-               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\x64\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
+               HintPath="$(ArtifactsObjDir)PresentationFramework-ref\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\ref\PresentationFramework.dll"
+               Private="false" />
   </ItemGroup>
 
   <!-- Minimal set of .NET core references -->
