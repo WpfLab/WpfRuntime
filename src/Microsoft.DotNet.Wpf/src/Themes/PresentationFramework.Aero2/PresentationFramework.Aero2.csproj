@@ -45,14 +45,15 @@
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
     <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
     <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
     <ProjectReference Include="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj"
                       ReferenceOutputAssembly="false"
                       SkipGetTargetFrameworkProperties="true" />
     <Reference Include="PresentationFramework"
                HintPath="$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
-               Private="false"
-               Condition="Exists('$(ArtifactsBinDir)PresentationFramework\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll')" />
+               Private="false" />
 
     <ProjectReference Include="$(WpfSourceDir)Themes\PresentationFramework.Aero2\ref\PresentationFramework.Aero2-ref.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

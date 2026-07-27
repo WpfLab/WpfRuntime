@@ -64,7 +64,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 - `msbuild Microsoft.Dotnet.Wpf.slnx -restore /t:Rebuild /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal`
 - `msbuild Microsoft.Dotnet.Wpf.slnx -restore /t:Rebuild /p:Configuration=Debug "/p:Platform=Any CPU" /m:1 /nr:false /v:minimal`
 
-强制重建曾暴露 7 个主题引用程序集依赖预存 `PresentationFramework.dll` 的问题：打印相关 cycle-breaker 与完整引用程序集同名，`PresentationFramework.Royale-ref` 因选中不完整 bridge 而出现 53 个 `CS0234`。当前 7 个主题 ref 项目使用 ref-to-ref 项目依赖，并显式编译引用 `$(ArtifactsObjDir)PresentationFramework-ref\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\ref\PresentationFramework.dll`，双平台强制重建均已通过。
+强制重建曾暴露 7 个主题引用程序集依赖预存 `PresentationFramework.dll` 的问题：打印相关 cycle-breaker 与完整引用程序集同名，`PresentationFramework.Royale-ref` 因选中不完整 bridge 而出现 53 个 `CS0234`。当前 7 个主题 ref 项目使用 ref-to-ref 项目依赖，并显式编译引用 `$(ArtifactsObjDir)PresentationFramework-ref\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\ref\PresentationFramework.dll`。Trusted Builder 的干净构建随后暴露运行时主题项目存在同类问题：条件式实现程序集引用在清理 `artifacts` 后不会进入项目项列表，MarkupCompile 可能加载同名 cycle-breaker，并以 `LostFocusEventManager` 无法解析为 known type 380 失败；当前 7 个运行时主题项目已将 `PresentationFramework.csproj` 降为仅构建排序，并无条件显式引用完整实现输出，等待 Trusted Builder 复验。
 
 当前可能出现但不导致最终双平台强制重建失败的警告包括：
 
@@ -126,7 +126,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 
 - 根 `slnx` 的 `Debug|x64` 和 `Debug|Any CPU` Restore + Rebuild 已在当前工作区成功；该结论不外推到其他配置、平台或 Visual Studio 设计时/F5 行为。
 - Builder PR relay 的本地自动化验证不包含真实 GitHub push、PR 创建或不可信外部 PR 构建；Actions 权限、fork 与评论行为仍需真实 PR 验收。
-- 主题 ref 的成功依赖当前显式完整 `PresentationFramework-ref` 引用边界；在同名打印 cycle-breaker 收敛前，不应移除该隔离并退回条件式预存实现输出。
+- 主题 ref 与运行时主题的成功依赖当前显式完整 `PresentationFramework` 引用边界；在同名打印 cycle-breaker 收敛前，不应移除该隔离，也不应使用会在干净项目求值时消失的条件式输出引用。
 - 独立项目成功不能替代根 `slnx` 成功；增量成功不能替代强制重建成功。
 - IDE 枚举项目路径不能证明项目已加载；必须由 Visual Studio 的加载状态和实际构建验证。
 - `artifacts` 中已有生成文件不能证明从干净状态可重现。
