@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\WpfRuntimeDependencies.props" />
 
@@ -41,7 +41,10 @@
   </ItemGroup>
 
   <Target Name="WritePackagePaths" BeforeTargets="Build" Condition="'$(RestoreWpfRuntimePackages)' == 'true'">
-    <WriteLinesToFile File="$(OutputPath)PackagePaths.txt" Lines="win-x64=$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\;win-x86=$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x86\$(RepoWpfWindowsDesktopRuntimeVersion)\;host-win-x64=$(NuGetPackageRoot)microsoft.netcore.app.host.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\;host-win-x86=$(NuGetPackageRoot)microsoft.netcore.app.host.win-x86\$(RepoWpfWindowsDesktopRuntimeVersion)\;ref=$(NuGetPackageRoot)microsoft.windowsdesktop.app.ref\$(RepoWpfWindowsDesktopRuntimeVersion)\" Overwrite="true" />
+    <PropertyGroup>
+      <_BuilderNuGetPackageRoot>$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))</_BuilderNuGetPackageRoot>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(OutputPath)PackagePaths.txt" Lines="win-x64=$(_BuilderNuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\;win-x86=$(_BuilderNuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x86\$(RepoWpfWindowsDesktopRuntimeVersion)\;host-win-x64=$(_BuilderNuGetPackageRoot)microsoft.netcore.app.host.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\;host-win-x86=$(_BuilderNuGetPackageRoot)microsoft.netcore.app.host.win-x86\$(RepoWpfWindowsDesktopRuntimeVersion)\;ref=$(_BuilderNuGetPackageRoot)microsoft.windowsdesktop.app.ref\$(RepoWpfWindowsDesktopRuntimeVersion)\" Overwrite="true" />
   </Target>
 
 </Project>

@@ -28,6 +28,12 @@ internal static class NuGetPackageService
             throw new InvalidOperationException("Package paths file is empty; please check NuGet package references");
         }
 
+        Log.Info($"  Package paths file: {pathsFile}");
+        foreach (var (key, path) in result.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            Log.Info($"  Package path [{key}]: {path} (exists: {Directory.Exists(path)})");
+        }
+
         return result;
     }
 
@@ -67,6 +73,7 @@ public static void CopyIjwHostFromPackage(Dictionary<string, string> packagePath
     if (!packagePaths.TryGetValue(packageKey, out var packageRoot))
         throw new InvalidOperationException($".NET host package path '{packageKey}' not found. Available keys: {string.Join(", ", packagePaths.Keys.Order())}");
 
+    RequirePackageDirectory(packageKey, packageRoot);
     var sourcePath = Path.Join(packageRoot, "runtimes", rid, "native", "ijwhost.dll");
     RequirePackageFile(sourcePath);
     Directory.CreateDirectory(destDir);
@@ -242,6 +249,23 @@ public static void ValidatePackageAssets(string stagingDir)
     }
 
     Log.Info("  Package asset validation passed for win-x64 and win-x86");
+}
+
+private static void RequirePackageDirectory(string packageKey, string packageRoot)
+{
+    if (Directory.Exists(packageRoot))
+    {
+        return;
+    }
+
+    var parentDirectory = Path.GetDirectoryName(packageRoot);
+    var availableEntries = parentDirectory is not null && Directory.Exists(parentDirectory)
+        ? string.Join(", ", Directory.EnumerateFileSystemEntries(parentDirectory)
+            .Select(Path.GetFileName)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Take(20))
+        : "<parent directory unavailable>";
+    throw new InvalidOperationException($"NuGet package directory '{packageKey}' not found: {packageRoot}. Parent entries: {availableEntries}");
 }
 
 private static void RequirePackageFile(string path)

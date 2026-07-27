@@ -34,6 +34,14 @@ public sealed class WorkflowContractTests
     }
 
     [Fact]
+    public void BuilderProject_NormalizesNuGetPackageRootBeforeWritingPackagePaths()
+    {
+        var project = File.ReadAllText(Path.Join(RepositoryRoot, "eng", "Builder", "Builder.csproj"));
+
+        Assert.Contains("$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildWorkflow_PinsEveryThirdPartyActionToAFullCommit()
     {
         var workflow = ReadWorkflow("build.yml");
