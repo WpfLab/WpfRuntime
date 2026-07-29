@@ -21,8 +21,6 @@ internal static class BuilderResources
 
     public static string GitHubTokenRequired => GetString(nameof(GitHubTokenRequired));
 
-    public static string DetachedHeadRequiresBase => GetString(nameof(DetachedHeadRequiresBase));
-
     public static string PullRequestNotOpen => GetString(nameof(PullRequestNotOpen));
 
     public static string TargetBranchSourceConflict => GetString(nameof(TargetBranchSourceConflict));

@@ -36,7 +36,8 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
 
             var context = BuilderContext.Create();
             var address = PullRequestAddress.Parse(PullRequest);
-            var targetRemote = string.IsNullOrWhiteSpace(TargetRemote) ? "origin" : TargetRemote;
+            var targetRemote = ResolveTargetRemote(TargetRemote);
+            var baseBranch = ResolveBaseBranch(Base, targetRemote);
             var keepWorkspace = string.IsNullOrWhiteSpace(KeepWorkspace)
                 ? KeepWorkspacePolicy.OnFailure
                 : ParseKeepWorkspace(KeepWorkspace);
@@ -78,12 +79,12 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                 var service = new PullRequestRelayService(git, github, validation);
                 Log.Info($"Source PR: {address.CanonicalUrl}");
                 Log.Info($"Target remote: {targetRemote}");
-                Log.Info($"Target base: {Base ?? "current branch"}");
+                Log.Info($"Target base: {baseBranch}");
                 var result = await service.RunAsync(
                     new PullRequestRelayOptions(
                         address,
                         targetRemote,
-                        Base,
+                        baseBranch,
                         AllowUntrustedBuild,
                         keepWorkspace),
                     context.RepoRoot,
@@ -123,6 +124,15 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             Log.Error(exception.Message);
             return 1;
         }
+    }
+
+    internal static string ResolveTargetRemote(string? targetRemote) =>
+        string.IsNullOrWhiteSpace(targetRemote) ? "origin" : targetRemote;
+
+    internal static string ResolveBaseBranch(string? baseBranch, string targetRemote)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetRemote);
+        return string.IsNullOrWhiteSpace(baseBranch) ? $"{targetRemote}/main" : baseBranch;
     }
 
     internal static string? ResolveGitHubToken(string? commandLineToken, string? environmentToken) =>

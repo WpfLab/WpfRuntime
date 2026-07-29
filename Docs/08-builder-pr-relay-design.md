@@ -85,7 +85,7 @@ dotnet run --project eng/Builder/Builder.csproj --no-build -- relay-pr `
 |---|---:|---|---|
 | `--pull-request` | 是 | 无 | 标准 GitHub.com PR 页面链接；允许 `/files`、`/commits` 等子页面，解析后统一为 canonical PR URL |
 | `--target-remote` | 否 | `origin` | 调用者仓库中代表“自己的 GitHub 仓库”的 remote；fetch URL 用于取得 base，push URL 用于发布分支 |
-| `--base` | 条件必需 | 调用时当前分支名 | 新 PR 的 base 分支；调用者处于 detached HEAD 时必须显式传入 |
+| `--base` | 否 | `<target-remote>/main`（默认 `origin/main`） | 新 PR 的 base 分支；同时接受 `main` 与 `origin/main` 形式 |
 | `--github-token` | 条件必需 | `GITHUB_TOKEN` | GitHub API Token；命令行值优先，未提供或为空时回退到环境变量 |
 | `--allow-untrusted-build` | 是 | `false` | 明确确认将执行外部 PR 中的 MSBuild、C# 和构建脚本；缺少该开关时只输出风险并退出 |
 | `--keep-workspace` | 否 | `on-failure` | `always`、`on-failure` 或 `never`；控制独立临时 clone 的保留策略 |
@@ -176,7 +176,7 @@ URL 中的仓库是原 PR 的 base repository，不一定是提交代码的来�
 1. 在调用者仓库中读取 `git remote get-url <target-remote>` 和 `git remote get-url --push <target-remote>`。
 2. 同时支持 GitHub HTTPS 与 SSH remote 形式，但两者必须可唯一解析为同一个 `owner/repository`。
 3. 目标 remote 不是 GitHub.com、fetch/push 指向不同仓库或 URL 无法解析时停止。
-4. `--base` 未提供时，只读取调用者当前分支的名称；不会读取或复制当前分支的未提交文件。
+4. `--base` 未提供时使用 `<target-remote>/main`；显式参数同时接受远端限定形式（如 `origin/main`）和分支名形式（如 `main`）。
 5. 临时 clone 必须从目标 remote 的远端 base 分支建立，确保最终 PR 的 base 与 GitHub 远端事实一致。
 6. 目标远端不存在该 base 分支时停止。
 

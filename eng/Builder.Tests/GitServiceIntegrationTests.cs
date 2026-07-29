@@ -4,6 +4,19 @@ namespace WpfReorganize.Builder.Tests;
 
 public sealed class GitServiceIntegrationTests
 {
+    [Theory]
+    [InlineData(null, "main")]
+    [InlineData("", "main")]
+    [InlineData("main", "main")]
+    [InlineData("origin/main", "main")]
+    [InlineData("release/9.0", "release/9.0")]
+    public void ResolveBaseBranch_NormalizesTargetRemotePrefix(string? requestedBaseBranch, string expected)
+    {
+        var result = GitService.ResolveBaseBranch("origin", requestedBaseBranch);
+
+        Assert.Equal(expected, result);
+    }
+
     [Fact]
     public async Task MergeAndPush_CreatesNoFastForwardMergeAndPushesExactSha()
     {

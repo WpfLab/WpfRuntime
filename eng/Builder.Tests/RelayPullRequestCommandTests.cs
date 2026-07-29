@@ -4,6 +4,33 @@ namespace WpfReorganize.Builder.Tests;
 
 public sealed class RelayPullRequestCommandTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResolveTargetRemote_WhenTargetRemoteIsMissingThenUsesOrigin(string? targetRemote)
+    {
+        var result = RelayPullRequestCommand.ResolveTargetRemote(targetRemote);
+
+        Assert.Equal("origin", result);
+    }
+
+    [Fact]
+    public void ResolveBaseBranch_WhenBaseIsMissingThenUsesTargetRemoteMain()
+    {
+        var result = RelayPullRequestCommand.ResolveBaseBranch(null, "origin");
+
+        Assert.Equal("origin/main", result);
+    }
+
+    [Fact]
+    public void ResolveBaseBranch_WhenBaseIsProvidedThenUsesProvidedBase()
+    {
+        var result = RelayPullRequestCommand.ResolveBaseBranch("release/9.0", "origin");
+
+        Assert.Equal("release/9.0", result);
+    }
+
     [Fact]
     public void ResolveGitHubToken_WhenCommandLineTokenIsProvidedThenUsesCommandLineToken()
     {
