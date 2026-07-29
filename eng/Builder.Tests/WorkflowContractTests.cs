@@ -42,24 +42,11 @@ public sealed class WorkflowContractTests
     }
 
     [Fact]
-    public void BuildWorkflow_PinsEveryThirdPartyActionToAFullCommit()
+    public void BuildWorkflow_UsesMajorVersionTagsForEveryThirdPartyAction()
     {
         var workflow = ReadWorkflow("build.yml");
-        var actionLines = NormalizeNewLines(workflow)
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => line.StartsWith("uses:", StringComparison.Ordinal))
-            .ToArray();
 
-        Assert.NotEmpty(actionLines);
-        Assert.All(actionLines, line =>
-        {
-            var separator = line.LastIndexOf('@');
-            Assert.True(separator > 0, line);
-            var revision = line[(separator + 1)..];
-            Assert.Equal(40, revision.Length);
-            Assert.All(revision, character => Assert.True(Uri.IsHexDigit(character), line));
-        });
+        AssertActionsUseMajorVersionTags(workflow);
     }
 
     [Fact]
@@ -89,13 +76,19 @@ public sealed class WorkflowContractTests
     }
 
     [Fact]
-    public void CommentWorkflow_PinsEveryThirdPartyActionToAFullCommit()
+    public void CommentWorkflow_UsesMajorVersionTagsForEveryThirdPartyAction()
     {
         var workflow = ReadWorkflow("comment-pr-build-artifacts.yml");
+
+        AssertActionsUseMajorVersionTags(workflow);
+    }
+
+    private static void AssertActionsUseMajorVersionTags(string workflow)
+    {
         var actionLines = NormalizeNewLines(workflow)
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => value.Trim())
-            .Where(value => value.StartsWith("uses:", StringComparison.Ordinal))
+            .Select(line => line.Trim())
+            .Where(line => line.StartsWith("uses:", StringComparison.Ordinal))
             .ToArray();
 
         Assert.NotEmpty(actionLines);
@@ -104,8 +97,9 @@ public sealed class WorkflowContractTests
             var separator = line.LastIndexOf('@');
             Assert.True(separator > 0, line);
             var revision = line[(separator + 1)..];
-            Assert.Equal(40, revision.Length);
-            Assert.All(revision, character => Assert.True(Uri.IsHexDigit(character), line));
+            var majorVersion = revision.StartsWith('v') ? revision[1..] : revision;
+            Assert.NotEmpty(majorVersion);
+            Assert.All(majorVersion, character => Assert.True(char.IsAsciiDigit(character), line));
         });
     }
 
