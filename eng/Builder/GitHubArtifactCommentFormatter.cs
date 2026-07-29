@@ -57,9 +57,9 @@ internal static class GitHubArtifactCommentFormatter
             && artifacts.Count > 0
             && testedSha is not null;
         var resultLabel = hasValidSuccessArtifacts
-            ? "成功"
+            ? "Succeeded"
             : string.Equals(conclusion, "success", StringComparison.Ordinal)
-                ? "异常：workflow 成功，但没有唯一且有效的 nupkg artifact"
+                ? "Invalid: the workflow succeeded, but no unique valid nupkg artifact was found"
                 : GetConclusionLabel(conclusion);
         var marker = CreateMarker(pullRequestNumber);
         var runMarker = CreateRunMarker(runId, runAttempt);
@@ -68,12 +68,12 @@ internal static class GitHubArtifactCommentFormatter
         {
             marker,
             runMarker,
-            "## WPF NuGet 构建",
+            "## WPF NuGet Build",
             string.Empty,
-            $"- 结果：{resultLabel}",
-            $"- PR head：`{currentPullRequestHead}`",
-            $"- 测试合并提交：{(testedSha is null ? "无可验证产物身份" : $"`{testedSha}`")}",
-            $"- Actions run：[{runId}（attempt {runAttempt}）]({runUrl})",
+            $"- Result: {resultLabel}",
+            $"- PR head: `{currentPullRequestHead}`",
+            $"- Tested merge commit: {(testedSha is null ? "No verifiable artifact identity" : $"`{testedSha}`")}",
+            $"- Actions run: [{runId} (attempt {runAttempt})]({runUrl})",
         };
 
         if (hasValidSuccessArtifacts)
@@ -81,18 +81,15 @@ internal static class GitHubArtifactCommentFormatter
             foreach (var artifact in artifacts.Take(MaxArtifacts))
             {
                 var artifactUrl = $"{runUrl}/artifacts/{artifact.Id}";
-                body.Add($"- NuGet artifact：[{EscapeMarkdown(artifact.Name)}]({artifactUrl})");
-                body.Add($"  - 大小：{FormatBytes(artifact.SizeInBytes)}");
-                body.Add($"  - 过期时间：{EscapeMarkdown(artifact.ExpiresAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}");
+                body.Add($"- NuGet artifact: [{EscapeMarkdown(artifact.Name)}]({artifactUrl})");
+                body.Add($"  - Size: {FormatBytes(artifact.SizeInBytes)}");
+                body.Add($"  - Expires at: {EscapeMarkdown(artifact.ExpiresAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}");
             }
 
             if (artifacts.Count > MaxArtifacts)
             {
-                body.Add($"- 另有 {artifacts.Count - MaxArtifacts} 个有效 artifact 未展示。");
+                body.Add($"- {artifacts.Count - MaxArtifacts} additional valid artifact(s) are not shown.");
             }
-
-            body.Add(string.Empty);
-            body.Add("下载需要 GitHub 登录和仓库读取权限；链接随 artifact 保留期失效。");
         }
 
         return new GitHubArtifactCommentContent(
@@ -206,14 +203,14 @@ internal static class GitHubArtifactCommentFormatter
     private static string GetConclusionLabel(string conclusion) =>
         conclusion switch
         {
-            "success" => "成功",
-            "failure" => "失败",
-            "cancelled" => "已取消",
-            "timed_out" => "超时",
-            "action_required" => "需要操作",
-            "neutral" => "中性",
-            "skipped" => "已跳过",
-            "stale" => "已过期",
+            "success" => "Succeeded",
+            "failure" => "Failed",
+            "cancelled" => "Cancelled",
+            "timed_out" => "Timed out",
+            "action_required" => "Action required",
+            "neutral" => "Neutral",
+            "skipped" => "Skipped",
+            "stale" => "Stale",
             _ => EscapeMarkdown(conclusion),
         };
 

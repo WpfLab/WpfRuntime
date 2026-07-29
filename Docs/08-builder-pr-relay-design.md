@@ -71,11 +71,11 @@ Builder 应完成以下动作：
 ```powershell
 dotnet restore eng/Builder/Builder.csproj
 dotnet build eng/Builder/Builder.csproj --no-restore
-$env:GITHUB_TOKEN = "<fine-grained PAT or GitHub App token>"
 dotnet run --project eng/Builder/Builder.csproj --no-build -- relay-pr `
   --pull-request https://github.com/dotnet/wpf/pull/11781 `
   --target-remote origin `
   --base WpfReorganize `
+  --github-token "<fine-grained PAT or GitHub App token>" `
   --allow-untrusted-build
 ```
 
@@ -86,6 +86,7 @@ dotnet run --project eng/Builder/Builder.csproj --no-build -- relay-pr `
 | `--pull-request` | 是 | 无 | 标准 GitHub.com PR 页面链接；允许 `/files`、`/commits` 等子页面，解析后统一为 canonical PR URL |
 | `--target-remote` | 否 | `origin` | 调用者仓库中代表“自己的 GitHub 仓库”的 remote；fetch URL 用于取得 base，push URL 用于发布分支 |
 | `--base` | 条件必需 | 调用时当前分支名 | 新 PR 的 base 分支；调用者处于 detached HEAD 时必须显式传入 |
+| `--github-token` | 条件必需 | `GITHUB_TOKEN` | GitHub API Token；命令行值优先，未提供或为空时回退到环境变量 |
 | `--allow-untrusted-build` | 是 | `false` | 明确确认将执行外部 PR 中的 MSBuild、C# 和构建脚本；缺少该开关时只输出风险并退出 |
 | `--keep-workspace` | 否 | `on-failure` | `always`、`on-failure` 或 `never`；控制独立临时 clone 的保留策略 |
 
@@ -101,7 +102,7 @@ t/bot/PR_<number>
 
 ### GitHub API 凭据
 
-本地命令从 `GITHUB_TOKEN` 读取 Octokit 凭据，不把 Token 写入配置、命令行、Git URL、日志、状态文件或 PR 正文。
+本地命令优先从 `--github-token` 读取 Octokit 凭据，未提供或为空时回退到 `GITHUB_TOKEN`。实现不把 Token 写入配置、Git URL、日志、状态文件或 PR 正文。命令行参数可能被终端历史或系统进程列表记录；共享环境中应优先使用环境变量或其他受控的凭据注入方式。
 
 Token 至少需要：
 

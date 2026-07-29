@@ -15,6 +15,9 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
     [Option("base")]
     public string? Base { get; init; }
 
+    [Option("github-token")]
+    public string? GitHubToken { get; init; }
+
     [Option("allow-untrusted-build")]
     public bool AllowUntrustedBuild { get; init; }
 
@@ -37,8 +40,10 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             var keepWorkspace = string.IsNullOrWhiteSpace(KeepWorkspace)
                 ? KeepWorkspacePolicy.OnFailure
                 : ParseKeepWorkspace(KeepWorkspace);
-            var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-            if (string.IsNullOrWhiteSpace(token))
+            var token = ResolveGitHubToken(
+                GitHubToken,
+                Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
+            if (token is null)
             {
                 Log.Error(BuilderResources.GitHubTokenRequired);
                 return 2;
@@ -119,6 +124,13 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             return 1;
         }
     }
+
+    internal static string? ResolveGitHubToken(string? commandLineToken, string? environmentToken) =>
+        !string.IsNullOrWhiteSpace(commandLineToken)
+            ? commandLineToken
+            : !string.IsNullOrWhiteSpace(environmentToken)
+                ? environmentToken
+                : null;
 
     internal static KeepWorkspacePolicy ParseKeepWorkspace(string value) =>
         value.ToLowerInvariant() switch

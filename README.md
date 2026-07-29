@@ -1,16 +1,38 @@
-﻿# About This Reorganized WPF Repository
+# WpfRuntime
 
-This repository is a reorganized version of the original WPF repository. The root solution entry point is `Microsoft.Dotnet.Wpf.slnx`.
+WpfRuntime is an experimental and actively maintained WPF repository based on the open-source [dotnet/wpf](https://github.com/dotnet/wpf) project. It aims to enable faster iteration, provide a straightforward development experience, and make it easier for the community to build, modify, and experiment with WPF.
 
-Unlike the original repository, this repository currently includes a reorganized set of C# and C++/CLI projects. Modules such as `PenImc` and `WpfGfx` are referenced through binary assets from the WindowsDesktop runtime NuGet packages instead of including their corresponding source code in this repository. See [Docs/00-overview.md](Docs/00-overview.md) for the project inventory, current build status, and validation scope.
+The source originates from `dotnet/wpf` and remains subject to the notices and license included in this repository.
 
 ## Quick Start
 
-```bash
+```powershell
 msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal
 ```
 
-This command is the current build entry point, but it is not guaranteed to succeed in every workspace state. Review the current status and security constraints before running it.
+`Microsoft.Dotnet.Wpf.slnx` is the root solution entry point.
+
+## Build a Local Package
+
+```powershell
+dotnet run --project eng/Builder/Builder.csproj -- --version 1.0.0-local
+```
+
+The generated `DotNetCampus.WpfLib` package is written to `eng/Builder/bin/nupkg/`.
+
+## Relay an Existing Pull Request
+
+Set `GITHUB_TOKEN` to a fine-grained personal access token or GitHub App token that can push branches and create pull requests in the target repository. Do not put the token in command-line arguments or commit it to the repository.
+
+```powershell
+$env:GITHUB_TOKEN = "<fine-grained PAT or GitHub App token>"
+
+dotnet run --project eng/Builder/Builder.csproj -- relay-pr `
+  --pull-request https://github.com/dotnet/wpf/pull/11781 `
+  --allow-untrusted-build
+```
+
+This command imports the changes from the specified GitHub pull request, builds the merged result, and creates the corresponding pull request in this repository.
 
 ---
 

@@ -100,9 +100,12 @@ public sealed class GitHubArtifactCommentTests
         Assert.Equal(TestedSha, content.TestedSha.ToString());
         Assert.Contains("<!-- wpf-nuget-artifacts workflow=build pr=11781 -->", content.Body, StringComparison.Ordinal);
         Assert.Contains("<!-- wpf-nuget-artifacts-run id=42 attempt=2 -->", content.Body, StringComparison.Ordinal);
+        Assert.Contains("## WPF NuGet Build", content.Body, StringComparison.Ordinal);
+        Assert.Contains("- Result: Succeeded", content.Body, StringComparison.Ordinal);
         Assert.Contains("package@\u200bteam\\[debug\\]", content.Body, StringComparison.Ordinal);
         Assert.Contains("1.5 KiB", content.Body, StringComparison.Ordinal);
         Assert.Contains("actions/runs/42/artifacts/7", content.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("下载需要 GitHub 登录和仓库读取权限", content.Body, StringComparison.Ordinal);
         Assert.True(GitHubArtifactCommentFormatter.TryReadRunIdentity(content.Body, out var runId, out var attempt));
         Assert.Equal(42, runId);
         Assert.Equal(2, attempt);
@@ -125,7 +128,7 @@ public sealed class GitHubArtifactCommentTests
 
         Assert.False(content.HasValidSuccessArtifacts);
         Assert.Null(content.TestedSha);
-        Assert.Contains("没有唯一且有效", content.Body, StringComparison.Ordinal);
+        Assert.Contains("no unique valid nupkg artifact was found", content.Body, StringComparison.Ordinal);
         Assert.True(GitHubArtifactCommentFormatter.CompareRunIdentity(42, 3, 42, 2) > 0);
         Assert.True(GitHubArtifactCommentFormatter.CompareRunIdentity(43, 1, 42, 99) > 0);
     }
