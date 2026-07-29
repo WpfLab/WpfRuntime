@@ -1,6 +1,9 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using MS.Internal.KnownBoxes;
 using System.Windows.Input;
 
 namespace System.Windows
@@ -43,10 +46,8 @@ namespace System.Windows
 
             if (shouldFireNotification)
             {
-                MouseEventArgs mouseEventArgs = new MouseEventArgs(Mouse.PrimaryDevice, Environment.TickCount, Mouse.PrimaryDevice.StylusDevice)
-                {
-                    RoutedEvent = oldValue ? Mouse.MouseLeaveEvent : Mouse.MouseEnterEvent
-                };
+                MouseEventArgs mouseEventArgs = new MouseEventArgs(Mouse.PrimaryDevice, Environment.TickCount, Mouse.PrimaryDevice.StylusDevice);
+                mouseEventArgs.RoutedEvent = oldValue ? Mouse.MouseLeaveEvent : Mouse.MouseEnterEvent;
 
                 if (uie != null)
                 {
@@ -56,9 +57,9 @@ namespace System.Windows
                 {
                     ce.RaiseEvent(mouseEventArgs);
                 }
-                else
+                else if (uie3D != null)
                 {
-                    uie3D?.RaiseEvent(mouseEventArgs);
+                    uie3D.RaiseEvent(mouseEventArgs);
                 }
             }
         }

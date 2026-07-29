@@ -1,13 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security;
 using MS.Utility;
+using MS.Internal;
 using MS.Internal.Interop;
 using MS.Win32;
+using MS.Internal.PresentationCore;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Interop
 {
@@ -15,14 +22,20 @@ namespace System.Windows.Interop
     {
         internal HwndKeyboardInputProvider(HwndSource source)
         {
-            _site = InputManager.Current.RegisterInputProvider(this);
-            _source = source;
+            _site = new SecurityCriticalDataClass<InputProviderSite>(InputManager.Current.RegisterInputProvider(this));
+
+            _source = new SecurityCriticalDataClass<HwndSource>(source);
         }
+
+
 
         public void Dispose()
         {
-            _site?.Dispose();
-            _site = null;
+            if(_site != null)
+            {
+                _site.Value.Dispose();
+                _site = null;
+            }
             _source = null;
         }
 
@@ -33,10 +46,11 @@ namespace System.Windows.Interop
                 Keyboard.Focus(null); // internally we will set the focus to the root.
             }
         }
-
         bool IInputProvider.ProvidesInputForRootVisual(Visual v)
         {
-            return _source.RootVisual == v;
+            Debug.Assert( null != _source );
+
+            return _source.Value.RootVisual == v;
         }
 
         void IInputProvider.NotifyDeactivate()
@@ -61,11 +75,11 @@ namespace System.Windows.Interop
                     _restoreFocus = null;
                 }
 
-                HandleRef thisWindow = new HandleRef(this, _source.Handle);
+                HandleRef thisWindow = new HandleRef(this, _source.Value.CriticalHandle);
                 IntPtr focus = UnsafeNativeMethods.GetFocus();
 
                 int windowStyle = UnsafeNativeMethods.GetWindowLong(thisWindow, NativeMethods.GWL_EXSTYLE);
-                if ((windowStyle & NativeMethods.WS_EX_NOACTIVATE) == NativeMethods.WS_EX_NOACTIVATE || _source.IsInExclusiveMenuMode)
+                if ((windowStyle & NativeMethods.WS_EX_NOACTIVATE) == NativeMethods.WS_EX_NOACTIVATE || _source.Value.IsInExclusiveMenuMode)
                 {
                     // If this window has the WS_EX_NOACTIVATE style, then we
                     // do not set Win32 keyboard focus to this window because
@@ -122,7 +136,7 @@ namespace System.Windows.Interop
                         // deactivated.  Now we detect that we already have
                         // Win32 focus but are not activated and treat it the
                         // same as getting focus.
-                        if (!_active && focus == _source.Handle)
+                        if (!_active && focus == _source.Value.CriticalHandle)
                         {
                             OnSetFocus(focus);
                         }
@@ -136,7 +150,7 @@ namespace System.Windows.Interop
                         }
                     }
 
-                    result = (focus == _source.Handle);
+                    result = (focus == _source.Value.CriticalHandle);
                 }
             }
             catch(System.ComponentModel.Win32Exception)
@@ -156,7 +170,7 @@ namespace System.Windows.Interop
             IntPtr result = IntPtr.Zero ;
 
             // It is possible to be re-entered during disposal.  Just return.
-            if(_source is null)
+            if(null == _source || null == _source.Value)
             {
                 return result;
             }
@@ -185,7 +199,7 @@ namespace System.Windows.Interop
                     // But there are several paths (our message pump / app's message
                     // pump) where we do (or don't) call through IKeyboardInputSink.
                     // So the best way is to just check here if we already did it.
-                    if(_source.IsRepeatedKeyboardMessage(hwnd, (int)message, wParam, lParam))
+                    if(_source.Value.IsRepeatedKeyboardMessage(hwnd, (int)message, wParam, lParam))
                     {
                         break;
                     }
@@ -239,7 +253,7 @@ namespace System.Windows.Interop
                 case WindowMessage.WM_SYSKEYUP:
                 case WindowMessage.WM_KEYUP:
                 {
-                    if(_source.IsRepeatedKeyboardMessage(hwnd, (int)message, wParam, lParam))
+                    if(_source.Value.IsRepeatedKeyboardMessage(hwnd, (int)message, wParam, lParam))
                     {
                         break;
                     }
@@ -257,7 +271,7 @@ namespace System.Windows.Interop
                 case WindowMessage.WM_SYSCHAR:
                 case WindowMessage.WM_SYSDEADCHAR:
                 {
-                    if(_source.IsRepeatedKeyboardMessage(hwnd, (int)message, wParam, lParam))
+                    if(_source.Value.IsRepeatedKeyboardMessage(hwnd, (int)message, wParam, lParam))
                     {
                         break;
                     }
@@ -324,16 +338,16 @@ namespace System.Windows.Interop
                 // This is our clue that the keyboard is inactive.
                 case WindowMessage.WM_KILLFOCUS:
                 {
-                    if(_active && wParam != _source.Handle )
+                    if(_active  &&  wParam != _source.Value.CriticalHandle )
                     {
                         // Console.WriteLine("WM_KILLFOCUS");
 
-                        if(_source.RestoreFocusMode == RestoreFocusMode.Auto)
+                        if(_source.Value.RestoreFocusMode == RestoreFocusMode.Auto)
                         {
                             // when the window that's acquiring focus (wParam) is
                             // a descendant of our window, remember the immediate
                             // child so that we can restore focus to it.
-                            _restoreFocusWindow = GetImmediateChildFor((IntPtr)wParam, _source.Handle);
+                            _restoreFocusWindow = GetImmediateChildFor((IntPtr)wParam, _source.Value.CriticalHandle);
 
                             _restoreFocus = null;
 
@@ -347,7 +361,7 @@ namespace System.Windows.Interop
                                 if (focusedDO != null)
                                 {
                                     HwndSource hwndSource = PresentationSource.CriticalFromVisual(focusedDO) as HwndSource;
-                                    if (hwndSource == _source)
+                                    if (hwndSource == _source.Value)
                                     {
                                         _restoreFocus = focusedDO as IInputElement;
                                     }
@@ -369,13 +383,13 @@ namespace System.Windows.Interop
                 case WindowMessage.WM_UPDATEUISTATE:
                 {
                     RawUIStateInputReport report =
-                        new RawUIStateInputReport(_source,
+                        new RawUIStateInputReport(_source.Value,
                                                    InputMode.Foreground,
                                                    _msgTime,
                                                    (RawUIStateActions)NativeMethods.SignedLOWORD((int)wParam),
                                                    (RawUIStateTargets)NativeMethods.SignedHIWORD((int)wParam));
 
-                    _site.ReportInput(report);
+                    _site.Value.ReportInput(report);
 
                     handled = true;
                 }
@@ -425,7 +439,7 @@ namespace System.Windows.Interop
                 // designer process) in 4.5 Beta, but never tracked down the culprit.
                 // To be safe, we cache the member variable in a local variable
                 // for use within this method.
-                HwndSource thisSource = _source;
+                HwndSource thisSource = _source.Value;
 
                 // Console.WriteLine("WM_SETFOCUS");
 
@@ -490,7 +504,7 @@ namespace System.Windows.Interop
                         // this window, we do not allow the focused element to be in
                         // a different window.
                         IntPtr focus = UnsafeNativeMethods.GetFocus();
-                        if (focus == thisSource.Handle)
+                        if (focus == thisSource.CriticalHandle)
                         {
                             restoreFocusDO = (DependencyObject)Keyboard.FocusedElement;
                             if (restoreFocusDO != null)
@@ -560,7 +574,7 @@ namespace System.Windows.Interop
                 System.Diagnostics.Debug.WriteLine("HwndMouseInputProvider: GetKeyState failed!");
             }
 
-            RawTextInputReport report = new RawTextInputReport(_source,
+            RawTextInputReport report = new RawTextInputReport(_source.Value ,
                                                                InputMode.Foreground,
                                                                _msgTime,
                                                                isDeadChar,
@@ -568,7 +582,7 @@ namespace System.Windows.Interop
                                                                isControlChar,
                                                                charcode);
 
-            handled = _site.ReportInput(report);
+            handled = _site.Value.ReportInput(report);
         }
 
         internal static int GetVirtualKey(IntPtr wParam, IntPtr lParam)
@@ -660,6 +674,10 @@ namespace System.Windows.Interop
         ///<summary>
         ///     Returns the set of modifier keys currently pressed as determined by calling to Win32
         ///</summary>
+        ///<remarks>
+        ///     Marked as FriendAccessAllowed so HwndHost in PresentationFramework can call it
+        ///</remarks>
+        [FriendAccessAllowed]
         internal static ModifierKeys GetSystemModifierKeys()
         {
             ModifierKeys modifierKeys = ModifierKeys.None;
@@ -714,7 +732,7 @@ namespace System.Windows.Interop
             // Only deactivate the keyboard input stream if needed.
             if(deactivate)
             {
-                ReportInput(_source.Handle,
+                ReportInput(_source.Value.CriticalHandle,
                             InputMode.Foreground,
                             _msgTime,
                             RawKeyboardActions.Deactivate,
@@ -736,7 +754,7 @@ namespace System.Windows.Interop
                 HwndSource hwndSource = HwndSource.CriticalFromHwnd(hwnd);
                 if(hwndSource != null)
                 {
-                    if(hwndSource.Dispatcher == _source.Dispatcher)
+                    if(hwndSource.Dispatcher == _source.Value.Dispatcher)
                     {
                         // The window has the same dispatcher, must be ours.
                         isOurWindow = true;
@@ -837,7 +855,7 @@ namespace System.Windows.Interop
                 System.Diagnostics.Debug.WriteLine("HwndMouseInputProvider: GetMessageExtraInfo failed!");
             }
 
-            RawKeyboardInputReport report = new RawKeyboardInputReport(_source,
+            RawKeyboardInputReport report = new RawKeyboardInputReport(_source.Value,
                                                                        mode,
                                                                        timestamp,
                                                                        actions,
@@ -848,14 +866,14 @@ namespace System.Windows.Interop
                                                                        extraInformation);
 
 
-            bool handled = _site.ReportInput(report);
+            bool handled = _site.Value.ReportInput(report);
 
             return handled;
         }
 
         private int  _msgTime;
-        private HwndSource _source;
-        private InputProviderSite _site;
+        private SecurityCriticalDataClass<HwndSource> _source;
+        private SecurityCriticalDataClass<InputProviderSite> _site;
         private IInputElement _restoreFocus;
         private IntPtr _restoreFocusWindow;
         private bool _active;

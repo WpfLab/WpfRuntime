@@ -1,18 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xaml
 {
     internal class XamlSubreader : XamlReader, IXamlLineInfo
     {
-        private XamlReader _reader;
-        private IXamlLineInfo _lineInfoReader;
-        private bool _done;
-        private bool _firstRead;
-        private bool _rootIsStartMember;
-        private int _depth;
+        XamlReader _reader;
+        IXamlLineInfo _lineInfoReader;
+        bool _done;
+        bool _firstRead;
+        bool _rootIsStartMember;
+        int _depth;
 
         public XamlSubreader(XamlReader reader)
         {
@@ -26,12 +25,14 @@ namespace System.Xaml
 
         public override bool Read()
         {
-            ObjectDisposedException.ThrowIf(IsDisposed, typeof(XamlReader)); // Can't say XamlSubreader because its internal.
+            if (IsDisposed)
+            {
+                throw new ObjectDisposedException("XamlReader");  // can't say "XamlSubreader" it's an internal class.
+            }
             if (!_firstRead)
             {
                 return LimitedRead();
             }
-
             _firstRead = false;
             return true;
         }
@@ -79,24 +80,23 @@ namespace System.Xaml
         {
             get
             {
-                if (_lineInfoReader is null)
+                if (_lineInfoReader == null)
                 {
                     return false;
                 }
-
                 return _lineInfoReader.HasLineInfo;
             }
+
         }
 
         public int LineNumber
         {
             get
             {
-                if (_lineInfoReader is null)
+                if (_lineInfoReader == null)
                 {
                     return 0;
                 }
-
                 return _lineInfoReader.LineNumber;
             }
         }
@@ -105,11 +105,10 @@ namespace System.Xaml
         {
             get
             {
-                if (_lineInfoReader is null)
+                if (_lineInfoReader == null)
                 {
                     return 0;
                 }
-
                 return _lineInfoReader.LinePosition;
             }
         }
@@ -155,7 +154,6 @@ namespace System.Xaml
             {
                 _done = true;
             }
-
             _reader.Read();
             return !IsEof;
         }

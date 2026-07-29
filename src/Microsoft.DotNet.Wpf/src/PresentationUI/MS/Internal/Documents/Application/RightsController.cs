@@ -1,28 +1,34 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Responsible for the lifecycle of the RightsDocument and the actions that can
 //              be performed on it.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Packaging;
+using System.Security;
 using System.Security.RightsManagement;
+using System.Windows;
+using System.Windows.TrustUI; // for SR
+using MS.Internal.IO.Packaging.CompoundFile;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// Responsible for the lifecycle of the RightsDocument and the actions that can
-    /// be performed on it.
-    /// <see cref="MS.Internal.Documents.Application.IDocumentController"/>
-    /// </summary>
-    /// <remarks>
-    /// All IDocumentController methods are expected to throw if provided
-    /// a document that is not a RightsDocument.  Users of the IDocumentController
-    /// interface are expected to use the IChainOfResponsibiltyNode method before
-    /// calling into the IDocumentController methods to avoid runtime errors.
-    /// </remarks>
-    internal class RightsController : IDocumentController, IDisposable
+/// <summary>
+/// Responsible for the lifecycle of the RightsDocument and the actions that can
+/// be performed on it.
+/// <see cref="MS.Internal.Documents.Application.IDocumentController"/>
+/// </summary>
+/// <remarks>
+/// All IDocumentController methods are expected to throw if provided
+/// a document that is not a RightsDocument.  Users of the IDocumentController
+/// interface are expected to use the IChainOfResponsibiltyNode method before
+/// calling into the IDocumentController methods to avoid runtime errors.
+/// </remarks>
+class RightsController : IDocumentController, IDisposable
 {
     #region IDocumentController Members
     //--------------------------------------------------------------------------
@@ -51,7 +57,7 @@ namespace MS.Internal.Documents.Application
             try
             {
                 encryptedPackage =
-                    _provider.EncryptPackage(ciphered);
+                    _provider.Value.EncryptPackage(ciphered);
 
                 if (encryptedPackage != null)
                 {
@@ -119,7 +125,7 @@ namespace MS.Internal.Documents.Application
 
         RightsManagementProvider provider =
             new RightsManagementProvider(doc.SourcePackage);
-        _provider = provider;
+        _provider.Value = provider;
 
         try
         {
@@ -142,15 +148,14 @@ namespace MS.Internal.Documents.Application
 
                 if (clear != null)
                 {
-                        clear = new RightsManagementSuppressedStream(
-                            clear,
-                            DocumentRightsManagementManager.Current.HasPermissionToEdit)
-                        {
-                            // Reset the position of the stream since GetPackageStream will
-                            // create a package and move the stream pointer somewhere else
-                            Position = 0
-                        };
-                    }
+                    clear = new RightsManagementSuppressedStream(
+                        clear,
+                        DocumentRightsManagementManager.Current.HasPermissionToEdit);
+
+                    // Reset the position of the stream since GetPackageStream will
+                    // create a package and move the stream pointer somewhere else
+                    clear.Position = 0;
+                }
                 else
                 {
                     Trace.SafeWrite(
@@ -166,7 +171,7 @@ namespace MS.Internal.Documents.Application
             // If anything failed here, we cannot use the provider any longer,
             // so we can dispose it
             provider.Dispose();
-            _provider = null;
+            _provider.Value = null;
             throw;
         }
 
@@ -179,7 +184,7 @@ namespace MS.Internal.Documents.Application
             // If decryption failed, we can no longer do anything with the
             // provider instance or the current RM manager
             provider.Dispose();
-            _provider = null;
+            _provider.Value = null;
         }
 
         return true;
@@ -223,15 +228,14 @@ namespace MS.Internal.Documents.Application
 
                 if (clear != null)
                 {
-                        clear = new RightsManagementSuppressedStream(
-                            clear,
-                            DocumentRightsManagementManager.Current.HasPermissionToEdit)
-                        {
-                            // Reset the position of the stream since GetPackageStream will
-                            // create a package and move the stream pointer somewhere else
-                            Position = 0
-                        };
-                    }
+                    clear = new RightsManagementSuppressedStream(
+                        clear,
+                        DocumentRightsManagementManager.Current.HasPermissionToEdit);
+
+                    // Reset the position of the stream since GetPackageStream will
+                    // create a package and move the stream pointer somewhere else
+                    clear.Position = 0;
+                }
                 else
                 {
                     Trace.SafeWrite(
@@ -330,7 +334,7 @@ namespace MS.Internal.Documents.Application
             doc.DestinationProxy = new StreamProxy(clear);
 
             // save the use license in case the user acquired one
-            _provider.SaveUseLicense(doc.DestinationPackage);
+            _provider.Value.SaveUseLicense(doc.DestinationPackage);
 
             handled = true;
 
@@ -352,7 +356,7 @@ namespace MS.Internal.Documents.Application
                 "Cannot save with changes if Edit permission was not granted.");
 
             EncryptedPackageEnvelope encryptedPackage =
-                _provider.EncryptPackage(ciphered);
+                _provider.Value.EncryptPackage(ciphered);
 
             // the destination is intended to be encrypted when a non-null
             // value is returned
@@ -419,11 +423,14 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     void IDisposable.Dispose()
     {
-        IDisposable provider = _provider as IDisposable;
+        IDisposable provider = _provider.Value as IDisposable;
 
-        provider?.Dispose();
+        if (provider != null)
+        {
+            provider.Dispose();
+        }
 
-        _provider = null;
+        _provider.Value = null;
         
         GC.SuppressFinalize(this);
     }
@@ -470,14 +477,13 @@ namespace MS.Internal.Documents.Application
 
         clear = envelope.GetPackageStream();
 
-            clear = new RightsManagementSuppressedStream(clear, allowWrite)
-            {
-                // Reset the position of the stream since GetPackageStream will
-                // create a package and move the stream pointer somewhere else
-                Position = 0
-            };
+        clear = new RightsManagementSuppressedStream(clear, allowWrite);
 
-            return clear;
+        // Reset the position of the stream since GetPackageStream will
+        // create a package and move the stream pointer somewhere else
+        clear.Position = 0;
+
+        return clear;
     }
 
     /// <summary>
@@ -500,7 +506,7 @@ namespace MS.Internal.Documents.Application
     // Private Fields
     //--------------------------------------------------------------------------
 
-    private static IRightsManagementProvider _provider;
+    private static SecurityCriticalDataForSet<IRightsManagementProvider> _provider;
     #endregion Private Fields
 }
 }

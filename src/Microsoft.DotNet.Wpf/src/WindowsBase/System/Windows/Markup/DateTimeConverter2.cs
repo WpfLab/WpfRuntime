@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.ComponentModel;
 
@@ -12,10 +13,15 @@ using System.Text;
 namespace System.Windows.Markup
 #endif
 {
-    /// <summary>
-    /// This internal class simply wraps the DateTimeValueSerializer, to make it compatible with
-    /// internal code that expects a type converter.
-    /// </summary>
+    //+--------------------------------------------------------------------------------------
+    // 
+    //  DateTimeConverter2
+    //
+    //  This internal class simply wraps the DateTimeValueSerializer, to make it compatible with
+    //  internal code that expects a type converter.
+    //
+    //+--------------------------------------------------------------------------------------
+    
     internal class DateTimeConverter2 : TypeConverter
     {
 #if !PBTCOMPILER
@@ -39,21 +45,27 @@ namespace System.Windows.Markup
             return base.CanConvertTo(context, destinationType);
         }
 
+
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
-            => _dateTimeValueSerializer.ConvertFromString( value as string, null );
+        {
+            return _dateTimeValueSerializer.ConvertFromString( value as string, _valueSerializerContext );
+        }
+
+
 
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
             if (destinationType != null && value is DateTime)
             {
-                return _dateTimeValueSerializer.ConvertToString(value as string, null);
+                _dateTimeValueSerializer.ConvertToString( value as string, _valueSerializerContext );
             }
 
             return base.ConvertTo(context, culture, value, destinationType);
         }
 
 
-        private readonly DateTimeValueSerializer _dateTimeValueSerializer = new DateTimeValueSerializer();
+        private DateTimeValueSerializer _dateTimeValueSerializer = new DateTimeValueSerializer();
+        private IValueSerializerContext _valueSerializerContext = new DateTimeValueSerializerContext();
 #endif
     }
 }

@@ -1,0 +1,83 @@
+<Window x:Class="PackageTestApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DotNetCampus.WpfLib Package Test"
+        Width="760"
+        Height="560"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <Border Padding="16" Background="{StaticResource AccentBrush}" CornerRadius="8">
+      <StackPanel>
+        <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White"
+                   Text="DotNetCampus.WpfLib validation" />
+        <TextBlock Margin="0,6,0,0" Foreground="White"
+                   Text="A real XAML window rendered by the package-provided WPF assemblies." />
+      </StackPanel>
+    </Border>
+
+    <TabControl x:Name="ContentTabs" Grid.Row="1" Margin="0,16">
+      <TabItem Header="Controls">
+        <Grid Margin="12">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+          <Label Grid.Row="0" Content="Name" Target="{Binding ElementName=NameTextBox}" />
+          <TextBox x:Name="NameTextBox" Grid.Row="0" Grid.Column="1" Margin="6" Text="WPF package probe" />
+
+          <Label Grid.Row="1" Content="Theme" Target="{Binding ElementName=ThemeComboBox}" />
+          <ComboBox x:Name="ThemeComboBox" Grid.Row="1" Grid.Column="1" Margin="6" SelectedIndex="0">
+            <ComboBoxItem Content="Light" />
+            <ComboBoxItem Content="Dark" />
+          </ComboBox>
+
+          <Label Grid.Row="2" Content="Features" />
+          <StackPanel Grid.Row="2" Grid.Column="1" Margin="6" Orientation="Horizontal">
+            <CheckBox x:Name="AnimationsCheckBox" IsChecked="True" Content="Animations" />
+            <RadioButton x:Name="StandardModeRadioButton" Margin="16,0,0,0" IsChecked="True" Content="Standard mode" />
+          </StackPanel>
+
+          <Label Grid.Row="3" Content="Progress" />
+          <ProgressBar x:Name="ValidationProgressBar" Grid.Row="3" Grid.Column="1" Height="18" Margin="6"
+                       Minimum="0" Maximum="100" Value="75" />
+
+          <Button x:Name="ActionButton" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left"
+                  Content="Run action" Click="OnActionButtonClick" />
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Data">
+        <DockPanel Margin="12">
+          <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" FontWeight="SemiBold"
+                     Text="Common WPF controls loaded from XAML" />
+          <ListBox x:Name="FeatureListBox" SelectedIndex="0">
+            <ListBoxItem Content="XAML resource lookup" />
+            <ListBoxItem Content="Control templates and styles" />
+            <ListBoxItem Content="Routed events" />
+            <ListBoxItem Content="Dispatcher rendering" />
+          </ListBox>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+
+    <StatusBar Grid.Row="2">
+      <StatusBarItem>
+        <TextBlock x:Name="StatusTextBlock" Text="Waiting for validation" />
+      </StatusBarItem>
+    </StatusBar>
+  </Grid>
+</Window>

@@ -1,10 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Xaml;
 using System.Xaml.Schema;
 using System.Xaml.Permissions;
+using System.Collections.Generic;
 using System.Windows.Controls;
+using System.Diagnostics;
 using System.Windows.Data;
 using System.Windows.Diagnostics;
 using System.Windows.Markup;
@@ -13,6 +16,7 @@ using MS.Utility;
 using System.ComponentModel;
 using System.Collections;
 using System.Collections.Specialized;
+using System.Security;
 using MS.Internal.Xaml.Context;
 using System.Windows.Baml2006;
 
@@ -245,13 +249,11 @@ namespace System.Windows
             // Items panel templates have special rules
             if (OwnerTemplate is ItemsPanelTemplate)
             {
-                PropertyValue pv = new PropertyValue
-                {
-                    ValueType = PropertyValueType.Set,
-                    ChildName = TemplateLoadData.RootName,
-                    ValueInternal = true,
-                    Property = Panel.IsItemsHostProperty
-                };
+                PropertyValue pv = new PropertyValue();
+                pv.ValueType = PropertyValueType.Set;
+                pv.ChildName = TemplateLoadData.RootName;
+                pv.ValueInternal = true;
+                pv.Property = Panel.IsItemsHostProperty;
 
                 sharedProperties.Add(pv);
             }
@@ -371,7 +373,10 @@ namespace System.Windows
 
             while (reader.Read())
             {
-                lineInfoConsumer?.SetLineInfo(lineInfo.LineNumber, lineInfo.LinePosition);
+                if (lineInfoConsumer != null)
+                {
+                    lineInfoConsumer.SetLineInfo(lineInfo.LineNumber, lineInfo.LinePosition);
+                }
 
                 object newValue;
                 bool reProcessOnApply = ParseNode(reader, stack, sharedProperties, ref nameNumber, out newValue);
@@ -422,7 +427,7 @@ namespace System.Windows
 
                         // Check to see if the parent object needs to have the name set
                         if (stack.Depth > 0 &&
-!stack.CurrentFrame.NameSet &&
+                            stack.CurrentFrame.NameSet == false &&
                             stack.CurrentFrame.Type != null &&
                             !stack.CurrentFrame.IsInNameScope &&
                             !stack.CurrentFrame.IsInStyleOrTemplate)
@@ -450,7 +455,7 @@ namespace System.Windows
                     {
                         // Check to see if the parent object needs to have the name set
                         if (stack.Depth > 0 &&
-                            !stack.CurrentFrame.NameSet &&
+                            stack.CurrentFrame.NameSet == false &&
                             stack.CurrentFrame.Type != null &&
                             !stack.CurrentFrame.IsInNameScope &&
                             !stack.CurrentFrame.IsInStyleOrTemplate)
@@ -478,7 +483,7 @@ namespace System.Windows
                 case System.Xaml.XamlNodeType.EndObject:
                     if (!stack.CurrentFrame.IsInStyleOrTemplate)
                     {
-                        if (!stack.CurrentFrame.NameSet && !stack.CurrentFrame.IsInNameScope)
+                        if (stack.CurrentFrame.NameSet == false && !stack.CurrentFrame.IsInNameScope)
                         {
                             // FEs and FCEs need to be added to the name to index map
                             if (typeof(FrameworkElement).IsAssignableFrom(stack.CurrentFrame.Type.UnderlyingType) ||
@@ -569,8 +574,10 @@ namespace System.Windows
                                 stack.CurrentFrame.ContentSourceSet = true;
                         }
 
-                        if (!stack.CurrentFrame.IsInNameScope && !xamlReader.Member.IsDirective)
+                        if (!stack.CurrentFrame.IsInNameScope &&
+                            xamlReader.Member.IsDirective == false)
                         {
+
                             // Try to see if the property is shareable
                             PropertyValue? sharedValue;
                             var iReader = xamlReader as IXamlIndexingReader;
@@ -720,7 +727,7 @@ namespace System.Windows
                     if (!stack.CurrentFrame.IsInStyleOrTemplate)
                     {
                         // Check to see if the parent object needs to have the name set
-                        if (stack.Depth > 0 && !stack.CurrentFrame.NameSet && stack.CurrentFrame.Type != null && !stack.CurrentFrame.IsInNameScope)
+                        if (stack.Depth > 0 && stack.CurrentFrame.NameSet == false && stack.CurrentFrame.Type != null && !stack.CurrentFrame.IsInNameScope)
                         {
                             // FEs and FCEs need to be added to the name to index map
                             if (typeof(FrameworkElement).IsAssignableFrom(stack.CurrentFrame.Type.UnderlyingType) ||
@@ -980,7 +987,10 @@ namespace System.Windows
                                     // events inside of a FramewokrTemplate
                                     if (!insideTemplate && frames.CurrentFrame.Property == XamlLanguage.ConnectionId)
                                     {
-                                        OwnerTemplate.StyleConnector?.Connect((int)xamlReader.Value, frames.CurrentFrame.Instance);
+                                        if (OwnerTemplate.StyleConnector != null)
+                                        {
+                                            OwnerTemplate.StyleConnector.Connect((int)xamlReader.Value, frames.CurrentFrame.Instance);
+                                        }
                                     }
                                     break;
                             }
@@ -1132,13 +1142,11 @@ namespace System.Windows
             if (isValueShareable)
             {
                 // If we're here, that means the property can be shared
-                PropertyValue propertyValue = new PropertyValue
-                {
-                    Property = property,
-                    ChildName = parentName,
-                    ValueInternal = value,
-                    ValueType = PropertyValueType.Set
-                };
+                PropertyValue propertyValue = new PropertyValue();
+                propertyValue.Property = property;
+                propertyValue.ChildName = parentName;
+                propertyValue.ValueInternal = value;
+                propertyValue.ValueType = PropertyValueType.Set;
 
                 sharedValue = propertyValue;
 
@@ -1218,7 +1226,7 @@ namespace System.Windows
             bool isContentStringFormatPropertyDefined
             )
         {
-            if (String.IsNullOrEmpty(contentSource) && !isContentSourceSet)
+            if (String.IsNullOrEmpty(contentSource) && isContentSourceSet == false)
                 contentSource = "Content";
 
             if (!String.IsNullOrEmpty(contentSource) && !isContentPropertyDefined)
@@ -1238,13 +1246,11 @@ namespace System.Windows
 
                 if (dpContent != null)
                 {
-                    PropertyValue pv = new PropertyValue
-                    {
-                        ValueType = PropertyValueType.TemplateBinding,
-                        ChildName = templateChildName,
-                        ValueInternal = new TemplateBindingExtension(dpContent),
-                        Property = ContentPresenter.ContentProperty
-                    };
+                    PropertyValue pv = new PropertyValue();
+                    pv.ValueType = PropertyValueType.TemplateBinding;
+                    pv.ChildName = templateChildName;
+                    pv.ValueInternal = new TemplateBindingExtension(dpContent);
+                    pv.Property = ContentPresenter.ContentProperty;
 
                     StyleHelper.UpdateTables(ref pv, ref childRecordFromChildIndex,
                         ref triggerSourceRecordFromChildIndex,
@@ -1261,13 +1267,11 @@ namespace System.Windows
                 {
                     if (dpContentTemplate != null)
                     {
-                        PropertyValue pv = new PropertyValue
-                        {
-                            ValueType = PropertyValueType.TemplateBinding,
-                            ChildName = templateChildName,
-                            ValueInternal = new TemplateBindingExtension(dpContentTemplate),
-                            Property = ContentPresenter.ContentTemplateProperty
-                        };
+                        PropertyValue pv = new PropertyValue();
+                        pv.ValueType = PropertyValueType.TemplateBinding;
+                        pv.ChildName = templateChildName;
+                        pv.ValueInternal = new TemplateBindingExtension(dpContentTemplate);
+                        pv.Property = ContentPresenter.ContentTemplateProperty;
 
                         StyleHelper.UpdateTables(ref pv, ref childRecordFromChildIndex,
                                ref triggerSourceRecordFromChildIndex,
@@ -1279,13 +1283,11 @@ namespace System.Windows
 
                     if (dpContentTemplateSelector != null)
                     {
-                        PropertyValue pv = new PropertyValue
-                        {
-                            ValueType = PropertyValueType.TemplateBinding,
-                            ChildName = templateChildName,
-                            ValueInternal = new TemplateBindingExtension(dpContentTemplateSelector),
-                            Property = ContentPresenter.ContentTemplateSelectorProperty
-                        };
+                        PropertyValue pv = new PropertyValue();
+                        pv.ValueType = PropertyValueType.TemplateBinding;
+                        pv.ChildName = templateChildName;
+                        pv.ValueInternal = new TemplateBindingExtension(dpContentTemplateSelector);
+                        pv.Property = ContentPresenter.ContentTemplateSelectorProperty;
 
                         StyleHelper.UpdateTables(ref pv, ref childRecordFromChildIndex,
                                ref triggerSourceRecordFromChildIndex,
@@ -1297,13 +1299,11 @@ namespace System.Windows
 
                     if (dpContentStringFormat != null)
                     {
-                        PropertyValue pv = new PropertyValue
-                        {
-                            ValueType = PropertyValueType.TemplateBinding,
-                            ChildName = templateChildName,
-                            ValueInternal = new TemplateBindingExtension(dpContentStringFormat),
-                            Property = ContentPresenter.ContentStringFormatProperty
-                        };
+                        PropertyValue pv = new PropertyValue();
+                        pv.ValueType = PropertyValueType.TemplateBinding;
+                        pv.ChildName = templateChildName;
+                        pv.ValueInternal = new TemplateBindingExtension(dpContentStringFormat);
+                        pv.Property = ContentPresenter.ContentStringFormatProperty;
 
 
                         StyleHelper.UpdateTables(ref pv, ref childRecordFromChildIndex,
@@ -1339,13 +1339,11 @@ namespace System.Windows
 
                 if (dpContent != null)
                 {
-                    PropertyValue propertyValue = new PropertyValue
-                    {
-                        ValueType = PropertyValueType.TemplateBinding,
-                        ChildName = childName,
-                        ValueInternal = new TemplateBindingExtension(dpContent),
-                        Property = GridViewRowPresenter.ContentProperty
-                    };
+                    PropertyValue propertyValue = new PropertyValue();
+                    propertyValue.ValueType = PropertyValueType.TemplateBinding;
+                    propertyValue.ChildName = childName;
+                    propertyValue.ValueInternal = new TemplateBindingExtension(dpContent);
+                    propertyValue.Property = GridViewRowPresenter.ContentProperty;
 
                     StyleHelper.UpdateTables(ref propertyValue,
                                              ref childRecordFromChildIndex,
@@ -1360,13 +1358,11 @@ namespace System.Windows
             // <GridViewRowPresenter Columns="{TemplateBinding Property=GridView.ColumnCollection}" .../>
             if (!isColumnsPropertyDefined)
             {
-                PropertyValue propertyValue = new PropertyValue
-                {
-                    ValueType = PropertyValueType.TemplateBinding,
-                    ChildName = childName,
-                    ValueInternal = new TemplateBindingExtension(GridView.ColumnCollectionProperty),
-                    Property = GridViewRowPresenter.ColumnsProperty
-                };
+                PropertyValue propertyValue = new PropertyValue();
+                propertyValue.ValueType = PropertyValueType.TemplateBinding;
+                propertyValue.ChildName = childName;
+                propertyValue.ValueInternal = new TemplateBindingExtension(GridView.ColumnCollectionProperty);
+                propertyValue.Property = GridViewRowPresenter.ColumnsProperty;
 
                 StyleHelper.UpdateTables(ref propertyValue,
                                          ref childRecordFromChildIndex,

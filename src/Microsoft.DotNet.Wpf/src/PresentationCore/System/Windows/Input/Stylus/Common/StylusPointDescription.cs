@@ -1,7 +1,18 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using SR = MS.Internal.PresentationCore.SR;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows.Input
 {
@@ -43,7 +54,10 @@ namespace System.Windows.Input
         /// </summary>
         public StylusPointDescription(IEnumerable<StylusPointPropertyInfo> stylusPointPropertyInfos)
         {
-            ArgumentNullException.ThrowIfNull(stylusPointPropertyInfos);
+            if (null == stylusPointPropertyInfos)
+            {
+                throw new ArgumentNullException("stylusPointPropertyInfos");
+            }
             List<StylusPointPropertyInfo> infos =
                 new List<StylusPointPropertyInfo>(stylusPointPropertyInfos);
 
@@ -52,7 +66,7 @@ namespace System.Windows.Input
                 infos[RequiredYIndex].Id != StylusPointPropertyIds.Y ||
                 infos[RequiredPressureIndex].Id != StylusPointPropertyIds.NormalPressure)
             {
-                throw new ArgumentException(SR.InvalidStylusPointDescription, nameof(stylusPointPropertyInfos));
+                throw new ArgumentException(SR.InvalidStylusPointDescription, "stylusPointPropertyInfos");
             }
 
             //
@@ -68,7 +82,7 @@ namespace System.Windows.Input
             {
                 if (seenIds.Contains(infos[x].Id))
                 {
-                    throw new ArgumentException(SR.InvalidStylusPointDescriptionDuplicatesFound, nameof(stylusPointPropertyInfos));
+                    throw new ArgumentException(SR.InvalidStylusPointDescriptionDuplicatesFound, "stylusPointPropertyInfos");
                 }
                 if (infos[x].IsButton)
                 {
@@ -79,14 +93,14 @@ namespace System.Windows.Input
                     //this is not a button, make sure we haven't seen one before
                     if (buttonCount > 0)
                     {
-                        throw new ArgumentException(SR.InvalidStylusPointDescriptionButtonsMustBeLast, nameof(stylusPointPropertyInfos));
+                        throw new ArgumentException(SR.InvalidStylusPointDescriptionButtonsMustBeLast, "stylusPointPropertyInfos");
                     }
                 }
                 seenIds.Add(infos[x].Id);
             }
             if (buttonCount > MaximumButtonCount)
             {
-                throw new ArgumentException(SR.InvalidStylusPointDescriptionTooManyButtons, nameof(stylusPointPropertyInfos));
+                throw new ArgumentException(SR.InvalidStylusPointDescriptionTooManyButtons, "stylusPointPropertyInfos");
             }
 
             _buttonCount = buttonCount;
@@ -110,7 +124,10 @@ namespace System.Windows.Input
         /// <param name="stylusPointProperty">stylusPointProperty</param>
         public bool HasProperty(StylusPointProperty stylusPointProperty)
         {
-            ArgumentNullException.ThrowIfNull(stylusPointProperty);
+            if (null == stylusPointProperty)
+            {
+                throw new ArgumentNullException("stylusPointProperty");
+            }
 
             int index = IndexOf(stylusPointProperty.Id);
             if (-1 == index)
@@ -134,7 +151,10 @@ namespace System.Windows.Input
         /// <param name="stylusPointProperty">stylusPointProperty</param>
         public StylusPointPropertyInfo GetPropertyInfo(StylusPointProperty stylusPointProperty)
         {
-            ArgumentNullException.ThrowIfNull(stylusPointProperty);
+            if (null == stylusPointProperty)
+            {
+                throw new ArgumentNullException("stylusPointProperty");
+            }
             return GetPropertyInfo(stylusPointProperty.Id);
         }
 
@@ -290,7 +310,7 @@ namespace System.Windows.Input
                 throw new ArgumentNullException("stylusPointDescription");
             }
 
-            // if a StylusPointDescription is not null, then _stylusPointPropertyInfos is not null.
+            #pragma warning disable 6506 // if a StylusPointDescription is not null, then _stylusPointPropertyInfos is not null.
             //
             // ignore X, Y, Pressure - they are guaranteed to be the first3 members
             //
@@ -315,6 +335,7 @@ namespace System.Windows.Input
                     return false;
                 }
             }
+            #pragma warning restore 6506
 
             return true;
         }
@@ -327,11 +348,17 @@ namespace System.Windows.Input
         /// <remarks>The StylusPointProperties from stylusPointDescriptionPreserveInfo will be returned in the new StylusPointDescription</remarks>
         public static StylusPointDescription GetCommonDescription(StylusPointDescription stylusPointDescription, StylusPointDescription stylusPointDescriptionPreserveInfo)
         {
-            ArgumentNullException.ThrowIfNull(stylusPointDescription);
-            ArgumentNullException.ThrowIfNull(stylusPointDescriptionPreserveInfo);
+            if (stylusPointDescription == null)
+            {
+                throw new ArgumentNullException("stylusPointDescription");
+            }
+            if (stylusPointDescriptionPreserveInfo == null)
+            {
+                throw new ArgumentNullException("stylusPointDescriptionPreserveInfo");
+            }
 
 
-            // if a StylusPointDescription is not null, then _stylusPointPropertyInfos is not null.
+            #pragma warning disable 6506 // if a StylusPointDescription is not null, then _stylusPointPropertyInfos is not null.
             //
             // ignore X, Y, Pressure - they are guaranteed to be the first3 members
             //
@@ -364,6 +391,7 @@ namespace System.Windows.Input
                     }
                 }
             }
+            #pragma warning restore 6506
             
             return new StylusPointDescription(commonProperties);
         }
@@ -376,7 +404,10 @@ namespace System.Windows.Input
         /// <returns></returns>
         public bool IsSubsetOf(StylusPointDescription stylusPointDescriptionSuperset)
         {
-            ArgumentNullException.ThrowIfNull(stylusPointDescriptionSuperset);
+            if (null == stylusPointDescriptionSuperset)
+            {
+                throw new ArgumentNullException("stylusPointDescriptionSuperset");
+            }
             if (stylusPointDescriptionSuperset._stylusPointPropertyInfos.Length < _stylusPointPropertyInfos.Length)
             {
                 return false;

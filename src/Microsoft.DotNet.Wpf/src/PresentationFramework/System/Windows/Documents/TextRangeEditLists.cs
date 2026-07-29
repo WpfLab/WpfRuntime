@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Internal static class representing a group of methods
@@ -10,6 +9,10 @@ using MS.Internal;
 
 namespace System.Windows.Documents
 {
+    using System;
+    using MS.Internal;
+    using System.Windows.Controls;
+
     /// <summary>
     /// The TextRange class represents a pair of TextPositions, with many
     /// rich text editing operations exposed.
@@ -315,10 +318,8 @@ namespace System.Windows.Documents
             else
             {
                 // Create a list around all paragraphs
-                List list = new List
-                {
-                    MarkerStyle = markerStyle
-                };
+                List list = new List();
+                list.MarkerStyle = markerStyle;
                 list.Apply(firstBlock, lastBlock);
 
                 // Merge with neighboring lists

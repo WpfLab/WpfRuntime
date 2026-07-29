@@ -1,0 +1,120 @@
+name: Build WPF NuGet Package
+
+on:
+  push:
+    branches: [ main, WpfReorganize ]
+  pull_request_target:
+    branches: [ main, WpfReorganize ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-wpf-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-solution:
+    runs-on: windows-latest
+    timeout-minutes: 180
+
+    steps:
+    - name: Checkout trusted Builder
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.sha }}
+        path: trusted
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Checkout tested commit
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.event_name == 'pull_request_target' && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.sha }}
+        path: tested
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Setup .NET SDKs
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+      with:
+        dotnet-version: |
+          8.0.x
+          9.0.x
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
+
+    - name: Restore trusted Builder
+      working-directory: trusted
+      run: dotnet restore eng/Builder/Builder.csproj -p:RestoreWpfRuntimePackages=false
+
+    - name: Build trusted Builder
+      working-directory: trusted
+      run: dotnet build eng/Builder/Builder.csproj --no-restore -p:RestoreWpfRuntimePackages=false
+
+    - name: Restore and rebuild solution through trusted Builder
+      working-directory: trusted
+      run: dotnet eng/Builder/bin/Builder.dll ci-build --repository ../tested --target solution
+
+  build-package:
+    runs-on: windows-latest
+    timeout-minutes: 180
+
+    steps:
+    - name: Checkout trusted Builder
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.sha }}
+        path: trusted
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Checkout tested commit
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.event_name == 'pull_request_target' && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.sha }}
+        path: tested
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Setup .NET SDKs
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+      with:
+        dotnet-version: |
+          8.0.x
+          9.0.x
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
+
+    - name: Restore trusted Builder
+      working-directory: trusted
+      run: dotnet restore eng/Builder/Builder.csproj -p:RestoreWpfRuntimePackages=false
+
+    - name: Build trusted Builder
+      working-directory: trusted
+      run: dotnet build eng/Builder/Builder.csproj --no-restore -p:RestoreWpfRuntimePackages=false
+
+    - name: Build and test package through trusted Builder
+      id: build-package
+      working-directory: trusted
+      run: dotnet eng/Builder/bin/Builder.dll ci-build --repository ../tested --target package
+
+    - name: Upload package test diagnostics
+      if: failure()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: DotNetCampus.WpfLib-package-tests-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+        path: tested/eng/Builder/bin/package-tests
+        if-no-files-found: warn
+        retention-days: 7
+
+    - name: Upload NuGet package artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: ${{ steps.build-package.outputs.artifact-name }}
+        path: ${{ steps.build-package.outputs.package-path }}
+        if-no-files-found: error
+        retention-days: 7

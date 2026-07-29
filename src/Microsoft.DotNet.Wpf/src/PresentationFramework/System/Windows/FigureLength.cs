@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
@@ -9,6 +10,7 @@
 //
 //
 
+using MS.Internal;
 using System.ComponentModel;
 using System.Globalization;
 using MS.Internal.PtsHost.UnsafeNativeMethods;     // PTS restrictions
@@ -179,10 +181,11 @@ namespace System.Windows
         /// <param name="oCompare">Reference to an object for comparison.</param>
         /// <returns><c>true</c>if this FigureLength instance has the same value 
         /// and unit type as oCompare.</returns>
-        public override bool Equals(object oCompare)
+        override public bool Equals(object oCompare)
         {
-            if (oCompare is FigureLength l)
+            if(oCompare is FigureLength)
             {
+                FigureLength l = (FigureLength)oCompare;
                 return (this == l);
             }
             else

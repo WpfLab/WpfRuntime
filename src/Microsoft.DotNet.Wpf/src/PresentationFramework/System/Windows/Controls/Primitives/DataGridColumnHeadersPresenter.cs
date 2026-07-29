@@ -1,8 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 
+using System;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using MS.Internal;
@@ -296,8 +302,8 @@ namespace System.Windows.Controls.Primitives
                 else if (e.Property == DataGrid.FrozenColumnCountProperty ||
                     e.Property == DataGridColumn.VisibilityProperty ||
                     e.Property == DataGrid.CellsPanelHorizontalOffsetProperty ||
-                    string.Equals(propertyName, "ViewportWidth", StringComparison.Ordinal) ||
-                    string.Equals(propertyName, "DelayedColumnWidthComputation", StringComparison.Ordinal))
+                    string.Compare(propertyName, "ViewportWidth", StringComparison.Ordinal) == 0 ||
+                    string.Compare(propertyName, "DelayedColumnWidthComputation", StringComparison.Ordinal) == 0)
                 {
                     InvalidateDataGridCellsPanelMeasureAndArrange();
                 }
@@ -306,11 +312,11 @@ namespace System.Windows.Controls.Primitives
                     InvalidateArrange();
                     InvalidateDataGridCellsPanelMeasureAndArrange();
                 }
-                else if (string.Equals(propertyName, "RealizedColumnsBlockListForNonVirtualizedRows", StringComparison.Ordinal))
+                else if (string.Compare(propertyName, "RealizedColumnsBlockListForNonVirtualizedRows", StringComparison.Ordinal) == 0)
                 {
                     InvalidateDataGridCellsPanelMeasureAndArrange(/* withColumnVirtualization */ false);
                 }
-                else if (string.Equals(propertyName, "RealizedColumnsBlockListForVirtualizedRows", StringComparison.Ordinal))
+                else if (string.Compare(propertyName, "RealizedColumnsBlockListForVirtualizedRows", StringComparison.Ordinal) == 0)
                 {
                     InvalidateDataGridCellsPanelMeasureAndArrange(/* withColumnVirtualization */ true);
                 }
@@ -328,7 +334,10 @@ namespace System.Windows.Controls.Primitives
             {
                 if (e.Property == DataGridColumn.HeaderProperty)
                 {
-                    HeaderCollection?.NotifyHeaderPropertyChanged(column, e);
+                    if (HeaderCollection != null)
+                    {
+                        HeaderCollection.NotifyHeaderPropertyChanged(column, e);
+                    }
                 }
                 else
                 {
@@ -346,7 +355,10 @@ namespace System.Windows.Controls.Primitives
                         (e.Property == DataGrid.ColumnHeaderStyleProperty || e.Property == DataGrid.ColumnHeaderHeightProperty) )
                     {
                         DataGridColumnHeader fillerColumnHeader = GetTemplateChild(ElementFillerColumnHeader) as DataGridColumnHeader;
-                        fillerColumnHeader?.NotifyPropertyChanged(d, e);
+                        if (fillerColumnHeader != null)
+                        {
+                            fillerColumnHeader.NotifyPropertyChanged(d, e);
+                        }
                     }
                 }
             }
@@ -543,9 +555,15 @@ namespace System.Windows.Controls.Primitives
                         bool shouldDisplayDragIndicator = IsMousePositionValidForColumnDrag(2.0);
                         Visibility dragIndicatorVisibility = shouldDisplayDragIndicator ? Visibility.Visible : Visibility.Collapsed;
 
-                        _columnHeaderDragIndicator?.Visibility = dragIndicatorVisibility;
+                        if (_columnHeaderDragIndicator != null)
+                        {
+                            _columnHeaderDragIndicator.Visibility = dragIndicatorVisibility;
+                        }
 
-                        _columnHeaderDropLocationIndicator?.Visibility = dragIndicatorVisibility;
+                        if (_columnHeaderDropLocationIndicator != null)
+                        {
+                            _columnHeaderDropLocationIndicator.Visibility = dragIndicatorVisibility;
+                        }
 
                         InvalidateArrange();
 
@@ -738,10 +756,8 @@ namespace System.Windows.Controls.Primitives
         {
             Debug.Assert(_draggingSrcColumnHeader != null, "Dragging header is null");
 
-            DataGridColumnFloatingHeader floatingHeader = new DataGridColumnFloatingHeader
-            {
-                ReferenceHeader = _draggingSrcColumnHeader
-            };
+            DataGridColumnFloatingHeader floatingHeader = new DataGridColumnFloatingHeader();
+            floatingHeader.ReferenceHeader = _draggingSrcColumnHeader;
             return floatingHeader;
         }
 
@@ -771,10 +787,8 @@ namespace System.Windows.Controls.Primitives
         {
             Debug.Assert(_draggingSrcColumnHeader != null, "Dragging header is null");
 
-            DataGridColumnDropSeparator indicator = new DataGridColumnDropSeparator
-            {
-                ReferenceHeader = _draggingSrcColumnHeader
-            };
+            DataGridColumnDropSeparator indicator = new DataGridColumnDropSeparator();
+            indicator.ReferenceHeader = _draggingSrcColumnHeader;
             return indicator;
         }
 
@@ -811,7 +825,10 @@ namespace System.Windows.Controls.Primitives
             {
                 _columnHeaderDragIndicator.Visibility = Visibility.Collapsed;
                 DataGridColumnFloatingHeader floatingHeader = _columnHeaderDragIndicator as DataGridColumnFloatingHeader;
-                floatingHeader?.ClearHeader();
+                if (floatingHeader != null)
+                {
+                    floatingHeader.ClearHeader();
+                }
 
                 RemoveVisualChild(_columnHeaderDragIndicator);
             }
@@ -820,7 +837,10 @@ namespace System.Windows.Controls.Primitives
             {
                 _columnHeaderDropLocationIndicator.Visibility = Visibility.Collapsed;
                 DataGridColumnDropSeparator separator = _columnHeaderDropLocationIndicator as DataGridColumnDropSeparator;
-                separator?.ReferenceHeader = null;
+                if (separator != null)
+                {
+                    separator.ReferenceHeader = null;
+                }
 
                 RemoveVisualChild(_columnHeaderDropLocationIndicator);
             }

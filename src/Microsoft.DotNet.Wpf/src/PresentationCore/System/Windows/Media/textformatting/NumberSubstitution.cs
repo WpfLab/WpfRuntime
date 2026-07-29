@@ -1,9 +1,27 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
+//  Contents:  Number substitution related types
+//
+//  Spec:      Cultural%20digit%20substitution.htm
+//
+//
+
+
+using System;
 using System.Globalization;
 using System.ComponentModel;
-using MS.Internal.FontCache;
+using System.Windows;
+using MS.Internal.FontCache; // for HashFn
+
+using SR = MS.Internal.PresentationCore.SR;
+
+// Allow suppression of presharp warnings
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Media
 {
@@ -140,7 +158,10 @@ namespace System.Windows.Media
         /// </summary>
         public static void SetCultureSource(DependencyObject target, NumberCultureSource value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(CultureSourceProperty, value);
         }
@@ -151,7 +172,10 @@ namespace System.Windows.Media
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static NumberCultureSource GetCultureSource(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (NumberCultureSource)(target.GetValue(CultureSourceProperty));
         }
@@ -173,7 +197,10 @@ namespace System.Windows.Media
         /// </summary>
         public static void SetCultureOverride(DependencyObject target, CultureInfo value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(CultureOverrideProperty, value);
         }
@@ -185,7 +212,10 @@ namespace System.Windows.Media
         [TypeConverter(typeof(System.Windows.CultureInfoIetfLanguageTagConverter))]
         public static CultureInfo GetCultureOverride(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (CultureInfo)(target.GetValue(CultureOverrideProperty));
         }
@@ -204,7 +234,10 @@ namespace System.Windows.Media
         /// </summary>
         public static void SetSubstitution(DependencyObject target, NumberSubstitutionMethod value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(SubstitutionProperty, value);
         }
@@ -215,7 +248,10 @@ namespace System.Windows.Media
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static NumberSubstitutionMethod GetSubstitution(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (NumberSubstitutionMethod)(target.GetValue(SubstitutionProperty));
         }
@@ -244,10 +280,14 @@ namespace System.Windows.Media
         {
             NumberSubstitution sub = obj as NumberSubstitution;
 
+            // Suppress PRESharp warning that sub can be null; apparently PRESharp
+            // doesn't understand short circuit evaluation of operator &&.
+            #pragma warning disable 6506
             return sub != null &&
                 _source == sub._source &&
                 _substitution == sub._substitution &&
                 (_cultureOverride == null ? (sub._cultureOverride == null) : (_cultureOverride.Equals(sub._cultureOverride)));
+            #pragma warning restore 6506
         }
 
         private NumberCultureSource _source;

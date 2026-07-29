@@ -1,30 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-
-#region Using declarations
-
-using System.Collections;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.Windows.Automation;
-using System.Windows.Automation.Peers;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Markup;
-using System.Windows.Markup.Primitives;
-using System.Windows.Media;
-using System.Windows.Threading;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon.Primitives;
-using Microsoft.Windows.Controls;
-#else
-    using Microsoft.Windows.Controls.Ribbon.Primitives;
-#endif
-using MS.Internal;
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -32,6 +9,35 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    #region Using declarations
+
+    using System;
+    using System.Collections;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Security;
+    using System.Windows;
+    using System.Windows.Automation;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
+    using System.Windows.Data;
+    using System.Windows.Input;
+    using System.Windows.Interop;
+    using System.Windows.Markup;
+    using System.Windows.Markup.Primitives;
+    using System.Windows.Media;
+    using System.Windows.Threading;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon.Primitives;
+    using Microsoft.Windows.Controls;
+#else
+    using Microsoft.Windows.Controls.Ribbon.Primitives;
+#endif
+    using MS.Internal;
+
+
     #endregion
 
     /// <summary>
@@ -64,15 +70,13 @@ namespace Microsoft.Windows.Controls.Ribbon
                     !string.IsNullOrEmpty(toolTipFooterDescription) ||
                     toolTipFooterImageSource != null)
                 {
-                    RibbonToolTip ribbonToolTip = new RibbonToolTip
-                    {
-                        Title = toolTipTitle,
-                        Description = toolTipDescription,
-                        ImageSource = toolTipImageSource,
-                        FooterTitle = toolTipFooterTitle,
-                        FooterDescription = toolTipFooterDescription,
-                        FooterImageSource = toolTipFooterImageSource
-                    };
+                    RibbonToolTip ribbonToolTip = new RibbonToolTip();
+                    ribbonToolTip.Title = toolTipTitle;
+                    ribbonToolTip.Description = toolTipDescription;
+                    ribbonToolTip.ImageSource = toolTipImageSource;
+                    ribbonToolTip.FooterTitle = toolTipFooterTitle;
+                    ribbonToolTip.FooterDescription = toolTipFooterDescription;
+                    ribbonToolTip.FooterImageSource = toolTipFooterImageSource;
                     value = ribbonToolTip;
                 }
             }
@@ -130,10 +134,8 @@ namespace Microsoft.Windows.Controls.Ribbon
                     if (ribbonToolTip == null ||
                         ribbonToolTip.Title != content.ToString())
                     {
-                        ribbonToolTip = new RibbonToolTip
-                        {
-                            Title = content.ToString()
-                        };
+                        ribbonToolTip = new RibbonToolTip();
+                        ribbonToolTip.Title = content.ToString();
                         visualChild.ToolTip = ribbonToolTip;
                     }
                 }
@@ -957,7 +959,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                 else
                 {
                     UIElement3D uiElement3D = element as UIElement3D;
-                    uiElement3D?.AddHandler(routedEvent, handler);
+                    if (uiElement3D != null)
+                    {
+                        uiElement3D.AddHandler(routedEvent, handler);
+                    }
                 }
             }
         }
@@ -982,7 +987,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                 else
                 {
                     UIElement3D uiElement3D = element as UIElement3D;
-                    uiElement3D?.RemoveHandler(routedEvent, handler);
+                    if (uiElement3D != null)
+                    {
+                        uiElement3D.RemoveHandler(routedEvent, handler);
+                    }
                 }
             }
         }
@@ -1139,7 +1147,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                     {
                         source = element;
                     }
-                    source?.RaiseEvent(new RibbonDismissPopupEventArgs(RibbonDismissPopupMode.MousePhysicallyNotOver));
+                    if (source != null)
+                    {
+                        source.RaiseEvent(new RibbonDismissPopupEventArgs(RibbonDismissPopupMode.MousePhysicallyNotOver));
+                    }
                 }
             }
         }
@@ -1253,7 +1264,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                         {
                             settor(false);
                             e.Handled = true;
-                            targetFocusOnFalse?.Focus();
+                            if (targetFocusOnFalse != null)
+                            {
+                                targetFocusOnFalse.Focus();
+                            }
                         }
                     }
                     break;
@@ -1281,18 +1295,24 @@ namespace Microsoft.Windows.Controls.Ribbon
                         {
                             settor(false);
                             e.Handled = true;
-                            targetFocusOnFalse?.Focus();
+                            if (targetFocusOnFalse != null)
+                            {
+                                targetFocusOnFalse.Focus();
+                            }
                         }
                         else
                         {
                             settor(true);
-                            targetFocusContainerOnTrue?.Dispatcher.BeginInvoke(
+                            if (targetFocusContainerOnTrue != null)
+                            {
+                                targetFocusContainerOnTrue.Dispatcher.BeginInvoke(
                                     (Action)delegate()
                                     {
                                         targetFocusContainerOnTrue.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                                     },
                                     DispatcherPriority.Input,
                                     null);
+                            }
                             e.Handled = true;
                         }
 
@@ -1307,7 +1327,7 @@ namespace Microsoft.Windows.Controls.Ribbon
 
         public static UIElement TryGetChild(this Popup popup)
         {
-            return (popup?.Child);
+            return (popup == null ? null : popup.Child);
         }
 
         public static bool IsCaptureInSubtree(UIElement element)
@@ -1376,7 +1396,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                 {
                     if (starLayoutManager != iContainsStarLayoutManager.StarLayoutManager)
                     {
-                        iContainsStarLayoutManager.StarLayoutManager?.UnregisterStarLayoutProvider(iProvideStarLayoutInfoBase);
+                        if (iContainsStarLayoutManager.StarLayoutManager != null)
+                        {
+                            iContainsStarLayoutManager.StarLayoutManager.UnregisterStarLayoutProvider(iProvideStarLayoutInfoBase);
+                        }
                         starLayoutManager.RegisterStarLayoutProvider(iProvideStarLayoutInfoBase);
                         iContainsStarLayoutManager.StarLayoutManager = starLayoutManager;
                     }
@@ -1392,7 +1415,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                     // will already be dirty for measure.
 
                     UIElement managerElement = starLayoutManager as UIElement;
-                    managerElement?.InvalidateMeasure();
+                    if (managerElement != null)
+                    {
+                        managerElement.InvalidateMeasure();
+                    }
                 }
             }
         }
@@ -2384,22 +2410,16 @@ namespace Microsoft.Windows.Controls.Ribbon
             Popup popup = menuItem.Popup;
             if (popup != null)
             {
-                Binding binding = new Binding("SubmenuPlaceholder")
-                {
-                    Source = parentItemsControl
-                };
+                Binding binding = new Binding("SubmenuPlaceholder");
+                binding.Source = parentItemsControl;
                 BindingOperations.SetBinding(popup, Popup.PlacementTargetProperty, binding);
 
-                binding = new Binding("SubmenuPlaceholder.ActualWidth")
-                {
-                    Source = parentItemsControl
-                };
+                binding = new Binding("SubmenuPlaceholder.ActualWidth");
+                binding.Source = parentItemsControl;
                 BindingOperations.SetBinding(popup, Popup.WidthProperty, binding);
 
-                binding = new Binding("SubmenuPlaceholder.ActualHeight")
-                {
-                    Source = parentItemsControl
-                };
+                binding = new Binding("SubmenuPlaceholder.ActualHeight");
+                binding.Source = parentItemsControl;
                 BindingOperations.SetBinding(popup, Popup.HeightProperty, binding);
                 BindingOperations.SetBinding(menuItem, RibbonMenuItem.DropDownHeightProperty, binding);
             }
@@ -2881,16 +2901,19 @@ namespace Microsoft.Windows.Controls.Ribbon
 
         internal static void InvalidateScrollBarVisibility(ScrollViewer submenuScrollViewer)
         {
-            // The scroll viewer needs to re-evaluate the visibility of the scrollbars
-            // and that happens in its MeasureOverride call. Also note that we need to
-            // make this invalidate call async because we may already be within a
-            // ScrollViewer measure pass, by which we would miss the boat.
-
-            submenuScrollViewer?.Dispatcher.BeginInvoke((Action)delegate ()
+            if (submenuScrollViewer != null)
             {
-                submenuScrollViewer.InvalidateMeasure();
-            },
-            DispatcherPriority.Render);
+                // The scroll viewer needs to re-evaluate the visibility of the scrollbars
+                // and that happens in its MeasureOverride call. Also note that we need to
+                // make this invalidate call async because we may already be within a
+                // ScrollViewer measure pass, by which we would miss the boat.
+
+                submenuScrollViewer.Dispatcher.BeginInvoke((Action)delegate()
+                {
+                    submenuScrollViewer.InvalidateMeasure();
+                },
+                DispatcherPriority.Render);
+            }
         }
 
         #endregion

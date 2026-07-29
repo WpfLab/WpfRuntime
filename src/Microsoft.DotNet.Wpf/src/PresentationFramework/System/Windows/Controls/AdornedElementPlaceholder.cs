@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,11 +11,18 @@
 // See specs at Validation.mht
 //
 
+using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Media;
+using System.Windows;
+using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Markup;
 using MS.Internal.Controls;
+using MS.Utility;
 
 
 namespace System.Windows.Controls
@@ -56,7 +64,7 @@ namespace System.Windows.Controls
                 return;
 
             if (!(value is UIElement))
-                throw new ArgumentException (SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(UIElement)), nameof(value));
+                throw new ArgumentException (SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(UIElement)), "value");
 
             if (this.Child != null)
                 throw new ArgumentException(SR.Format(SR.CanOnlyHaveOneChild, this.GetType(), value.GetType()));
@@ -139,7 +147,7 @@ namespace System.Windows.Controls
         {
             if (_child == null || index != 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+                throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
             }
             return _child;
         }        
@@ -188,7 +196,8 @@ namespace System.Windows.Controls
             Size desiredSize = AdornedElement.RenderSize;
             UIElement child = Child;
 
-            child?.Measure(desiredSize);
+            if (child != null)
+                child.Measure(desiredSize);
 
             return desiredSize;
         }
@@ -202,7 +211,8 @@ namespace System.Windows.Controls
         {
             UIElement child = Child;
 
-            child?.Arrange(new Rect(arrangeBounds));
+            if (child != null)
+                child.Arrange(new Rect(arrangeBounds));
 
             return arrangeBounds;
         }

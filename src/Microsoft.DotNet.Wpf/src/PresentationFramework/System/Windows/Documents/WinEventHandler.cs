@@ -1,11 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: WinEventHandler implementation.
 //
 
+using System;
+using System.Collections;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Security;
+using System.Windows.Threading;
 using MS.Win32;
 
 using MS.Internal;
@@ -28,9 +35,9 @@ namespace System.Windows.Documents
             _eventMin = eventMin;
             _eventMax = eventMax;
 
-            _winEventProc = new NativeMethods.WinEventProcDef(WinEventDefaultProc);
+            _winEventProc.Value = new NativeMethods.WinEventProcDef(WinEventDefaultProc);
             // Keep the garbage collector from moving things around
-            _gchThis = GCHandle.Alloc(_winEventProc);
+            _gchThis = GCHandle.Alloc(_winEventProc.Value);
 
             // Workaround for bug 150666.
             _shutdownListener = new WinEventHandlerShutDownListener(this);
@@ -81,9 +88,9 @@ namespace System.Windows.Documents
         {
             if (_gchThis.IsAllocated)
             {
-                _hHook = UnsafeNativeMethods.SetWinEventHook(_eventMin, _eventMax, IntPtr.Zero, _winEventProc,
+                _hHook.Value = UnsafeNativeMethods.SetWinEventHook(_eventMin, _eventMax, IntPtr.Zero, _winEventProc.Value,
                                                              0, 0, NativeMethods.WINEVENT_OUTOFCONTEXT);
-                if (_hHook == IntPtr.Zero )
+                if (_hHook.Value == IntPtr.Zero )
                 {
                     Stop();
                 }
@@ -93,14 +100,17 @@ namespace System.Windows.Documents
         // uninstall WinEvent hook.
         internal void Stop()
         {
-            if (_hHook != IntPtr.Zero )
+            if (_hHook.Value != IntPtr.Zero )
             {
-                UnsafeNativeMethods.UnhookWinEvent(_hHook);
-                _hHook = IntPtr.Zero ;
+                UnsafeNativeMethods.UnhookWinEvent(_hHook.Value);
+                _hHook.Value = IntPtr.Zero ;
             }
 
-            _shutdownListener?.StopListening();
-            _shutdownListener = null;
+            if (_shutdownListener != null)
+            {
+                _shutdownListener.StopListening();
+                _shutdownListener = null;
+            }
         }
 
         #endregion Internal Methods
@@ -153,10 +163,10 @@ namespace System.Windows.Documents
         private int _eventMax;
 
         // hook handle
-        private IntPtr _hHook;
+        private SecurityCriticalDataForSet<IntPtr> _hHook;
 
         // the callback.
-        private NativeMethods.WinEventProcDef _winEventProc;
+        private SecurityCriticalDataForSet<NativeMethods.WinEventProcDef> _winEventProc;
 
         // GCHandle to keep the garbage collector from moving things around
         private GCHandle _gchThis;

@@ -1,13 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-using System.ComponentModel;
-using System.Globalization;
-using MS.Internal;
-using System.Diagnostics;
-using System.ComponentModel.Design.Serialization;
-using System.Reflection;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -15,6 +9,14 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    using System;
+    using System.ComponentModel;
+    using System.Globalization;
+    using MS.Internal;
+    using System.Diagnostics;
+    using System.ComponentModel.Design.Serialization;
+    using System.Reflection;
+
     /// <summary>
     ///   A class used for converting between RibbonControlLengths and strings/numbers.
     /// </summary>
@@ -26,8 +28,8 @@ namespace Microsoft.Windows.Controls.Ribbon
         private static string[] _unitStrings = { "auto", "px", "items", "*" };
 
         //  this array contains strings for unit types that are not present in the RibbonControlLengthUnitType enum
-        private static string[] _pixelUnitStrings = { "in", "cm", "pt" };
-        private static double[] _pixelUnitFactors = 
+        static private string[] _pixelUnitStrings = { "in", "cm", "pt" };
+        static private double[] _pixelUnitFactors = 
         { 
             96.0,             // Pixels per Inch
             96.0 / 2.54,      // Pixels per Centimeter

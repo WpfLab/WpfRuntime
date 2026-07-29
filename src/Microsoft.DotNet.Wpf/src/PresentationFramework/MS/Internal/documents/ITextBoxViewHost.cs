@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Documents;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Interface for Controls hosting TextBoxView.
@@ -9,6 +8,8 @@ using System.Windows.Documents;
 
 namespace System.Windows.Controls
 {
+    using System.Windows.Documents;
+
     // Controls built on TextBoxView must implement this interface
     // which is passed to the TextBoxView ctor.
     // TextBoxView requires that the object implementing ITextBoxViewHost

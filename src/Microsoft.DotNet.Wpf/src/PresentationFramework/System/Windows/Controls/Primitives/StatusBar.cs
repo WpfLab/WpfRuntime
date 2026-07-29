@@ -1,8 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.Windows.Automation.Peers;
+using System.Windows.Media;
+using System.Windows.Threading;
 using MS.Internal.KnownBoxes;
 using MS.Internal.Telemetry.PresentationFramework;
 
@@ -120,7 +124,7 @@ namespace System.Windows.Controls.Primitives
                     }
                     else
                     {
-                        throw new InvalidOperationException(SR.Format(SR.InvalidItemContainer, this.GetType().Name, nameof(StatusBarItem), nameof(Separator), itemContainer));
+                        throw new InvalidOperationException(SR.Format(SR.InvalidItemContainer, this.GetType().Name, typeof(StatusBarItem).Name, typeof(Separator).Name, itemContainer));
                     }
                 }
             }

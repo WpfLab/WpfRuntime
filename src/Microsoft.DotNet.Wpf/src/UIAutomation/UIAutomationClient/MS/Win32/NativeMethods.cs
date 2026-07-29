@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //***************************************************************************
 // HOW TO USE THIS FILE
@@ -34,10 +35,8 @@ namespace MS.Win32
 
             public static HWND Cast(IntPtr h)
             {
-                HWND hTemp = new HWND
-                {
-                    h = h
-                };
+                HWND hTemp = new HWND();
+                hTemp.h = h;
                 return hTemp;
             }
 
@@ -50,10 +49,8 @@ namespace MS.Win32
             {
                 get
                 {
-                    HWND hTemp = new HWND
-                    {
-                        h = IntPtr.Zero
-                    };
+                    HWND hTemp = new HWND();
+                    hTemp.h = IntPtr.Zero;
                     return hTemp;
                 }
             }
@@ -68,7 +65,7 @@ namespace MS.Win32
                 return hl.h != hr.h;
             }
 
-            public override bool Equals(object oCompare)
+            override public bool Equals(object oCompare)
             {
                 HWND hr = Cast((HWND)oCompare);
                 return h == hr.h;

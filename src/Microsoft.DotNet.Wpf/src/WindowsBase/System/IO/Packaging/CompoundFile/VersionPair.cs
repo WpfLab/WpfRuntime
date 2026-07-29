@@ -1,25 +1,31 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
 //  A major, minor version number pair.
 //
 
+// Allow use of presharp warning numbers [6506] unknown to the compiler
+#pragma warning disable 1634, 1691
+
 using System;
+using System.Globalization;
 
 #if PBTCOMPILER
 using MS.Utility;     // For SR.cs
 #else
 using System.Windows;
 using System.Text;
-using MS.Internal.WindowsBase;
+using MS.Internal.WindowsBase; // FriendAccessAllowed
 #endif
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
     ///<summary>Class for a version pair which consists of major and minor numbers</summary>
 #if !PBTCOMPILER
+    [FriendAccessAllowed]
     internal    class VersionPair : IComparable
 #else
     internal  class VersionPair
@@ -42,13 +48,13 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         {
             if (major < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(major),
+                throw new ArgumentOutOfRangeException("major",
                             SR.VersionNumberComponentNegative);
             }
 
             if (minor < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(minor),
+                throw new ArgumentOutOfRangeException("minor",
                             SR.VersionNumberComponentNegative);
             }
 
@@ -250,10 +256,15 @@ namespace MS.Internal.IO.Packaging.CompoundFile
 
             VersionPair v = (VersionPair) obj;
 
+            //PRESHARP:Parameter to this public method must be validated:  A null-dereference can occur here. 
+            //    Parameter 'v' to this public method must be validated:  A null-dereference can occur here. 
+            //This is a false positive as the checks above can gurantee no null dereference will occur  
+#pragma warning disable 6506
             if (this != v)
             {
                 return false;
             }
+#pragma warning restore 6506
 
             return true;
         }
@@ -288,6 +299,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
 
             VersionPair v = (VersionPair) obj;
 
+            //PRESHARP:Parameter to this public method must be validated:  A null-dereference can occur here. 
+            //    Parameter 'v' to this public method must be validated:  A null-dereference can occur here. 
+            //This is a false positive as the checks above can gurantee no null dereference will occur  
+#pragma warning disable 6506
             if (this.Equals(obj))   // equal
             {
                 return 0;
@@ -297,7 +312,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             {
                 return -1;
             }
-
+#pragma warning restore 6506
             // greater than
             return 1;
         }

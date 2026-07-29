@@ -1,7 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
+//
+//
+// Description:
+//   Provides a publicly exposable way to resolve a type from its
+//   QName (e.g. the ns:Class in Xaml).
+//
+//
 
 using System.Runtime.CompilerServices;
 
@@ -18,8 +25,9 @@ namespace System.Windows.Markup
         /// </summary>
         /// <param name="qualifiedTypeName">TypeName that appears in Xaml - nsPrefix:LocalName or LocalName.</param>
         /// <returns>
-        /// The type that the qualifiedTypeName represents.
+        ///  The type that the qualifiedTypeName represents.
         /// </returns>
+
         Type Resolve(string qualifiedTypeName);
     }
 }

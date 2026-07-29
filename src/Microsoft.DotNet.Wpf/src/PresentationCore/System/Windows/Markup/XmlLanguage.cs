@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 //
@@ -10,10 +11,14 @@
 //
 //
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Text;
 using System.IO;
+using System.Windows;
 using MS.Internal.PresentationCore;
 
 namespace System.Windows.Markup
@@ -113,8 +118,9 @@ namespace System.Windows.Markup
         public static XmlLanguage GetLanguage(string ietfLanguageTag)
         {
             XmlLanguage language;
-
-            ArgumentNullException.ThrowIfNull(ietfLanguageTag);
+            
+            if (ietfLanguageTag == null)
+                throw new ArgumentNullException("ietfLanguageTag");
 
             string lowercase = AsciiToLower(ietfLanguageTag);   // throws on non-ascii
 
@@ -183,7 +189,7 @@ namespace System.Windows.Markup
                 // see http://www.w3.org/International/questions/qa-no-language
                 //
                 // Just treat it the same as xml:lang=""
-                if(string.Equals(lowerCaseTag, "und", StringComparison.Ordinal))
+                if(String.CompareOrdinal(lowerCaseTag, "und") == 0)
                 {
                     lowerCaseTag = String.Empty;
                 }            
@@ -192,7 +198,7 @@ namespace System.Windows.Markup
                 {
                     // Even if we previously failed to find an EquivalentCulture, we retry, if only to
                     //   capture inner exception.
-                    _equivalentCulture = CultureInfo.GetCultureInfoByIetfLanguageTag(lowerCaseTag);
+                    _equivalentCulture = SafeSecurityHelper.GetCultureInfoByIetfLanguageTag(lowerCaseTag);
                 }
                 catch (ArgumentException e)
                 {
@@ -223,7 +229,7 @@ namespace System.Windows.Markup
         {
             if (_specificCulture == null)
             {
-                if (_lowerCaseTag.Length == 0 || string.Equals(_lowerCaseTag, "und", StringComparison.Ordinal))
+                if (_lowerCaseTag.Length == 0 || String.CompareOrdinal(_lowerCaseTag, "und") == 0)
                 {
                     _specificCulture = GetEquivalentCulture();
                 }
@@ -246,7 +252,7 @@ namespace System.Windows.Markup
                         {
                             // note that it's important that we use culture.Name, not culture.IetfLanguageTag, here
                             culture = CultureInfo.CreateSpecificCulture(culture.Name);
-                            _specificCulture = CultureInfo.GetCultureInfoByIetfLanguageTag(culture.IetfLanguageTag);
+                            _specificCulture = SafeSecurityHelper.GetCultureInfoByIetfLanguageTag(culture.IetfLanguageTag);
                         }
                         catch (ArgumentException e)
                         {
@@ -263,11 +269,14 @@ namespace System.Windows.Markup
         ///     Finds a registered CultureInfo corresponding to the IetfLanguageTag, or the longest
         ///       sequence of leading subtags for which we have a registered CultureInfo.
         /// </summary>
+        [FriendAccessAllowed]
         internal CultureInfo GetCompatibleCulture()
         {
             if (_compatibleCulture == null)
             {
-                if (!TryGetEquivalentCulture(out CultureInfo culture))
+                CultureInfo culture = null;
+
+                if (!TryGetEquivalentCulture(out culture))
                 {
                     string languageTag = IetfLanguageTag;
                     
@@ -284,7 +293,7 @@ namespace System.Windows.Markup
                         {
                             try
                             {
-                                culture = CultureInfo.GetCultureInfoByIetfLanguageTag(languageTag);
+                                culture = SafeSecurityHelper.GetCultureInfoByIetfLanguageTag(languageTag);
                             }
                             catch (ArgumentException)
                             {
@@ -311,6 +320,7 @@ namespace System.Windows.Markup
         ///      "sr-latn-sp" is in the range covered by "sr-latn".  (Note that "sr-latn" does
         ///      does not have a registered CultureInfo.)
         /// </remarks>
+        [FriendAccessAllowed]
         internal bool RangeIncludes(XmlLanguage language)
         {
             if (this.IsPrefixOf(language.IetfLanguageTag))
@@ -338,10 +348,13 @@ namespace System.Windows.Markup
         /// </remarks>
         internal bool RangeIncludes(CultureInfo culture)
         {
-            ArgumentNullException.ThrowIfNull(culture);
+            if (culture == null)
+            {
+                throw new ArgumentNullException("culture");
+            }
 
             // no need for special cases for InvariantCulture, which has IetfLanguageTag == ""
-
+            
             // Limit how far we'll walk up the hierarchy to avoid security threat.
             // We could check for cycles (e.g., culture.Parent.Parent == culture)
             // but in in the case of non-malicious code there should be no cycles,
@@ -706,7 +719,10 @@ namespace System.Windows.Markup
         /// <exception cref="ArgumentException">tag is non-empty, but does not conform to RFC 3066.</exception>
         private static void ValidateLowerCaseTag(string ietfLanguageTag)
         {
-            ArgumentNullException.ThrowIfNull(ietfLanguageTag);
+            if (ietfLanguageTag == null)
+            {
+                throw new ArgumentNullException("ietfLanguageTag");
+            }
 
             if (ietfLanguageTag.Length > 0)
             {
@@ -714,10 +730,10 @@ namespace System.Windows.Markup
                 {
                     int i;
 
-                    i = ParseSubtag(ietfLanguageTag, reader, isPrimary: true);
+                    i = ParseSubtag(ietfLanguageTag, reader, /* isPrimary */ true);
                     while (i != -1)
                     {
-                        i = ParseSubtag(ietfLanguageTag, reader, isPrimary: false);
+                        i = ParseSubtag(ietfLanguageTag, reader, /* isPrimary */ false);
                     }
                 }
             }
@@ -727,7 +743,7 @@ namespace System.Windows.Markup
         //  end of string.
         // throws exception on improper formatting
         // It is assumed that caller has already converted to lower-case.
-        private static int ParseSubtag(string ietfLanguageTag, StringReader reader, bool isPrimary)
+        static private int ParseSubtag(string ietfLanguageTag, StringReader reader, bool isPrimary)
         {
             int c;
             bool ok;
@@ -777,23 +793,23 @@ namespace System.Windows.Markup
             }
         }
 
-        private static bool IsLowerAlpha(int c)
+        static private bool IsLowerAlpha(int c)
         {
             return (c >= 'a' && c <= 'z');
         }
 
-        private static bool IsDigit(int c)
+        static private bool IsDigit(int c)
         {
             return c >= '0' && c <= '9';
         }
 
-        private static void ThrowParseException(string ietfLanguageTag)
+        static private void ThrowParseException(string ietfLanguageTag)
         {
-             throw new ArgumentException(SR.Format(SR.XmlLangMalformed, ietfLanguageTag), nameof(ietfLanguageTag));
+             throw new ArgumentException(SR.Format(SR.XmlLangMalformed, ietfLanguageTag), "ietfLanguageTag");
         }
 
         // throws if there is a non-7-bit ascii character
-        private static string AsciiToLower(string tag)
+        static private string AsciiToLower(string tag)
         {
             int length = tag.Length;
 

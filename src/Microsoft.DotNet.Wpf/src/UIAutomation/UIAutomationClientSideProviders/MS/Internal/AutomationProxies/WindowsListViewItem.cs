@@ -1,10 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Win32 ListView Item proxy
 //
 
+
+// PRESHARP: In order to avoid generating warnings about unknown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
+
 using System;
+using System.ComponentModel;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Runtime.InteropServices;
@@ -121,12 +127,10 @@ namespace MS.Internal.AutomationProxies
                         {
                             return boundingRectangle;
                         }
-
-                        NativeMethods.LVITEMINDEX ii = new NativeMethods.LVITEMINDEX
-                        {
-                            iGroup = index,
-                            iItem = _item
-                        };
+                        
+                        NativeMethods.LVITEMINDEX ii = new NativeMethods.LVITEMINDEX();
+                        ii.iGroup = index;
+                        ii.iItem = _item;
 
                         unsafe
                         {
@@ -700,12 +704,11 @@ namespace MS.Internal.AutomationProxies
         // retrieves listview item/subitem text
         internal static string GetText (IntPtr hwnd, int item, int subitem)
         {
-            NativeMethods.LVITEM lvitem = new NativeMethods.LVITEM
-            {
-                mask = NativeMethods.LVIF_TEXT,
-                iItem = item,
-                iSubItem = subitem
-            };
+            NativeMethods.LVITEM lvitem = new NativeMethods.LVITEM ();
+
+            lvitem.mask = NativeMethods.LVIF_TEXT;
+            lvitem.iItem = item;
+            lvitem.iSubItem = subitem;
             return WindowsListView.GetItemText (hwnd, lvitem);
         }
 
@@ -724,15 +727,13 @@ namespace MS.Internal.AutomationProxies
 
         // retrieve an id of the group to which this lvitem belongs
         // valid only if lv has groups enabled
-        internal static int GetGroupID (IntPtr hwnd, int lvItem)
+        static internal int GetGroupID (IntPtr hwnd, int lvItem)
         {
             System.Diagnostics.Debug.Assert (WindowsListView.IsGroupViewEnabled (hwnd), "GetGroupID: called when lv does not have groups");
 
-            NativeMethods.LVITEM_V6 item = new NativeMethods.LVITEM_V6
-            {
-                mask = NativeMethods.LVIF_GROUPID,
-                iItem = lvItem
-            };
+            NativeMethods.LVITEM_V6 item = new NativeMethods.LVITEM_V6 ();
+            item.mask = NativeMethods.LVIF_GROUPID;
+            item.iItem = lvItem;
 
             if (XSendMessage.GetItem(hwnd, ref item))
             {
@@ -744,7 +745,14 @@ namespace MS.Internal.AutomationProxies
 
         internal static void SetValue (string val, IntPtr hwnd, int item)
         {
-            ArgumentNullException.ThrowIfNull(val);
+            // PerSharp/PreFast will flag this as warning 6507/56507: Prefer 'string.IsNullOrEmpty(val)' over checks for null and/or emptiness.
+            // An empty strings is valued here, while a null string is not.
+            // Therefore we can not use IsNullOrEmpty() here, suppress the warning.
+#pragma warning suppress 6507
+            if (val == null)
+            {
+                throw new ArgumentNullException ("val");
+            }
 
             if (!WindowsListView.ListViewEditable (hwnd))
             {
@@ -892,7 +900,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // detect if this listviewitem needs to support GridItem pattern
-        private static bool IsImplementingGrid (IntPtr hwnd)
+        static private bool IsImplementingGrid (IntPtr hwnd)
         {
             // in the detail mode, GridItem will be implemented on the subitem
             // and not item
@@ -1047,7 +1055,7 @@ namespace MS.Internal.AutomationProxies
         #region Private Fields
 
         private const int _checkbox = -1;
-        private bool _isComctrlV6OnOsVerV6orHigher;
+        bool _isComctrlV6OnOsVerV6orHigher;
         #endregion Private Fields
     }
 }

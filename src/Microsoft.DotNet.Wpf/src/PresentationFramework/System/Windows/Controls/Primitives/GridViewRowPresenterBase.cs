@@ -1,10 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 
 using System.Collections;               // IEnumerator
+using System.Collections.Generic;       // List<T>
 using System.Collections.Specialized;   // NotifyCollectionChangedEventHandler
+using System.Collections.ObjectModel;   // Collection
+using System.ComponentModel;            // PropertyChangedEventArgs
+using System.Diagnostics;               // Debug
 using System.Windows.Media;             // VisualOperations
 
 using MS.Internal.Controls;             // EmptyEnumerator
@@ -122,7 +127,7 @@ namespace System.Windows.Controls.Primitives
         {
             if (_uiElementCollection == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+                throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
             }
             return _uiElementCollection[index];
         }
@@ -303,7 +308,7 @@ namespace System.Windows.Controls.Primitives
         {
             ItemsControl ic = ItemsControl.ItemsControlFromItemContainer(TemplatedParent);
 
-            return ic ?? (FrameworkElement)this;
+            return (ic != null) ? ic : (FrameworkElement)this;
         }
 
         // if and only if both conditions below are satisfied, row presenter visual is ready.

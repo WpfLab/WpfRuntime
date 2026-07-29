@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\WpfRuntimeDependencies.props" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>WpfReorganize.Builder</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+    <!-- Builder 自身输出不能落在 artifacts\ 内，避免清空时自毁 -->
+    <OutputPath>$(MSBuildThisFileDirectory)bin\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <RestoreWpfRuntimePackages Condition="'$(RestoreWpfRuntimePackages)' == ''">true</RestoreWpfRuntimePackages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PackageTestApp\PackageTestApp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RestoreWpfRuntimePackages)' == 'true'">
+    <PackageDownload Include="Microsoft.WindowsDesktop.App.Runtime.win-x64" Version="[$(RepoWpfWindowsDesktopRuntimeVersion)]" />
+    <PackageDownload Include="Microsoft.WindowsDesktop.App.Runtime.win-x86" Version="[$(RepoWpfWindowsDesktopRuntimeVersion)]" />
+    <PackageDownload Include="Microsoft.WindowsDesktop.App.Ref" Version="[$(RepoWpfWindowsDesktopRuntimeVersion)]" />
+    <PackageDownload Include="Microsoft.NETCore.App.Host.win-x64" Version="[$(RepoWpfWindowsDesktopRuntimeVersion)]" />
+    <PackageDownload Include="Microsoft.NETCore.App.Host.win-x86" Version="[$(RepoWpfWindowsDesktopRuntimeVersion)]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNetCampus.CommandLine" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.11.0" PrivateAssets="all" />
+    <PackageReference Include="Octokit" Version="14.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="PackageTestApp\**\*.cs" />
+    <ApplicationDefinition Remove="PackageTestApp\App.xaml" />
+    <Page Remove="PackageTestApp\**\*.xaml" />
+    <None Include="PackageTestApp\**\*" />
+  </ItemGroup>
+
+  <Target Name="WritePackagePaths" BeforeTargets="Build" Condition="'$(RestoreWpfRuntimePackages)' == 'true'">
+    <PropertyGroup>
+      <_BuilderNuGetPackageRoot>$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))</_BuilderNuGetPackageRoot>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(OutputPath)PackagePaths.txt" Lines="win-x64=$(_BuilderNuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\;win-x86=$(_BuilderNuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x86\$(RepoWpfWindowsDesktopRuntimeVersion)\;host-win-x64=$(_BuilderNuGetPackageRoot)microsoft.netcore.app.host.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\;host-win-x86=$(_BuilderNuGetPackageRoot)microsoft.netcore.app.host.win-x86\$(RepoWpfWindowsDesktopRuntimeVersion)\;ref=$(_BuilderNuGetPackageRoot)microsoft.windowsdesktop.app.ref\$(RepoWpfWindowsDesktopRuntimeVersion)\" Overwrite="true" />
+  </Target>
+
+</Project>

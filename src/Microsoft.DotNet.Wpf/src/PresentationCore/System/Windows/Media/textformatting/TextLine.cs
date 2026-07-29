@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,7 +11,16 @@
 //
 //
 
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media;
 using MS.Internal.TextFormatting;
+using MS.Internal.PresentationCore;
+
 
 namespace System.Windows.Media.TextFormatting
 {
@@ -137,6 +147,7 @@ namespace System.Windows.Media.TextFormatting
         /// codepoint is a valid caret stop if moving forward and then backward will 
         /// return back to it,  vice versa for the trailing edge of a codepoint. 
         /// </remarks>
+        [FriendAccessAllowed]
         internal bool IsAtCaretCharacterHit(CharacterHit characterHit, int cpFirst)
         {   
             // TrailingLength is used as a flag to indicate whether the character 

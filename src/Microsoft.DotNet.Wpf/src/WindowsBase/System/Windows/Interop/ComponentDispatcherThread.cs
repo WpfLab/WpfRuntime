@@ -1,5 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+
+using System;
+using MS.Win32;
+using System.Globalization;
+using System.Security;
+using MS.Internal.WindowsBase;
 
 namespace System.Windows.Interop
 {
@@ -153,7 +161,7 @@ namespace System.Windows.Interop
         }
 
         /// <summary>
-        ///     Removes the first occurrence of the specified handler from the
+        ///     Removes the first occurance of the specified handler from the
         ///     invocation list of the PreprocessMessage event.
         /// <summary>
         public void RemoveThreadPreprocessMessageHandlerFirst(ThreadMessageEventHandler handler)
@@ -162,12 +170,12 @@ namespace System.Windows.Interop
             {
                 ThreadMessageEventHandler newHandler = null;
 
-                foreach (ThreadMessageEventHandler testHandler in Delegate.EnumerateInvocationList(_threadPreprocessMessage))
+                foreach (ThreadMessageEventHandler testHandler in _threadPreprocessMessage.GetInvocationList())
                 {
                     if (testHandler == handler)
                     {
                         // This is the handler to remove.  We should not check
-                        // for any more occurrences.
+                        // for any more occurances.
                         handler = null;
                     }
                     else

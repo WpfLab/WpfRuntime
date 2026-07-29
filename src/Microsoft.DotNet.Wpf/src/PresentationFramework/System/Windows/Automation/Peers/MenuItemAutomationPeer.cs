@@ -1,8 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+using System.Windows;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
+using System.Windows.Media;
+
+using MS.Internal;
+using MS.Win32;
 
 namespace System.Windows.Automation.Peers
 {
@@ -15,19 +29,19 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override string GetClassNameCore()
+        override protected string GetClassNameCore()
         {
             return "MenuItem";
         }
 
         ///
-        protected override AutomationControlType GetAutomationControlTypeCore()
+        override protected AutomationControlType GetAutomationControlTypeCore()
         {
             return AutomationControlType.MenuItem;
         }
 
         ///
-        public override object GetPattern(PatternInterface patternInterface)
+        override public object GetPattern(PatternInterface patternInterface)
         {
             object result = null;
             MenuItem owner = (MenuItem)Owner;
@@ -77,7 +91,7 @@ namespace System.Windows.Automation.Peers
         /// <returns>
         /// The value of <see cref="AutomationProperties.PositionInSetProperty"/> if it has been set, or it's position relative to the parent ItemsControl or GroupItem.
         /// </returns>
-        protected override int GetSizeOfSetCore()
+        override protected int GetSizeOfSetCore()
         {
             int sizeOfSet = base.GetSizeOfSetCore();
             
@@ -109,7 +123,7 @@ namespace System.Windows.Automation.Peers
         /// <returns>
         /// The position of a MenuItem that is contained in a set.
         /// </returns>
-        protected override int GetPositionInSetCore()
+        override protected int GetPositionInSetCore()
         {
             int positionInSet = base.GetPositionInSetCore();
             
@@ -137,7 +151,7 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override string GetAccessKeyCore()
+        override protected string GetAccessKeyCore()
         {
             string accessKey = base.GetAccessKeyCore();
             if (!string.IsNullOrEmpty(accessKey))
@@ -314,7 +328,7 @@ namespace System.Windows.Automation.Peers
 
         // Return the base without the AccessKey character
         ///
-        protected override string GetNameCore()
+        override protected string GetNameCore()
         {
             string result = base.GetNameCore();
             if (!string.IsNullOrEmpty(result))

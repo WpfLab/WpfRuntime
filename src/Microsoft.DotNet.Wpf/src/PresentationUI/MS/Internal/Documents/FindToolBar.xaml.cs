@@ -1,19 +1,35 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Code behind file for the DocumentViewer FindToolBar.
+
+using System.Security;
 
 using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
 
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Markup;
+using System.Windows.TrustUI;
 
 using System;
+using System.Reflection;
+using System.Text;
+using System.Globalization;
+
+using MS.Internal.Documents.Application;
+using MS.Internal.PresentationUI;
+
 
 namespace MS.Internal.Documents
 {
-    internal partial class FindToolBar
+    [FriendAccessAllowed]
+    internal partial class FindToolBar : ToolBar
     {
         //------------------------------------------------------
         //
@@ -76,7 +92,7 @@ namespace MS.Internal.Documents
         /// <value></value>
         public bool MatchCase
         {
-            get { return OptionsCaseMenuItem.IsChecked; }
+            get { return OptionsCaseMenuItem.IsChecked == true; }
         }
 
         /// <summary>
@@ -86,7 +102,7 @@ namespace MS.Internal.Documents
         /// <value></value>
         public bool MatchWholeWord
         {
-            get { return OptionsWholeWordMenuItem.IsChecked; }
+            get { return OptionsWholeWordMenuItem.IsChecked == true; }
         }
         /// <summary>
         /// Specifies whether the search should match diacritics.
@@ -94,7 +110,7 @@ namespace MS.Internal.Documents
         /// <value></value>
         public bool MatchDiacritic
         {
-            get { return OptionsDiacriticMenuItem.IsChecked; }
+            get { return OptionsDiacriticMenuItem.IsChecked == true; }
         }
 
         /// <summary>
@@ -103,7 +119,7 @@ namespace MS.Internal.Documents
         /// <value></value>
         public bool MatchKashida
         {
-            get { return OptionsKashidaMenuItem.IsChecked; }
+            get { return OptionsKashidaMenuItem.IsChecked == true; }
         }
 
         /// <summary>
@@ -112,7 +128,7 @@ namespace MS.Internal.Documents
         /// <value></value>
         public bool MatchAlefHamza
         {
-            get { return OptionsAlefHamzaMenuItem.IsChecked; }
+            get { return OptionsAlefHamzaMenuItem.IsChecked == true; }
         }
 
         /// <summary>
@@ -256,9 +272,15 @@ namespace MS.Internal.Documents
         /// </summary>
         private void UpdateButtonState()
         {
-            FindNextButton?.IsEnabled = FindEnabled;
+            if (FindNextButton != null)
+            {
+                FindNextButton.IsEnabled = FindEnabled;
+            }
 
-            FindPreviousButton?.IsEnabled = FindEnabled;
+            if (FindPreviousButton != null)
+            {
+                FindPreviousButton.IsEnabled = FindEnabled;
+            }
         }
 
         /// <summary>

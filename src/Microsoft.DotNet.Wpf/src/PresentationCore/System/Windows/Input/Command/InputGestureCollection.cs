@@ -1,11 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
+//
 // Description: InputGestureCollection serves the purpose of Storing/Retrieving InputGestures 
 //
 //              See spec at : http://avalon/coreui/Specs/Commanding(new).mht
+// 
+//
 
+using System;
 using System.Collections;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Windows;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -166,7 +178,7 @@ namespace System.Windows.Input
          {
              get
              {
-                 return (_innerGestureList?[index]);
+                 return (_innerGestureList != null ? _innerGestureList[index] : null);
              }
              set
              {
@@ -174,7 +186,11 @@ namespace System.Windows.Input
                      throw new NotSupportedException(SR.ReadOnlyInputGesturesCollection);
 
                  EnsureList();
-                _innerGestureList?[index] = value;
+
+                 if (_innerGestureList != null)
+                 {
+                     _innerGestureList[index] = value;
+                 }
              }
          }                
 
@@ -222,7 +238,8 @@ namespace System.Windows.Input
              if (IsReadOnly)
                  throw new NotSupportedException(SR.ReadOnlyInputGesturesCollection);
 
-             _innerGestureList?.RemoveAt(index);
+             if (_innerGestureList != null)
+                _innerGestureList.RemoveAt(index);
          }
 
          /// <summary>
@@ -247,7 +264,10 @@ namespace System.Windows.Input
                 throw new NotSupportedException(SR.ReadOnlyInputGesturesCollection);
             }
 
-            ArgumentNullException.ThrowIfNull(inputGesture);
+	    if (inputGesture == null)
+            {
+		throw new ArgumentNullException("inputGesture");
+            }
 
             EnsureList();
             _innerGestureList.Add(inputGesture);
@@ -267,9 +287,10 @@ namespace System.Windows.Input
                 throw new NotSupportedException(SR.ReadOnlyInputGesturesCollection);
             }
 
-            ArgumentNullException.ThrowIfNull(collection);
-
-            if ( collection.Count > 0) 
+            if (collection == null)
+                throw new ArgumentNullException("collection");
+            
+            if( collection.Count > 0) 
             {
                 if (_innerGestureList == null)
                     _innerGestureList = new System.Collections.Generic.List<InputGesture>(collection.Count);
@@ -303,7 +324,8 @@ namespace System.Windows.Input
             if (inputGesture == null)
                 throw new NotSupportedException(SR.CollectionOnlyAcceptsInputGestures);
 
-            _innerGestureList?.Insert(index, inputGesture);
+            if (_innerGestureList != null)
+                _innerGestureList.Insert(index, inputGesture);
         }
 
         /// <summary>
@@ -328,7 +350,10 @@ namespace System.Windows.Input
                  throw new NotSupportedException(SR.ReadOnlyInputGesturesCollection);
             }
 
-            ArgumentNullException.ThrowIfNull(inputGesture);
+            if (inputGesture == null)
+ 	        {
+                throw new ArgumentNullException("inputGesture");
+	        }
 
             if (_innerGestureList != null && _innerGestureList.Contains(inputGesture))
             {
@@ -356,9 +381,12 @@ namespace System.Windows.Input
             {
                  throw new NotSupportedException(SR.ReadOnlyInputGesturesCollection);
             }
-
-            _innerGestureList?.Clear();
-            _innerGestureList = null;
+         
+	    if (_innerGestureList != null)
+            {
+               _innerGestureList.Clear();
+               _innerGestureList = null;
+            }
         }
 
         /// <summary>
@@ -382,7 +410,8 @@ namespace System.Windows.Input
         /// <param name="index">start index of items to copy</param>
         public void CopyTo(InputGesture[] inputGestures, int index) 
         {
-            _innerGestureList?.CopyTo(inputGestures, index);
+            if (_innerGestureList != null)
+                _innerGestureList.CopyTo(inputGestures, index);
         }
 
         /// <summary>

@@ -1,15 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 using MS.Internal;
+using MS.Utility;
 using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Shapes;
+using System.Windows.Data;
 using System.Windows.Automation.Peers;
+
+using System;
 using MS.Internal.Commands; // CommandHelpers
 using MS.Internal.KnownBoxes;
 using MS.Internal.Telemetry.PresentationFramework;
@@ -294,7 +301,8 @@ namespace System.Windows.Controls
                 ||  AutomationPeer.ListenerExists(AutomationEvents.SelectionItemPatternOnElementRemovedFromSelection)   )
             {
                 ListBoxAutomationPeer peer = UIElementAutomationPeer.CreatePeerForElement(this) as ListBoxAutomationPeer;
-                peer?.RaiseSelectionEvents(e);
+                if (peer != null)
+                    peer.RaiseSelectionEvents(e);
             }
         }
 
@@ -391,7 +399,7 @@ namespace System.Windows.Controls
                 case Key.Space:
                 case Key.Enter:
                     {
-                        if (e.Key == Key.Enter && !(bool)GetValue(KeyboardNavigation.AcceptsReturnProperty))
+                        if (e.Key == Key.Enter && (bool)GetValue(KeyboardNavigation.AcceptsReturnProperty) == false)
                         {
                             handled = false;
                             break;
@@ -615,18 +623,19 @@ namespace System.Windows.Controls
                 Debug.Assert(_autoScrollTimer == null, "IsMouseCaptured went from true to true");
                 if (_autoScrollTimer == null)
                 {
-                    _autoScrollTimer = new DispatcherTimer(DispatcherPriority.SystemIdle)
-                    {
-                        Interval = AutoScrollTimeout
-                    };
+                    _autoScrollTimer = new DispatcherTimer(DispatcherPriority.SystemIdle);
+                    _autoScrollTimer.Interval = AutoScrollTimeout;
                     _autoScrollTimer.Tick += new EventHandler(OnAutoScrollTimeout);
                     _autoScrollTimer.Start();
                 }
             }
             else
             {
-                _autoScrollTimer?.Stop();
-                _autoScrollTimer = null;
+                if (_autoScrollTimer != null)
+                {
+                    _autoScrollTimer.Stop();
+                    _autoScrollTimer = null;
+                }
             }
 
             base.OnIsMouseCapturedChanged(e);
@@ -881,7 +890,10 @@ namespace System.Windows.Controls
                 }
 
                 IDisposable d = enumerator as IDisposable;
-                d?.Dispose();
+                if (d != null)
+                {
+                    d.Dispose();
+                }
             }
             finally
             {
@@ -1021,7 +1033,7 @@ namespace System.Windows.Controls
         internal ItemInfo AnchorItemInternal
         {
             get { return _anchorItem; }
-            set { _anchorItem = value?.Clone(); }   // clone, so that adjustments to selection and anchor don't double-adjust
+            set { _anchorItem = (value != null) ? value.Clone() : null; }   // clone, so that adjustments to selection and anchor don't double-adjust
         }
 
         /// <summary>

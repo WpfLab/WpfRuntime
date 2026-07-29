@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //---------------------------------------------------------------------------
 //
@@ -9,6 +10,8 @@
 //
 //---------------------------------------------------------------------------
 
+#pragma warning disable 1634, 1691
+
 using System;
 using System.Xml;
 using System.IO;
@@ -16,6 +19,7 @@ using System.Text;
 using System.Reflection;
 using System.Globalization;
 using System.ComponentModel;
+using System.Security.Cryptography;
 
 using System.CodeDom;
 using System.CodeDom.Compiler;
@@ -25,11 +29,14 @@ using System.ComponentModel.Design.Serialization;
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+
+using System.Threading;
 using MS.Internal.Markup;
 using MS.Internal.Tasks;
 using MS.Utility;   // for SR
 using Microsoft.Build.Utilities;
 using Microsoft.Build.Tasks.Windows;
+using System.Runtime.CompilerServices;
 
 namespace MS.Internal
 {
@@ -200,7 +207,7 @@ namespace MS.Internal
         ///<summary>Complies list of file items comprising an Application.</summary>
         public void Compile(CompilationUnit cu)
         {
-            // KnownTypes, XamlTypeMapper, and ReflectionHelper all hold on to data statically that
+            // KnownTypes, XamlTypeMapper, and ReflectionHelper all hold on to data statically that 
             // must not be reused between compilations as different compilations can target different
             //
             // Defensively clear static data even though the prior compilation should have done it.
@@ -476,7 +483,7 @@ namespace MS.Internal
                 }
 
                 int pathEndIndex = SourceFileInfo.RelativeSourceFilePath.LastIndexOf(Path.DirectorySeparatorChar);
-                string targetPath = string.Concat(TargetPath, SourceFileInfo.RelativeSourceFilePath.Substring(0, pathEndIndex + 1));
+                string targetPath = TargetPath + SourceFileInfo.RelativeSourceFilePath.Substring(0, pathEndIndex + 1);
 
                 // Create if not already exists
                 if (targetPath.Length > 0 && !Directory.Exists(targetPath))
@@ -486,6 +493,7 @@ namespace MS.Internal
             }
             // All exceptions including NullRef & SEH need to be caught by the markupcompiler
             // since it is an app and not a component.
+            #pragma warning suppress 6500
             catch (Exception e)
             {
                 OnError(e);
@@ -506,22 +514,17 @@ namespace MS.Internal
                 _ccRoot = null;
                 _hasLocalEvent = false;
                 _codeContexts = new Stack();
-                _parserContext = new ParserContext
-                {
-                    XamlTypeMapper = _typeMapper
-                };
+                _parserContext = new ParserContext();
+                _parserContext.XamlTypeMapper = _typeMapper;
                 _hasEmittedEventSetterDeclaration = false;
 
                 bamlStream = new MemoryStream();
-                BamlRecordWriter bamlWriter = new BamlRecordWriter(bamlStream, _parserContext, true)
-                {
-                    DebugBamlStream = XamlDebuggingInformation
-                };
+                BamlRecordWriter bamlWriter = new BamlRecordWriter(bamlStream, _parserContext, true);
+                bamlWriter.DebugBamlStream = XamlDebuggingInformation;
 
-                xamlParser = new ParserExtension(this, _parserContext, bamlWriter, SourceFileInfo.Stream, pass2)
-                {
-                    ParserHooks = ParserHooks
-                };
+                xamlParser = new ParserExtension(this, _parserContext, bamlWriter, SourceFileInfo.Stream, pass2);
+
+                xamlParser.ParserHooks = ParserHooks;
 
                 try
                 {
@@ -539,6 +542,7 @@ namespace MS.Internal
             }
             // All exceptions including NullRef & SEH need to be caught by the markupcompiler
             // since it is an app and not a component.
+#pragma warning suppress 6500
             catch (Exception e)
             {
                 OnError(e);
@@ -550,18 +554,31 @@ namespace MS.Internal
                     xamlParser.BamlRecordWriter == null &&
                     IsBamlNeeded)
                 {
-                    _pendingLocalFiles ??= new ArrayList(10);
+                    if (_pendingLocalFiles == null)
+                    {
+                        _pendingLocalFiles = new ArrayList(10);
+                    }
 
                     _pendingLocalFiles.Add(relativeSourceFile);
                 }
 
-                _codeContexts?.Clear();
-                _codeContexts = null;
+                if (_codeContexts != null)
+                {
+                    _codeContexts.Clear();
+                    _codeContexts = null;
+                }
 
 
-                SourceFileInfo?.CloseStream();
-                bamlStream?.Close();
-                bamlStream = null;
+                if (SourceFileInfo != null)
+                {
+                    SourceFileInfo.CloseStream();
+                }
+
+                if (bamlStream != null)
+                {
+                    bamlStream.Close();
+                    bamlStream = null;
+                }
             }
         }
 
@@ -587,8 +604,11 @@ namespace MS.Internal
                 _ccRoot.CodeNS.Types.Add(_ccRoot.CodeClass);
             }
 
-            _usingNS?.Clear();
-            _usingNS = null;
+            if (_usingNS != null)
+            {
+                _usingNS.Clear();
+                _usingNS = null;
+            }
 
             if (IsCompilingEntryPointClass)
             {
@@ -609,17 +629,15 @@ namespace MS.Internal
                     // } end namespace
                     CodeCompileUnit ccu = new CodeCompileUnit();
 
-                    // generate pragma checksum data
+                    // generate pragma checksum data  
                     Guid hashGuid = !string.IsNullOrEmpty(ChecksumAlgorithm) && ChecksumAlgorithm.Equals("SHA256", StringComparison.OrdinalIgnoreCase)
                         ? s_hashSHA256Guid
                         : s_hashSHA1Guid;
 
-                    CodeChecksumPragma csPragma = new CodeChecksumPragma
-                    {
-                        FileName = ParentFolderPrefix + SourceFileInfo.RelativeSourceFilePath + XAML,
-                        ChecksumAlgorithmId = hashGuid,
-                        ChecksumData = TaskFileService.GetChecksum(SourceFileInfo.OriginalFilePath, hashGuid)
-                    };
+                    CodeChecksumPragma csPragma = new CodeChecksumPragma();
+                    csPragma.FileName = ParentFolderPrefix + SourceFileInfo.RelativeSourceFilePath + XAML;
+                    csPragma.ChecksumAlgorithmId = hashGuid;
+                    csPragma.ChecksumData = TaskFileService.GetChecksum(SourceFileInfo.OriginalFilePath, hashGuid);
                     ccu.StartDirectives.Add(csPragma);
 
                     if (cnsImports != _ccRoot.CodeNS)
@@ -679,15 +697,14 @@ namespace MS.Internal
                 // If SourceFileResolve event handler is not registered,  generate
                 // the default SourceFileInfo for this file.
                 //
-                sourceFileInfo = new SourceFileInfo(file)
-                {
-                    SourcePath = _compilationUnitSourcePath
-                };
+                sourceFileInfo = new SourceFileInfo(file);
+
+                sourceFileInfo.SourcePath = _compilationUnitSourcePath;
 
                 if (sourceFileInfo.IsXamlFile)
                 {
                     int fileExtIndex = file.Path.LastIndexOf(DOTCHAR);
-
+                    
                     sourceFileInfo.RelativeSourceFilePath = file.Path.Substring(0, fileExtIndex);
                 }
             }
@@ -695,11 +712,11 @@ namespace MS.Internal
             return sourceFileInfo;
         }
 
-        #endregion CompileUnit
+#endregion CompileUnit
 
-        #region ErrorHandling
+#region ErrorHandling
 
-        private static void ThrowCompilerException(string id)
+        static void ThrowCompilerException(string id)
         {
             string message = SR.GetResourceString(id);
             ThrowCompilerExceptionImpl(message);
@@ -723,13 +740,13 @@ namespace MS.Internal
             ThrowCompilerExceptionImpl(message);
         }
 
-        private static void ThrowCompilerException(string id, string value1, string value2, string value3, string value4)
+        static void ThrowCompilerException(string id, string value1, string value2, string value3, string value4)
         {
             string message = SR.Format(SR.GetResourceString(id), value1, value2, value3, value4);
             ThrowCompilerExceptionImpl(message);
         }
 
-        private static void ThrowCompilerExceptionImpl(string message)
+        static void ThrowCompilerExceptionImpl(string message)
         {
             Exception compilerException = new Exception(message);
             throw compilerException;
@@ -836,9 +853,10 @@ namespace MS.Internal
                     case XmlNodeType.CDATA:
                     case XmlNodeType.Text:
                     {
+                        IXmlLineInfo xmlLineInfo = xmlReader as IXmlLineInfo;
                         int lineNumber = 0;
 
-                        if (xmlReader is IXmlLineInfo xmlLineInfo)
+                        if (null != xmlLineInfo)
                         {
                             lineNumber = xmlLineInfo.LineNumber;
                         }
@@ -867,12 +885,10 @@ namespace MS.Internal
         {
             if (_ccRoot.StyleConnectorFn == null)
             {
-                _ccRoot.StyleConnectorFn = new CodeMemberMethod
-                {
-                    Name = CONNECT,
-                    Attributes = MemberAttributes.Public | MemberAttributes.Final,
-                    PrivateImplementationType = new CodeTypeReference(KnownTypes.Types[(int)KnownElements.IStyleConnector])
-                };
+                _ccRoot.StyleConnectorFn = new CodeMemberMethod();
+                _ccRoot.StyleConnectorFn.Name = CONNECT;
+                _ccRoot.StyleConnectorFn.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                _ccRoot.StyleConnectorFn.PrivateImplementationType = new CodeTypeReference(KnownTypes.Types[(int)KnownElements.IStyleConnector]);
 
                 // void IStyleConnector.Connect(int connectionId, object target) {
                 //
@@ -930,12 +946,10 @@ namespace MS.Internal
                 {
                     // if (connectionId == 1)
                     //
-                    ccsConnector = new CodeConditionStatement
-                    {
-                        Condition = new CodeBinaryOperatorExpression(new CodeArgumentReferenceExpression(CONNECTIONID),
+                    ccsConnector = new CodeConditionStatement();
+                    ccsConnector.Condition = new CodeBinaryOperatorExpression(new CodeArgumentReferenceExpression(CONNECTIONID),
                                                                               CodeBinaryOperatorType.ValueEquality,
-                                                                              new CodePrimitiveExpression(connectionId))
-                    };
+                                                                              new CodePrimitiveExpression(connectionId));
                 }
             }
             else if (!SwitchStatementSupported())
@@ -965,10 +979,11 @@ namespace MS.Internal
 
                 // eventSetter = new EventSetter();
                 //
+                CodeExpression[] esParams = {};
                 CodeVariableReferenceExpression cvreES = new CodeVariableReferenceExpression(EVENTSETTER);
                 CodeAssignStatement casES = new CodeAssignStatement(cvreES,
                                                                     new CodeObjectCreateExpression(KnownTypes.Types[(int)KnownElements.EventSetter],
-                                                                                                   Array.Empty<CodeExpression>()));
+                                                                                                   esParams));
 
                 // eventSetter.Event = Button.ClickEvent;
                 //
@@ -1102,12 +1117,10 @@ namespace MS.Internal
             //
             if (_ccRoot.HookupFn == null)
             {
-                _ccRoot.HookupFn = new CodeMemberMethod
-                {
-                    Name = CONNECT,
-                    Attributes = MemberAttributes.Public | MemberAttributes.Final,
-                    PrivateImplementationType = new CodeTypeReference(KnownTypes.Types[(int)KnownElements.IComponentConnector])
-                };
+                _ccRoot.HookupFn = new CodeMemberMethod();
+                _ccRoot.HookupFn.Name = CONNECT;
+                _ccRoot.HookupFn.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                _ccRoot.HookupFn.PrivateImplementationType = new CodeTypeReference(KnownTypes.Types[(int)KnownElements.IComponentConnector]);
 
                 // void IComponentConnector.Connect(int connectionId, object target) {
                 //
@@ -1163,12 +1176,10 @@ namespace MS.Internal
             {
                 // if (connectionId == 1)
                 //
-                ccsConnector = new CodeConditionStatement
-                {
-                    Condition = new CodeBinaryOperatorExpression(new CodeArgumentReferenceExpression(CONNECTIONID),
+                ccsConnector = new CodeConditionStatement();
+                ccsConnector.Condition = new CodeBinaryOperatorExpression(new CodeArgumentReferenceExpression(CONNECTIONID),
                                                                           CodeBinaryOperatorType.ValueEquality,
-                                                                          new CodePrimitiveExpression(connectionId))
-                };
+                                                                          new CodePrimitiveExpression(connectionId));
             }
 
 
@@ -1299,7 +1310,8 @@ namespace MS.Internal
             {
                 for (int i = 0; i < ReferenceAssemblyList.Count; i++)
                 {
-                    if (ReferenceAssemblyList[i] is ReferenceAssembly refasm && refasm.Path.Length > 0)
+                    ReferenceAssembly refasm = ReferenceAssemblyList[i] as ReferenceAssembly;
+                    if (refasm != null && refasm.Path.Length > 0)
                     {
                         paths.Add(refasm.Path);
                     }
@@ -1316,7 +1328,9 @@ namespace MS.Internal
             {
                 for (int i = 0; i < ReferenceAssemblyList.Count; i++)
                 {
-                    if (ReferenceAssemblyList[i] is ReferenceAssembly refasm && refasm.Path.Length > 0)
+                    ReferenceAssembly refasm = ReferenceAssemblyList[i] as ReferenceAssembly;
+
+                    if (refasm != null && refasm.Path.Length > 0)
                     {
                         _typeMapper.SetAssemblyPath(refasm.AssemblyName, refasm.Path);
                     }
@@ -1350,14 +1364,14 @@ namespace MS.Internal
 
         private bool SwitchStatementSupported()
         {
-            return IsLanguageCSharp || (CompilerInfo != null && string.Equals(CompilerInfo.GetLanguages()[0], JSCRIPT, StringComparison.OrdinalIgnoreCase));
+            return (IsLanguageCSharp || (CompilerInfo != null && (string.Compare(CompilerInfo.GetLanguages()[0], JSCRIPT, StringComparison.OrdinalIgnoreCase) == 0)));
         }
 
         private bool IsInternalAccessSupported
         {
             get
             {
-                return CompilerInfo == null || !string.Equals(CompilerInfo.GetLanguages()[0], JSHARP, StringComparison.OrdinalIgnoreCase);
+                return (CompilerInfo == null || (string.Compare(CompilerInfo.GetLanguages()[0], JSHARP, StringComparison.OrdinalIgnoreCase) != 0));
             }
         }
 
@@ -1557,9 +1571,9 @@ namespace MS.Internal
                 {
                     //  During code generation, ParentFolderPrefix returns the relative path from a .g.cs file to its markup file.
                     //
-                    //      One example is generated #pragmas: #pragma checksum "..\..\..\..\Views\ExportNotificationView.xaml"
+                    //      One example is generated #pragmas: #pragma checksum "..\..\..\..\Views\ExportNotificationView.xaml"  
                     //
-                    //  The path information for a markup file is represented in SourceFileInfo:
+                    //  The path information for a markup file is represented in SourceFileInfo: 
                     //
                     //      SourceFileInfo.OriginalFilePath: "c:\\greenshot\\src\\Greenshot.Addons\\Views\\ExportNotificationView.xaml"
                     //      SourceFileInfo.TargetPath: "c:\\greenshot\\src\\Greenshot.Addons\\obj\\Debug\\net6.0-windows\\"
@@ -1576,23 +1590,23 @@ namespace MS.Internal
                     //
                     //  The relative path calculation must take in to account both the TargetPath and the RelativeFilePath:
                     //
-                    //      "c:\\greenshot\\src\\Greenshot.Addons\\obj\\Debug\\net6.0-windows\\" [SourceFileInfo.TargetPath]
+                    //      "c:\\greenshot\\src\\Greenshot.Addons\\obj\\Debug\\net6.0-windows\\" [SourceFileInfo.TargetPath]      
                     //      "Views\\ExportNotificationView" [SourceFileInfo.RelativeTargetPath]
                     //
                     //   TargetPath concatenated with the directory portion of the RelativeTargetPath is the location to the .g.cs file:
                     //
                     //      "c:\\greenshot\\src\\Greenshot.Addons\\obj\\Debug\\net6.0-windows\\Views"
-                    //
+                    //      
                     string pathOfRelativeSourceFilePath = System.IO.Path.GetDirectoryName(SourceFileInfo.RelativeSourceFilePath);
 
-                    // Return the parent folder of the target file with a trailing DirectorySeparatorChar.
+                    // Return the parent folder of the target file with a trailing DirectorySeparatorChar.  
                     // Return a relative path if possible.  Else, return an absolute path.
-                    #if NETFX
+                    #if NETFX 
                     string path = PathInternal.GetRelativePath(TargetPath + pathOfRelativeSourceFilePath, SourceFileInfo.SourcePath, StringComparison.OrdinalIgnoreCase);
 #else
                     string path = Path.GetRelativePath(TargetPath + pathOfRelativeSourceFilePath, SourceFileInfo.SourcePath);
 #endif
-                    // Always return a path with a trailing DirectorySeparatorChar.
+                    // Always return a path with a trailing DirectorySeparatorChar.  
                     return path.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 }
                 else
@@ -1610,7 +1624,7 @@ namespace MS.Internal
                     }
 
                     return parentFolderPrefix;
-                }
+                } 
             }
         }
 
@@ -1827,8 +1841,9 @@ namespace MS.Internal
                         desc.Arguments.CopyTo(args, 0);
                         CodeExpression[] expressions = new CodeExpression[args.Length];
 
-                        if (desc.MemberInfo is MethodInfo mi)
+                        if (desc.MemberInfo is MethodInfo)
                         {
+                            MethodInfo mi = (MethodInfo)desc.MemberInfo;
                             ParameterInfo[] parameters = mi.GetParameters();
 
                             for (int i = 0; i < args.Length; i++)
@@ -1844,8 +1859,9 @@ namespace MS.Internal
 
                             ce = cmie;
                         }
-                        else if (desc.MemberInfo is ConstructorInfo ci) // instance ctor invoke
+                        else if (desc.MemberInfo is ConstructorInfo)  // instance ctor invoke
                         {
+                            ConstructorInfo ci = (ConstructorInfo)desc.MemberInfo;
                             ParameterInfo[] parameters = ci.GetParameters();
 
                             for (int i = 0; i < args.Length; i++)
@@ -1877,8 +1893,9 @@ namespace MS.Internal
         private Type GetEventHandlerType(MemberInfo memberInfo)
         {
             Type eventHandlerType = null;
-            if (memberInfo is EventInfo ei)
+            if (memberInfo is EventInfo)
             {
+                EventInfo ei = (EventInfo)memberInfo;
                 eventHandlerType = ei.EventHandlerType;
             }
             else
@@ -1917,7 +1934,7 @@ namespace MS.Internal
             // Fetch the EventHandlerType from either the EventInfo or the MethodInfo
             // for the Add{Propertyname}Handler method's MethodInfo
             Type eventHandlerType = GetEventHandlerType(miEvent);
-            string [] typeArgsList = cc?.GenericTypeArgs;
+            string [] typeArgsList = cc != null ? cc.GenericTypeArgs : null;
 
             cdce.DelegateType = GenerateConstructedTypeReference(eventHandlerType, typeArgsList, eventTarget, eventTargetName, eventName);
             cdce.MethodName = eventHandler.Trim() + (subClassed ? HELPER : string.Empty);
@@ -1932,10 +1949,10 @@ namespace MS.Internal
                 cDelExp = coce;
             }
 
-
+            		
 //            The bug that this chunk of code works around was fixed but
 //            exposes a different bug. To work around the second bug, we
-//            remove the workaround for the first one.
+//            remove the workaround for the first one.  
 //            Note that the initial bug was not fixed for VB, so the code block above remains.
 //            else if (Language == CompilerLanguage.JScript)
 //            {
@@ -2095,7 +2112,7 @@ namespace MS.Internal
         private bool IsLanguageSupported(string language)
         {
             _language = language;
-            _isLangCSharp = string.Equals(language, CSHARP, StringComparison.OrdinalIgnoreCase);
+            _isLangCSharp = string.Compare(language, CSHARP, StringComparison.OrdinalIgnoreCase) == 0;
 
             if (IsLanguageCSharp)
             {
@@ -2104,7 +2121,7 @@ namespace MS.Internal
             }
             else
             {
-                _isLangVB = string.Equals(language, VB, StringComparison.OrdinalIgnoreCase);
+                _isLangVB = string.Compare(language, VB, StringComparison.OrdinalIgnoreCase) == 0;
                 if (IsLanguageVB)
                 {
                     _codeProvider = new Microsoft.VisualBasic.VBCodeProvider();
@@ -2197,12 +2214,10 @@ namespace MS.Internal
                 return null;
             }
 
-            CodeMemberField field = new CodeMemberField
-            {
-                Name = name,
-                Attributes = MemberAttributes.Assembly,
-                Type = cc.ElementTypeReference
-            };
+            CodeMemberField field = new CodeMemberField();
+            field.Name = name;
+            field.Attributes = MemberAttributes.Assembly;
+            field.Type = cc.ElementTypeReference;
             field.CustomAttributes.Add(
                 new CodeAttributeDeclaration(
                          new CodeTypeReference("System.Diagnostics.CodeAnalysis.SuppressMessageAttribute"),
@@ -2437,10 +2452,8 @@ namespace MS.Internal
             // public class MyClass : BaseClass {
             //
             CodeTypeReference ctrBaseClass = null;
-            CodeTypeDeclaration ctdClass = new CodeTypeDeclaration
-            {
-                Name = className
-            };
+            CodeTypeDeclaration ctdClass = new CodeTypeDeclaration();
+            ctdClass.Name = className;
             if (baseClass != null)
             {
                 // At this point, we should only have fully open generic types if there is a typeargs list.
@@ -2520,17 +2533,13 @@ namespace MS.Internal
             // {
             Debug.Assert(_ccRoot == null);
             Debug.Assert(_codeContexts == null || _codeContexts.Count == 0, "mismatched CodeContexts");
-            CodeNamespace cns = new CodeNamespace
-            {
-                Name = ns
-            };
+            CodeNamespace cns = new CodeNamespace();
+            cns.Name = ns;
             cns.Types.Clear();
 
             CodeTypeDeclaration ctdClass = GenerateClass(className, ref modifier, baseClass, baseClassFullName);
-            CodeContext cc = new CodeContextRoot(ctdClass, cns, baseClass, _typeArgsList, baseClassFullName)
-            {
-                ElementTypeReference = new CodeTypeReference(GetFullClassName(ns, className))
-            };
+            CodeContext cc = new CodeContextRoot(ctdClass, cns, baseClass, _typeArgsList, baseClassFullName);
+            cc.ElementTypeReference = new CodeTypeReference(GetFullClassName(ns, className));
 
             return cc;
         }
@@ -2549,12 +2558,10 @@ namespace MS.Internal
             //     return Delegate.CreateDelegate(delegateType, this, handler);
             // }
             //
-            CodeMemberMethod cmmCD = new CodeMemberMethod
-            {
-                Name = CREATEDELEGATEHELPER,
-                ReturnType = new CodeTypeReference(typeof(Delegate)),
-                Attributes = MemberAttributes.Assembly | MemberAttributes.Final
-            };
+            CodeMemberMethod cmmCD = new CodeMemberMethod();
+            cmmCD.Name = CREATEDELEGATEHELPER;
+            cmmCD.ReturnType = new CodeTypeReference(typeof(Delegate));
+            cmmCD.Attributes = MemberAttributes.Assembly | MemberAttributes.Final;
             AddDebuggerNonUserCodeAttribute(cmmCD);
             AddGeneratedCodeAttribute(cmmCD);
             AddSuppressMessageAttribute(cmmCD, "Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode");
@@ -2565,10 +2572,8 @@ namespace MS.Internal
             cmmCD.Parameters.Add(param2);
 
             CodeMethodReferenceExpression cmreCD = new CodeMethodReferenceExpression(new CodeTypeReferenceExpression(typeof(Delegate)), "CreateDelegate");
-            CodeMethodInvokeExpression cmieCD = new CodeMethodInvokeExpression
-            {
-                Method = cmreCD
-            };
+            CodeMethodInvokeExpression cmieCD = new CodeMethodInvokeExpression();
+            cmieCD.Method = cmreCD;
             cmieCD.Parameters.Add(new CodeArgumentReferenceExpression(DELEGATETYPE));
             cmieCD.Parameters.Add(new CodeThisReferenceExpression());
             cmieCD.Parameters.Add(new CodeArgumentReferenceExpression(HANDLERARG));
@@ -2598,10 +2603,8 @@ namespace MS.Internal
             //         return;
             //     }
             //
-            CodeConditionStatement ccsCL = new CodeConditionStatement
-            {
-                Condition = new CodeFieldReferenceExpression(null, CONTENT_LOADED)
-            };
+            CodeConditionStatement ccsCL = new CodeConditionStatement();
+            ccsCL.Condition = new CodeFieldReferenceExpression(null, CONTENT_LOADED);
             ccsCL.TrueStatements.Add(new CodeMethodReturnStatement());
             if (!isApp)
             {
@@ -2649,19 +2652,19 @@ namespace MS.Internal
             //   - Modify the AssemblyVersionAttribute to a wildcard string (e.g. "1.2.*")
             //   - Set Deterministic to false in the build
             // During MarkupCompilation, the AssemblyVersion property would not be set and WPF would correctly generate a resource URI without a version.
-            // In .NET Core/5 (or .NET Framework SDK-style projects), the same process can be used if GenerateAssemblyVersionAttribute is set to false in
-            // the build.  However, this isn't really the idiomatic way to set the version for an assembly.  Instead, developers are more likely to use the
-            // AssemblyVersion build property.  If a developer explicitly sets the AssemblyVersion build property to a wildcard version string, we would use
-            // that as part of the URI here.  This results in an error in Version.Parse during InitializeComponent's call tree.  Instead, do as we would have
+            // In .NET Core/5 (or .NET Framework SDK-style projects), the same process can be used if GenerateAssemblyVersionAttribute is set to false in 
+            // the build.  However, this isn't really the idiomatic way to set the version for an assembly.  Instead, developers are more likely to use the 
+            // AssemblyVersion build property.  If a developer explicitly sets the AssemblyVersion build property to a wildcard version string, we would use 
+            // that as part of the URI here.  This results in an error in Version.Parse during InitializeComponent's call tree.  Instead, do as we would have 
             // when the developer sets a wildcard version string via AssemblyVersionAttribute and use an empty string.
             string version = hasWildcard || String.IsNullOrEmpty(AssemblyVersion)
-                ? String.Empty
+                ? String.Empty 
                 : COMPONENT_DELIMITER + VER + AssemblyVersion;
 
-            string token = String.IsNullOrEmpty(AssemblyPublicKeyToken)
-                ? String.Empty
+            string token = String.IsNullOrEmpty(AssemblyPublicKeyToken) 
+                ? String.Empty 
                 : COMPONENT_DELIMITER + AssemblyPublicKeyToken;
-
+            
             uriPart = FORWARDSLASH + AssemblyName + version + token + COMPONENT_DELIMITER + COMPONENT + FORWARDSLASH + resourceID;
 
             //
@@ -2681,10 +2684,9 @@ namespace MS.Internal
             //  System.Windows.Application.LoadComponent(this, resourceLocator);
             //
             CodeMethodReferenceExpression cmreLoadContent = new CodeMethodReferenceExpression(new CodeTypeReferenceExpression(KnownTypes.Types[(int)KnownElements.Application]), LOADCOMPONENT);
-            CodeMethodInvokeExpression cmieLoadContent = new CodeMethodInvokeExpression
-            {
-                Method = cmreLoadContent
-            };
+            CodeMethodInvokeExpression cmieLoadContent = new CodeMethodInvokeExpression();
+
+            cmieLoadContent.Method = cmreLoadContent;
 
             CodeVariableReferenceExpression cvreMemStm = new CodeVariableReferenceExpression(resVarname);
 
@@ -2697,12 +2699,10 @@ namespace MS.Internal
 
             // private bool _contentLoaded;
             //
-            CodeMemberField cmfCL = new CodeMemberField
-            {
-                Name = CONTENT_LOADED,
-                Attributes = MemberAttributes.Private,
-                Type = new CodeTypeReference(typeof(bool))
-            };
+            CodeMemberField cmfCL = new CodeMemberField();
+            cmfCL.Name = CONTENT_LOADED;
+            cmfCL.Attributes = MemberAttributes.Private;
+            cmfCL.Type = new CodeTypeReference(typeof(bool));
             _ccRoot.CodeClass.Members.Add(cmfCL);
 
             if (!isApp)
@@ -2726,19 +2726,15 @@ namespace MS.Internal
             // namespace XamlGeneratedNamespace
             // {
             //
-            CodeNamespace cns = new CodeNamespace
-            {
-                Name = XamlTypeMapper.GeneratedNamespace
-            };
+            CodeNamespace cns = new CodeNamespace();
+            cns.Name = XamlTypeMapper.GeneratedNamespace;
 
             //     [EditorBrowsable(EditorBrowsableState.Never)]
             //     public sealed class GeneratedInternalTypeHelper : InternalTypeHelper
             //     {
             //
-            CodeTypeDeclaration ctdClass = new CodeTypeDeclaration
-            {
-                Name = XamlTypeMapper.GeneratedInternalTypeHelperClassName
-            };
+            CodeTypeDeclaration ctdClass = new CodeTypeDeclaration();
+            ctdClass.Name = XamlTypeMapper.GeneratedInternalTypeHelperClassName;
             ctdClass.BaseTypes.Add(new CodeTypeReference("System.Windows.Markup.InternalTypeHelper"));
             ctdClass.TypeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
             AddDebuggerNonUserCodeAttribute(ctdClass);
@@ -2746,7 +2742,7 @@ namespace MS.Internal
             AddEditorBrowsableAttribute(ctdClass);
             GenerateXmlComments(ctdClass, ctdClass.Name);
 
-            //         protected override object CreateInstance(Type type, CultureInfo culture)
+            //         protected internal override object CreateInstance(Type type, CultureInfo culture)
             //         {
             //             return Activator.CreateInstance(type,
             //                                             BindingFlags.Public |
@@ -2758,12 +2754,10 @@ namespace MS.Internal
             //                                             culture);
             //         }
             //
-            CodeMemberMethod cmmCI = new CodeMemberMethod
-            {
-                Name = "CreateInstance",
-                Attributes = MemberAttributes.Family | MemberAttributes.Override,
-                ReturnType = new CodeTypeReference(typeof(Object))
-            };
+            CodeMemberMethod cmmCI = new CodeMemberMethod();
+            cmmCI.Name = "CreateInstance";
+            cmmCI.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
+            cmmCI.ReturnType = new CodeTypeReference(typeof(Object));
 
             CodeParameterDeclarationExpression param1 = new CodeParameterDeclarationExpression(typeof(Type), TYPE);
             CodeParameterDeclarationExpression param4 = new CodeParameterDeclarationExpression(typeof(CultureInfo), CULTURE);
@@ -2771,10 +2765,8 @@ namespace MS.Internal
             cmmCI.Parameters.Add(param4);
 
             CodeMethodReferenceExpression cmreCI = new CodeMethodReferenceExpression(new CodeTypeReferenceExpression(typeof(Activator)), "CreateInstance");
-            CodeMethodInvokeExpression cmieCI = new CodeMethodInvokeExpression
-            {
-                Method = cmreCI
-            };
+            CodeMethodInvokeExpression cmieCI = new CodeMethodInvokeExpression();
+            cmieCI.Method = cmreCI;
             cmieCI.Parameters.Add(new CodeArgumentReferenceExpression(TYPE));
             CodeFieldReferenceExpression cfre1 = new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(BindingFlags)), "Public");
             CodeFieldReferenceExpression cfre2 = new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(BindingFlags)), "NonPublic");
@@ -2792,17 +2784,15 @@ namespace MS.Internal
             GenerateXmlComments(cmmCI, cmmCI.Name);
             ctdClass.Members.Add(cmmCI);
 
-            //         protected override object GetPropertyValue(PropertyInfo propertyInfo, object target, CultureInfo culture)
+            //         protected internal override object GetPropertyValue(PropertyInfo propertyInfo, object target, CultureInfo culture)
             //         {
             //             return propertyInfo.GetValue(target, BindingFlags.Default, null, null, culture);
             //         }
             //
-            CodeMemberMethod cmmGPV = new CodeMemberMethod
-            {
-                Name = "GetPropertyValue",
-                Attributes = MemberAttributes.Family | MemberAttributes.Override,
-                ReturnType = new CodeTypeReference(typeof(Object))
-            };
+            CodeMemberMethod cmmGPV = new CodeMemberMethod();
+            cmmGPV.Name = "GetPropertyValue";
+            cmmGPV.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
+            cmmGPV.ReturnType = new CodeTypeReference(typeof(Object));
 
             param1 = new CodeParameterDeclarationExpression(typeof(PropertyInfo), PROPINFO);
             CodeParameterDeclarationExpression param2 = new CodeParameterDeclarationExpression(typeof(object), TARGET);
@@ -2811,10 +2801,8 @@ namespace MS.Internal
             cmmGPV.Parameters.Add(param4);
 
             CodeMethodReferenceExpression cmreGPV = new CodeMethodReferenceExpression(new CodeArgumentReferenceExpression(PROPINFO), "GetValue");
-            CodeMethodInvokeExpression cmieGPV = new CodeMethodInvokeExpression
-            {
-                Method = cmreGPV
-            };
+            CodeMethodInvokeExpression cmieGPV = new CodeMethodInvokeExpression();
+            cmieGPV.Method = cmreGPV;
             cmieGPV.Parameters.Add(new CodeArgumentReferenceExpression(TARGET));
             cmieGPV.Parameters.Add(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(BindingFlags)), DEFAULT));
             cmieGPV.Parameters.Add(new CodePrimitiveExpression(null));
@@ -2825,16 +2813,14 @@ namespace MS.Internal
             GenerateXmlComments(cmmGPV, cmmGPV.Name);
             ctdClass.Members.Add(cmmGPV);
 
-            //         protected override void SetPropertyValue(PropertyInfo propertyInfo, object target, object value, CultureInfo culture)
+            //         protected internal override void SetPropertyValue(PropertyInfo propertyInfo, object target, object value, CultureInfo culture)
             //         {
             //             propertyInfo.SetValue(target, value, BindingFlags.Default, null, null, culture);
             //         }
             //
-            CodeMemberMethod cmmSPV = new CodeMemberMethod
-            {
-                Name = "SetPropertyValue",
-                Attributes = MemberAttributes.Family | MemberAttributes.Override
-            };
+            CodeMemberMethod cmmSPV = new CodeMemberMethod();
+            cmmSPV.Name = "SetPropertyValue";
+            cmmSPV.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
 
             CodeParameterDeclarationExpression param3 = new CodeParameterDeclarationExpression(typeof(object), VALUE);
             cmmSPV.Parameters.Add(param1);
@@ -2843,10 +2829,8 @@ namespace MS.Internal
             cmmSPV.Parameters.Add(param4);
 
             CodeMethodReferenceExpression cmreSPV = new CodeMethodReferenceExpression(new CodeArgumentReferenceExpression(PROPINFO), "SetValue");
-            CodeMethodInvokeExpression cmieSPV = new CodeMethodInvokeExpression
-            {
-                Method = cmreSPV
-            };
+            CodeMethodInvokeExpression cmieSPV = new CodeMethodInvokeExpression();
+            cmieSPV.Method = cmreSPV;
             cmieSPV.Parameters.Add(new CodeArgumentReferenceExpression(TARGET));
             cmieSPV.Parameters.Add(new CodeArgumentReferenceExpression(VALUE));
             cmieSPV.Parameters.Add(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(BindingFlags)), DEFAULT));
@@ -2858,7 +2842,7 @@ namespace MS.Internal
             GenerateXmlComments(cmmSPV, cmmSPV.Name);
             ctdClass.Members.Add(cmmSPV);
 
-            //         protected override Delegate CreateDelegate(Type delegateType, object target, string handler)
+            //         protected internal override Delegate CreateDelegate(Type delegateType, object target, string handler)
             //         {
             //             return (Delegate)target.GetType().InvokeMember("_CreateDelegate",
             //                                                            BindingFlags.Instance |
@@ -2869,12 +2853,10 @@ namespace MS.Internal
             //                                                            new object[] { delegateType, handler });
             //         }
             //
-            CodeMemberMethod cmmCD = new CodeMemberMethod
-            {
-                Name = "CreateDelegate",
-                Attributes = MemberAttributes.Family | MemberAttributes.Override,
-                ReturnType = new CodeTypeReference(typeof(Delegate))
-            };
+            CodeMemberMethod cmmCD = new CodeMemberMethod();
+            cmmCD.Name = "CreateDelegate";
+            cmmCD.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
+            cmmCD.ReturnType = new CodeTypeReference(typeof(Delegate));
 
             param1 = new CodeParameterDeclarationExpression(typeof(Type), DELEGATETYPE);
             param3 = new CodeParameterDeclarationExpression(typeof(string), HANDLERARG);
@@ -2884,16 +2866,12 @@ namespace MS.Internal
 
             CodeArgumentReferenceExpression careTarget = new CodeArgumentReferenceExpression(TARGET);
             CodeMethodReferenceExpression cmreGetType = new CodeMethodReferenceExpression(careTarget, "GetType");
-            CodeMethodInvokeExpression cmieGetType = new CodeMethodInvokeExpression
-            {
-                Method = cmreGetType
-            };
+            CodeMethodInvokeExpression cmieGetType = new CodeMethodInvokeExpression();
+            cmieGetType.Method = cmreGetType;
 
             CodeMethodReferenceExpression cmreCD = new CodeMethodReferenceExpression(cmieGetType, "InvokeMember");
-            CodeMethodInvokeExpression cmieCD = new CodeMethodInvokeExpression
-            {
-                Method = cmreCD
-            };
+            CodeMethodInvokeExpression cmieCD = new CodeMethodInvokeExpression();
+            cmieCD.Method = cmreCD;
             cmieCD.Parameters.Add(new CodePrimitiveExpression(CREATEDELEGATEHELPER));
 
             CodeFieldReferenceExpression cfre5 = new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(BindingFlags)), "InvokeMethod");
@@ -2917,16 +2895,14 @@ namespace MS.Internal
             GenerateXmlComments(cmmCD, cmmCD.Name);
             ctdClass.Members.Add(cmmCD);
 
-            //         protected override void AddEventHandler(EventInfo eventInfo, object target, Delegate handler);
+            //         protected internal override void AddEventHandler(EventInfo eventInfo, object target, Delegate handler);
             //         {
             //             eventInfo.AddEventHandler(target, handler);
             //         }
             //
-            CodeMemberMethod cmmAEH = new CodeMemberMethod
-            {
-                Name = "AddEventHandler",
-                Attributes = MemberAttributes.Family | MemberAttributes.Override
-            };
+            CodeMemberMethod cmmAEH = new CodeMemberMethod();
+            cmmAEH.Name = "AddEventHandler";
+            cmmAEH.Attributes = MemberAttributes.FamilyOrAssembly | MemberAttributes.Override;
 
             param1 = new CodeParameterDeclarationExpression(typeof(EventInfo), EVENTINFO);
             param3 = new CodeParameterDeclarationExpression(typeof(Delegate), HANDLERARG);
@@ -2935,10 +2911,8 @@ namespace MS.Internal
             cmmAEH.Parameters.Add(param3);
 
             CodeMethodReferenceExpression cmreAEH = new CodeMethodReferenceExpression(new CodeArgumentReferenceExpression(EVENTINFO), "AddEventHandler");
-            CodeMethodInvokeExpression cmieAEH = new CodeMethodInvokeExpression
-            {
-                Method = cmreAEH
-            };
+            CodeMethodInvokeExpression cmieAEH = new CodeMethodInvokeExpression();
+            cmieAEH.Method = cmreAEH;
             cmieAEH.Parameters.Add(new CodeArgumentReferenceExpression(TARGET));
             cmieAEH.Parameters.Add(new CodeArgumentReferenceExpression(HANDLERARG));
 
@@ -3142,8 +3116,9 @@ namespace MS.Internal
             //
             CodeObjectCreateExpression coce;
             CodeVariableReferenceExpression cvre = new CodeVariableReferenceExpression(APPVAR);
+            CodeExpression[] ctorParams = {};
 
-            coce = new CodeObjectCreateExpression(appClassName, Array.Empty<CodeExpression>());
+            coce = new CodeObjectCreateExpression(appClassName, ctorParams);
 
             CodeVariableDeclarationStatement cvds = new CodeVariableDeclarationStatement(appClassName, APPVAR, coce);
 
@@ -3195,10 +3170,8 @@ namespace MS.Internal
                 // public static void Main () {
                 //
 
-                cmmMain = new CodeEntryPointMethod
-                {
-                    Attributes = MemberAttributes.Public | MemberAttributes.Static
-                };
+                cmmMain = new CodeEntryPointMethod();
+                cmmMain.Attributes = MemberAttributes.Public | MemberAttributes.Static;
                 cmmMain.CustomAttributes.Add(new CodeAttributeDeclaration(typeof(STAThreadAttribute).FullName));
                 AddDebuggerNonUserCodeAttribute(cmmMain);
                 AddGeneratedCodeAttribute(cmmMain);
@@ -3235,10 +3208,8 @@ namespace MS.Internal
                     {
                         //   app.InitializeComponent();
                         //
-                        CodeMethodInvokeExpression cmieIT = new CodeMethodInvokeExpression
-                        {
-                            Method = new CodeMethodReferenceExpression(cvreApp, INITIALIZE_COMPONENT)
-                        };
+                        CodeMethodInvokeExpression cmieIT = new CodeMethodInvokeExpression();
+                        cmieIT.Method = new CodeMethodReferenceExpression(cvreApp, INITIALIZE_COMPONENT);
                         cmmMain.Statements.Add(new CodeExpressionStatement(cmieIT));
                     }
 
@@ -3247,10 +3218,8 @@ namespace MS.Internal
                         //   app.Run();
                         //
                         CodeMethodReferenceExpression cmreRun = new CodeMethodReferenceExpression(cvreApp, "Run");
-                        CodeMethodInvokeExpression cmieRun = new CodeMethodInvokeExpression
-                        {
-                            Method = cmreRun
-                        };
+                        CodeMethodInvokeExpression cmieRun = new CodeMethodInvokeExpression();
+                        cmieRun.Method = cmreRun;
 
                         CodeStatement csRun = new CodeExpressionStatement(cmieRun);
                         cmmMain.Statements.Add(csRun);
@@ -3340,7 +3309,7 @@ namespace MS.Internal
                 relPath = TaskHelper.GetRootRelativePath(Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar, fullFilePath);
             }
 
-            if (!string.IsNullOrEmpty(relPath))
+            if (string.IsNullOrEmpty(relPath) == false)
             {
                 resourceId = relPath;
             }
@@ -3456,11 +3425,9 @@ namespace MS.Internal
                 {
                     if (_initializeComponentFn == null)
                     {
-                        _initializeComponentFn = new CodeMemberMethod
-                        {
-                            Name = INITIALIZE_COMPONENT,
-                            Attributes = MemberAttributes.Public | MemberAttributes.Final
-                        };
+                        _initializeComponentFn = new CodeMemberMethod();
+                        _initializeComponentFn.Name = INITIALIZE_COMPONENT;
+                        _initializeComponentFn.Attributes = MemberAttributes.Public | MemberAttributes.Final;
                         AddDebuggerNonUserCodeAttribute(_initializeComponentFn);
                         AddGeneratedCodeAttribute(_initializeComponentFn);
                         MarkupCompiler.GenerateXmlComments(_initializeComponentFn, INITIALIZE_COMPONENT);

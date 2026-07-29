@@ -1,8 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using MS.Internal.Automation;
+using System.Windows.Automation;
 
 namespace System.Windows.Automation
 {
@@ -29,7 +32,7 @@ namespace System.Windows.Automation
         /// <param name="condition">Condition to negate</param>
         public NotCondition( Condition condition )
         {
-            ArgumentNullException.ThrowIfNull(condition);
+            Misc.ValidateArgumentNonNull( condition, "condition" );
 
             _condition = condition;
 
@@ -69,10 +72,10 @@ namespace System.Windows.Automation
         //  Private Fields
         //
         //------------------------------------------------------
-
+ 
         #region Private Fields
 
-        private Condition _condition;
+        Condition _condition;
 
         #endregion Private Fields
     }

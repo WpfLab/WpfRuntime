@@ -1,24 +1,45 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//  The root object for manipulating the WPP container.
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+using System;
+using System.IO;
 using System.Runtime.InteropServices;
-using MS.Internal;
+
+using System.Windows;    // For exception string lookup table
+
+using MS.Internal;                          // for Invariant
 using MS.Internal.IO.Packaging.CompoundFile;
+using MS.Internal.WindowsBase;
 
 namespace System.IO.Packaging
 {
-    /// <summary>
-    /// The main container class, one instance per compound file
-    /// </summary>
-    internal  class StorageRoot : StorageInfo
+/// <summary>
+/// The main container class, one instance per compound file
+/// </summary>
+internal  class StorageRoot : StorageInfo
 {
     /***********************************************************************/
     // Default values to use for the StorageRoot.Open shortcuts
-    private const FileMode   defaultFileMode   = FileMode.OpenOrCreate;
-    private const FileAccess defaultFileAccess = FileAccess.ReadWrite;
-    private const FileShare  defaultFileShare  = FileShare.None;
-    private const int        defaultSectorSize = 512;
-    private const int        stgFormatDocFile  = 5; // STGFMT_DOCFILE
+    const FileMode   defaultFileMode   = FileMode.OpenOrCreate;
+    const FileAccess defaultFileAccess = FileAccess.ReadWrite;
+    const FileShare  defaultFileShare  = FileShare.None;
+    const int        defaultSectorSize = 512;
+    const int        stgFormatDocFile  = 5; // STGFMT_DOCFILE
 
     /***********************************************************************/
     // Instance values
@@ -28,17 +49,17 @@ namespace System.IO.Packaging
     /// is initialized at Open and zeroed out at Close.  If this value is
     /// zero, it means the object has been disposed.
     /// </summary>
-    private IStorage rootIStorage;
+    IStorage rootIStorage;
 
     /// <summary>
     /// Cached instance to our data space manager
     /// </summary>
-    private DataSpaceManager dataSpaceManager;
+    DataSpaceManager dataSpaceManager;
 
     /// <summary>
     /// If we know we are in a read-only mode, we know not to do certain things.
     /// </summary>
-    private bool containerIsReadOnly;
+    bool containerIsReadOnly;
 
     /// <summary>
     /// When data space manager is being initialized, sometimes it trips
@@ -46,7 +67,7 @@ namespace System.IO.Packaging
     /// data space manager.  To avoid an infinite loop, we break it by knowing
     /// when data space manager is being initialized.
     /// </summary>
-    private bool dataSpaceManagerInitializationInProgress;
+    bool dataSpaceManagerInitializationInProgress;
 
     /***********************************************************************/
     private StorageRoot(IStorage root, bool readOnly )
@@ -83,9 +104,12 @@ namespace System.IO.Packaging
     /// <returns>New StorageRoot object built on the given Stream</returns>
     internal static StorageRoot CreateOnStream( Stream baseStream )
     {
-        ArgumentNullException.ThrowIfNull(baseStream);
-
-        if ( 0 == baseStream.Length )
+        if (baseStream == null)
+        {
+            throw new ArgumentNullException("baseStream");
+        }
+        
+        if( 0 == baseStream.Length )
         {
             return CreateOnStream( baseStream, FileMode.Create );
         }
@@ -103,8 +127,9 @@ namespace System.IO.Packaging
     /// <returns>New StorageRoot object built on the given Stream</returns>
     internal static StorageRoot CreateOnStream(Stream baseStream, FileMode mode)
     {
-        ArgumentNullException.ThrowIfNull(baseStream);
-
+        if( null == baseStream )
+            throw new ArgumentNullException("baseStream");
+        
         IStorage storageOnStream;
         int returnValue;
         int openFlags = SafeNativeCompoundFileConstants.STGM_SHARE_EXCLUSIVE;
@@ -373,10 +398,13 @@ namespace System.IO.Packaging
     {
         if( null == rootIStorage )
             return; // Extraneous calls to Close() are ignored
-
-        // Tell data space manager to flush all information as necessary
-        dataSpaceManager?.Dispose();
-        dataSpaceManager = null;
+            
+        if( null != dataSpaceManager )
+        {
+            // Tell data space manager to flush all information as necessary
+            dataSpaceManager.Dispose();
+            dataSpaceManager = null;
+        }
 
         try
         {

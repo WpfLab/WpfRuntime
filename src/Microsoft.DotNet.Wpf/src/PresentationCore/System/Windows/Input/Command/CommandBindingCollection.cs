@@ -1,12 +1,26 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
+//
 // Description: The CommandBindingCollection class serves the purpose of Storing/Retrieving 
 //                   CommandBindings.
 //
 //              See spec at : http://avalon/coreUI/Specs/Commanding%20--%20design.htm 
+// 
+//
+//
 
+using System;
 using System.Collections;
+using System.Diagnostics;
+using System.Collections.Specialized;
+using System.Windows;
+using System.Windows.Input;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -144,7 +158,10 @@ namespace System.Windows.Input
             }
             set
             {
-                _innerCBList?[index] = value;
+                if (_innerCBList != null)
+                {
+                    _innerCBList[index] = value;
+                }
             }
         }
         
@@ -175,7 +192,8 @@ namespace System.Windows.Input
         /// <param name="collection">collection to append</param>
         public void AddRange(ICollection collection) 
         {
-            ArgumentNullException.ThrowIfNull(collection);
+            if (collection==null)
+                throw new ArgumentNullException(nameof(collection));
 
             if (collection.Count <= 0) return;
             _innerCBList ??= new System.Collections.Generic.List<CommandBinding>(collection.Count);

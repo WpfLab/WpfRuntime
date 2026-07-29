@@ -1,5 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+//
+// Description:
+//   Proivde a implementation for IServiceProvider and method to add services
+//
+//
+
+using System;
+using System.ComponentModel;
+using System.Collections.Generic;
+using MS.Internal.WindowsBase;
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 namespace System.Windows.Markup
 {
@@ -35,16 +50,23 @@ namespace System.Windows.Markup
         /// <param name="service"></param>
         public void AddService(Type serviceType, Object service)
         {
-            ArgumentNullException.ThrowIfNull(serviceType);
-            ArgumentNullException.ThrowIfNull(service);
+            if (serviceType == null)
+            {
+                throw new ArgumentNullException("serviceType");
+            }
 
-            if (!_objDict.ContainsKey(serviceType))
+            if (service == null)
+            {
+                throw new ArgumentNullException("service");
+            }
+
+            if (_objDict.ContainsKey(serviceType) == false)
             {
                 _objDict.Add(serviceType, service);
             }
             else if (_objDict[serviceType] != service)
             {
-                throw new ArgumentException(SR.ServiceTypeAlreadyAdded, nameof(serviceType));
+                throw new ArgumentException(SR.ServiceTypeAlreadyAdded, "serviceType");
             }
         }
 

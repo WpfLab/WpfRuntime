@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,15 +9,34 @@
 //      that abstracts out channel creation, storage and destruction.
 //
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows.Threading;
+using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Security;
 
 using MS.Internal;
+using MS.Utility;
+using MS.Win32;
 
-using UnsafeNativeMethods = MS.Win32.PresentationCore.UnsafeNativeMethods.MilCoreApi;
+using Microsoft.Win32.SafeHandles;
+
+using SR=MS.Internal.PresentationCore.SR;
+
+using UnsafeNativeMethods=MS.Win32.PresentationCore.UnsafeNativeMethods.MilCoreApi;
 
 namespace System.Windows.Media
 {
-    internal partial class MediaContext
+    partial class MediaContext
     {
         /// <summary>
         /// A helper structure that abstracts channel management.
@@ -79,9 +99,12 @@ namespace System.Windows.Media
                     _freeSyncChannels = null;
                 }
 
-                _syncServiceChannel?.Close();
+                if (_syncServiceChannel != null)
+                {
+                    _syncServiceChannel.Close();
 
-                _syncServiceChannel = null;
+                    _syncServiceChannel = null;
+                }
             }
 
             /// <summary>
@@ -89,11 +112,18 @@ namespace System.Windows.Media
             /// </summary>
             internal void RemoveChannels()
             {
-                _asyncChannel?.Close();
-                _asyncChannel = null;
-                _asyncOutOfBandChannel?.Close();
-                _asyncOutOfBandChannel = null;
+                if (_asyncChannel != null)
+                {
+                    _asyncChannel.Close();
+                    _asyncChannel = null;
+                }
 
+                if (_asyncOutOfBandChannel != null)
+                {
+                    _asyncOutOfBandChannel.Close();
+                    _asyncOutOfBandChannel = null;
+                }
+               
                 RemoveSyncChannels();
 
                 if (_pSyncConnection != IntPtr.Zero)

@@ -1,24 +1,36 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: ITextStoreACP implementation.
 //
 
 
+using System;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Windows.Threading;
 using System.Threading;
 using System.Globalization;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using MS.Internal;
+using System.Windows.Controls;
 using System.Windows.Markup;        // for XmlLanguage
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Documents;
 using MS.Internal.Documents;
+using System.Security;
 using MS.Win32;
+
+using IComDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 
 namespace System.Windows.Documents
 {
@@ -948,8 +960,11 @@ namespace System.Windows.Documents
 
             // Convert to local coordinates.
             GeneralTransform transform = compositionTarget.RootVisual.TransformToDescendant(RenderScope);
-            // REVIEW: should we throw if the point could not be transformed?
-            transform?.TryTransform(milPoint, out milPoint);
+            if (transform != null)
+            {
+                // REVIEW: should we throw if the point could not be transformed?
+                transform.TryTransform(milPoint, out milPoint);
+            }
 
             // Validate layout information on TextView
             if (!view.Validate(milPoint))
@@ -1089,7 +1104,7 @@ namespace System.Windows.Documents
                         end = navigator;
                     }
 
-                    if (!lineRect.IsEmpty)
+                    if (lineRect.IsEmpty == false)
                     {
                         rectBound.Union(lineRect);
                     }
@@ -1406,7 +1421,10 @@ namespace System.Windows.Documents
 
                 // Composition event is completed, so new composition undo unit will be opened.
                 CompositionParentUndoUnit unit = PeekCompositionParentUndoUnit();
-                unit?.IsLastCompositionUnit = true;
+                if (unit != null)
+                {
+                    unit.IsLastCompositionUnit = true;
+                }
             }
 
             _nextUndoUnitIsFirstCompositionUnit = true;
@@ -1689,7 +1707,10 @@ namespace System.Windows.Documents
                 }
             }
 
-            _textservicesproperty?.OnLayoutUpdated();
+            if (_textservicesproperty != null)
+            {
+                _textservicesproperty.OnLayoutUpdated();
+            }
         }
 
         // Called as the selection changes.
@@ -1971,7 +1992,10 @@ namespace System.Windows.Documents
             //
             _nextUndoUnitIsFirstCompositionUnit = false;
             CompositionParentUndoUnit topUndoUnit = PeekCompositionParentUndoUnit();
-            topUndoUnit?.IsLastCompositionUnit = false;
+            if (null != topUndoUnit)
+            {
+                topUndoUnit.IsLastCompositionUnit = false;
+            }
 
             CompositionParentUndoUnit compositionUndoUnit = OpenCompositionUndoUnit(range.Start, range.End);
             UndoCloseAction undoCloseAction = UndoCloseAction.Rollback;
@@ -2089,8 +2113,17 @@ namespace System.Windows.Documents
         // The pointer to ITfDocumentMgr.
         internal UnsafeNativeMethods.ITfDocumentMgr DocumentManager
         {
-            get => _documentmanager;
-            set => _documentmanager = value;
+            get
+            {
+                if (_documentmanager == null)
+                {
+                    return null;
+                }
+
+                return _documentmanager.Value;
+            }
+
+            set { _documentmanager = new SecurityCriticalDataClass<UnsafeNativeMethods.ITfDocumentMgr>(value); }
         }
 
         // Cookie for ITfThreadFocusSink.
@@ -2382,7 +2415,10 @@ namespace System.Windows.Documents
                 }
                 finally
                 {
-                    undoManager?.IsImeSupportModeEnabled = wasImeSupportModeEnabled;
+                    if (undoManager != null)
+                    {
+                        undoManager.IsImeSupportModeEnabled = wasImeSupportModeEnabled;
+                    }
 
                     // The TextContainer will have changed when playing back the recorded events and thus we need to refresh the TextPointers.
                     _previousCompositionStart = (_previousCompositionStartOffset == -1) ? null : textEditor.TextContainer.CreatePointerAtOffset(_previousCompositionStartOffset, LogicalDirection.Backward);
@@ -2772,12 +2808,10 @@ namespace System.Windows.Documents
                         continue;
                 }
 
-                UnsafeNativeMethods.TS_ATTRVAL attrval = new UnsafeNativeMethods.TS_ATTRVAL
-                {
-                    attributeId = _supportingattributes[i].Guid,
-                    overlappedId = (int)_supportingattributes[i].Style,
-                    val = new NativeMethods.VARIANT()
-                };
+                UnsafeNativeMethods.TS_ATTRVAL attrval = new UnsafeNativeMethods.TS_ATTRVAL();
+                attrval.attributeId = _supportingattributes[i].Guid;
+                attrval.overlappedId = (int)_supportingattributes[i].Style;
+                attrval.val = new NativeMethods.VARIANT();
 
                 // This VARIANT is returned to the caller, which supposed to call VariantClear().
                 // GC does not have to clear it.
@@ -2788,13 +2822,13 @@ namespace System.Windows.Documents
                     case AttributeStyle.InputScope:
                         object obj = new InputScopeAttribute(inputScope);
                         attrval.val.vt = (short)NativeMethods.tagVT.VT_UNKNOWN;
-                        attrval.val.data1 = Marshal.GetIUnknownForObject(obj);
+                        attrval.val.data1.Value = Marshal.GetIUnknownForObject(obj);
                         break;
 
                     case AttributeStyle.Font_Style_Height:
                         // We always evaluate the font size and returns a value.
                         attrval.val.vt = (short)NativeMethods.tagVT.VT_I4;
-                        attrval.val.data1 = (IntPtr)(int)fontSize;
+                        attrval.val.data1.Value = (IntPtr)(int)fontSize;
                         break;
 
                     case AttributeStyle.Font_FaceName:
@@ -2803,24 +2837,24 @@ namespace System.Windows.Documents
                             if (familyName != null)
                             {
                                 attrval.val.vt = (short)NativeMethods.tagVT.VT_BSTR;
-                                attrval.val.data1 = Marshal.StringToBSTR(familyName);
+                                attrval.val.data1.Value = Marshal.StringToBSTR(familyName);
                             }
                         }
                         break;
 
                     case AttributeStyle.Font_SizePts:
                         attrval.val.vt = (short)NativeMethods.tagVT.VT_I4;
-                        attrval.val.data1 = (IntPtr)(int)(fontSize / 96.0 * 72.0);
+                        attrval.val.data1.Value = (IntPtr)(int)(fontSize / 96.0 * 72.0);
                         break;
 
                     case AttributeStyle.Text_ReadOnly:
                         attrval.val.vt = (short)NativeMethods.tagVT.VT_BOOL;
-                        attrval.val.data1 = IsReadOnly ? (IntPtr)1 : (IntPtr)0;
+                        attrval.val.data1.Value = IsReadOnly ? (IntPtr)1 : (IntPtr)0;
                         break;
 
                     case AttributeStyle.Text_Orientation:
                         attrval.val.vt = (short)NativeMethods.tagVT.VT_I4;
-                        attrval.val.data1 = (IntPtr)0;
+                        attrval.val.data1.Value = (IntPtr)0;
 
                         // Get the transformation that is relative from source.
                         PresentationSource source = null;
@@ -2855,7 +2889,7 @@ namespace System.Windows.Documents
                                         else
                                             angle = 360 - angleCos;
 
-                                        attrval.val.data1 = (IntPtr)((int)angle * 10);
+                                        attrval.val.data1.Value = (IntPtr)((int)angle * 10);
                                     }
                                 }
                             }
@@ -2867,7 +2901,7 @@ namespace System.Windows.Documents
                         //     the vertical writing is not supported yet
                         //
                         attrval.val.vt = (short)NativeMethods.tagVT.VT_BOOL;
-                        attrval.val.data1 = (IntPtr)0;
+                        attrval.val.data1.Value = (IntPtr)0;
                         break;
                 }
 
@@ -3043,7 +3077,7 @@ namespace System.Windows.Documents
 
             int i;
             bool eaten = false;
-            for (i = 0; (i < _mouseSinks.Count) && (!eaten); i++)
+            for (i = 0; (i < _mouseSinks.Count) && (eaten == false); i++)
             {
                 MouseSink mSink = (MouseSink)_mouseSinks[i];
 
@@ -3161,7 +3195,7 @@ namespace System.Windows.Documents
 
             // Scan the line range and compute the top and the height of the bounding rectangle.
             ITextPointer navigator = start.CreatePointer(LogicalDirection.Forward);
-            while (navigator.MoveToNextContextPosition(LogicalDirection.Forward) && navigator.CompareTo(end) < 0)
+            while (navigator.MoveToNextContextPosition(LogicalDirection.Forward) == true && navigator.CompareTo(end) < 0)
             {
                 TextPointerContext context = navigator.GetPointerContext(LogicalDirection.Backward);
                 switch (context)
@@ -3339,9 +3373,12 @@ namespace System.Windows.Documents
         {
             CompositionParentUndoUnit unit = PeekCompositionParentUndoUnit();
 
-            // We also put the caret at the end of the composition after
-            // redoing a composition undo.  So update the end position now.
-            unit?.RecordRedoSelectionState(caretPosition, caretPosition);
+            if (unit != null)
+            {
+                // We also put the caret at the end of the composition after
+                // redoing a composition undo.  So update the end position now.
+                unit.RecordRedoSelectionState(caretPosition, caretPosition);
+            }
         }
 
         // Repositions an ITextRange to comply with limitations on IME input.
@@ -4235,8 +4272,8 @@ namespace System.Windows.Documents
         {
             internal MouseSink(UnsafeNativeMethods.ITfRangeACP range, UnsafeNativeMethods.ITfMouseSink sink, int cookie)
             {
-                _range = range;
-                _sink = sink;
+                _range = new SecurityCriticalDataClass<UnsafeNativeMethods.ITfRangeACP>(range);
+                _sink = new SecurityCriticalDataClass<UnsafeNativeMethods.ITfMouseSink>(sink);
                 _cookie = cookie;
             }
 
@@ -4245,18 +4282,16 @@ namespace System.Windows.Documents
                 Invariant.Assert(!_locked);
 
                 // In case Dispose comes twice.
-                if (_range is not null)
+                if (_range != null)
                 {
-                    Marshal.ReleaseComObject(_range);
+                    Marshal.ReleaseComObject(_range.Value);
                     _range = null;
                 }
-
-                if (_sink is not null)
+                if (_sink != null)
                 {
-                    Marshal.ReleaseComObject(_sink);
+                    Marshal.ReleaseComObject(_sink.Value);
                     _sink = null;
                 }
-
                 _cookie = UnsafeNativeMethods.TF_INVALID_COOKIE;
                 GC.SuppressFinalize(this);
             }
@@ -4298,15 +4333,21 @@ namespace System.Windows.Documents
                 }
             }
 
-            internal UnsafeNativeMethods.ITfRangeACP Range => _range;
+            internal UnsafeNativeMethods.ITfRangeACP Range
+            {
+                get {return _range.Value;}
+            }
 
-            internal UnsafeNativeMethods.ITfMouseSink Sink => _sink;
+            internal UnsafeNativeMethods.ITfMouseSink Sink
+            {
+                get {return _sink.Value;}
+            }
 
             internal int Cookie {get{return _cookie;}}
 
-            private UnsafeNativeMethods.ITfRangeACP _range;
+            private SecurityCriticalDataClass<UnsafeNativeMethods.ITfRangeACP> _range;
 
-            private UnsafeNativeMethods.ITfMouseSink _sink;
+            private SecurityCriticalDataClass<UnsafeNativeMethods.ITfMouseSink> _sink;
 
             private int _cookie;
 
@@ -4548,7 +4589,7 @@ namespace System.Windows.Documents
         private const int _viewCookie = 0;
 
         // The TSF document object.  This is a native resource.
-        private UnsafeNativeMethods.ITfDocumentMgr _documentmanager;
+        private SecurityCriticalDataClass<UnsafeNativeMethods.ITfDocumentMgr> _documentmanager;
 
         // The ITfThreadFocusSink cookie.
         private int _threadFocusCookie;
@@ -4646,28 +4687,26 @@ namespace System.Windows.Documents
         {
             #region static members
 
-            private const int s_CtfFormatVersion = 1;   // Format of output file
-            private const int s_MaxTraceRecords = 3000;    // max length of in-memory _traceList
-            private const int s_MinTraceRecords = 500;     // keep this many records after flushing
+            const int s_CtfFormatVersion = 1;   // Format of output file
+            const int s_MaxTraceRecords = 3000;    // max length of in-memory _traceList
+            const int s_MinTraceRecords = 500;     // keep this many records after flushing
 
-            private static string _targetName;
+            static string _targetName;
             static IMECompositionTracer()
             {
                 _targetName = FrameworkCompatibilityPreferences.GetIMECompositionTraceTarget();
                 _flushDepth = 0;
 
-                string trace = FrameworkCompatibilityPreferences.GetIMECompositionTraceFile();
-                if (!string.IsNullOrEmpty(trace))
+                string s = FrameworkCompatibilityPreferences.GetIMECompositionTraceFile();
+                if (!String.IsNullOrEmpty(s))
                 {
-                    Span<Range> splitRegions = stackalloc Range[3];
-                    ReadOnlySpan<char> traceSplits = trace.AsSpan();
-                    int regionsLength = traceSplits.Split(splitRegions, ';');
+                    string[] a = s.Split(';');
+                    _fileName = a[0];
 
-                    _fileName = traceSplits[splitRegions[0]].ToString();
-
-                    if (regionsLength > 1)
+                    if (a.Length > 1)
                     {
-                        if (int.TryParse(traceSplits[splitRegions[1]], NumberStyles.Integer, CultureInfo.InvariantCulture, out int flushDepth))
+                        int flushDepth;
+                        if (Int32.TryParse(a[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out flushDepth))
                         {
                             _flushDepth = flushDepth;
                         }
@@ -4695,7 +4734,7 @@ namespace System.Windows.Documents
                 }
             }
 
-            private static bool _isEnabled;
+            static bool _isEnabled;
             internal static bool IsEnabled { get { return _isEnabled; } }
 
             // for use from VS Immediate window
@@ -4722,8 +4761,8 @@ namespace System.Windows.Documents
                 return (target == o);
             }
 
-            private static string _fileName;
-            private static int _flushDepth;
+            static string _fileName;
+            static int _flushDepth;
 
             // for use from VS Immediate window
             internal static void Flush()
@@ -4738,7 +4777,7 @@ namespace System.Windows.Documents
             }
 
             // for use from VS Immediate window
-            internal static void Mark(params ReadOnlySpan<object> args)
+            internal static void Mark(params object[] args)
             {
                 IMECompositionTraceRecord record = new IMECompositionTraceRecord(IMECompositionTraceOp.Mark, BuildDetail(args));
                 lock (s_TargetToTraceListMap)
@@ -4790,7 +4829,7 @@ namespace System.Windows.Documents
                 return (cti != null && cti.IMECompositionTracer != null);
             }
 
-            internal static void Trace(TextStore textStore, IMECompositionTraceOp op, params ReadOnlySpan<object> args)
+            internal static void Trace(TextStore textStore, IMECompositionTraceOp op, params object[] args)
             {
                 IMECompositionTracingInfo cti = IMECompositionTracingInfoField.GetValue(textStore.UiScope);
                 IMECompositionTracer tracer = cti.IMECompositionTracer;
@@ -4833,12 +4872,16 @@ namespace System.Windows.Documents
                 return sb.ToString();
             }
 
-            private static string BuildDetail(ReadOnlySpan<object> args)
+            private static string BuildDetail(object[] args)
             {
-                return args.IsEmpty ? string.Empty : string.Format(CultureInfo.InvariantCulture, s_format[args.Length], args);
+                int length = (args != null) ? args.Length : 0;
+                if (length == 0)
+                    return String.Empty;
+                else
+                    return String.Format(CultureInfo.InvariantCulture, s_format[length], args);
             }
 
-            private static readonly string[] s_format = new string[] {
+            private static string[] s_format = new string[] {
                 "",
                 "{0}",
                 "{0} {1}",
@@ -4873,7 +4916,7 @@ namespace System.Windows.Documents
             }
 
             // when app shuts down, flush pending info to the file
-            private static void OnApplicationExit(object sender, ExitEventArgs e)
+            static void OnApplicationExit(object sender, ExitEventArgs e)
             {
                 Application app = sender as Application;
                 if (app != null)
@@ -4885,7 +4928,7 @@ namespace System.Windows.Documents
             }
 
             // in case of unhandled exception, flush pending info to the file
-            private static void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+            static void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
             {
                 Application app = sender as Application;
                 if (app != null)
@@ -4903,7 +4946,7 @@ namespace System.Windows.Documents
                 AddTrace(textStore, IMECompositionTraceOp.ID, _nullInfo, DisplayType(uiScope));
             }
 
-            private void AddTrace(TextStore textStore, IMECompositionTraceOp op, IMECompositionTracingInfo cti, params ReadOnlySpan<object> args)
+            private void AddTrace(TextStore textStore, IMECompositionTraceOp op, IMECompositionTracingInfo cti, params object[] args)
             {
                 // pop a E* op from the stack
                 if (IMECompositionTraceOp.FirstEndOp <= op && _opStack.Count > 0)
@@ -4946,7 +4989,7 @@ namespace System.Windows.Documents
                 = new List<Tuple<WeakReference<FrameworkElement>,TraceList>>();
             private static int s_seqno;
 
-            private static TraceList TraceListForUiScope(FrameworkElement target)
+            static TraceList TraceListForUiScope(FrameworkElement target)
             {
                 TraceList traceList = null;
 
@@ -5010,7 +5053,7 @@ namespace System.Windows.Documents
             }
 
             // Must be called under "lock (s_TargetToTraceListMap)"
-            private static void CloseAllTraceLists()
+            static void CloseAllTraceLists()
             {
                 for (int i=0, n=s_TargetToTraceListMap.Count; i<n; ++i)
                 {
@@ -5123,7 +5166,7 @@ namespace System.Windows.Documents
             }
         }
 
-        private static readonly UncommonField<IMECompositionTracingInfo>
+        static readonly UncommonField<IMECompositionTracingInfo>
             IMECompositionTracingInfoField = new UncommonField<IMECompositionTracingInfo>();
 
         #endregion IMECompositionTracingInfo

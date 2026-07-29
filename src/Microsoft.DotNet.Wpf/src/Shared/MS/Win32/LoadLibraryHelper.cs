@@ -1,13 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System;
-using System.Runtime.InteropServices;
+// See the LICENSE file in the project root for more information.
 
 // Description: Helper class for calling LoadLibrary using SEARCH_SYSTEM32 when possible
 
 namespace MS.Win32
 {
+    using System;
+    using System.Security;
+    using System.Runtime.InteropServices;
+
+
+
     internal static class LoadLibraryHelper
     {
         /// <summary>

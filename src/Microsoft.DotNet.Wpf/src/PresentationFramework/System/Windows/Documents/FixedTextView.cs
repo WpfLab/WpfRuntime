@@ -1,13 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal.Documents;
-using System.Collections;
-using System.Collections.ObjectModel;
-using System.Windows.Controls;
-using System.Windows.Shapes;
-using System.Windows.Media;
-using System.Windows.Media.TextFormatting;  // CharacterHit
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: TextView implementation for FixedDocument.
@@ -15,6 +8,22 @@ using System.Windows.Media.TextFormatting;  // CharacterHit
 
 namespace System.Windows.Documents
 {
+    using MS.Internal;
+    using MS.Internal.Documents;
+    using MS.Internal.Media;
+    using MS.Utility;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
+    using System.Windows.Documents;
+    using System.Windows.Controls;
+    using System.Windows.Shapes;
+    using System.Windows.Media;
+    using System.Windows.Media.TextFormatting;  // CharacterHit
+    using System;
+
+
     /// <summary>
     /// TextView for each individual FixedDocumentPage
     /// </summary>
@@ -91,13 +100,15 @@ namespace System.Windows.Documents
                 {
                     pos = _CreateTextPointerFromGlyphs(g, point);
                 }
-                else if (e is Image im)
+                else if (e is Image)
                 {
+                    Image im = (Image)e;
                     FixedPosition fixedp = new FixedPosition(this.FixedPage.CreateFixedNode(this.PageIndex, im), 0);
                     pos = _CreateTextPointer(fixedp, LogicalDirection.Forward);
                 }
-                else if (e is Path p)
+                else if (e is Path)
                 {
+                    Path p = (Path)e;
                     if (p.Fill is ImageBrush)
                     {
                         FixedPosition fixedp = new FixedPosition(this.FixedPage.CreateFixedNode(this.PageIndex, p), 0);
@@ -193,15 +204,17 @@ namespace System.Windows.Documents
             }
 
             DependencyObject element = this.FixedPage.GetElement(fixedp.Node);
-            if (element is Glyphs g)
+            if (element is Glyphs)
             {
+                Glyphs g = (Glyphs)element;
                 designRect = _GetGlyphRunDesignRect(g, fixedp.Offset, fixedp.Offset);
                 // need to do transform
                 GeneralTransform tran = g.TransformToAncestor(this.FixedPage);
                 designRect = _GetTransformedCaretRect(tran, designRect.TopLeft, designRect.Height);
             }
-            else if (element is Image image)
+            else if (element is Image)
             {
+                Image image = (Image)element;
                 GeneralTransform tran = image.TransformToAncestor(this.FixedPage);
                 Point offset = new Point(0, 0);
                 if (fixedp.Offset > 0)
@@ -210,8 +223,9 @@ namespace System.Windows.Documents
                 }
                 designRect = _GetTransformedCaretRect(tran, offset, image.ActualHeight);
             }
-            else if (element is Path path)
+            else if (element is Path)
             {
+                Path path = (Path)element;
                 GeneralTransform tran = path.TransformToAncestor(this.FixedPage);
                 Rect bounds = path.Data.Bounds;
                 Point offset = bounds.TopLeft;
@@ -275,10 +289,8 @@ namespace System.Windows.Documents
                         backgroundRect.Intersect(clipRect);
                     }
 
-                    Geometry thisGeometry = new RectangleGeometry(backgroundRect)
-                    {
-                        Transform = t
-                    };
+                    Geometry thisGeometry = new RectangleGeometry(backgroundRect);
+                    thisGeometry.Transform = t;
 
                     backgroundRect = transform.TransformBounds(backgroundRect);
 
@@ -436,8 +448,9 @@ namespace System.Windows.Documents
             if (_GetFixedPosition(ftp, out fixedp))
             {
                 DependencyObject element = this.FixedPage.GetElement(fixedp.Node);
-                if (element is Glyphs g)
+                if (element is Glyphs)
                 {
+                    Glyphs g = (Glyphs)element;
                     int characterCount = (g.UnicodeString == null ? 0 : g.UnicodeString.Length);
                     if (fixedp.Offset == characterCount)
                     {   //end of line -- allow caret
@@ -506,8 +519,9 @@ namespace System.Windows.Documents
             if (_GetFixedPosition(ftp, out fixedp))
             {
                 DependencyObject element = this.FixedPage.GetElement(fixedp.Node);
-                if (element is Glyphs g)
+                if (element is Glyphs)
                 {
+                    Glyphs g = (Glyphs)element;
                     GlyphRun run = g.ToGlyphRun();
 
                     int characterCount = (run.Characters == null) ? 0 : run.Characters.Count;
@@ -764,7 +778,7 @@ namespace System.Windows.Documents
             e = null;
 
             HitTestResult result = VisualTreeHelper.HitTest(this.FixedPage, pt);
-            DependencyObject v = result?.VisualHit;
+            DependencyObject v = (result != null) ? result.VisualHit : null;
 
             while (v != null)
             {
@@ -822,7 +836,10 @@ namespace System.Windows.Documents
                     Glyphs startGlyphs = this.FixedPage.GetGlyphsElement(node);
                     GeneralTransform tranToGlyphs = this.FixedPage.TransformToDescendant(startGlyphs);
                     Point transformedPt = point;
-                    tranToGlyphs?.TryTransform(transformedPt, out transformedPt);
+                    if (tranToGlyphs != null)
+                    {
+                        tranToGlyphs.TryTransform(transformedPt, out transformedPt);
+                    }
 
                     GlyphRun run = startGlyphs.ToGlyphRun();
                     Rect alignmentRect = run.ComputeAlignmentBox();
@@ -1175,7 +1192,10 @@ namespace System.Windows.Documents
         private ITextPointer _CreateTextPointerFromGlyphs(Glyphs g, Point point)
         {
             GeneralTransform transform = this.VisualRoot.TransformToDescendant(g);
-            transform?.TryTransform(point, out point);
+            if (transform != null)
+            {
+                transform.TryTransform(point, out point);
+            }
 
             int charIndex;
             LogicalDirection edge;

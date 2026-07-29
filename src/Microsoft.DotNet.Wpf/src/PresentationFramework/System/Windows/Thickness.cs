@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Contains the Thickness (double x4) value type. 
@@ -69,8 +70,9 @@ namespace System.Windows
         /// <returns>True if object is a Thickness and all sides of it are equal to this Thickness'.</returns>
         public override bool Equals(object obj)
         {
-            if (obj is Thickness otherObj)
+            if (obj is Thickness)
             {
+                Thickness otherObj = (Thickness)obj;
                 return (this == otherObj);
             }
             return (false);
@@ -93,7 +95,7 @@ namespace System.Windows
         /// <returns>Hash code</returns>
         public override int GetHashCode()
         {
-            return System.HashCode.Combine(_Left, _Top, _Right, _Bottom);
+            return _Left.GetHashCode() ^ _Top.GetHashCode() ^ _Right.GetHashCode() ^ _Bottom.GetHashCode();
         }
 
         /// <summary>
@@ -200,7 +202,7 @@ namespace System.Windows
         /// <param name='thickness0'>The first thickness to compare</param>
         /// <param name='thickness1'>The second thickness to compare</param>
         /// <returns>Whether or not the two thicknesses are equal</returns>
-        internal static bool AreClose(Thickness thickness0, Thickness thickness1)
+        static internal bool AreClose(Thickness thickness0, Thickness thickness1)
         {
             return thickness0.IsClose(thickness1);
         }

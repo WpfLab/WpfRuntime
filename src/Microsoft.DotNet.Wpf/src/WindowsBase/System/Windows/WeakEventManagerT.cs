@@ -1,12 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 // Description: Generic weak event manager.
 //
 
+using System;
 using System.Reflection;
+using MS.Internal.WindowsBase;
 
 namespace System.Windows
 {
@@ -43,7 +46,8 @@ namespace System.Windows
         /// </summary>
         public static void AddHandler(TEventSource source, string eventName, EventHandler<TEventArgs> handler)
         {
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+                throw new ArgumentNullException("handler");
 
             CurrentManager(eventName).ProtectedAddHandler(source, handler);
         }
@@ -53,7 +57,8 @@ namespace System.Windows
         /// </summary>
         public static void RemoveHandler(TEventSource source, string eventName, EventHandler<TEventArgs> handler)
         {
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+                throw new ArgumentNullException("handler");
 
             CurrentManager(eventName).ProtectedRemoveHandler(source, handler);
         }
@@ -118,9 +123,9 @@ namespace System.Windows
 
         #region Private Data
 
-        private Delegate _handler;
-        private string _eventName;
-        private EventInfo _eventInfo;
+        Delegate _handler;
+        string _eventName;
+        EventInfo _eventInfo;
 
         #endregion Private Data
     }

@@ -4,13 +4,16 @@
     <PackageId>System.Printing-ref</PackageId>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetOutputRelPath>$(TargetGroup)-$(PackageId)/</TargetOutputRelPath>
-    <Platforms>AnyCPU</Platforms>
+    <Platforms>AnyCPU;x64;arm64</Platforms>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
   <PropertyGroup>
+    
     <EnableDefaultItems>false</EnableDefaultItems>
+    <WpfBridgePlatform Condition="'$(Platform)' == 'AnyCPU'">x64</WpfBridgePlatform>
+    <WpfBridgePlatform Condition="'$(WpfBridgePlatform)' == ''">$(Platform)</WpfBridgePlatform>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,16 +23,54 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(WpfSourceDir)PresentationCore\ref\PresentationCore-ref.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)System.Xaml\ref\System.Xaml-ref.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)WindowsBase\ref\WindowsBase-ref.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationProvider\ref\UIAutomationProvider-ref.csproj" />
-    <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationTypes\ref\UIAutomationTypes-ref.csproj" />
+    <NetCoreReference Include="System.Collections" />
+    <NetCoreReference Include="System.Collections.Specialized" />
+    <NetCoreReference Include="System.ComponentModel" />
+    <NetCoreReference Include="System.ComponentModel.EventBasedAsync" />
+    <NetCoreReference Include="System.ComponentModel.Primitives" />
+    <NetCoreReference Include="System.ComponentModel.TypeConverter" />
+    <NetCoreReference Include="System.Net.Primitives" />
+    <NetCoreReference Include="System.Net.Requests" />
+    <NetCoreReference Include="System.Net.WebHeaderCollection" />
+    <NetCoreReference Include="System.ObjectModel" />
+    <NetCoreReference Include="System.Runtime" />
+    <NetCoreReference Include="System.Resources.ResourceManager" />
+    <NetCoreReference Include="System.Runtime.Extensions" />
+    <NetCoreReference Include="System.Runtime.InteropServices" />
+    <NetCoreReference Include="System.Security.Cryptography.X509Certificates" />
+    <NetCoreReference Include="System.Threading.Thread" />
+    <NetCoreReference Include="System.Xml" />
+    <NetCoreReference Include="System.Xml.Document" />
+    <NetCoreReference Include="System.Xml.ReaderWriter" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj" />
-    <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-System.Printing-api-cycle.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationCore\PresentationCore.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)WindowsBase\WindowsBase.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationProvider\UIAutomationProvider.csproj" />
+    <ProjectReference Include="$(WpfSourceDir)UIAutomation\UIAutomationTypes\UIAutomationTypes.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj"
+                      AdditionalProperties="Platform=$(WpfNativePlatform)"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+    <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-System.Printing-api-cycle.csproj"
+                      AdditionalProperties="Platform=$(WpfNativePlatform)"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+    <Reference Include="PresentationFramework"
+               HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\bin\PresentationFramework-System.Printing-api-cycle\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\PresentationFramework.dll"
+               SpecificVersion="false"
+               ExternallyResolved="true"
+               Private="false" />
+    <Reference Include="ReachFramework"
+               HintPath="$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\obj\ReachFramework-System.Printing-api-cycle\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\ref\ReachFramework.dll"
+               SpecificVersion="false"
+               ExternallyResolved="true"
+               Private="false" />
   </ItemGroup>
 
 </Project>

@@ -1,10 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+/***************************************************************************\
+*
+*
+*  TargetType property setting class.
+*
+*
+\***************************************************************************/
+using System;
 using System.ComponentModel;
 using System.Windows.Markup;
 using System.Windows.Data;
 using System.Globalization;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows
 {
@@ -246,7 +257,7 @@ namespace System.Windows
             Setter setter = targetObject as Setter;
             if (setter == null)
             {
-                throw new ArgumentNullException(nameof(targetObject));
+                throw new ArgumentNullException("targetObject");
             }
             ArgumentNullException.ThrowIfNull(eventArgs);
 

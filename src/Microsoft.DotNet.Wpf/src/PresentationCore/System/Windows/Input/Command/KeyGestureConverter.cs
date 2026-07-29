@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -7,8 +8,14 @@
 // Description: KeyGestureConverter - Converts a KeyGesture string
 //              to the *Type* that the string represents
 //
+using System;
 using System.ComponentModel;    // for TypeConverter
 using System.Globalization;     // for CultureInfo
+using System.Reflection;
+using MS.Internal;
+using System.Windows;
+using System.Windows.Input;
+using MS.Utility;
 
 namespace System.Windows.Input
 {
@@ -134,7 +141,8 @@ namespace System.Windows.Input
         /// <returns></returns>
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            ArgumentNullException.ThrowIfNull(destinationType);
+            if (destinationType == null)
+                throw new ArgumentNullException("destinationType");
 
             if (destinationType == typeof(string))
             {

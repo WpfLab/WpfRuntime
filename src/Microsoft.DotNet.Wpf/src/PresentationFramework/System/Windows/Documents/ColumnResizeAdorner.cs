@@ -1,12 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // 
 //
 // Description: Adorner for column resize.
 // 
 
+using System;
+using System.Diagnostics;
+using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using MS.Win32;
+using MS.Internal;
 
 namespace System.Windows.Documents.Internal
 {
@@ -133,7 +142,10 @@ namespace System.Windows.Documents.Internal
 
             _adornerLayer = AdornerLayer.GetAdornerLayer(renderScope);
 
-            _adornerLayer?.Add(this);
+            if (_adornerLayer != null)
+            {
+                _adornerLayer.Add(this);
+            }
 
             _x = xPos;
             _top = yPos;
@@ -142,8 +154,11 @@ namespace System.Windows.Documents.Internal
 
         internal void Uninitialize()
         {
-            _adornerLayer?.Remove(this);
-            _adornerLayer = null;
+            if (_adornerLayer != null)
+            {
+                _adornerLayer.Remove(this);
+                _adornerLayer = null;
+            }
         }
 
         #endregion Internal methods

@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Collections;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Implements Fixed/Flow structural mapping
@@ -9,6 +8,14 @@ using System.Collections;
 
 namespace System.Windows.Documents
 {
+    using MS.Internal.Documents;
+    using System;
+    using System.Diagnostics;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Text;
+
     //--------------------------------------------------------------------
     //
     // Internal Enums
@@ -405,8 +412,8 @@ namespace System.Windows.Documents
         private FlowNode  _flowEnd;             // End FlowNode for the flow document.  It flows as new FlowNode gets inserted
 
         // immutable fixed nodes
-        private static readonly FixedNode s_FixedStart = FixedNode.Create(FixedOrderStartPage, 1, FixedOrderStartVisual, -1, null);
-        private static readonly FixedNode s_FixedEnd   = FixedNode.Create(FixedOrderEndPage, 1, FixedOrderEndVisual, -1,  null);
+        private readonly static FixedNode s_FixedStart = FixedNode.Create(FixedOrderStartPage, 1, FixedOrderStartVisual, -1, null);
+        private readonly static FixedNode s_FixedEnd   = FixedNode.Create(FixedOrderEndPage, 1, FixedOrderEndVisual, -1,  null);
         private Hashtable _mapping;
         private FixedNode _cachedFixedNode;
         private List<FixedSOMElement> _cachedEntry;

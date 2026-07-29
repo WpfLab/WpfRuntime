@@ -1,16 +1,25 @@
-ï»¿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: DocumentPage representing bottomless of finite page of
 //              a PTS host (FlowDocument).
 //
 
+using System;
+using System.IO;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections;
+using System.Diagnostics;
 using System.Threading;
+using System.Security;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Documents;
+using System.Windows.Threading;         // Dispatcher
 using MS.Internal.Documents;
 using MS.Internal.Text;
 
@@ -291,7 +300,7 @@ namespace MS.Internal.PtsHost
                     ie = _ptsPage.InputHitTest(point);
                 }
             }
-            return ie ?? _structuralCache.FormattingOwner as IInputElement;
+            return (ie != null) ? ie : _structuralCache.FormattingOwner as IInputElement;
         }
 
         /// <summary>
@@ -366,7 +375,7 @@ namespace MS.Internal.PtsHost
                 else
                 {
                     // Return empty collection
-                    return new HostedElements(ReadOnlyCollection<TextSegment>.Empty);
+                    return new HostedElements(new ReadOnlyCollection<TextSegment>(new List<TextSegment>(0)));
                 }
             }
         }
@@ -391,7 +400,7 @@ namespace MS.Internal.PtsHost
         }
 
         /// <summary>
-        /// Called when a UIElement-derived class which is hosted by a IContentHost changes itâ€™s DesiredSize
+        /// Called when a UIElement-derived class which is hosted by a IContentHost changes it’s DesiredSize
         /// </summary>
         /// <param name="child">
         /// Child element whose DesiredSize has changed
@@ -571,7 +580,7 @@ namespace MS.Internal.PtsHost
 
             if (trackDetails.cParas == 0)
             {
-                return ReadOnlyCollection<ParagraphResult>.Empty;
+                return new ReadOnlyCollection<ParagraphResult>(new List<ParagraphResult>(0));
             }
 
             PTS.FSPARADESCRIPTION[] arrayParaDesc;
@@ -676,7 +685,7 @@ namespace MS.Internal.PtsHost
         //-------------------------------------------------------------------
         // Is this page already disposed?
         //-------------------------------------------------------------------
-        internal bool IsDisposed { get { return _disposed || _structuralCache.PtsContext.Disposed; } }
+        internal bool IsDisposed { get { return (_disposed != 0) || _structuralCache.PtsContext.Disposed; } }
 
         //-------------------------------------------------------------------
         // Size of content on page.
@@ -797,7 +806,7 @@ namespace MS.Internal.PtsHost
         private void Dispose(bool disposing)
         {
             // Do actual dispose only once.
-            if (!Interlocked.CompareExchange(ref _disposed, true, false))
+            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 0)
             {
                 if (disposing)
                 {
@@ -816,7 +825,10 @@ namespace MS.Internal.PtsHost
                     }
 
                     // Dispose PTS page
-                    _ptsPage?.Dispose();
+                    if (_ptsPage != null)
+                    {
+                        _ptsPage.Dispose();
+                    }
                 }
                 try
                 {
@@ -892,7 +904,10 @@ namespace MS.Internal.PtsHost
         //-------------------------------------------------------------------
         private void OnAfterFormatPage()
         {
-            _textView?.Invalidate();
+            if (_textView != null)
+            {
+                _textView.Invalidate();
+            }
             _visualNeedsUpdate = true;
         }
 
@@ -917,7 +932,7 @@ namespace MS.Internal.PtsHost
             Debug.Assert(e != null);
 
             // Validate that this function is only called when a TextContainer exists as complex content
-            Debug.Assert(_structuralCache.TextContainer is not null);
+            Debug.Assert(_structuralCache.TextContainer is TextContainer);
 
             TextPointer elementPosition = null;
 
@@ -934,8 +949,8 @@ namespace MS.Internal.PtsHost
             else
             {
                 // Else: search for e in the complex content
-                if (!(_structuralCache.TextContainer.Start is not null) ||
-                    !(_structuralCache.TextContainer.End is not null))
+                if (!(_structuralCache.TextContainer.Start is TextPointer) ||
+                    !(_structuralCache.TextContainer.End is TextPointer))
                 {
                     // Invalid TextContainer, don't search
                     return null;
@@ -1022,7 +1037,10 @@ namespace MS.Internal.PtsHost
         /// </summary>
         private void ValidateTextView()
         {
-            _textView?.OnUpdated();
+            if (_textView != null)
+            {
+                _textView.OnUpdated();
+            }
         }
 
         /// <summary>
@@ -1097,7 +1115,7 @@ namespace MS.Internal.PtsHost
         //-------------------------------------------------------------------
         // Is it already disposed?
         //-------------------------------------------------------------------
-        private bool _disposed;
+        private int _disposed;
 
         //-------------------------------------------------------------------
         // Max of dcpDepend for page
@@ -1202,7 +1220,7 @@ namespace MS.Internal.PtsHost
         }
 
         /// <summary>
-        /// Called when a UIElement-derived class which is hosted by a IContentHost changes itâ€™s DesiredSize
+        /// Called when a UIElement-derived class which is hosted by a IContentHost changes it’s DesiredSize
         /// </summary>
         /// <param name="child">
         /// Child element whose DesiredSize has changed

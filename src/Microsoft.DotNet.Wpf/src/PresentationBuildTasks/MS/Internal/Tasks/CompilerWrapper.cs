@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //----------------------------------------------------------------------------------------
 //
@@ -17,6 +18,10 @@
 using System;
 using System.IO;
 using System.Collections;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+using MS.Internal.Markup;
 using Microsoft.Build.Utilities;
 using Microsoft.Build.Framework;
 using MS.Internal.Tasks;
@@ -222,14 +227,12 @@ namespace MS.Internal
         {
             bool ret = true;
 
-            CompilationUnit compUnit = new CompilationUnit(assemblyName, language, rootNamespace, fileList)
-            {
-                Pass2 = isSecondPass,
+            CompilationUnit compUnit = new CompilationUnit(assemblyName, language, rootNamespace, fileList);
+            compUnit.Pass2 = isSecondPass;
 
-                // Set some properties required by the CompilationUnit
-                ApplicationFile = _applicationMarkup,
-                SourcePath = _sourceDir
-            };
+            // Set some properties required by the CompilationUnit
+            compUnit.ApplicationFile = _applicationMarkup;
+            compUnit.SourcePath = _sourceDir;
 
             //Set the properties required by MarkupCompiler
 
@@ -254,9 +257,11 @@ namespace MS.Internal
             {
                 for (int i = 0; i < _mc.ReferenceAssemblyList.Count; i++)
                 {
-                    if (_mc.ReferenceAssemblyList[i] is ReferenceAssembly asmReference)
+                    ReferenceAssembly asmReference = _mc.ReferenceAssemblyList[i] as ReferenceAssembly;
+
+                    if (asmReference != null)
                     {
-                        if (string.Equals(asmReference.AssemblyName, assemblyName, StringComparison.OrdinalIgnoreCase))
+                        if (String.Compare(asmReference.AssemblyName, assemblyName, StringComparison.OrdinalIgnoreCase) == 0)
                         {
                             // Set the local assembly file to markupCompiler
                             _mc.LocalAssemblyFile = asmReference;

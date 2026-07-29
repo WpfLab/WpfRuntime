@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Implementation of ObjectDataProvider object.
@@ -7,13 +8,18 @@
 // Specs:       Avalon DataProviders.mht
 //
 
+using System;
 using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Threading;
 using System.Threading;
+using System.Windows;
+using System.Windows.Data;
 using MS.Internal;
 using MS.Internal.Data; // ParameterCollection
+using System.Windows.Markup;
 
 //---------------------------------------------------------------------------
 // Design notes:
@@ -141,7 +147,7 @@ namespace System.Windows.Data
         {
             get
             {
-                 return _instanceProvider ?? _objectInstance;
+                 return (_instanceProvider != null) ? _instanceProvider : _objectInstance;
             }
             set
             {
@@ -350,7 +356,7 @@ namespace System.Windows.Data
             _objectInstance = value;
 
             // set the objectType by looking at the new value
-            SetObjectType(value?.GetType());
+            SetObjectType((value != null) ? value.GetType() : null);
 
             // raise this change event AFTER both oType and oInstance are updated
             OnPropertyChanged(s_instance);
@@ -371,7 +377,7 @@ namespace System.Windows.Data
             return false;
         }
 
-        private void QueryWorker(object obj)
+        void QueryWorker(object obj)
         {
             object      data    = null;
             Exception   e       = null; // exception to pass back to main thread
@@ -429,11 +435,19 @@ namespace System.Windows.Data
             OnQueryFinished(data, e, null, null);
         }
 
-        private object CreateObjectInstance(out Exception e)
+        object CreateObjectInstance(out Exception e)
         {
             object  instance = null;
             string  error   = null; // string that describes known error
             e = null;
+
+            // PreSharp uses message numbers that the C# compiler doesn't know about.
+            // Disable the C# complaints, per the PreSharp documentation.
+            #pragma warning disable 1634, 1691
+
+            // PreSharp complains about catching NullReference (and other) exceptions.
+            // It doesn't recognize that IsCritical[Application]Exception() handles these correctly.
+            #pragma warning disable 56500
 
             Debug.Assert(_objectType != null);
 
@@ -480,6 +494,9 @@ namespace System.Windows.Data
                 e = new InvalidOperationException(SR.Format(SR.ObjectDataProviderNonCLSException, _objectType.Name));
             }
 
+            #pragma warning restore 56500
+            #pragma warning restore 1634, 1691
+
             if (e != null || error != null)
             {
                 // report known errors through TraceData (instead of throwing exceptions)
@@ -499,7 +516,7 @@ namespace System.Windows.Data
             return instance;
         }
 
-        private object InvokeMethodOnInstance(out Exception e)
+        object InvokeMethodOnInstance(out Exception e)
         {
             object  data = null;
             string  error   = null; // string that describes known error
@@ -509,6 +526,14 @@ namespace System.Windows.Data
 
             object[] parameters = new object[_methodParameters.Count];
             _methodParameters.CopyTo(parameters, 0);
+
+            // PreSharp uses message numbers that the C# compiler doesn't know about.
+            // Disable the C# complaints, per the PreSharp documentation.
+            #pragma warning disable 1634, 1691
+
+            // PreSharp complains about catching NullReference (and other) exceptions.
+            // It doesn't recognize that IsCritical[Application]Exception() handles these correctly.
+            #pragma warning disable 56500
 
             try
             {
@@ -558,6 +583,9 @@ namespace System.Windows.Data
                 error = null;   // indicate unknown error
                 e = new InvalidOperationException(SR.Format(SR.ObjectDataProviderNonCLSExceptionInvoke, MethodName, _objectType.Name));
             }
+
+            #pragma warning restore 56500
+            #pragma warning restore 1634, 1691
 
             if (e != null || error != null)
             {
@@ -645,24 +673,24 @@ namespace System.Windows.Data
 
         #region Private Fields
 
-        private Type _objectType;
-        private object _objectInstance;
-        private string _methodName;
-        private DataSourceProvider _instanceProvider;
-        private ParameterCollection _constructorParameters;
-        private ParameterCollection _methodParameters;
-        private bool _isAsynchronous = false;
+        Type _objectType;
+        object _objectInstance;
+        string _methodName;
+        DataSourceProvider _instanceProvider;
+        ParameterCollection _constructorParameters;
+        ParameterCollection _methodParameters;
+        bool _isAsynchronous = false;
 
-        private SourceMode _mode = SourceMode.NoSource;
-        private bool _needNewInstance = true;   // set to true when ObjectType or ConstructorParameters change
+        SourceMode _mode = SourceMode.NoSource;
+        bool _needNewInstance = true;   // set to true when ObjectType or ConstructorParameters change
 
-        private EventHandler _sourceDataChangedHandler;
+        EventHandler _sourceDataChangedHandler;
 
-        private const string s_instance = "ObjectInstance";
-        private const string s_type = "ObjectType";
-        private const string s_method = "MethodName";
-        private const string s_async = "IsAsynchronous";
-        private const BindingFlags s_invokeMethodFlags =
+        const string s_instance = "ObjectInstance";
+        const string s_type = "ObjectType";
+        const string s_method = "MethodName";
+        const string s_async = "IsAsynchronous";
+        const BindingFlags s_invokeMethodFlags =
                             BindingFlags.Public |
                             BindingFlags.Instance |
                             BindingFlags.Static |

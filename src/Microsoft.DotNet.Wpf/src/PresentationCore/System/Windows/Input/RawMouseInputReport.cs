@@ -1,7 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Windows.Input
+using System.Windows.Media; 
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;
+using MS.Win32;
+using System;
+
+namespace System.Windows.Input 
 {
     /// <summary>
     ///     The RawMouseInputReport class encapsulates the raw input provided
@@ -12,6 +20,7 @@ namespace System.Windows.Input
     ///     blittable types.  This is required so that the report can be
     ///     marshalled across application domains.
     /// </remarks>
+    [FriendAccessAllowed]
     internal class RawMouseInputReport : InputReport
     {
         /// <summary>
@@ -59,7 +68,7 @@ namespace System.Windows.Input
             _x = x;
             _y = y;
             _wheel = wheel;
-            _extraInformation = extraInformation;
+            _extraInformation = new SecurityCriticalData<IntPtr>(extraInformation);
         }
 
         /// <summary>
@@ -86,7 +95,13 @@ namespace System.Windows.Input
         ///     Read-only access to the extra information was provided along
         ///     with the input.
         /// </summary>
-        public IntPtr ExtraInformation => _extraInformation;
+        public IntPtr ExtraInformation 
+        {
+            get 
+            {
+                return _extraInformation.Value;
+            }
+        }
 
         // IsValid Method for RawMouseActions. Relies on the enum being flags.
         internal static bool IsValidRawMouseActions(RawMouseActions actions)
@@ -125,6 +140,6 @@ namespace System.Windows.Input
         
         internal bool _isSynchronize; // Set from MouseDevice.Synchronize.
         
-        private readonly IntPtr _extraInformation;
+        private SecurityCriticalData<IntPtr> _extraInformation;
     }    
 }

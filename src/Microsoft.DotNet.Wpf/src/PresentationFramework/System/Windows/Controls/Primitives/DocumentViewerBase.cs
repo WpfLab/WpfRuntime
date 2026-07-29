@@ -1,18 +1,35 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+// Description: DocumentViewerBase is a minimal base class, providing only
+//              the functionality common across document viewing scenarios.
+//              The base class provides no user interface, very few properties,
+//              and minimal policy. Functionality included in the base class:
+//              BringIntoView support & Print API services
+//              and Annotation support.
+//
+#pragma warning disable 1634, 1691  // avoid generating warnings about unknown
+                                    // message numbers and unknown pragmas for PRESharp contol
 
 using System.Collections;               // IEnumerator
+using System.Collections.Generic;       // List<T>
 using System.Collections.ObjectModel;   // ReadOnlyCollection<T>
 using System.Windows.Annotations;       // AnnotationService
+using System.Windows.Automation;        // AutomationPattern
 using System.Windows.Automation.Peers;  // AutomationPeer
 using System.Windows.Documents;         // IDocumentPaginatorSource, ...
 using System.Windows.Documents.Serialization;  // WritingCompletedEventArgs
 using System.Windows.Input;             // UICommand
 using System.Windows.Media;             // Visual
 using System.Windows.Markup;            // IAddChild, XamlSerializerUtil, ContentPropertyAttribute
+using System.Windows.Threading;         // DispatcherPriority
 using MS.Internal;                      // Invariant, DoubleUtil
 using MS.Internal.KnownBoxes;           // BooleanBoxes
+using MS.Internal.Annotations;          // TextAnchor
 using MS.Internal.Annotations.Anchoring;// DataIdProcessor, FixedPageProcessor, ...
+using MS.Internal.Automation;           // TextAdaptor
 using MS.Internal.Documents;            // MultiPageTextView
 using MS.Internal.Controls;             // EmptyEnumerator
 using MS.Internal.Commands;             // CommandHelpers
@@ -58,7 +75,7 @@ namespace System.Windows.Controls.Primitives
         protected DocumentViewerBase()
             : base()
         {
-            _pageViews = ReadOnlyCollection<DocumentPageView>.Empty;
+            _pageViews = new ReadOnlyCollection<DocumentPageView>(new List<DocumentPageView>());
             // By default text selection is enabled.
             SetFlags(true, Flags.IsSelectionEnabled);
         }
@@ -553,7 +570,7 @@ namespace System.Windows.Controls.Primitives
         protected virtual void OnPrintCommand()
         {
 #if !DONOTREFPRINTINGASMMETA
-            System.Windows.Xps.XpsDocumentWriter docWriter;
+            dynamic docWriter;
             System.Printing.PrintDocumentImageableArea ia = null;
 
             // Only one printing job is allowed.
@@ -570,8 +587,8 @@ namespace System.Windows.Controls.Primitives
                 {
                     // Register for WritingCompleted event.
                     _documentWriter = docWriter;
-                    _documentWriter.WritingCompleted += new WritingCompletedEventHandler(HandlePrintCompleted);
-                    _documentWriter.WritingCancelled += new WritingCancelledEventHandler(HandlePrintCancelled);
+                    _documentWriter.WritingCompleted += new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                    _documentWriter.WritingCancelled += new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
 
                     // Since _documentWriter value is used to determine CanExecute state, we must invalidate that state.
                     CommandManager.InvalidateRequerySuggested();
@@ -600,7 +617,10 @@ namespace System.Windows.Controls.Primitives
         protected virtual void OnCancelPrintCommand()
         {
 #if !DONOTREFPRINTINGASMMETA
-            _documentWriter?.CancelAsync();
+            if (_documentWriter != null)
+            {
+                _documentWriter.CancelAsync();
+            }
 #endif // DONOTREFPRINTINGASMMETA
         }
 
@@ -614,7 +634,7 @@ namespace System.Windows.Controls.Primitives
             // Document has been changed. Update existing DocumentPageViews to point them to the new Document.
             for (index = 0; index < _pageViews.Count; index++)
             {
-                _pageViews[index].DocumentPaginator = _document?.DocumentPaginator;
+                _pageViews[index].DocumentPaginator = (_document != null) ? _document.DocumentPaginator : null;
             }
 
             // Document invalidation invalidates following properties:
@@ -833,12 +853,15 @@ namespace System.Windows.Controls.Primitives
                 _pageViews = pageViews;
                 for (index = 0; index < _pageViews.Count; index++)
                 {
-                    _pageViews[index].DocumentPaginator = _document?.DocumentPaginator;
+                    _pageViews[index].DocumentPaginator = (_document != null) ? _document.DocumentPaginator : null;
                 }
 
                 // Collection of DocumentPageView has been changed. Need to update
                 // TextView, if one already exists.
-                _textView?.OnPagesUpdated();
+                if (_textView != null)
+                {
+                    _textView.OnPagesUpdated();
+                }
 
                 // DocumentPageViews collection has been changed. Notify all listeners
                 // and/or derived classes about this fact.
@@ -1002,8 +1025,11 @@ namespace System.Windows.Controls.Primitives
                 _textView = null;
             }
 
-            // Must be enabled - otherwise it won't be on the tree
-            service?.Disable();
+            if (service != null)
+            {
+                // Must be enabled - otherwise it won't be on the tree
+                service.Disable();
+            }
 
             // If new Document supports TextEditor, create one.
             // If the Document is already attached to TextEditor (TextSelection != null), 
@@ -1013,16 +1039,17 @@ namespace System.Windows.Controls.Primitives
             if (textContainer != null && this.TextEditorRenderScope != null && textContainer.TextSelection == null)
             {
                 _textView = new MultiPageTextView(this, this.TextEditorRenderScope, textContainer);
-                _textEditor = new TextEditor(textContainer, this, false)
-                {
-                    IsReadOnly = !IsEditingEnabled,
-                    TextView = _textView
-                };
+                _textEditor = new TextEditor(textContainer, this, false);
+                _textEditor.IsReadOnly = !IsEditingEnabled;
+                _textEditor.TextView = _textView;
                 textContainer.TextView = _textView;
             }
 
             // Re-enable the service in order to register on the new TextView
-            service?.Enable(service.Store);
+            if (service != null)
+            {
+                service.Enable(service.Store);
+            }
         }
 
         /// <summary>
@@ -1140,8 +1167,9 @@ namespace System.Windows.Controls.Primitives
                     if (child != null)
                     {
                         // Special case UIElements already connected to visual tree.
-                        if (args.TargetObject is UIElement targetObject)
+                        if (args.TargetObject is UIElement)
                         {
+                            UIElement targetObject = (UIElement)args.TargetObject;
                             if (VisualTreeHelper.IsAncestorOf(this, targetObject))
                             {
                                 targetRect = args.TargetRect;
@@ -1307,7 +1335,10 @@ namespace System.Windows.Controls.Primitives
                 }
 
                 DependencyObject depObj = oldDocument as DependencyObject;
-                depObj?.ClearValue(PathNode.HiddenParentProperty);
+                if (depObj != null)
+                {
+                    depObj.ClearValue(PathNode.HiddenParentProperty);
+                }
             }
 
             // If DocumentViewer was created through style, then do not modify
@@ -1387,7 +1418,10 @@ namespace System.Windows.Controls.Primitives
 
             // Document is also represented as Automation child. Need to invalidate peer to force update.
             DocumentViewerBaseAutomationPeer peer = UIElementAutomationPeer.FromElement(this) as DocumentViewerBaseAutomationPeer;
-            peer?.InvalidatePeer();
+            if (peer != null)
+            {
+                peer.InvalidatePeer();
+            }
 
             // Respond to Document change - update state that is affected by this change.
             OnDocumentChanged();
@@ -1401,8 +1435,8 @@ namespace System.Windows.Controls.Primitives
 #if !DONOTREFPRINTINGASMMETA
             if (_documentWriter != null)
             {
-                _documentWriter.WritingCompleted -= new WritingCompletedEventHandler(HandlePrintCompleted);
-                _documentWriter.WritingCancelled -= new WritingCancelledEventHandler(HandlePrintCancelled);
+                _documentWriter.WritingCompleted -= new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                _documentWriter.WritingCancelled -= new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
                 _documentWriter = null;
 
                 // Since _documentWriter value is used to determine CanExecute state, we must invalidate that state.
@@ -1530,9 +1564,11 @@ namespace System.Windows.Controls.Primitives
                     {
                         pageNumber = Convert.ToInt32(args.Parameter, System.Globalization.CultureInfo.CurrentCulture);
                     }
+#pragma warning disable 56502 // Allow empty catch statements.
                     catch (InvalidCastException) { }
                     catch (OverflowException) { }
                     catch (FormatException) { }
+#pragma warning restore 56502
 
                     if (pageNumber >= 0)
                     {
@@ -1632,7 +1668,7 @@ namespace System.Windows.Controls.Primitives
         private IDocumentPaginatorSource _document;                 // IDocumentPaginatorSource representing Document.
         private Flags _flags;                                       // Flags reflecting various aspects of object's state.
 #if !DONOTREFPRINTINGASMMETA
-        private System.Windows.Xps.XpsDocumentWriter _documentWriter;                  // DocumentWriter used for printing.
+        private dynamic _documentWriter;                  // DocumentWriter used for printing.
 #endif // DONOTREFPRINTINGASMMETA
 
         private static bool IsEditingEnabled = false;               // A flag enabling text editing within a document viewer
@@ -1704,7 +1740,7 @@ namespace System.Windows.Controls.Primitives
             IDocumentPaginatorSource document = value as IDocumentPaginatorSource;
             if (document == null)
             {
-                throw new ArgumentException(SR.DocumentViewerChildMustImplementIDocumentPaginatorSource, nameof(value));
+                throw new ArgumentException(SR.DocumentViewerChildMustImplementIDocumentPaginatorSource, "value");
             }
             this.Document = document;
         }
@@ -1755,3 +1791,5 @@ namespace System.Windows.Controls.Primitives
         #endregion IServiceProvider
     }
 }
+#pragma warning enable 1634, 1691
+

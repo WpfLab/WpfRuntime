@@ -1,11 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Interop;
+using MS.Internal.Controls;
+using MS.Internal;
+using MS.Internal.PresentationFramework;
 using MS.Win32;
+using System.Security;
+using System.Windows.Controls;
 
 namespace MS.Internal.Controls
 {
@@ -311,7 +320,7 @@ namespace MS.Internal.Controls
         #endregion IOleInPlaceSite
 
 
-        private ActiveXHelper.ActiveXState HostState
+        ActiveXHelper.ActiveXState HostState
         {
             get
             {
@@ -451,8 +460,11 @@ namespace MS.Internal.Controls
 
         internal void StopEvents()
         {
-            _connectionPoint?.Disconnect();
-            _connectionPoint = null;
+            if (_connectionPoint != null)
+            {
+                _connectionPoint.Disconnect();
+                _connectionPoint = null;
+            }
         }
 
         internal int OnActiveXRectChange(NativeMethods.COMRECT lprcPosRect)

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /* SSS_DROP_BEGIN */
 
@@ -13,11 +14,25 @@
 *
 **************************************************************************/
 
+
+//
+// Description: Provides PTS callbacks implementation / forwarding. 
+//
+#pragma warning disable 1634, 1691  // avoid generating warnings about unknown 
+                                    // message numbers and unknown pragmas for PRESharp contol
+                                    
+#pragma warning disable 6500        // Specifically disable warning about unhandled null reference and SEH exceptions.
+
+using System;                                   // IntPtr
+using System.Threading;                         // Monitor
+using System.Diagnostics;
+using System.Security;                          // SecurityCritical
 using System.Windows;
-using System.Windows.Documents;
+using System.Windows.Documents; 
 using System.Windows.Media.TextFormatting;
 using MS.Internal.Text;
 using MS.Internal.PtsHost.UnsafeNativeMethods;  // PTS
+using System.Collections.Generic;
 
 namespace MS.Internal.PtsHost
 {
@@ -33,7 +48,7 @@ namespace MS.Internal.PtsHost
         /// </summary>
         internal PtsHost()
         {
-            _context = IntPtr.Zero;
+            _context = new SecurityCriticalDataForSet<IntPtr>(IntPtr.Zero);
         }
 
         // ------------------------------------------------------------------
@@ -60,10 +75,10 @@ namespace MS.Internal.PtsHost
         // ------------------------------------------------------------------
         internal IntPtr Context
         {
-            get { Invariant.Assert(_context != IntPtr.Zero); return _context; }
-            set { Invariant.Assert(_context == IntPtr.Zero); _context = value; }
+            get { Invariant.Assert(_context.Value != IntPtr.Zero); return _context.Value; }
+            set { Invariant.Assert(_context.Value == IntPtr.Zero); _context.Value = value; }
         }
-        private IntPtr _context;
+        private SecurityCriticalDataForSet<IntPtr> _context;
 
         // ------------------------------------------------------------------
         //  Container paragraph id.
@@ -566,7 +581,7 @@ namespace MS.Internal.PtsHost
             int* rgcColumns,                    // OUT: arrays of number of columns spanned
             out int cAreasActual)               // OUT: actual number of segment-defined areas
         {
-            Debug.Fail("PTS.GetSegmentDefinedColumnSpanAreaInfo is not implemented.");
+            Debug.Assert(false, "PTS.GetSegmentDefinedColumnSpanAreaInfo is not implemented.");
             cAreasActual = 0;
             return PTS.fserrNotImplemented;
         }
@@ -578,7 +593,7 @@ namespace MS.Internal.PtsHost
             int* rgcColumns,                    // OUT: arrays of number of columns spanned
             out int cAreasActual)               // OUT: actual number of height-defined areas
         {
-            Debug.Fail("PTS.GetHeightDefinedColumnSpanAreaInfo is not implemented.");
+            Debug.Assert(false, "PTS.GetHeightDefinedColumnSpanAreaInfo is not implemented.");
             cAreasActual = 0;
             return PTS.fserrNotImplemented;
         }
@@ -866,7 +881,7 @@ namespace MS.Internal.PtsHost
             IntPtr nms,                         // IN:  name of section
             out int ccolEndnote)                // OUT: number of columns in endnote area
         {
-            Debug.Fail("PTS.GetNumberEndnoteColumns is not implemented.");
+            Debug.Assert(false, "PTS.GetNumberEndnoteColumns is not implemented.");
             ccolEndnote = 0;
             return PTS.fserrNotImplemented;
         }
@@ -878,7 +893,7 @@ namespace MS.Internal.PtsHost
             PTS.FSCOLUMNINFO* fscolinfoEndnote, // OUT: array of the colinfo structures
             out int ccolEndnote)                // OUT: actual number of the columns in footnote area
         {
-            Debug.Fail("PTS.GetEndnoteColumnInfo is not implemented.");
+            Debug.Assert(false, "PTS.GetEndnoteColumnInfo is not implemented.");
             ccolEndnote = 0;
             return PTS.fserrNotImplemented;
         }
@@ -889,7 +904,7 @@ namespace MS.Internal.PtsHost
             out IntPtr nmsFtnContSeparator,     // OUT: name of the ftn cont separator segment
             out IntPtr nmsFtnContNotice)        // OUT: name of the footnote cont notice segment
         {
-            Debug.Fail("PTS.GetFootnoteSeparators is not implemented.");
+            Debug.Assert(false, "PTS.GetFootnoteSeparators is not implemented.");
             nmsFtnSeparator = nmsFtnContSeparator = nmsFtnContNotice = IntPtr.Zero;
             return PTS.fserrNotImplemented;
         }
@@ -898,7 +913,7 @@ namespace MS.Internal.PtsHost
             IntPtr nms,                         // IN:  name of section
             out int fFootnoteBeneathText)       // OUT: position footnote right after text?
         {
-            Debug.Fail("PTS.FFootnoteBeneathText is not implemented.");
+            Debug.Assert(false, "PTS.FFootnoteBeneathText is not implemented.");
             fFootnoteBeneathText = 0;
             return PTS.fserrNotImplemented;
         }
@@ -907,7 +922,7 @@ namespace MS.Internal.PtsHost
             IntPtr nms,                         // IN:  name of section
             out int ccolFootnote)               // OUT: number of columns in footnote area
         {
-            Debug.Fail("PTS.GetNumberFootnoteColumns is not implemented.");
+            Debug.Assert(false, "PTS.GetNumberFootnoteColumns is not implemented.");
             ccolFootnote = 0;
             return PTS.fserrNotImplemented;
         }
@@ -919,7 +934,7 @@ namespace MS.Internal.PtsHost
             PTS.FSCOLUMNINFO* fscolinfoFootnote,// OUT: array of the colinfo structures
             out int ccolFootnote)               // OUT: actual number of the columns in footnote area
         {
-            Debug.Fail("PTS.GetFootnoteColumnInfo is not implemented.");
+            Debug.Assert(false, "PTS.GetFootnoteColumnInfo is not implemented.");
             ccolFootnote = 0;
             return PTS.fserrNotImplemented;
         }
@@ -928,7 +943,7 @@ namespace MS.Internal.PtsHost
             IntPtr nmftn,                       // IN:  name of footnote
             out IntPtr nmsFootnote)             // OUT: name of footnote segment
         {
-            Debug.Fail("PTS.GetFootnoteSegment is not implemented.");
+            Debug.Assert(false, "PTS.GetFootnoteSegment is not implemented.");
             nmsFootnote = IntPtr.Zero;
             return PTS.fserrNotImplemented;
         }
@@ -942,7 +957,7 @@ namespace MS.Internal.PtsHost
             out int fProposedRejectionOrderAccepted,    // OUT: agree with proposed order?
             IntPtr* rgFinalRejectionOrder)              // OUT: footnotes in final reject order
         {
-            Debug.Fail("PTS.GetFootnotePresentationAndRejectionOrder is not implemented.");
+            Debug.Assert(false, "PTS.GetFootnotePresentationAndRejectionOrder is not implemented.");
             fProposedPresentationOrderAccepted = fProposedRejectionOrderAccepted = 0;
             return PTS.fserrNotImplemented;
         }
@@ -951,7 +966,7 @@ namespace MS.Internal.PtsHost
             IntPtr nmftn,                       // IN:  name of footnote
             out int fAllow)                     // OUT: allow separating footnote from its reference
         {
-            Debug.Fail("PTS.FAllowFootnoteSeparation is not implemented.");
+            Debug.Assert(false, "PTS.FAllowFootnoteSeparation is not implemented.");
             fAllow = 0;
             return PTS.fserrNotImplemented;
         }
@@ -1249,7 +1264,7 @@ namespace MS.Internal.PtsHost
             int* rgdcp,                         // OUT: array of footnote refs in the range
             out int cFootnotes)                 // OUT: actual number of footnotes
         {
-            Debug.Fail("PTS.GetFootnotes is not implemented.");
+            Debug.Assert(false, "PTS.GetFootnotes is not implemented.");
             cFootnotes = 0;
             return PTS.fserrNotImplemented;
         }
@@ -1268,7 +1283,7 @@ namespace MS.Internal.PtsHost
             out int cVertices,                  // OUT: number of vertices
             out int durText)                    // OUT: distance from text
         {
-            Debug.Fail("PTS.FormatDropCap is not implemented.");
+            Debug.Assert(false, "PTS.FormatDropCap is not implemented.");
             pfsdropc = IntPtr.Zero;
             fInMargin = dur = dvr = cPolygons = cVertices = durText = 0;
             return PTS.fserrNotImplemented;
@@ -1286,7 +1301,7 @@ namespace MS.Internal.PtsHost
             out int cfspt,                      // OUT: actual total number of vertices in all polygons
             out int fWrapThrough)               // OUT: fill text in empty areas within obstacles?
         {
-            Debug.Fail("PTS.GetDropCapPolygons is not implemented.");
+            Debug.Assert(false, "PTS.GetDropCapPolygons is not implemented.");
             ccVertices = cfspt = fWrapThrough = 0;
             return PTS.fserrNotImplemented;
         }
@@ -1294,7 +1309,7 @@ namespace MS.Internal.PtsHost
             IntPtr pfsclient,                   // IN:  client opaque data
             IntPtr pfsdropc)                    // IN:  pointer to drop cap created by client
         {
-            Debug.Fail("PTS.DestroyDropCap is not implemented.");
+            Debug.Assert(false, "PTS.DestroyDropCap is not implemented.");
             return PTS.fserrNotImplemented;
         }
         internal int FormatBottomText(IntPtr pfsclient,                   // IN:  client opaque data
@@ -1518,21 +1533,25 @@ namespace MS.Internal.PtsHost
                 {
                     TextBreakpoint textBreakpoint = textBreakpoints[breakIndex];
 
-                    // LineBreakpoint is an UnmamangedHandle, that adds itself
+#pragma warning disable 56518
+                    // Disable PRESharp warning 56518. LineBreakpoint is an UnmamangedHandle, that adds itself
                     // to HandleMapper that holds a reference to it. PTS manages lifetime of this object, and 
                     // calls Destroyline to get rid of it. Destroyline will call Dispose() on the object
                     // and remove it from HandleMapper.
                     LineBreakpoint lineBreakpoint = new LineBreakpoint(optimalBreakSession, textBreakpoint);
+#pragma warning restore 56518
 
                     TextLineBreak textLineBreakOut = textBreakpoint.GetTextLineBreak();
 
                     if(textLineBreakOut != null)
                     {
-                //Line is an UnmamangedHandle, that adds itself
+#pragma warning disable 56518
+                // Disable PRESharp warning 6518. Line is an UnmamangedHandle, that adds itself
                 // to HandleMapper that holds a reference to it. PTS manages lifetime of this object, and
                 // calls DestroyLineBreakRecord to get rid of it. DestroyLineBreakRecord will call Dispose() on the object
                 // and remove it from HandleMapper.
                         LineBreakRecord lineBreakRecord = new LineBreakRecord(optimalBreakSession.PtsContext, textLineBreakOut);
+#pragma warning disable 56518
 
                         rgfslinevariant[breakIndex].pfsbreakreclineclient = lineBreakRecord.Handle;
                     }
@@ -1556,7 +1575,7 @@ namespace MS.Internal.PtsHost
                     rgfslinevariant[breakIndex].dvrAscent    = dvrAscent;
                     rgfslinevariant[breakIndex].dvrDescent   = dvrDescent;
                     rgfslinevariant[breakIndex].fReformatNeighborsAsLastLine   = PTS.False;
-                    rgfslinevariant[breakIndex].ptsLinePenaltyInfo = textBreakpoint.GetTextPenaltyResource();
+                    rgfslinevariant[breakIndex].ptsLinePenaltyInfo = textBreakpoint.GetTextPenaltyResource().Value;
                 }
 
                 nLineVariantsActual = textBreakpoints.Count;
@@ -1702,7 +1721,7 @@ namespace MS.Internal.PtsHost
             int vrCurrent,                      // IN:  current vertical position
             out int vrNew)                      // OUT: snapped vertical position
         {
-            Debug.Fail("PTS.SnapGridVertical is not implemented.");
+            Debug.Assert(false, "PTS.SnapGridVertical is not implemented.");
             vrNew = 0;
             return PTS.fserrNotImplemented;
         }
@@ -1803,7 +1822,7 @@ namespace MS.Internal.PtsHost
             IntPtr nmp,                         // IN:  name of paragraph
             out int fChanged)                   // OUT: dropcap changed?
         {
-            Debug.Fail("PTS.UpdGetDropCapChange is not implemented.");
+            Debug.Assert(false, "PTS.UpdGetDropCapChange is not implemented.");
             fChanged = 0;
             return PTS.fserrNotImplemented;
         }
@@ -1904,7 +1923,7 @@ namespace MS.Internal.PtsHost
             int cLines,                         // IN:  number of lines - size of pre-allocated array
             int* rgdcp)                         // OUT: array of dcp's to fill
         {
-            Debug.Fail("PTS.GetOptimalLineDcpCache is not implemented.");
+            Debug.Assert(false, "PTS.GetOptimalLineDcpCache is not implemented.");
             return PTS.fserrNotImplemented;
         }
 
@@ -1964,15 +1983,17 @@ namespace MS.Internal.PtsHost
 
                 for(int objectIndex = 0; objectIndex < attachedObjects.Count; objectIndex++)
                 {
-                    if (attachedObjects[objectIndex] is FigureObject figureObject)
+                    if(attachedObjects[objectIndex] is FigureObject)
                     {
+                        FigureObject figureObject = (FigureObject) attachedObjects[objectIndex];
+
                         rgnmpAttachedObject[objectIndex] = figureObject.Para.Handle;
                         rgdcpAnchor[objectIndex] = figureObject.Dcp;
                         rgidobj[objectIndex] = PTS.fsidobjFigure;
                     }
                     else
                     {
-                        FloaterObject floaterObject = (FloaterObject)attachedObjects[objectIndex];
+                        FloaterObject floaterObject = (FloaterObject) attachedObjects[objectIndex];
 
                         rgnmpAttachedObject[objectIndex] = floaterObject.Para.Handle;
                         rgdcpAnchor[objectIndex] = floaterObject.Dcp;
@@ -2079,15 +2100,17 @@ namespace MS.Internal.PtsHost
 
                 for(int objectIndex = 0; objectIndex < attachedObjects.Count; objectIndex++)
                 {
-                    if (attachedObjects[objectIndex] is FigureObject figureObject)
+                    if(attachedObjects[objectIndex] is FigureObject)
                     {
+                        FigureObject figureObject = (FigureObject) attachedObjects[objectIndex];
+
                         rgnmpAttachedObject[objectIndex] = figureObject.Para.Handle;
                         rgdcpAnchor[objectIndex] = figureObject.Dcp;
                         rgidobj[objectIndex] = PTS.fsidobjFigure;
                     }
                     else
                     {
-                        FloaterObject floaterObject = (FloaterObject)attachedObjects[objectIndex];
+                        FloaterObject floaterObject = (FloaterObject) attachedObjects[objectIndex];
 
                         rgnmpAttachedObject[objectIndex] = floaterObject.Para.Handle;
                         rgdcpAnchor[objectIndex] = floaterObject.Dcp;
@@ -2930,7 +2953,7 @@ namespace MS.Internal.PtsHost
             PTS.FSFTNINFO* pfsftninf,           // IN/OUT: array of footnote info
             out int iftnLim)                    // OUT: lim index used by this paragraph
         {
-            Debug.Fail("PTS.ObjGetFootnoteInfo is not implemented.");
+            Debug.Assert(false, "PTS.ObjGetFootnoteInfo is not implemented.");
             iftnLim = 0;
             return PTS.fserrNotImplemented;
         }
@@ -4075,7 +4098,10 @@ namespace MS.Internal.PtsHost
             try
             {
                 CellParaClient cellParaClient = PtsContext.HandleToObject(pfsCell) as CellParaClient;
-                cellParaClient?.Dispose();
+                if (cellParaClient != null)
+                {
+                    cellParaClient.Dispose();
+                }
             }
             catch (Exception e)
             {
@@ -4173,3 +4199,7 @@ namespace MS.Internal.PtsHost
         #endregion PTS callbacks
     }
 }
+
+#pragma warning enable 6500
+#pragma warning enable 1634, 1691
+

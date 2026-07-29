@@ -1,7 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-// Description: Specifies that the whitespace surrounding an element should be trimmed.
+//  Description: Specifies that the whitespace surrounding an element should be trimmed.
 
 using System;
 using System.Reflection;
@@ -10,9 +11,6 @@ using System.Globalization;
 using System.Diagnostics;
 #if SYSTEM_XAML
 using System.Xaml.Replacements;
-#else
-#nullable disable
-#pragma warning disable CS8632
 #endif
 
 #if PBTCOMPILER
@@ -48,8 +46,9 @@ namespace System.Windows.Markup
             {
                 MethodInfo methodInfo;
 #if !PBTCOMPILER
+                DependencyProperty dp = dpOrPiOrMi as DependencyProperty;
 
-                if (dpOrPiOrMi is DependencyProperty dp)
+                if (dp != null)
                 {
                     // While parsing styles or templates, we end up getting a DependencyProperty,
                     // even for non-attached cases. In this case, we try fetching the CLR
@@ -86,7 +85,7 @@ namespace System.Windows.Markup
                     {
                         // Use the Setter of the attached property (if any)
                         memberInfo = methodInfo.DeclaringType.GetMethod(
-                            $"Get{methodInfo.Name.Substring("Set".Length)}",
+                             "Get" + methodInfo.Name.Substring("Set".Length),
                              BindingFlags.Public | BindingFlags.NonPublic |
                              BindingFlags.Static | BindingFlags.FlattenHierarchy);
                     }
@@ -100,29 +99,45 @@ namespace System.Windows.Markup
         {
             Debug.Assert(null != memberInfo, "Null passed for memberInfo to GetConverterType");
 
+            Type converterType = null;
+
             // Try looking for the TypeConverter for the type using reflection.
-            string converterName = ReflectionHelper.GetTypeConverterAttributeData(memberInfo, out Type converterType);
-            return converterType ?? GetConverterTypeFromName(converterName);
+            string converterName = ReflectionHelper.GetTypeConverterAttributeData(memberInfo, out converterType);
+
+            if (converterType == null)
+            {
+                converterType = GetConverterTypeFromName(converterName);
+            }
+
+            return converterType;
         }
 #endif
-        internal static Type? GetConverterType(Type type)
+        internal static Type GetConverterType(Type type)
         {
-            Debug.Assert(type is not null, "Null passed for type to GetConverterType");
+            Debug.Assert(null != type, "Null passed for type to GetConverterType");
+
+            Type converterType = null;
 
             // Try looking for the TypeConverter for the type using reflection.
-            string? converterName = ReflectionHelper.GetTypeConverterAttributeData(type, out Type? converterType);
-            return converterType ?? GetConverterTypeFromName(converterName);
+            string converterName = ReflectionHelper.GetTypeConverterAttributeData(type, out converterType);
+
+            if (converterType == null)
+            {
+                converterType = GetConverterTypeFromName(converterName);
+            }
+
+            return converterType;
         }
 
-        private static Type? GetConverterTypeFromName(string? converterName)
+        private static Type GetConverterTypeFromName(string converterName)
         {
-            Type? converterType = null;
+            Type converterType = null;
 
             if (!string.IsNullOrEmpty(converterName))
             {
                 converterType = ReflectionHelper.GetQualifiedType(converterName);
 
-                if (converterType is not null)
+                if (converterType != null)
                 {
                     // Validate that this is an accessible type converter.
                     if (!ReflectionHelper.IsPublicType(converterType))
@@ -234,58 +249,58 @@ namespace System.Windows.Markup
         }
 #endif
 #if !PBTCOMPILER
-        private static TypeConverter? GetCoreConverterFromCoreType(Type type)
+        private static TypeConverter GetCoreConverterFromCoreType(Type type)
         {
-            TypeConverter? typeConverter = null;
-            if (type == typeof(int))
+            TypeConverter typeConverter = null;
+            if (type == typeof(Int32))
             {
                 typeConverter = new System.ComponentModel.Int32Converter();
             }
-            else if (type == typeof(short))
+            else if (type == typeof(Int16))
             {
                 typeConverter = new System.ComponentModel.Int16Converter();
             }
-            else if (type == typeof(long))
+            else if (type == typeof(Int64))
             {
                 typeConverter = new System.ComponentModel.Int64Converter();
             }
-            else if (type == typeof(uint))
+            else if (type == typeof(UInt32))
             {
                 typeConverter = new System.ComponentModel.UInt32Converter();
             }
-            else if (type == typeof(ushort))
+            else if (type == typeof(UInt16))
             {
                 typeConverter = new System.ComponentModel.UInt16Converter();
             }
-            else if (type == typeof(ulong))
+            else if (type == typeof(UInt64))
             {
                 typeConverter = new System.ComponentModel.UInt64Converter();
             }
-            else if (type == typeof(bool))
+            else if (type == typeof(Boolean))
             {
                 typeConverter = new System.ComponentModel.BooleanConverter();
             }
-            else if (type == typeof(double))
+            else if (type == typeof(Double))
             {
                 typeConverter = new System.ComponentModel.DoubleConverter();
             }
-            else if (type == typeof(float))
+            else if (type == typeof(Single))
             {
                 typeConverter = new System.ComponentModel.SingleConverter();
             }
-            else if (type == typeof(byte))
+            else if (type == typeof(Byte))
             {
                 typeConverter = new System.ComponentModel.ByteConverter();
             }
-            else if (type == typeof(sbyte))
+            else if (type == typeof(SByte))
             {
                 typeConverter = new System.ComponentModel.SByteConverter();
             }
-            else if (type == typeof(char))
+            else if (type == typeof(Char))
             {
                 typeConverter = new System.ComponentModel.CharConverter();
             }
-            else if (type == typeof(decimal))
+            else if (type == typeof(Decimal))
             {
                 typeConverter = new System.ComponentModel.DecimalConverter();
             }
@@ -297,7 +312,7 @@ namespace System.Windows.Markup
             {
                 typeConverter = new System.ComponentModel.GuidConverter();
             }
-            else if (type == typeof(string))
+            else if (type == typeof(String))
             {
                 typeConverter = new System.ComponentModel.StringConverter();
             }
@@ -328,64 +343,64 @@ namespace System.Windows.Markup
             return typeConverter;
         }
 
-        internal static TypeConverter? GetCoreConverterFromCustomType(Type type)
+        internal static TypeConverter GetCoreConverterFromCustomType(Type type)
         {
-            TypeConverter? typeConverter = null;
+            TypeConverter typeConverter = null;
             if (type.IsEnum)
             {
                 // Need to handle Enums types specially as they require a ctor that
                 // takes the underlying type.
                 typeConverter = new System.ComponentModel.EnumConverter(type);
             }
-            else if (typeof(int).IsAssignableFrom(type))
+            else if (typeof(Int32).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.Int32Converter();
             }
-            else if (typeof(short).IsAssignableFrom(type))
+            else if (typeof(Int16).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.Int16Converter();
             }
-            else if (typeof(long).IsAssignableFrom(type))
+            else if (typeof(Int64).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.Int64Converter();
             }
-            else if (typeof(uint).IsAssignableFrom(type))
+            else if (typeof(UInt32).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.UInt32Converter();
             }
-            else if (typeof(ushort).IsAssignableFrom(type))
+            else if (typeof(UInt16).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.UInt16Converter();
             }
-            else if (typeof(ulong).IsAssignableFrom(type))
+            else if (typeof(UInt64).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.UInt64Converter();
             }
-            else if (typeof(bool).IsAssignableFrom(type))
+            else if (typeof(Boolean).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.BooleanConverter();
             }
-            else if (typeof(double).IsAssignableFrom(type))
+            else if (typeof(Double).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.DoubleConverter();
             }
-            else if (typeof(float).IsAssignableFrom(type))
+            else if (typeof(Single).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.SingleConverter();
             }
-            else if (typeof(byte).IsAssignableFrom(type))
+            else if (typeof(Byte).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.ByteConverter();
             }
-            else if (typeof(sbyte).IsAssignableFrom(type))
+            else if (typeof(SByte).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.SByteConverter();
             }
-            else if (typeof(char).IsAssignableFrom(type))
+            else if (typeof(Char).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.CharConverter();
             }
-            else if (typeof(decimal).IsAssignableFrom(type))
+            else if (typeof(Decimal).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.DecimalConverter();
             }
@@ -397,7 +412,7 @@ namespace System.Windows.Markup
             {
                 typeConverter = new System.ComponentModel.GuidConverter();
             }
-            else if (typeof(string).IsAssignableFrom(type))
+            else if (typeof(String).IsAssignableFrom(type))
             {
                 typeConverter = new System.ComponentModel.StringConverter();
             }
@@ -439,14 +454,17 @@ namespace System.Windows.Markup
         /// <returns>A TypeConverter for the Type type if found. Null otherwise.</returns>
         internal static TypeConverter GetTypeConverter(Type type)
         {
-            ArgumentNullException.ThrowIfNull(type);
-
-            TypeConverter? typeConverter = GetCoreConverterFromCoreType(type);
-
-            if (typeConverter is null)
+            if (type == null)
             {
-                Type? converterType = GetConverterType(type);
-                if (converterType is not null)
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            TypeConverter typeConverter = GetCoreConverterFromCoreType(type);
+
+            if (typeConverter == null)
+            {
+                Type converterType = GetConverterType(type);
+                if (converterType != null)
                 {
                     typeConverter = Activator.CreateInstance(converterType,
                                                              BindingFlags.Instance | BindingFlags.CreateInstance | BindingFlags.Public,
@@ -459,7 +477,10 @@ namespace System.Windows.Markup
                     typeConverter = GetCoreConverterFromCustomType(type);
                 }
 
-                typeConverter ??= new TypeConverter();
+                if (typeConverter == null)
+                {
+                    typeConverter = new TypeConverter();
+                }
             }
 
             return typeConverter;

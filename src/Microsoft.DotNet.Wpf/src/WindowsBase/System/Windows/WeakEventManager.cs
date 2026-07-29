@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -58,11 +59,18 @@
 
 \***************************************************************************/
 
+using System;
+using System.Diagnostics;           // Debug
+using System.Collections;           // Hashtable
+using System.Collections.Generic;   // List<T>
 using System.Reflection;            // MethodInfo
 using System.Threading;             // Interlocked
+using System.Security;              // 
+using System.Windows;               // SR
 using System.Windows.Threading;     // DispatcherObject
 using MS.Utility;                   // FrugalList
 using MS.Internal;                  // Invariant
+using MS.Internal.WindowsBase;      // [FriendAccessAllowed]
 
 namespace System.Windows
 {
@@ -220,7 +228,8 @@ namespace System.Windows
         /// </summary>
         protected void ProtectedAddListener(object source, IWeakEventListener listener)
         {
-            ArgumentNullException.ThrowIfNull(listener);
+            if (listener == null)
+                throw new ArgumentNullException("listener");
 
             AddListener(source, listener, null);
         }
@@ -230,7 +239,8 @@ namespace System.Windows
         /// </summary>
         protected void ProtectedRemoveListener(object source, IWeakEventListener listener)
         {
-            ArgumentNullException.ThrowIfNull(listener);
+            if (listener == null)
+                throw new ArgumentNullException("listener");
 
             RemoveListener(source, listener, null);
         }
@@ -240,7 +250,8 @@ namespace System.Windows
         /// </summary>
         protected void ProtectedAddHandler(object source, Delegate handler)
         {
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+                throw new ArgumentNullException("handler");
 
             AddListener(source, null, handler);
         }
@@ -250,14 +261,15 @@ namespace System.Windows
         /// </summary>
         protected void ProtectedRemoveHandler(object source, Delegate handler)
         {
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+                throw new ArgumentNullException("handler");
 
             RemoveListener(source, null, handler);
         }
 
         private void AddListener(object source, IWeakEventListener listener, Delegate handler)
         {
-            object sourceKey = source ?? StaticSource;
+            object sourceKey = (source != null) ? source : StaticSource;
 
             using (Table.WriteLock)
             {
@@ -296,7 +308,7 @@ namespace System.Windows
 
         private void RemoveListener(object source, object target, Delegate handler)
         {
-            object sourceKey = source ?? StaticSource;
+            object sourceKey = (source != null) ? source : StaticSource;
 
             using (Table.WriteLock)
             {
@@ -337,7 +349,7 @@ namespace System.Windows
         protected void DeliverEvent(object sender, EventArgs args)
         {
             ListenerList list;
-            object sourceKey = sender ?? StaticSource;
+            object sourceKey = (sender != null) ? sender : StaticSource;
 
             // get the list of listeners
             using (Table.ReadLock)
@@ -455,6 +467,7 @@ namespace System.Windows
 
         // for use by test programs (e.g. leak detectors) that want to force
         // a cleanup pass.
+        [FriendAccessAllowed]   // defined in Base, used by Framework
         internal static bool Cleanup()
         {
             return WeakEventTable.Cleanup();
@@ -462,6 +475,7 @@ namespace System.Windows
 
         // for use by test programs (e.g. perf tests) that want to disable
         // cleanup passes temporarily.
+        [FriendAccessAllowed]   // defined in Base, used by Framework
         internal static void SetCleanupEnabled(bool value)
         {
             WeakEventTable.CurrentWeakEventTable.IsCleanupEnabled = value;
@@ -522,8 +536,8 @@ namespace System.Windows
             public Delegate Handler { get { return (_handler != null) ? (Delegate)_handler.Target : null; } }
             public bool HasHandler { get { return _handler != null; } }
 
-            private WeakReference _target;
-            private WeakReference _handler;
+            WeakReference _target;
+            WeakReference _handler;
         }
 
         /// <summary>
@@ -625,7 +639,7 @@ namespace System.Windows
                 AddHandlerToCWT(target, handler);
             }
 
-            private void AddHandlerToCWT(object target, Delegate handler)
+            void AddHandlerToCWT(object target, Delegate handler)
             {
                 // add the handler to the CWT - this keeps the handler alive throughout
                 // the lifetime of the target, without prolonging the lifetime of
@@ -640,7 +654,8 @@ namespace System.Windows
                 {
                     // 1% case - the target listens multiple times
                     // we store the delegates in a list
-                    if (value is not List<Delegate> list)
+                    List<Delegate> list = value as List<Delegate>;
+                    if (list == null)
                     {
                         // lazily allocate the list, and add the old handler
                         Delegate oldHandler = value as Delegate;
@@ -679,7 +694,8 @@ namespace System.Windows
                 // remove the handler from the CWT
                 if (_cwt.TryGetValue(target, out value))
                 {
-                    if (value is not List<Delegate> list)
+                    List<Delegate> list = value as List<Delegate>;
+                    if (list == null)
                     {
                         // 99% case - the target is removing its single handler
                         _cwt.Remove(target);
@@ -777,7 +793,8 @@ namespace System.Windows
                     else
                     {
                         // legacy (4.0)
-                        if (target is IWeakEventListener iwel)
+                        IWeakEventListener iwel = target as IWeakEventListener;
+                        if (iwel != null)
                         {
                             bool handled = iwel.ReceiveWeakEvent(managerType, sender, args);
 
@@ -830,7 +847,9 @@ namespace System.Windows
 
             protected void CopyTo(ListenerList newList)
             {
-                for (int k = 0, n = Count; k < n; ++k)
+                IWeakEventListener iwel;
+
+                for (int k=0, n=Count; k<n; ++k)
                 {
                     Listener listener = GetListener(k);
                     if (listener.Target != null)
@@ -843,7 +862,7 @@ namespace System.Windows
                                 newList.AddHandler(handler);
                             }
                         }
-                        else if (listener.Target is IWeakEventListener iwel)
+                        else if ((iwel = listener.Target as IWeakEventListener) != null)
                         {
                             newList.Add(iwel);
                         }

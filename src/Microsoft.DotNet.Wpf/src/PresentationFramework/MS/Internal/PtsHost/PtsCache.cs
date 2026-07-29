@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /* SSS_DROP_BEGIN */
 
@@ -19,6 +20,9 @@
 //              management.
 //
 
+using System;                                   // IntPtr
+using System.Collections.Generic;               // List<T>
+using System.Security;                          // SecurityCritical, SecurityTreatAsSafe
 using System.Threading;                         // Interlocked
 using System.Windows;                           // WrapDirection
 using System.Windows.Media.TextFormatting;      // TextFormatter
@@ -117,7 +121,7 @@ namespace MS.Internal.PtsHost
                 PtsCache ptsCache = Dispatcher.CurrentDispatcher.PtsCache as PtsCache;
                 if (ptsCache != null)
                 {
-                    disposed = ptsCache._disposed;
+                    disposed = (ptsCache._disposed == 1);
                 }
             }
             return disposed;
@@ -162,7 +166,7 @@ namespace MS.Internal.PtsHost
         ~PtsCache()
         {
             // After shutdown is initiated, do not allow Finalizer thread to the cleanup.
-            if (!Interlocked.CompareExchange(ref _disposed, true, false))
+            if (0 == Interlocked.CompareExchange(ref _disposed, 1, 0))
             {
                 // Destroy all PTS contexts
                 DestroyPTSContexts();
@@ -188,7 +192,6 @@ namespace MS.Internal.PtsHost
                 }
             }
 
-#pragma warning disable IDE0017
             // Create new PTS Context, if cannot find free one.
             if (index == _contextPool.Count)
             {
@@ -197,7 +200,6 @@ namespace MS.Internal.PtsHost
                 _contextPool[index].PtsHost = new PtsHost();
                 _contextPool[index].PtsHost.Context = CreatePTSContext(index, textFormattingMode);
             }
-#pragma warning restore IDE0017
 
             // Initialize TextFormatter, if optimal paragraph is enabled.
             // Optimal paragraph requires new TextFormatter for every PTS Context.
@@ -224,7 +226,7 @@ namespace MS.Internal.PtsHost
             {
                 // After shutdown is initiated, do not allow Finalizer thread to add any
                 // items to _releaseQueue.
-                if (!_disposed)
+                if (_disposed == 0)
                 {
                     // Add PtsContext to collection of released PtsContexts.
                     // If the queue is empty, schedule Dispatcher time to dispose
@@ -291,7 +293,7 @@ namespace MS.Internal.PtsHost
 
             // After shutdown is initiated, do not allow Finalizer thread to add any
             // items to _releaseQueue.
-            if (!Interlocked.CompareExchange(ref _disposed, true, false))
+            if (0 == Interlocked.CompareExchange(ref _disposed, 1, 0))
             {
                 // Dispose any pending PtsContexts stored in _releaseQueue
                 OnPtsContextReleased(false);
@@ -332,7 +334,10 @@ namespace MS.Internal.PtsHost
                     PTS.IgnoreError(PTS.DestroyInstalledObjectsInfo(_contextPool[index].InstalledObjects));
                     // Explicitly dispose the penalty module object to ensure proper destruction
                     // order of PTSContext  and the penalty module (PTS context must be destroyed first).
-                    _contextPool[index].TextPenaltyModule?.Dispose();
+                    if (_contextPool[index].TextPenaltyModule != null)
+                    {
+                        _contextPool[index].TextPenaltyModule.Dispose();
+                    }
 
                     _contextPool.RemoveAt(index);
                 }
@@ -404,7 +409,10 @@ namespace MS.Internal.PtsHost
                         PTS.Validate(PTS.DestroyInstalledObjectsInfo(_contextPool[index].InstalledObjects));
                         // Explicitly dispose the penalty module object to ensure proper destruction
                         // order of PTSContext  and the penalty module (PTS context must be destroyed first).
-                        _contextPool[index].TextPenaltyModule?.Dispose();
+                        if (_contextPool[index].TextPenaltyModule != null)
+                        {
+                            _contextPool[index].TextPenaltyModule.Dispose();
+                        }
                         _contextPool.RemoveAt(index);
                         continue;
                     }
@@ -762,7 +770,7 @@ namespace MS.Internal.PtsHost
         /// <summary>
         /// Whether object is already disposed.
         /// </summary>
-        private bool _disposed;
+        private int _disposed;
 
         #endregion Private Fields
 

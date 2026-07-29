@@ -1,12 +1,28 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //                                             
 
+using System;
 using MS.Internal;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
+using System.Collections;
+using System.Text;
+using System.Globalization;
+using System.Windows.Media;
 using System.Windows.Media.Composition;
+using System.Windows;
+using System.Text.RegularExpressions;
+using System.Windows.Media.Animation;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security;
 
-namespace System.Windows.Media
+using SR=MS.Internal.PresentationCore.SR;
+
+namespace System.Windows.Media 
 {
     /// <summary>
     /// This is the Geometry class for Rectangles and RoundedRectangles. 
@@ -107,7 +123,7 @@ namespace System.Windows.Media
                         Transform.GetTransformValue(transform, out geometryMatrix);
 
                         boundsRect = RectangleGeometry.GetBoundsHelper(
-                            pen: null,
+                            null /* no pen */,
                             Matrix.Identity,
                             currentRect,
                             radiusX,
@@ -204,10 +220,10 @@ namespace System.Windows.Media
                     // We've checked that rect isn't empty above
                     Invariant.Assert(pointCount != 0);
 
-                    Point* pPoints = stackalloc Point[(int)pointCount];
+                    Point * pPoints = stackalloc Point[(int)pointCount];
                     RectangleGeometry.GetPointList(pPoints, pointCount, rect, radiusX, radiusY);
 
-                    fixed (byte* pTypes = GetTypeList(rect, radiusX, radiusY)) //Merely retrieves the pointer to static PE data, no actual pinning occurs
+                    fixed (byte *pTypes = RectangleGeometry.GetTypeList(rect, radiusX, radiusY))
                     {
                         boundingRect = Geometry.GetBoundsHelper(
                             pen,
@@ -243,10 +259,10 @@ namespace System.Windows.Media
             
             unsafe
             {
-                Point* pPoints = stackalloc Point[(int)pointCount];
+                Point *pPoints = stackalloc Point[(int)pointCount];
                 RectangleGeometry.GetPointList(pPoints, pointCount, rect, radiusX, radiusY);
 
-                fixed (byte* pTypes = GetTypeList(rect, radiusX, radiusY)) //Merely retrieves the pointer to static PE data, no actual pinning occurs
+                fixed (byte* pTypes = GetTypeList(rect, radiusX, radiusY))
                 {
                     return ContainsInternal(
                         pen,
@@ -396,11 +412,9 @@ namespace System.Windows.Media
                 return Geometry.GetEmptyPathGeometryData();
             }
 
-            PathGeometryData data = new PathGeometryData
-            {
-                FillRule = FillRule.EvenOdd,
-                Matrix = CompositionResourceManager.TransformToMilMatrix3x2D(Transform)
-            };
+            PathGeometryData data = new PathGeometryData();
+            data.FillRule = FillRule.EvenOdd;
+            data.Matrix = CompositionResourceManager.TransformToMilMatrix3x2D(Transform);
 
             double radiusX = RadiusX;
             double radiusY = RadiusY;
@@ -412,21 +426,21 @@ namespace System.Windows.Media
             {
                 Point[] points = GetPointList(rect, radiusX, radiusY);
 
-                ctx.BeginFigure(points[0], isFilled: true, isClosed: true);
-                ctx.BezierTo(points[1], points[2], points[3], isStroked: true, isSmoothJoin: false);
-                ctx.LineTo(points[4], isStroked: true, isSmoothJoin: false);
-                ctx.BezierTo(points[5], points[6], points[7], isStroked: true, isSmoothJoin: false);
-                ctx.LineTo(points[8], isStroked: true, isSmoothJoin: false);
-                ctx.BezierTo(points[9], points[10], points[11], isStroked: true, isSmoothJoin: false);
-                ctx.LineTo(points[12], isStroked: true, isSmoothJoin: false);
-                ctx.BezierTo(points[13], points[14], points[15], isStroked: true, isSmoothJoin: false);
+                ctx.BeginFigure(points[0], true /* is filled */, true /* is closed */);
+                ctx.BezierTo(points[1], points[2], points[3], true /* is stroked */, false /* is smooth join */);
+                ctx.LineTo(points[4], true /* is stroked */, false /* is smooth join */);
+                ctx.BezierTo(points[5], points[6], points[7], true /* is stroked */, false /* is smooth join */);
+                ctx.LineTo(points[8], true /* is stroked */, false /* is smooth join */);
+                ctx.BezierTo(points[9], points[10], points[11], true /* is stroked */, false /* is smooth join */);
+                ctx.LineTo(points[12], true /* is stroked */, false /* is smooth join */);
+                ctx.BezierTo(points[13], points[14], points[15], true /* is stroked */, false /* is smooth join */);
             }
             else
             {   
-                ctx.BeginFigure(rect.TopLeft, isFilled: true, isClosed: true);
-                ctx.LineTo(rect.TopRight, isStroked: true, isSmoothJoin: false);
-                ctx.LineTo(rect.BottomRight, isStroked: true, isSmoothJoin: false);
-                ctx.LineTo(rect.BottomLeft, isStroked: true, isSmoothJoin: false);
+                ctx.BeginFigure(rect.TopLeft, true /* is filled */, true /* is closed */);
+                ctx.LineTo(rect.TopRight, true /* is stroked */, false /* is smooth join */);
+                ctx.LineTo(rect.BottomRight, true /* is stroked */, false /* is smooth join */);
+                ctx.LineTo(rect.BottomLeft, true /* is stroked */, false /* is smooth join */);
             }
 
             ctx.Close();
@@ -454,7 +468,7 @@ namespace System.Windows.Media
             return points;
         }
 
-        private static unsafe void GetPointList(Point * points, uint pointsCount, Rect rect, double radiusX, double radiusY)
+        private unsafe static void GetPointList(Point * points, uint pointsCount, Rect rect, double radiusX, double radiusY)
         {
             if (IsRounded(radiusX, radiusY))
             {
@@ -496,7 +510,7 @@ namespace System.Windows.Media
             }
         }
 
-        private static ReadOnlySpan<byte> GetTypeList(Rect rect, double radiusX, double radiusY)
+        private static byte[] GetTypeList(Rect rect, double radiusX, double radiusY)
         {
             if (rect.IsEmpty)
             {
@@ -504,11 +518,11 @@ namespace System.Windows.Media
             }
             else if (IsRounded(radiusX, radiusY))
             {
-                return RoundedPathTypes;
+                return s_roundedPathTypes;
             }
             else
             {
-                return SquaredPathTypes;
+                return s_squaredPathTypes;
             }
         }
 
@@ -587,37 +601,39 @@ namespace System.Windows.Media
         #region InstanceData
 
         // Rouneded
-        private static UInt32 c_roundedSegmentCount = 8;
-        private static UInt32 c_roundedPointCount = 17;
+        static private UInt32 c_roundedSegmentCount = 8;
+        static private UInt32 c_roundedPointCount = 17;
 
-        private static byte smoothBezier = (byte)MILCoreSegFlags.SegTypeBezier |
+        static private byte smoothBezier = (byte)MILCoreSegFlags.SegTypeBezier |
                                             (byte)MILCoreSegFlags.SegIsCurved   |
                                             (byte)MILCoreSegFlags.SegSmoothJoin;
 
-        private static byte smoothLine = (byte)MILCoreSegFlags.SegTypeLine | (byte)MILCoreSegFlags.SegSmoothJoin;
+        static private byte smoothLine = (byte)MILCoreSegFlags.SegTypeLine | (byte)MILCoreSegFlags.SegSmoothJoin;
 
-        private static ReadOnlySpan<byte> RoundedPathTypes => new byte[] {
-            (byte)MILCoreSegFlags.SegTypeBezier |
+        static private byte[] s_roundedPathTypes = {
+            (byte)MILCoreSegFlags.SegTypeBezier | 
             (byte)MILCoreSegFlags.SegIsCurved   |
-            (byte)MILCoreSegFlags.SegSmoothJoin |
+            (byte)MILCoreSegFlags.SegSmoothJoin | 
             (byte)MILCoreSegFlags.SegClosed,
-            smoothLine,
+            smoothLine, 
             smoothBezier,
-            smoothLine,
+            smoothLine, 
             smoothBezier,
-            smoothLine,
+            smoothLine, 
             smoothBezier,
-            smoothLine
+            smoothLine 
         };
 
         // Squared
         private const UInt32 c_squaredSegmentCount = 4;
         private const UInt32 c_squaredPointCount = 5;
 
-        private static ReadOnlySpan<byte> SquaredPathTypes => [(byte)MILCoreSegFlags.SegTypeLine | (byte)MILCoreSegFlags.SegClosed,
-                                                               (byte)MILCoreSegFlags.SegTypeLine,
-                                                               (byte)MILCoreSegFlags.SegTypeLine,
-                                                               (byte)MILCoreSegFlags.SegTypeLine];
+        private static readonly byte[] s_squaredPathTypes = {
+            (byte)MILCoreSegFlags.SegTypeLine | (byte)MILCoreSegFlags.SegClosed,
+            (byte)MILCoreSegFlags.SegTypeLine,
+            (byte)MILCoreSegFlags.SegTypeLine,
+            (byte)MILCoreSegFlags.SegTypeLine
+        };
 
         #endregion
     }

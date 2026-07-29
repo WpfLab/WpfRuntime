@@ -1,7 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Windows.Input
+using System;
+using System.Security;
+using MS.Internal;
+using MS.Win32;
+using System.Windows;
+
+namespace System.Windows.Input 
 {
     /// <summary>
     ///     The RawKeyboardInputReport class encapsulates the raw input 
@@ -63,7 +70,7 @@ namespace System.Windows.Input
             _isExtendedKey = isExtendedKey;
             _isSystemKey = isSystemKey;
             _virtualKey = virtualKey;
-            _extraInformation = extraInformation;
+            _extraInformation = new SecurityCriticalData<IntPtr>(extraInformation);
         }
 
         /// <summary>
@@ -95,7 +102,13 @@ namespace System.Windows.Input
         ///     Read-only access to the extra information was provided along
         ///     with the input.
         /// </summary>
-        public IntPtr ExtraInformation => _extraInformation;
+        public IntPtr ExtraInformation
+        {
+            get
+            {
+                return _extraInformation.Value;
+            }
+        }
 
         // IsValid Method for RawKeyboardActions. Relies on the enum being flags.
         internal static bool IsValidRawKeyboardActions(RawKeyboardActions actions)
@@ -117,7 +130,7 @@ namespace System.Windows.Input
         private bool _isExtendedKey;
         private bool _isSystemKey;
         private int _virtualKey;
-        private readonly IntPtr _extraInformation;
+        private SecurityCriticalData<IntPtr> _extraInformation;
     }    
 }
 

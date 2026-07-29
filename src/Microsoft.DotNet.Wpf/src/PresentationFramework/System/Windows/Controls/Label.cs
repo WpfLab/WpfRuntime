@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -7,9 +8,14 @@
 * Implements label control.
 *
 \***************************************************************************/
+using System;
+using System.Windows.Threading;
+
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.ComponentModel;
+using System.Xaml;
 using MS.Internal.Telemetry.PresentationFramework;
 
 namespace System.Windows.Controls
@@ -119,7 +125,10 @@ namespace System.Windows.Controls
                 }
             }
 
-            newElement?.SetValue(LabeledByProperty, label);
+            if (newElement != null)
+            {
+                newElement.SetValue(LabeledByProperty, label);
+            }
         }
 
         /// <summary>

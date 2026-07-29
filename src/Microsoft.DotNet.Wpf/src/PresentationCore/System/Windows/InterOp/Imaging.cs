@@ -1,11 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Security;
 using MS.Internal;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Media.Imaging;
+using Microsoft.Win32.SafeHandles;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+using System.Windows.Interop;
 
 namespace System.Windows.Interop
 {
@@ -24,7 +32,7 @@ namespace System.Windows.Interop
         /// <remarks>
         ///     Callers must have UnmanagedCode permission to call this API.
         /// </remarks>
-        public static unsafe BitmapSource CreateBitmapSourceFromHBitmap(
+        unsafe public static BitmapSource CreateBitmapSourceFromHBitmap(
             IntPtr bitmap,
             IntPtr palette,
             Int32Rect sourceRect,
@@ -42,7 +50,7 @@ namespace System.Windows.Interop
         /// <param name="sourceRect"></param>
         /// <param name="sizeOptions"></param>
         /// <param name="alphaOptions"></param>
-        internal static unsafe BitmapSource CriticalCreateBitmapSourceFromHBitmap(
+        unsafe internal static BitmapSource CriticalCreateBitmapSourceFromHBitmap(
             IntPtr bitmap,
             IntPtr palette,
             Int32Rect sourceRect,
@@ -51,7 +59,7 @@ namespace System.Windows.Interop
         {
             if (bitmap == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(bitmap));
+                throw new ArgumentNullException("bitmap");
             }
 
             return new InteropBitmap(bitmap, palette, sourceRect, sizeOptions, alphaOptions); // use the critical version
@@ -66,7 +74,7 @@ namespace System.Windows.Interop
         /// <remarks>
         ///     Callers must have UnmanagedCode permission to call this API.
         /// </remarks>
-        public static unsafe BitmapSource CreateBitmapSourceFromHIcon(
+        unsafe public static BitmapSource CreateBitmapSourceFromHIcon(
             IntPtr icon,
             Int32Rect sourceRect,
             BitmapSizeOptions sizeOptions)
@@ -74,7 +82,7 @@ namespace System.Windows.Interop
 
             if (icon == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(icon));
+                throw new ArgumentNullException("icon");
             }
 
             return new InteropBitmap(icon, sourceRect, sizeOptions);
@@ -92,7 +100,7 @@ namespace System.Windows.Interop
         /// <remarks>
         ///     Callers must have UnmanagedCode permission to call this API.
         /// </remarks>
-        public static unsafe BitmapSource CreateBitmapSourceFromMemorySection(
+        unsafe public static BitmapSource CreateBitmapSourceFromMemorySection(
             IntPtr section,
             int pixelWidth,
             int pixelHeight,
@@ -103,7 +111,7 @@ namespace System.Windows.Interop
 
             if (section == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(section));
+                throw new ArgumentNullException("section");
             }
 
             return new InteropBitmap(section, pixelWidth, pixelHeight, format, stride, offset);

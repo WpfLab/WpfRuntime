@@ -1,7 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections;
+using System.Diagnostics;
+using MS.Internal.WindowsBase;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows
 {
@@ -28,8 +34,10 @@ namespace System.Windows
         /// </summary>
         public override bool Equals(object obj)
         {
-            if (obj is LocalValueEnumerator other)
+            if(obj is LocalValueEnumerator)
             {
+                LocalValueEnumerator other = (LocalValueEnumerator) obj;
+
                 return (_count == other._count &&
                         _index == other._index &&
                         _snapshot == other._snapshot);
@@ -66,13 +74,13 @@ namespace System.Windows
             {
                 if(_index == -1 )
                 {
-                    // IEnumerator.Current is documented to throw this exception
+                    #pragma warning suppress 6503 // IEnumerator.Current is documented to throw this exception
                     throw new InvalidOperationException(SR.LocalValueEnumerationReset);
                 }
 
                 if(_index >= Count )
                 {
-                    // IEnumerator.Current is documented to throw this exception
+                    #pragma warning suppress 6503 // IEnumerator.Current is documented to throw this exception
                     throw new InvalidOperationException(SR.LocalValueEnumerationOutOfBounds);
                 }
                 

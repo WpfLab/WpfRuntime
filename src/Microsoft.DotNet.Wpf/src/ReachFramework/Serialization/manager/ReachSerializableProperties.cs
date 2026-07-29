@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*++                                                                      
     Abstract:
@@ -9,9 +10,19 @@
                                                                      
 --*/
 
+using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
+using System.Xml;
+using System.IO;
+using System.Security;
+using System.ComponentModel.Design.Serialization;
+using System.Windows.Xps.Packaging;
+using System.Windows.Documents;
+using System.Windows.Media;
 using System.Windows.Markup;
 
 namespace System.Windows.Xps.Serialization
@@ -397,8 +408,8 @@ namespace System.Windows.Xps.Serialization
         /// <summary>
         /// Detect whether it is a complex property or not.
         /// </summary>
-        public
         virtual
+        public
         bool
         IsComplexProperty(
             PackageSerializationManager serializationManager
@@ -444,8 +455,8 @@ namespace System.Windows.Xps.Serialization
             return isComplex;
         }
 
-        public
         virtual
+        public
         bool 
         IsComplexValue(
                 PackageSerializationManager manager, 

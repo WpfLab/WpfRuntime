@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -13,16 +14,32 @@
 //
 //
 
+// Enable presharp pragma warning suppress directives.
+#pragma warning disable 1634, 1691
+
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Text;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Converters;
 using System.Windows.Media.Composition;
 using System.Windows.Media.TextFormatting;
 using System.Windows.Markup;
+using System.Runtime.InteropServices;
 using MS.Internal;
 using MS.Internal.FontCache;
+using MS.Internal.FontFace;
 using MS.Internal.TextFormatting;
 using MS.Internal.Text.TextInterface;
+using MS.Utility;
+using System.Security;
+using System.Windows.Interop;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
@@ -124,6 +141,10 @@ namespace System.Windows.Media
             XmlLanguage language
             )
         {
+            // Suppress PRESharp warning that glyphIndices and advanceWidths are not validated and can be null.
+            // They can indeed be null, but that's perfectly OK. An explicit null check in the constructor is
+            // not required.
+#pragma warning suppress 56506
             Initialize(
                 glyphTypeface,
                 bidiLevel,
@@ -215,6 +236,10 @@ namespace System.Windows.Media
             XmlLanguage             language
             )
         {
+            // Suppress PRESharp warning that glyphIndices and advanceWidths are not validated and can be null.
+            // They can indeed be null, but that's perfectly OK. An explicit null check in the constructor is
+            // not required.
+#pragma warning suppress 56506
             Initialize(
                 glyphTypeface,
                 bidiLevel,
@@ -272,6 +297,10 @@ namespace System.Windows.Media
         {
             GlyphRun glyphRun = new GlyphRun(pixelsPerDip);
 
+            // Suppress PRESharp warning that glyphIndices and advanceWidths are not validated and can be null.
+            // They can indeed be null, but that's perfectly OK. An explicit null check in the constructor is
+            // not required.
+#pragma warning suppress 56506
             glyphRun.Initialize(
                 glyphTypeface,
                 bidiLevel,
@@ -381,34 +410,34 @@ namespace System.Windows.Media
                                     else
                                     {
                                         if (clusterMap[i] < clusterMap[i - 1])
-                                            throw new ArgumentException(SR.ClusterMapEntriesShouldNotDecrease, nameof(clusterMap));
+                                            throw new ArgumentException(SR.ClusterMapEntriesShouldNotDecrease, "clusterMap");
 
                                         if (clusterMap[i] >= GlyphCount)
-                                            throw new ArgumentException(SR.ClusterMapEntryShouldPointWithinGlyphIndices, nameof(clusterMap));
+                                            throw new ArgumentException(SR.ClusterMapEntryShouldPointWithinGlyphIndices, "clusterMap");
                                     }
                                 }
                             }
                             else
                             {
-                                throw new ArgumentException(SR.ClusterMapFirstEntryMustBeZero, nameof(clusterMap));
+                                throw new ArgumentException(SR.ClusterMapFirstEntryMustBeZero, "clusterMap");
                             }
                         }
                         else
                         {
-                            throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, characters.Count), nameof(clusterMap));
+                            throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, characters.Count), "clusterMap");
                         }
                     }
                     else
                     {
                         if (GlyphCount != characters.Count)
-                            throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, GlyphCount), nameof(clusterMap));
+                            throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, GlyphCount), "clusterMap");
                     }
                 }
 
                 if (caretStops != null && caretStops.Count != 0)
                 {
                     if (caretStops.Count != CodepointCount + 1)
-                        throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, CodepointCount + 1), nameof(caretStops));
+                        throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, CodepointCount + 1), "caretStops");
                 }
 
                 if (isSideways && (bidiLevel & 1) != 0)
@@ -424,26 +453,34 @@ namespace System.Windows.Media
             }
             else
             {
-                ArgumentOutOfRangeException.ThrowIfEqual(renderingEmSize, double.NaN);
-                ArgumentOutOfRangeException.ThrowIfNegative(renderingEmSize);
-                ArgumentNullException.ThrowIfNull(glyphTypeface);
-                ArgumentNullException.ThrowIfNull(glyphIndices);
+                if (double.IsNaN(renderingEmSize))
+                    throw new ArgumentOutOfRangeException("renderingEmSize", SR.ParameterValueCannotBeNaN);
+
+                if (renderingEmSize < 0.0)
+                    throw new ArgumentOutOfRangeException("renderingEmSize", SR.ParameterValueCannotBeNegative);
+
+                if (glyphTypeface == null)
+                    throw new ArgumentNullException("glyphTypeface");
+
+                if (glyphIndices == null)
+                    throw new ArgumentNullException("glyphIndices");
 
                 if (glyphIndices.Count <= 0)
-                    throw new ArgumentException(SR.CollectionNumberOfElementsMustBeGreaterThanZero, nameof(glyphIndices));
+                    throw new ArgumentException(SR.CollectionNumberOfElementsMustBeGreaterThanZero, "glyphIndices");
 
                 if (glyphIndices.Count > MaxGlyphCount)
                 {
-                    throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsMustBeLessOrEqualTo, MaxGlyphCount), nameof(glyphIndices));
+                    throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsMustBeLessOrEqualTo, MaxGlyphCount), "glyphIndices");
                 }
 
-                ArgumentNullException.ThrowIfNull(advanceWidths);
+                if (advanceWidths == null)
+                    throw new ArgumentNullException("advanceWidths");
 
                 if (advanceWidths.Count != glyphIndices.Count)
-                    throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, glyphIndices.Count), nameof(advanceWidths));
+                    throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, glyphIndices.Count), "advanceWidths");
 
                 if (glyphOffsets != null && glyphOffsets.Count != 0 && glyphOffsets.Count != glyphIndices.Count)
-                    throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, glyphIndices.Count), nameof(glyphOffsets));
+                    throw new ArgumentException(SR.Format(SR.CollectionNumberOfElementsShouldBeEqualTo, glyphIndices.Count), "glyphOffsets");
 
                 // We should've caught all invalid cases above and thrown appropriate exceptions.
                 Invariant.Assert(false);
@@ -479,7 +516,7 @@ namespace System.Windows.Media
 
             IList<bool> caretStops = CaretStops != null && CaretStops.Count != 0 ? CaretStops : new DefaultCaretStopList(CodepointCount);
             if (characterHit.FirstCharacterIndex < 0 || characterHit.FirstCharacterIndex > CodepointCount)
-                throw new ArgumentOutOfRangeException(nameof(characterHit));
+                throw new ArgumentOutOfRangeException("characterHit");
 
             int caretStopIndex, codePointsUntilNextStop;
             FindNearestCaretStop(
@@ -705,7 +742,7 @@ namespace System.Windows.Media
 
             IList<bool> caretStops = CaretStops != null && CaretStops.Count != 0 ? CaretStops : new DefaultCaretStopList(CodepointCount);
             if (characterHit.FirstCharacterIndex < 0 || characterHit.FirstCharacterIndex > CodepointCount)
-                throw new ArgumentOutOfRangeException(nameof(characterHit));
+                throw new ArgumentOutOfRangeException("characterHit");
 
             int caretStopIndex, codePointsUntilNextStop;
             FindNearestCaretStop(
@@ -752,7 +789,7 @@ namespace System.Windows.Media
 
             IList<bool> caretStops = CaretStops != null && CaretStops.Count != 0 ? CaretStops : new DefaultCaretStopList(CodepointCount);
             if (characterHit.FirstCharacterIndex < 0 || characterHit.FirstCharacterIndex > CodepointCount)
-                throw new ArgumentOutOfRangeException(nameof(characterHit));
+                throw new ArgumentOutOfRangeException("characterHit");
 
             int caretStopIndex, codePointsUntilNextStop;
             FindNearestCaretStop(
@@ -900,7 +937,10 @@ namespace System.Windows.Media
             {
                 CheckInitializing(); // This can only be set during initialization.
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 _glyphTypeface = value;
             }
@@ -1078,10 +1118,11 @@ namespace System.Windows.Media
 
                 // The list must be non-empty list.
                 // The consistency with other lists would be checked at EndInit() time.
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 if (value.Count <= 0)
-                    throw new ArgumentException(SR.CollectionNumberOfElementsMustBeGreaterThanZero, nameof(value));
+                    throw new ArgumentException(SR.CollectionNumberOfElementsMustBeGreaterThanZero, "value");
 
                 _glyphIndices = value;
             }
@@ -1108,10 +1149,11 @@ namespace System.Windows.Media
 
                 // The list must be non-empty list.
                 // The consistency with other lists would be checked at EndInit() time.
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 if (value.Count <= 0)
-                    throw new ArgumentException(SR.CollectionNumberOfElementsMustBeGreaterThanZero, nameof(value));
+                    throw new ArgumentException(SR.CollectionNumberOfElementsMustBeGreaterThanZero, "value");
 
                 _advanceWidths = value;
             }
@@ -1583,10 +1625,8 @@ namespace System.Windows.Media
 
                 if (accumulatedGeometry == null)
                 {
-                    accumulatedGeometry = new GeometryGroup
-                    {
-                        FillRule = FillRule.Nonzero
-                    };
+                    accumulatedGeometry = new GeometryGroup();
+                    accumulatedGeometry.FillRule = FillRule.Nonzero;
                 }
 
                 accumulatedGeometry.Children.Add(glyphGeometry.GetOutlinedPathGeometry(RelativeFlatteningTolerance, ToleranceType.Relative));

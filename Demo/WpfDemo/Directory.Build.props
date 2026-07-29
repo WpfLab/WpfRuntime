@@ -1,0 +1,5 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..\'))" />
+  <Import Project="$(RepoRoot)eng\WpfDemo\RepoWpfConsumer.props"
+          Condition="Exists('$(RepoRoot)eng\WpfDemo\RepoWpfConsumer.props')" />
+</Project>

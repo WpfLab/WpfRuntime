@@ -1,11 +1,24 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description: Helper for classes that need to clean up data structures
 //              containing WeakReferences
+//
 
-using System.Threading;
-using System.Windows.Threading;
+using System;
+using System.Diagnostics;           // Debug
+using System.Collections;           // Hashtable
+using System.Collections.Generic;   // List<T>
+using System.Collections.Specialized; // HybridDictionary
+using System.Runtime.CompilerServices;  // RuntimeHelpers
+using System.Security;              // 
+using System.Threading;             // [ThreadStatic]
+using System.Windows;               // WeakEventManager
+using System.Windows.Threading;     // DispatcherObject
+using MS.Utility;                   // FrugalList
 
 namespace MS.Internal
 {
@@ -21,16 +34,12 @@ namespace MS.Internal
             _maxPollingInterval = TimeSpan.FromMilliseconds(maxInterval);
 
             _cleanupTimerPriority = DispatcherPriority.ContextIdle;
-            _defaultCleanupTimer = new DispatcherTimer(_cleanupTimerPriority)
-            {
-                Interval = _basePollingInterval
-            };
+            _defaultCleanupTimer = new DispatcherTimer(_cleanupTimerPriority);
+            _defaultCleanupTimer.Interval = _basePollingInterval;
             _defaultCleanupTimer.Tick += OnCleanupTick;
 
-            _starvationTimer = new DispatcherTimer(DispatcherPriority.Normal)
-            {
-                Interval = TimeSpan.FromMilliseconds(promotionInterval)
-            };
+            _starvationTimer = new DispatcherTimer(DispatcherPriority.Normal);
+            _starvationTimer.Interval = TimeSpan.FromMilliseconds(promotionInterval);
             _starvationTimer.Tick += OnStarvationTick;
 
             _cleanupTimer = _defaultCleanupTimer;
@@ -80,7 +89,7 @@ namespace MS.Internal
             return foundDirt;
         }
 
-        private void OnCleanupTick(object sender, EventArgs e)
+        void OnCleanupTick(object sender, EventArgs e)
         {
             if (!_waitingForGC)
             {
@@ -88,7 +97,7 @@ namespace MS.Internal
             }
         }
 
-        private void OnStarvationTick(object sender, EventArgs e)
+        void OnStarvationTick(object sender, EventArgs e)
         {
             // cleanup is starving at its current priority
             // so increase the priority
@@ -115,21 +124,21 @@ namespace MS.Internal
             }
         }
 
-        private DispatcherTimer _cleanupTimer;
-        private DispatcherTimer _starvationTimer;
-        private DispatcherTimer _defaultCleanupTimer;
-        private DispatcherPriority _cleanupTimerPriority;
+        DispatcherTimer _cleanupTimer;
+        DispatcherTimer _starvationTimer;
+        DispatcherTimer _defaultCleanupTimer;
+        DispatcherPriority _cleanupTimerPriority;
 
-        private int             _cleanupRequests;
-        private bool            _waitingForGC;
+        int             _cleanupRequests;
+        bool            _waitingForGC;
 
-        private Func<bool,bool> _cleanupCallback;
-        private TimeSpan        _basePollingInterval;
-        private TimeSpan        _maxPollingInterval;
+        Func<bool,bool> _cleanupCallback;
+        TimeSpan        _basePollingInterval;
+        TimeSpan        _maxPollingInterval;
 
         // When an instance of this class is GC'd and finalized, it
         // tells the CleanupHelper that a GC has occurred.
-        private class GCDetector
+        class GCDetector
         {
             internal GCDetector(CleanupHelper parent)
             {
@@ -141,7 +150,7 @@ namespace MS.Internal
                 _parent._waitingForGC = false;
             }
 
-            private CleanupHelper _parent;
+            CleanupHelper _parent;
         }
     }
 }

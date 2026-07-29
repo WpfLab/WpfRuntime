@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.IO;
+// See the LICENSE file in the project root for more information.
 
 #if !DONOTREFPRINTINGASMMETA
 // 
@@ -12,6 +11,9 @@ using System.IO;
 // 
 namespace System.Windows.Documents.Serialization
 {
+    using System;
+    using System.IO;
+
     /// <summary>
     /// ISerializerFactory is implemented by an assembly containing a plug-in serializer and provides
     /// functionality to instantiate the associated serializer

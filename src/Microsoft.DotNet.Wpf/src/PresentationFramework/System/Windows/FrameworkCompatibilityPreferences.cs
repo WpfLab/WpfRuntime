@@ -1,8 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Specialized;   // NameValueCollection
 using System.Configuration;             // ConfigurationManager
+using System.Runtime.Versioning;
+using MS.Internal;
 
 namespace System.Windows
 {
@@ -50,7 +54,7 @@ namespace System.Windows
 
         // CLR's BinaryCompatibility class doesn't expose a convenient way to determine
         // if the app targets 4.0 exactly.  We use that a lot, so encapsulate it here
-        private static bool _targetsDesktop_V4_0;
+        static bool _targetsDesktop_V4_0;
 
         internal static bool TargetsDesktop_V4_0
         {
@@ -206,7 +210,7 @@ namespace System.Windows
             return UseSetWindowPosForTopmostWindows;
         }
 
-        private static void SetUseSetWindowPosForTopmostWindowsFromAppSettings(NameValueCollection appSettings)
+        static void SetUseSetWindowPosForTopmostWindowsFromAppSettings(NameValueCollection appSettings)
         {
             // user can use config file to enable this behavior change
             string s = appSettings["UseSetWindowPosForTopmostWindows"];
@@ -256,7 +260,7 @@ namespace System.Windows
             return VSP45Compat;
         }
 
-        private static void SetVSP45CompatFromAppSettings(NameValueCollection appSettings)
+        static void SetVSP45CompatFromAppSettings(NameValueCollection appSettings)
         {
             // user can use config file to opt out of VSP fixes
             string s = appSettings["IsVirtualizingStackPanel_45Compatible"];
@@ -287,7 +291,7 @@ namespace System.Windows
             return _scrollingTraceFile;
         }
 
-        private static void SetScrollingTraceFromAppSettings(NameValueCollection appSettings)
+        static void SetScrollingTraceFromAppSettings(NameValueCollection appSettings)
         {
             // user can use config file to select a control (TreeView, DataGrid, etc.)
             // for in-flight tracing of scrolling behavior:
@@ -389,7 +393,7 @@ namespace System.Windows
             return ShouldThrowOnCopyOrCutFailure;
         }
 
-        private static void SetShouldThrowOnCopyOrCutFailuresFromAppSettings(NameValueCollection appSettings)
+        static void SetShouldThrowOnCopyOrCutFailuresFromAppSettings(NameValueCollection appSettings)
         {
             // user can use config file to enable this behavior change
             string s = appSettings[nameof(ShouldThrowOnCopyOrCutFailure)];
@@ -422,7 +426,7 @@ namespace System.Windows
             return _IMECompositionTraceFile;
         }
 
-        private static void SetIMECompositionTraceFromAppSettings(NameValueCollection appSettings)
+        static void SetIMECompositionTraceFromAppSettings(NameValueCollection appSettings)
         {
             // user can use config file to select a control (TextBox, RichTextBox, etc.)
             // for in-flight tracing of IME composition behavior:

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,6 +11,7 @@
 //
 
 
+using System;
 using System.Runtime.InteropServices;
 using MS.Internal.IO.Packaging;
 
@@ -499,17 +501,17 @@ namespace MS.Internal.Interop
         /// <summary>
         /// Chunk ID
         /// </summary>
-        private uint idChunk;
+        uint idChunk;
 
         /// <summary>
         /// Beginning of the region, specified as an offset from the beginning of the chunk
         /// </summary>
-        private uint cwcStart;
+        uint cwcStart;
 
         /// <summary>
         /// Extent of the region, specified as a number of Unicode characters
         /// </summary>
-        private uint cwcExtent;
+        uint cwcExtent;
     };
     #endregion
 

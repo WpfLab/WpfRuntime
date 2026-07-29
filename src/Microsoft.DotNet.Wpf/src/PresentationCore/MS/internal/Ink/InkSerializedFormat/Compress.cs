@@ -1,7 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //#define OLD_ISF
+
+using MS.Utility;
+using System;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Ink;
+using MS.Internal.Ink.InkSerializedFormat;
+
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.Ink.InkSerializedFormat
 {
@@ -245,7 +259,13 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <returns></returns>
         internal static byte[] CompressPropertyData(byte[] data, byte algorithm)
         {
-            ArgumentNullException.ThrowIfNull(data);
+            if (data == null)
+            {
+                //we don't raise any information that could be used to attack our ISF code
+                //a simple 'ISF Operation Failed' is sufficient since the user can't do 
+                //anything to fix bogus ISF
+                throw new ArgumentNullException("data");
+            }
 
             return AlgoModule.CompressPropertyData(data, algorithm);
         }

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: 
@@ -7,11 +8,15 @@
 //              See spec at: AdornerLayer Spec.htm
 // 
 
+using System;
 using System.Windows.Media;
+using System.Diagnostics;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Windows.Threading;
 using System.Windows.Controls;
+
+using MS.Utility;
 using MS.Internal;
 using MS.Internal.Controls;
 using MS.Internal.Media;
@@ -304,7 +309,7 @@ namespace System.Windows.Documents
         /// </summary>
         /// <param name="visual">Visual from which the treewalk begins</param>
         /// <returns>First AdornerLayer above given element, or null</returns>
-        public static AdornerLayer GetAdornerLayer(Visual visual)
+        static public AdornerLayer GetAdornerLayer(Visual visual)
         {
             ArgumentNullException.ThrowIfNull(visual);
 
@@ -471,7 +476,7 @@ namespace System.Windows.Documents
                         if (index >= 0)
                         {
                             // Get the matrix transform out, skip all non affine transforms
-                            Transform transform = adornerTransform?.AffineTransform;
+                            Transform transform = (adornerTransform != null) ? adornerTransform.AffineTransform : null;
                             
                             ((Adorner)(_children[index])).AdornerTransform = transform;
                         }
@@ -509,10 +514,8 @@ namespace System.Windows.Documents
         {
             ArgumentNullException.ThrowIfNull(adorner);
 
-            AdornerInfo adornerInfo = new AdornerInfo(adorner)
-            {
-                ZOrder = zOrder
-            };
+            AdornerInfo adornerInfo = new AdornerInfo(adorner);
+            adornerInfo.ZOrder = zOrder;
 
             AddAdornerInfo(ElementMap, adornerInfo, adorner.AdornedElement);
 
@@ -850,10 +853,8 @@ namespace System.Windows.Documents
                     {
                         GeneralTransform transform = oldElement.TransformToAncestor(element);
                         combinedGeometry.Transform = transform.AffineTransform;
-                        combinedGeometry = new CombinedGeometry(combinedGeometry, geometry)
-                        {
-                            GeometryCombineMode = GeometryCombineMode.Intersect
-                        };
+                        combinedGeometry = new CombinedGeometry(combinedGeometry, geometry);
+                        combinedGeometry.GeometryCombineMode = GeometryCombineMode.Intersect;
                     }
                     oldElement = element;
                 }
@@ -963,7 +964,7 @@ namespace System.Windows.Documents
             get { return 4; }
         }
 
-        private GeneralTransform GetProposedTransform(Adorner adorner, GeneralTransform sourceTransform)
+        GeneralTransform GetProposedTransform(Adorner adorner, GeneralTransform sourceTransform)
         {
             // Flip horizontally if Right to Left.
             if (adorner.FlowDirection != this.FlowDirection)

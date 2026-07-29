@@ -1,14 +1,36 @@
-ï»¿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//  This class implements the RM data transform for a compound file.
+//
+//
+//
+
+
+// Allow use of presharp warning numbers [6518] unknown to the compiler
+#pragma warning disable 1634, 1691
+
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Packaging;
 using System.Text;
+using System.Windows;
 using System.Security.RightsManagement;
 
+using MS.Internal.IO.Packaging.CompoundFile;
+using MS.Internal.Utility;
+
 using CU = MS.Internal.IO.Packaging.CompoundFile.ContainerUtilities;
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
@@ -107,10 +129,12 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             // does -not- close the underlying stream.
             //
 
-            // The stream is not owned by the BlockManager, therefore we cannot 
-            // close the BinaryWriter, as that would Close the stream underneath.
-            // TODO: Use leaveOpen ctor
+// Suppress 6518 Local IDisposable object not disposed: 
+// Reason: The stream is not owned by the BlockManager, therefore we cannot 
+// close the BinaryWriter, as that would Close the stream underneath.
+#pragma warning disable 6518
             BinaryReader utf8Reader = new BinaryReader(_publishLicenseStream, Encoding.UTF8);
+#pragma warning restore 6518
 
             //
             // There follows a variable-length header (not to be confused with the physical
@@ -191,7 +215,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             PublishLicense publishLicense
             )
         {
-            ArgumentNullException.ThrowIfNull(publishLicense);
+            if (publishLicense == null)
+            {
+                throw new ArgumentNullException("publishLicense");
+            }
 
             if (_fixedSettings)
             {
@@ -211,11 +238,12 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             // does -not- close the underlying stream.
             //
 
-
-            // The stream is not owned by the BlockManager, therefore we cannot 
-            // close the BinaryWriter, as that would Close the stream underneath.
-            // TODO: Use leaveOpen ctor
+// Suppress 6518 Local IDisposable object not disposed: 
+// Reason: The stream is not owned by the BlockManager, therefore we cannot 
+// close the BinaryWriter, as that would Close the stream underneath.
+#pragma warning disable 6518
             BinaryWriter utf8Writer = new BinaryWriter(_publishLicenseStream, Encoding.UTF8);
+#pragma warning restore 6518
 
             //
             // There follows a variable-length header (not to be confused with the physical
@@ -278,7 +306,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             ContentUser user
             )
         {
-            ArgumentNullException.ThrowIfNull(user);
+            if (user == null)
+            {
+                throw new ArgumentNullException("user");
+            }
 
             LoadUseLicenseForUserParams param = new LoadUseLicenseForUserParams(user);
 
@@ -317,15 +348,22 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             UseLicense useLicense
             )
         {
-            ArgumentNullException.ThrowIfNull(user);
-            ArgumentNullException.ThrowIfNull(useLicense);
+            if (user == null)
+            {
+                throw new ArgumentNullException("user");
+            }
+
+            if (useLicense == null)
+            {
+                throw new ArgumentNullException("useLicense");
+            }
 
             if (user.AuthenticationType != AuthenticationType.Windows &&
                 user.AuthenticationType != AuthenticationType.Passport)
             {
                 throw new ArgumentException(
                     SR.OnlyPassportOrWindowsAuthenticatedUsersAreAllowed,
-                    nameof(user)
+                    "user"
                     );
             }
 
@@ -362,7 +400,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             ContentUser user
             )
         {
-            ArgumentNullException.ThrowIfNull(user);
+            if (user == null)
+            {
+                throw new ArgumentNullException("user");
+            }
 
             EnumUseLicenseStreams(
                 new UseLicenseStreamCallback(this.DeleteUseLicenseForUser),
@@ -416,12 +457,12 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// <para>
         /// Returns true when the transform expects no further changes to its state.
         /// The contract is that if FixedSettings is false, an application can change
-        /// any of the transformâ€™s properties with the promise that an exception will
+        /// any of the transform’s properties with the promise that an exception will
         /// not be thrown.
         /// </para>
         /// <para>
         /// For the RightsManagementEncryptionTransform, FixedSettings becomes true the
-        /// first time the compound file code calls the objectâ€™s GetTransformedStream method.
+        /// first time the compound file code calls the object’s GetTransformedStream method.
         /// After that, any attempt to set the CryptoProvider property, or to call
         /// SavePublicLicense, throws InvalidOperationException.
         /// </para>
@@ -491,11 +532,14 @@ namespace MS.Internal.IO.Packaging.CompoundFile
                     throw new InvalidOperationException(SR.CannotChangeCryptoProvider);
                 }
 
-                ArgumentNullException.ThrowIfNull(value);
-
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+                
                 if (!value.CanEncrypt && !value.CanDecrypt)
                 {
-                    throw new ArgumentException(SR.CryptoProviderIsNotReady, nameof(value));
+                    throw new ArgumentException(SR.CryptoProviderIsNotReady, "value");
                 }
 
                 _cryptoProvider = value;
@@ -624,16 +668,27 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// If the RM information in this file cannot be read by the current version of
         /// this class.
         /// </exception>
-        internal void EnumUseLicenseStreams(UseLicenseStreamCallback callback, object param)
+        internal void
+        EnumUseLicenseStreams(
+            UseLicenseStreamCallback callback,
+            object param
+            )
         {
-            ArgumentNullException.ThrowIfNull(callback);
+            if (callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
 
             bool stop = false;
 
             foreach (StreamInfo si in _useLicenseStorage.GetStreams())
             {
                 // Stream names: we preserve casing, but do case-insensitive comparison (Native CompoundFile API behavior)
-                if (si.Name.StartsWith(LicenseStreamNamePrefix, StringComparison.OrdinalIgnoreCase))
+                if (String.CompareOrdinal(
+                                LicenseStreamNamePrefix.ToUpperInvariant(), 0,
+                                si.Name.ToUpperInvariant(), 0,
+                                LicenseStreamNamePrefixLength
+                                ) == 0)
                 {
                     callback(this, si, param, ref stop);
                     if (stop)
@@ -708,7 +763,9 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             // If the type-prefixed name is not in a valid format, a FileFormatException
             // will be thrown.
             //
-            ParseTypePrefixedUserName(typePrefixedUserName, out AuthenticationType authenticationType, out string userName);
+            AuthenticationType authenticationType;
+            string userName;
+            ParseTypePrefixedUserName(typePrefixedUserName, out authenticationType, out userName);
             user = new ContentUser(userName, authenticationType);
 
             //
@@ -747,9 +804,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             ref bool stop
             )
         {
-            if (param is not LoadUseLicenseForUserParams lulfup)
+            LoadUseLicenseForUserParams lulfup = param as LoadUseLicenseForUserParams;
+            if (lulfup == null)
             {
-                throw new ArgumentException(SR.CallbackParameterInvalid, nameof(param));
+                throw new ArgumentException(SR.CallbackParameterInvalid, "param");
             }
 
             ContentUser userDesired = lulfup.User;
@@ -801,9 +859,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             ref bool stop
             )
         {
-            if (param is not ContentUser userToDelete)
+            ContentUser userToDelete = param as ContentUser;
+            if (userToDelete == null)
             {
-                throw new ArgumentException(SR.CallbackParameterInvalid, nameof(param));
+                throw new ArgumentException(SR.CallbackParameterInvalid, "param");
             }
 
             ContentUser userFromStream = null;
@@ -835,7 +894,11 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// SaveUseLicense has removed any existing use licenses for this
         /// user before calling this internal function.
         /// </remarks>
-        internal void SaveUseLicenseForUser(ContentUser user, UseLicense useLicense)
+        internal void
+        SaveUseLicenseForUser(
+            ContentUser user,
+            UseLicense useLicense
+            )
         {
             //
             // Generate a unique name for the use license stream, and create the stream.
@@ -966,7 +1029,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// <remarks>
         /// This function dose NOT produce a proper Base32Encoding since it will NOT produce proper padding.
         /// </remarks>
-        private static ReadOnlySpan<char> Base32EncodeWithoutPadding(ReadOnlySpan<byte> bytes, Span<char> initialBuffer)
+        private static char[]
+        Base32EncodeWithoutPadding(
+            byte[] bytes
+            )
         {
             int numBytes = bytes.Length;
             int numBits  = checked (numBytes * 8);
@@ -976,7 +1042,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             if (numBits % 5 != 0)
                 ++numChars;
 
-            Span<char> chars = initialBuffer.Length >= numChars ? initialBuffer.Slice(0, numChars) : new char[numChars];
+            char[] chars = new char[numChars];
 
             for (int iChar = 0; iChar < numChars; ++iChar)
             {
@@ -1011,10 +1077,8 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// </summary>
         private static string MakeUseLicenseStreamName()
         {
-            Span<byte> guidBytes = stackalloc byte[16];
-            Guid.NewGuid().TryWriteBytes(guidBytes);
-
-            return string.Concat(LicenseStreamNamePrefix, Base32EncodeWithoutPadding(guidBytes, stackalloc char[26]));
+            return LicenseStreamNamePrefix +
+                       new string(Base32EncodeWithoutPadding(Guid.NewGuid().ToByteArray()));
         }
 
         /// <summary>
@@ -1046,12 +1110,21 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// <param name="userName">
         /// The user's ID.
         /// </param>
-        private static void ParseTypePrefixedUserName(string typePrefixedUserName, out AuthenticationType authenticationType, out string userName)
+        private static void
+        ParseTypePrefixedUserName(
+            string typePrefixedUserName,
+            out AuthenticationType authenticationType,
+            out string userName
+            )
         {
+            //
             // We don't actually know the authentication type yet, and we might find that
             // the type-prefixed user name doesn't even specify a valid authentication
             // type. But we have to assign to authenticationType because it's an out
             // parameter.
+            //
+            authenticationType = AuthenticationType.Windows;
+
             int colonIndex = typePrefixedUserName.IndexOf(':');
             if (colonIndex < 1 || colonIndex >= typePrefixedUserName.Length - 1)
             {
@@ -1061,15 +1134,37 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             // No need to use checked{} here since colonIndex cannot be >= to (max int - 1)
             userName = typePrefixedUserName.Substring(colonIndex + 1);
 
-            // Usernames: Case-Insensitive comparison
-            ReadOnlySpan<char> authenticationSpan = typePrefixedUserName.AsSpan(0, colonIndex);
+            string authenticationTypeString = typePrefixedUserName.Substring(0, colonIndex);
+            bool validEnum = false;
 
-            if (authenticationSpan.Equals(nameof(AuthenticationType.Windows), StringComparison.OrdinalIgnoreCase))
+            // user names: case-insensitive comparison
+            if (((IEqualityComparer) CU.StringCaseInsensitiveComparer).Equals(
+                    authenticationTypeString,
+                    Enum.GetName(typeof(AuthenticationType), AuthenticationType.Windows)))
+            {
                 authenticationType = AuthenticationType.Windows;
-            else if (authenticationSpan.Equals(nameof(AuthenticationType.Passport), StringComparison.OrdinalIgnoreCase))
+                validEnum = true;
+            }
+            else if (((IEqualityComparer) CU.StringCaseInsensitiveComparer).Equals(
+                    authenticationTypeString,
+                    Enum.GetName(typeof(AuthenticationType), AuthenticationType.Passport)))
+            {
                 authenticationType = AuthenticationType.Passport;
-            else // Didn't find a matching enumeration constant.
-                throw new FileFormatException(SR.Format(SR.InvalidAuthenticationTypeString, typePrefixedUserName));
+                validEnum = true;
+            }
+
+            //
+            // Didn't find a matching enumeration constant.
+            //
+            if (!validEnum)
+            {
+                throw new FileFormatException(
+                                SR.Format(
+                                    SR.InvalidAuthenticationTypeString,
+                                    typePrefixedUserName
+                                    )
+                                );
+            }
         }
 
         /// <summary>
@@ -1146,7 +1241,9 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             // If the type-prefixed name is not in a valid format, a FileFormatException
             // will be thrown.
             //
-            ParseTypePrefixedUserName(typePrefixedUserName, out AuthenticationType authenticationType, out string userName);
+            AuthenticationType authenticationType;
+            string userName;
+            ParseTypePrefixedUserName(typePrefixedUserName, out authenticationType, out userName);
             return new ContentUser(userName, authenticationType);
         }
 
@@ -1231,7 +1328,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             if (extra != 0)
             {
                 // No need to use checked{} here since we already made sure that extra is smaller than Int32Size
-                writer.Write(Padding.Slice(0, CU.Int32Size - extra));
+                writer.Write(Padding, 0, CU.Int32Size - extra);
             }
         }
 
@@ -1307,6 +1404,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         // All use licenses reside in streams whose names begin with this prefix:
         //
         private const string LicenseStreamNamePrefix = "EUL-";
+        private static readonly int    LicenseStreamNamePrefixLength = LicenseStreamNamePrefix.Length;
 
         //
         // The RM version information for the current version of this class.
@@ -1363,15 +1461,16 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         //
         private const int MaxPublishLicenseHeaderLen = 4096;
 
-        private static ReadOnlySpan<char> Base32EncodingTable => [
+        private static readonly char[] Base32EncodingTable = {
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
             'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-            '2', '3', '4', '5', '6', '7', '='];
+            '2', '3', '4', '5', '6', '7', '='
+            };
 
         //
         // Used to DWORD-align a stream after writing a string to it:
         //
-        private static ReadOnlySpan<byte> Padding => [0, 0, 0];
+        private static readonly byte[] Padding = {0, 0, 0};
 
         private const int SizeofByte  = 1;
 

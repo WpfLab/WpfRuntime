@@ -1,7 +1,31 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Security.RightsManagement
+//
+//
+// Description: This class represents an immutable pair of Strings (Name, Description)
+// That are generally used to represent name and description of an unsigned publish license 
+// (a.k.a. template). Unsigned Publish License has property called LocalizedNameDescriptionDictionary
+// which holds a map of a local Id to a Name Description pair, in order to support scenarios of 
+// building locale specific template browsing applications.
+//
+//
+//
+//
+
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Globalization;
+using System.Windows;
+using MS.Internal.Security.RightsManagement;
+using SecurityHelper=MS.Internal.WindowsBase.SecurityHelper; 
+
+// Allow use of presharp warning numbers [6506] and [6518] unknown to the compiler
+#pragma warning disable 1634, 1691
+
+namespace System.Security.RightsManagement 
 {
     /// <summary>
     /// LocalizedNameDescriptionPair class represent an immutable (Name, Description) pair of strings. This is 
@@ -15,10 +39,17 @@ namespace System.Security.RightsManagement
         /// </summary>
         public LocalizedNameDescriptionPair(string name, string description)
         {
+        
+            if (name == null)
+            {
+                throw new ArgumentNullException("name");
+            }
 
-            ArgumentNullException.ThrowIfNull(name);
-            ArgumentNullException.ThrowIfNull(description);
-
+            if (description == null)
+            {
+                throw new ArgumentNullException("description");
+            }
+            
             _name = name;
             _description = description;
         }
@@ -52,6 +83,7 @@ namespace System.Security.RightsManagement
         /// </summary>
         public override bool Equals(object obj)
         {
+
             if ((obj == null) || (obj.GetType() != GetType()))
             {
                 return false;
@@ -59,9 +91,13 @@ namespace System.Security.RightsManagement
 
             LocalizedNameDescriptionPair localizedNameDescr = obj as LocalizedNameDescriptionPair;
             
-            return (string.Equals(localizedNameDescr.Name, Name, StringComparison.Ordinal))
+            //PRESHARP:Parameter to this public method must be validated:  A null-dereference can occur here. 
+            //This is a false positive as the checks above can gurantee no null dereference will occur  
+#pragma warning disable 6506
+            return (String.CompareOrdinal(localizedNameDescr.Name, Name) == 0)
                         &&
-                    (string.Equals(localizedNameDescr.Description, Description, StringComparison.Ordinal));
+                    (String.CompareOrdinal(localizedNameDescr.Description, Description) == 0);
+#pragma warning restore 6506
         }        
             
         /// <summary>

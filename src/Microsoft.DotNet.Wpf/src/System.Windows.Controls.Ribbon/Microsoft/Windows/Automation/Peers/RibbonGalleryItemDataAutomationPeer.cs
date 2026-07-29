@@ -1,13 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-
-#region Using declarations
-
-using System.Windows.Automation.Provider;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Automation.Peers
@@ -15,6 +9,14 @@ namespace System.Windows.Automation.Peers
 namespace Microsoft.Windows.Automation.Peers
 #endif
 {
+
+    #region Using declarations
+
+    using System;
+    using System.Windows.Automation;
+    using System.Windows.Automation.Provider;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon;
 #else
     using Microsoft.Windows.Controls.Ribbon;
     using System.Windows;
@@ -40,19 +42,19 @@ namespace Microsoft.Windows.Automation.Peers
         #region AutomationPeer override
 
         ///
-        protected override string GetClassNameCore()
+        override protected string GetClassNameCore()
         {
             return "RibbonGalleryItem";
         }
 
         ///
-        protected override AutomationControlType GetAutomationControlTypeCore()
+        override protected AutomationControlType GetAutomationControlTypeCore()
         {
             return AutomationControlType.ListItem;
         }
 
         ///
-        public override object GetPattern(PatternInterface patternInterface)
+        override public object GetPattern(PatternInterface patternInterface)
         {
             if (patternInterface == PatternInterface.ScrollItem || patternInterface == PatternInterface.SelectionItem)
             {
@@ -83,7 +85,10 @@ namespace Microsoft.Windows.Automation.Peers
         void IScrollItemProvider.ScrollIntoView()
         {
             RibbonGalleryItem ribbonGalleryItem = GetWrapper() as RibbonGalleryItem;
-            ribbonGalleryItem?.BringIntoView();
+            if (ribbonGalleryItem != null)
+            {
+                ribbonGalleryItem.BringIntoView();
+            }
         }
 
         #endregion
@@ -148,12 +153,12 @@ namespace Microsoft.Windows.Automation.Peers
                 return null;
             }
         }
-
+        
         #endregion
 
         #region data
 
-        private RibbonGalleryCategoryDataAutomationPeer _parentCategoryDataAutomationPeer;
+        RibbonGalleryCategoryDataAutomationPeer _parentCategoryDataAutomationPeer;
 
         #endregion
 

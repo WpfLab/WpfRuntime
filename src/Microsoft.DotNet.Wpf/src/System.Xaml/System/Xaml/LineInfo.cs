@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xaml
 {
@@ -28,7 +27,7 @@ namespace System.Xaml
 
         public int LinePosition
         {
-            get { return _linePosition; }
+            get { return _linePosition; }            
         }
         #endregion
     }

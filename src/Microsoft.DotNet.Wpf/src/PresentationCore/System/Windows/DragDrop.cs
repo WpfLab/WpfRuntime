@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,12 +12,19 @@
 //
 
 using MS.Win32;
+using System.Collections;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
+using System.Security;
 using MS.Internal;
+using MS.Internal.PresentationCore;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 
+using SR=MS.Internal.PresentationCore.SR;
 using IComDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 
 namespace System.Windows
@@ -369,9 +377,15 @@ namespace System.Windows
         {
             DataObject dataObject;
 
-            ArgumentNullException.ThrowIfNull(dragSource);
+            if (dragSource == null)
+            {
+                throw new ArgumentNullException("dragSource");
+            }
 
-            ArgumentNullException.ThrowIfNull(data);
+            if (data == null)
+            {
+                throw new ArgumentNullException("data");
+            }
 
             RoutedEventArgs args = new RoutedEventArgs(DragDropStartedEvent, dragSource);
             
@@ -390,7 +404,7 @@ namespace System.Windows
             }
             else
             {
-                throw new ArgumentException(SR.ScopeMustBeUIElementOrContent, nameof(dragSource));
+                throw new ArgumentException(SR.ScopeMustBeUIElementOrContent, "dragSource");
             }
 
             dataObject = data as DataObject;
@@ -421,7 +435,7 @@ namespace System.Windows
             }
             else
             {
-                throw new ArgumentException(SR.ScopeMustBeUIElementOrContent, nameof(dragSource));
+                throw new ArgumentException(SR.ScopeMustBeUIElementOrContent, "dragSource");
             }
 
             return ret;
@@ -463,7 +477,7 @@ namespace System.Windows
         /// </summary>
         /// <param name="windowHandle">
         /// The window handle that can accept drop.
-        /// </param>
+        /// </param>        
         internal static void RevokeDropTarget(IntPtr windowHandle)
         {
             if (windowHandle != IntPtr.Zero)
@@ -575,10 +589,10 @@ namespace System.Windows
             // We don't need to check the error return since PreserveSig attribute is defined as "false"
             // which will pops up the exception automatically.
             OleServicesContext.CurrentOleServicesContext.OleDoDragDrop(
-                (IComDataObject)dataObject,
-                (UnsafeNativeMethods.IOleDropSource)oleDragSource,
-                (int)allowedEffects,
-                dwEffect);
+                                                            (IComDataObject)dataObject,
+                                                            (UnsafeNativeMethods.IOleDropSource)oleDragSource,
+                                                            (int)allowedEffects,
+                                                            dwEffect);
 
             // return the drop effect of DragDrop.
             return (DragDropEffects)dwEffect[0];
@@ -587,7 +601,7 @@ namespace System.Windows
         #endregion Private Methods
     }
 
-    #endregion DragDrop
+    #endregion DragDrop    
 
 
     #region OleDragSource
@@ -669,7 +683,7 @@ namespace System.Windows
             GiveFeedbackEventArgs args;
 
             // Create GiveFeedback event arguments.
-            args = new GiveFeedbackEventArgs((DragDropEffects)effect, useDefaultCursors: false);
+            args = new GiveFeedbackEventArgs((DragDropEffects)effect, /*UseDefaultCursors*/ false);
 
             // Raise the give feedback event for both Tunnel(Preview) and Bubble.
             RaiseGiveFeedbackEvent(args);
@@ -890,7 +904,7 @@ namespace System.Windows
         {
             if (handle == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(handle));
+                throw new ArgumentNullException("handle");
             }
 
             _windowHandle = handle;

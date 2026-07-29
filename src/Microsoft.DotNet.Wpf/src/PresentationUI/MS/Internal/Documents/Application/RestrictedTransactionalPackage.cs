@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //  This class wraps TransactionalPackage, ensuring that only parts with
 //  approved content types can be written.
@@ -7,15 +8,18 @@
 using System;
 using System.IO;
 using System.IO.Packaging;
+using System.Security;
 using System.Windows.TrustUI;
+
+using MS.Internal;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// This class wraps TransactionalPackage, ensuring that only approved
-    /// part content types can be written.
-    /// </summary>
-    internal sealed class RestrictedTransactionalPackage : TransactionalPackage
+/// <summary>
+/// This class wraps TransactionalPackage, ensuring that only approved
+/// part content types can be written.
+/// </summary>
+internal sealed class RestrictedTransactionalPackage : TransactionalPackage
 {
     #region Constructors
     //--------------------------------------------------------------------------
@@ -44,9 +48,9 @@ namespace MS.Internal.Documents.Application
     {
         ArgumentNullException.ThrowIfNull(target);
 
-        if (TempPackage != null)
+        if (TempPackage.Value != null)
         {
-            foreach (PackagePart part in TempPackage.GetParts())
+            foreach (PackagePart part in TempPackage.Value.GetParts())
             {
                 // Ensure that all parts being modified are permitted.
                 if ((part != null) && (!IsValidContentType(part.ContentType)))
@@ -85,7 +89,7 @@ namespace MS.Internal.Documents.Application
         // Ensure that modifying this contentType is permitted.
         if (!IsValidContentType(contentType))
         {
-            throw new ArgumentException(SR.PackagePartTypeNotWritable, nameof(contentType));
+            throw new ArgumentException(SR.PackagePartTypeNotWritable, "contentType");
         }
         return base.CreatePartCore(partUri, contentType, compressionOption);
     }

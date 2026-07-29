@@ -1,17 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
 using System.Xaml;
+using System.Diagnostics;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Diagnostics;
+using System.Windows.Media.Media3D;
 using System.Windows.Media;
+using MS.Internal;
 using System.Globalization;
 using XamlReaderHelper = System.Windows.Markup.XamlReaderHelper;
-using System.Runtime.CompilerServices;
-using MS.Internal;
 
 namespace System.Windows.Baml2006
 {
@@ -139,7 +143,7 @@ namespace System.Windows.Baml2006
 
         #region XamlReader Members
 
-        public override bool Read()
+        override public bool Read()
         {
             ObjectDisposedException.ThrowIf(IsDisposed, typeof(Baml2006Reader));
             if (IsEof)
@@ -166,37 +170,37 @@ namespace System.Windows.Baml2006
             return true;
         }
 
-        public override XamlNodeType NodeType
+        override public XamlNodeType NodeType
         {
             get { return _xamlNodesReader.NodeType; }
         }
 
-        public override bool IsEof
+        override public bool IsEof
         {
             get { return _isEof; }
         }
 
-        public override NamespaceDeclaration Namespace
+        override public NamespaceDeclaration Namespace
         {
             get { return _xamlNodesReader.Namespace; }
         }
 
-        public override XamlSchemaContext SchemaContext
+        override public XamlSchemaContext SchemaContext
         {
             get { return _xamlNodesReader.SchemaContext; }
         }
 
-        public override XamlType Type
+        override public XamlType Type
         {
             get { return _xamlNodesReader.Type; }
         }
 
-        public override object Value
+        override public object Value
         {
             get { return _xamlNodesReader.Value; }
         }
 
-        public override XamlMember Member
+        override public XamlMember Member
         {
             get { return _xamlNodesReader.Member; }
         }
@@ -320,7 +324,10 @@ namespace System.Windows.Baml2006
             foreach (KeyRecord keyRecord in _context.KeyList)
             {
                 keyRecord.ValuePosition += endOfKeysStartOfObjects;
-                previousKeyRecord?.ValueSize = (int)(keyRecord.ValuePosition - previousKeyRecord.ValuePosition);
+                if (previousKeyRecord != null)
+                {
+                    previousKeyRecord.ValueSize = (int)(keyRecord.ValuePosition - previousKeyRecord.ValuePosition);
+                }
                 previousKeyRecord = keyRecord;
             }
             previousKeyRecord.ValueSize = (int)(_binaryReader.BaseStream.Length - previousKeyRecord.ValuePosition);
@@ -756,10 +763,8 @@ namespace System.Windows.Baml2006
             }
             else
             {
-                var xData = new System.Windows.Markup.XData
-                {
-                    Text = value
-                };
+                var xData = new System.Windows.Markup.XData();
+                xData.Text = value;
                 _xamlNodesWriter.WriteValue(xData);
             }
 
@@ -884,10 +889,8 @@ namespace System.Windows.Baml2006
                     string propertyName = GetStaticExtensionValue(keyId, out memberType, out providedValue);
                     if (providedValue == null)
                     {
-                        var staticExtension = new System.Windows.Markup.StaticExtension(propertyName)
-                        {
-                            MemberType = memberType
-                        };
+                        var staticExtension = new System.Windows.Markup.StaticExtension(propertyName);
+                        staticExtension.MemberType = memberType;
                         providedValue = staticExtension.ProvideValue(null);
                     }
                     optimizedStaticResource.KeyValue = providedValue;
@@ -1034,7 +1037,7 @@ namespace System.Windows.Baml2006
 
         private void Process_Text_Helper(string stringValue)
         {
-            if (!_context.InsideKeyRecord && !_context.InsideStaticResource)
+            if (_context.InsideKeyRecord != true && _context.InsideStaticResource != true)
             {
                 InjectPropertyAndFrameIfNeeded(_context.SchemaContext.GetXamlType(typeof(String)), 0);
             }
@@ -1200,7 +1203,7 @@ namespace System.Windows.Baml2006
             }
 
             // Need to output the keys if we're in deferred content
-            if (_context.PreviousFrame.IsDeferredContent && !_context.InsideStaticResource)
+            if (_context.PreviousFrame.IsDeferredContent && _context.InsideStaticResource == false)
             {         
                 // If we're providing binary, that means we've delay loaded the ResourceDictionary
                 // and the object we're currently creating doens't actually need the key.
@@ -1311,10 +1314,8 @@ namespace System.Windows.Baml2006
 
             // Store a key record that can be accessed later.
             // This is a complex scenario so we need to write to the keyList
-            KeyRecord key = new KeyRecord(isShared, isSharedSet, valuePosition, _context.SchemaContext)
-            {
-                Flags = flags
-            };
+            KeyRecord key = new KeyRecord(isShared, isSharedSet, valuePosition, _context.SchemaContext);
+            key.Flags = flags;
             key.KeyNodeList.Writer.WriteStartObject(type);
 
 
@@ -1376,7 +1377,7 @@ namespace System.Windows.Baml2006
                 // Force load the Statics by walking up the hierarchy and running class constructors
                 while (null != currentType)
                 {
-                    RuntimeHelpers.RunClassConstructor(currentType.TypeHandle);
+                    MS.Internal.WindowsBase.SecurityHelper.RunClassConstructor(currentType);
                     currentType = currentType.BaseType;
                 }
 
@@ -1729,10 +1730,8 @@ namespace System.Windows.Baml2006
                     }
                     else
                     {
-                        System.Windows.Markup.StaticExtension staticExtension = new System.Windows.Markup.StaticExtension((string)param)
-                        {
-                            MemberType = memberType
-                        };
+                        System.Windows.Markup.StaticExtension staticExtension = new System.Windows.Markup.StaticExtension((string)param);
+                        staticExtension.MemberType = memberType;
                         value = staticExtension;
                     }
                     handled = true;
@@ -2102,9 +2101,11 @@ namespace System.Windows.Baml2006
 
         // Providing the assembly short name may lead to ambiguity between two versions of the same assembly, but we need to
         // keep it this way since it is exposed publicly via the Namespace property, Baml2006ReaderInternal provides the full Assembly name.
+        // We need to avoid Assembly.GetName() so we run in PartialTrust without asserting.
         internal virtual ReadOnlySpan<char> GetAssemblyNameForNamespace(Assembly assembly)
         {
-            return ReflectionUtils.GetAssemblyPartialName(assembly);
+            string assemblyLongName = assembly.FullName;
+            return assemblyLongName.AsSpan(0, assemblyLongName.IndexOf(','));
         }
 
         // (prefix, namespaceUri)
@@ -2151,7 +2152,10 @@ namespace System.Windows.Baml2006
             _context.LineOffset = _binaryReader.ReadInt32();
             // We do this cast on every line info, but that is harmless for perf since line info is only in debug build
             IXamlLineInfoConsumer consumer = _xamlNodesWriter as IXamlLineInfoConsumer;
-            consumer?.SetLineInfo(_context.LineNumber, _context.LineOffset);
+            if (consumer != null)
+            {
+                consumer.SetLineInfo(_context.LineNumber, _context.LineOffset);
+            }
         }
 
         // (line, offset)
@@ -2161,7 +2165,10 @@ namespace System.Windows.Baml2006
             _context.LineOffset = _binaryReader.ReadInt32();
             // We do this cast on every line info, but that is harmless for perf since line info is only in debug build
             IXamlLineInfoConsumer consumer = _xamlNodesWriter as IXamlLineInfoConsumer;
-            consumer?.SetLineInfo(_context.LineNumber, _context.LineOffset);
+            if (consumer != null)
+            {
+                consumer.SetLineInfo(_context.LineNumber, _context.LineOffset);
+            }
         }
 
         private void Process_PIMapping()
@@ -2400,7 +2407,10 @@ namespace System.Windows.Baml2006
                                 // This is needed to ensure that template root element carries a line info
                                 // which can then be used when it is instantiated
                                 IXamlLineInfoConsumer consumer = _xamlNodesWriter as IXamlLineInfoConsumer;
-                                consumer?.SetLineInfo(_context.LineNumber, _context.LineOffset);
+                                if (consumer != null)
+                                {
+                                    consumer.SetLineInfo(_context.LineNumber, _context.LineOffset);
+                                }
                             }
                         }
                     }
@@ -2746,7 +2756,10 @@ namespace System.Windows.Baml2006
         Freezable IFreezeFreezables.TryGetFreezable(string value)
         {
             Freezable freezable = null;
-            _freezeCache?.TryGetValue(value, out freezable);
+            if (_freezeCache != null)
+            {
+                _freezeCache.TryGetValue(value, out freezable);
+            }
 
             return freezable;
         }

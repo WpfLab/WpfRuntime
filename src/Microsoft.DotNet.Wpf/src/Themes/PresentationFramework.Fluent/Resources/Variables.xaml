@@ -3,6 +3,7 @@
     If a copy of the MIT was not distributed with this file, You can obtain one at https://opensource.org/licenses/MIT.
     Copyright (C) Leszek Pomianowski and WPF UI Contributors.
     All Rights Reserved.
+    
     Based on Microsoft XAML for Win UI
     Copyright (c) Microsoft Corporation. All Rights Reserved.
 -->
@@ -27,13 +28,11 @@
     -->
 
     <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
-    <Thickness x:Key="TextControlThemePadding">10,5,6,6</Thickness>
-
-    <!-- Moved to Light, Dark and HC resource files -->
-    <!-- <Thickness x:Key="TextControlBorderThemeThicknessFocused">2</Thickness> -->
+    <Thickness x:Key="TextControlBorderThemeThicknessFocused">2</Thickness>
+    <Thickness x:Key="TextControlThemePadding">10,5,10,6</Thickness>
 
     <system:Double x:Key="ContentControlFontSize">14</system:Double>
-    <system:Double x:Key="TextControlThemeMinHeight">32</system:Double>
+    <system:Double x:Key="TextControlThemeMinHeight">24</system:Double>
     <system:Double x:Key="TextControlThemeMinWidth">0</system:Double>
     <system:Double x:Key="TreeViewItemMultiSelectCheckBoxMinHeight">24</system:Double>
     <system:Double x:Key="TreeViewItemPresenterMargin">0</system:Double>
@@ -42,9 +41,10 @@
     <Thickness x:Key="TimePickerHostPadding">0,1,0,2</Thickness>
     <Thickness x:Key="DatePickerHostPadding">0,1,0,2</Thickness>
     <Thickness x:Key="DatePickerHostMonthPadding">9,0,0,1</Thickness>
-    <Thickness x:Key="TextControlErrorBorderPadding">1</Thickness>
+    <Thickness x:Key="ComboBoxEditableTextPadding">10,0,30,0</Thickness>
 
     <system:Double x:Key="ComboBoxMinHeight">24</system:Double>
+    <!-- <Thickness x:Key="ComboBoxPadding">12,1,0,3</Thickness> -->
     <system:Double x:Key="NavigationViewItemOnLeftMinHeight">32</system:Double>
 
 </ResourceDictionary>

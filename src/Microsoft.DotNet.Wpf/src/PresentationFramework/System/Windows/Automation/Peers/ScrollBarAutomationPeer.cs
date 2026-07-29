@@ -1,9 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+
+using MS.Internal;
+using MS.Win32;
 
 namespace System.Windows.Automation.Peers
 {
@@ -16,20 +23,20 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override string GetClassNameCore()
+        override protected string GetClassNameCore()
         {
             return "ScrollBar";
         }
 
         ///
-        protected override AutomationControlType GetAutomationControlTypeCore()
+        override protected AutomationControlType GetAutomationControlTypeCore()
         {
             return AutomationControlType.ScrollBar;
         }
 
         // AutomationControlType.ScrollBar must return IsContentElement false.
         // See http://msdn.microsoft.com/en-us/library/ms743712.aspx
-        protected override bool IsContentElementCore()
+        override protected bool IsContentElementCore()
         {
             return false;
         }

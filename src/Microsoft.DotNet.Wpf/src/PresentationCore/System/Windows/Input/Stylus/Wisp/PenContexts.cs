@@ -1,25 +1,48 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+using System.Windows.Threading;
+using System.Windows;
+using System.Windows.Input;
 using System.Windows.Input.StylusWisp;
 using System.Windows.Media;
+using System.Security;
+using MS.Internal;
+
+using MS.Win32;
+using MS.Utility;
+using System.Runtime.InteropServices;
+
 using System.Windows.Input.StylusPlugIns;
 using System.Windows.Interop;
 
+using SR=MS.Internal.PresentationCore.SR;
+
+using MS.Internal.PresentationCore;                        // SecurityHelper
+
 namespace System.Windows.Input
 {
+    /////////////////////////////////////////////////////////////////////////
+
     internal sealed class PenContexts
     {
+        /////////////////////////////////////////////////////////////////////////
+
         internal PenContexts(WispLogic stylusLogic, PresentationSource inputSource)
         {
             HwndSource hwndSource = inputSource as HwndSource;
-            if(hwndSource == null || IntPtr.Zero == (hwndSource).Handle)
+            if(hwndSource == null || IntPtr.Zero == (hwndSource).CriticalHandle)
             {
                 throw new InvalidOperationException(SR.Stylus_PenContextFailure);
             }
 
-            _stylusLogic = stylusLogic;
-            _inputSource = hwndSource;
+            _stylusLogic  = stylusLogic;
+            _inputSource   = new SecurityCriticalData<HwndSource>(hwndSource);
         }
 
         /////////////////////////////////////////////////////////////////////////
@@ -29,7 +52,7 @@ namespace System.Windows.Input
             if (_contexts == null)
             {
                 // create contexts
-                _contexts = _stylusLogic.WispTabletDevices.CreateContexts(_inputSource.Handle, this);
+                _contexts = _stylusLogic.WispTabletDevices.CreateContexts(_inputSource.Value.CriticalHandle, this);
 
                 foreach(PenContext context in _contexts)
                 {
@@ -125,12 +148,12 @@ namespace System.Windows.Input
                                              gestureX, 
                                              gestureY,
                                              buttonState, 
-                                             _inputSource);
+                                             _inputSource.Value);
         }
 
         /////////////////////////////////////////////////////////////////////
 
-        private void ProcessInput(
+        void ProcessInput(
             RawStylusActions actions,
             PenContext penContext,
             int tabletDeviceId, 
@@ -145,7 +168,7 @@ namespace System.Windows.Input
                                         stylusPointerId,
                                         data, 
                                         timestamp,
-                                        _inputSource);
+                                        _inputSource.Value);
         }
 
         /////////////////////////////////////////////////////////////////////////
@@ -201,14 +224,14 @@ namespace System.Windows.Input
         {
             // We only tear down the old context when PenContexts are enabled without being
             // dispose and we have a valid index. Otherwise, no-op here.
-            if (_contexts is not null && index <= _contexts.Length && _inputSource.Handle != 0)
+            if (_contexts != null && index <= _contexts.Length && _inputSource.Value.CriticalHandle != IntPtr.Zero)
             {
                 PenContext[] ctxs = new PenContext[_contexts.Length + 1];
                 uint preCopyCount = index;
                 uint postCopyCount = (uint)_contexts.Length - index;
 
                 Array.Copy(_contexts, 0, ctxs, 0, preCopyCount);
-                PenContext newContext = _stylusLogic.TabletDevices[(int)index].As<WispTabletDevice>().CreateContext(_inputSource.Handle, this);
+                PenContext newContext = _stylusLogic.TabletDevices[(int)index].As<WispTabletDevice>().CreateContext(_inputSource.Value.CriticalHandle, this);
                 ctxs[index] = newContext;
                 Array.Copy(_contexts, index, ctxs, index+1, postCopyCount);
                 _contexts = ctxs;
@@ -416,7 +439,7 @@ namespace System.Windows.Input
                 {
                     // Create new RawStylusInput to send
                     GeneralTransformGroup transformTabletToView = new GeneralTransformGroup();
-                    transformTabletToView.Children.Add(new MatrixTransform(_stylusLogic.GetTabletToViewTransform(inputReport.InputSource, stylusDevice.TabletDevice))); // this gives matrix in measured units (not device)
+                    transformTabletToView.Children.Add(new MatrixTransform(_stylusLogic.GetTabletToViewTransform(stylusDevice.CriticalActiveSource, stylusDevice.TabletDevice))); // this gives matrix in measured units (not device)
                     transformTabletToView.Children.Add(currentPic.ViewToElement); // Make it relative to the element.
                     transformTabletToView.Freeze(); // Must be frozen for multi-threaded access.
                     
@@ -435,7 +458,7 @@ namespace System.Windows.Input
                     //    The transformTabletToView matrix and plugincollection rects though can change based 
                     //    off of layout events which is why we need to lock this.
                     GeneralTransformGroup transformTabletToView = new GeneralTransformGroup();
-                    transformTabletToView.Children.Add(new MatrixTransform(_stylusLogic.GetTabletToViewTransform(inputReport.InputSource, stylusDevice.TabletDevice))); // this gives matrix in measured units (not device)
+                    transformTabletToView.Children.Add(new MatrixTransform(_stylusLogic.GetTabletToViewTransform(stylusDevice.CriticalActiveSource, stylusDevice.TabletDevice))); // this gives matrix in measured units (not device)
                     transformTabletToView.Children.Add(pic.ViewToElement); // Make it relative to the element.
                     transformTabletToView.Freeze();  // Must be frozen for multi-threaded access.
                     
@@ -485,7 +508,7 @@ namespace System.Windows.Input
                 System.Diagnostics.Debug.Assert(data.Length % pointLength == 0);
                 Point ptTablet = new Point(data[data.Length - pointLength], data[data.Length - pointLength + 1]);
                 // Note: the StylusLogic data inside DeviceUnitsFromMeasurUnits is protected by __rtiLock.
-                ptTablet *= stylusDevice.TabletDevice.TabletDeviceImpl.TabletToScreen;
+                ptTablet = ptTablet * stylusDevice.TabletDevice.TabletDeviceImpl.TabletToScreen;
                 ptTablet.X = (int)Math.Round(ptTablet.X); // Make sure we snap to whole window pixels.
                 ptTablet.Y = (int)Math.Round(ptTablet.Y);
                 ptTablet = _stylusLogic.MeasureUnitsFromDeviceUnits(stylusDevice.CriticalActiveSource, ptTablet); // change to measured units now.
@@ -517,7 +540,7 @@ namespace System.Windows.Input
 
         /////////////////////////////////////////////////////////////////////
         // NOTE: this is called on pen thread (outside of apps Dispatcher)
-        private StylusPlugInCollection HittestPlugInCollection(Point pt)
+        StylusPlugInCollection HittestPlugInCollection(Point pt)
         {
             // Caller must make call to this routine inside of lock(__rtiLock)!
             
@@ -532,21 +555,21 @@ namespace System.Windows.Input
             return null;
         }
 
-        internal HwndSource InputSource => _inputSource;
+        internal HwndSource InputSource { get { return _inputSource.Value; } }
 
         /////////////////////////////////////////////////////////////////////
 
-        internal HwndSource _inputSource;
+        internal SecurityCriticalData<HwndSource> _inputSource;
 
-        private WispLogic                      _stylusLogic;
+        WispLogic                      _stylusLogic;
 
-        private object                       __rtiLock = new object();
-        private List<StylusPlugInCollection> _plugInCollectionList = new List<StylusPlugInCollection>();
+        object                       __rtiLock = new object();
+        List<StylusPlugInCollection> _plugInCollectionList = new List<StylusPlugInCollection>();
 
-        private PenContext[]        _contexts;
+        PenContext[]        _contexts;
         
-        private bool                _isWindowDisabled;
-        private Point               _destroyedLocation = new Point(0,0);
+        bool                _isWindowDisabled;
+        Point               _destroyedLocation = new Point(0,0);
     }
 }
 

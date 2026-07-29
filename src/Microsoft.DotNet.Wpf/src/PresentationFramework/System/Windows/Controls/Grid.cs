@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Grid implementation.
@@ -16,11 +17,22 @@ using MS.Internal;
 using MS.Internal.Controls;
 using MS.Internal.PresentationFramework;
 using MS.Internal.Telemetry.PresentationFramework;
+using MS.Utility;
+
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows.Threading;
 using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Markup;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows.Controls
 {
@@ -74,7 +86,7 @@ namespace System.Windows.Controls
                 return;
             }
 
-            throw (new ArgumentException(SR.Format(SR.Grid_UnexpectedParameterType, value.GetType(), typeof(UIElement)), nameof(value)));
+            throw (new ArgumentException(SR.Format(SR.Grid_UnexpectedParameterType, value.GetType(), typeof(UIElement)), "value"));
         }
 
         /// <summary>
@@ -260,7 +272,6 @@ namespace System.Windows.Controls
         /// <summary>
         /// Returns a ColumnDefinitionCollection of column definitions.
         /// </summary>
-        [TypeConverter(typeof(ColumnDefinitionCollectionConverter))]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public ColumnDefinitionCollection ColumnDefinitions
         {
@@ -271,38 +282,11 @@ namespace System.Windows.Controls
 
                 return (_data.ColumnDefinitions);
             }
-            set
-            {
-                if (value?.Owner is not null)
-                {
-                    if (value.Owner == this)
-                    {
-                        return;
-                    }
-
-                    throw new ArgumentException(SR.Format(SR.GridCollection_InOtherCollection, nameof(value), nameof(ColumnDefinitionCollection)));
-                }
-
-                _data ??= new ExtendedData();
-                if (_data.ColumnDefinitions is { } columnDefinitions)
-                {
-                    columnDefinitions.Owner = null;
-                }
-
-                _data.ColumnDefinitions = null;
-                
-                if (value is not null)
-                {
-                    value.Owner = this;
-                    _data.ColumnDefinitions = value;
-                }
-            }
         }
 
         /// <summary>
         /// Returns a RowDefinitionCollection of row definitions.
         /// </summary>
-        [TypeConverter(typeof(RowDefinitionCollectionConverter))]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
         public RowDefinitionCollection RowDefinitions
         {
@@ -312,32 +296,6 @@ namespace System.Windows.Controls
                 if (_data.RowDefinitions == null) { _data.RowDefinitions = new RowDefinitionCollection(this); }
 
                 return (_data.RowDefinitions);
-            }
-            set
-            {
-                if (value?.Owner is not null)
-                {
-                    if (value.Owner == this)
-                    {
-                        return;
-                    }
-                    
-                    throw new ArgumentException(SR.Format(SR.GridCollection_InOtherCollection, nameof(value), nameof(RowDefinitionCollection)));
-                }
-
-                _data ??= new ExtendedData();
-                if (_data.RowDefinitions is { } rowDefinitions)
-                {
-                    rowDefinitions.Owner = null;
-                }
-
-                _data.RowDefinitions = null;
-
-                if (value is not null)
-                {
-                    value.Owner = this;
-                    _data.RowDefinitions = value;
-                }
             }
         }
 
@@ -368,7 +326,7 @@ namespace System.Windows.Controls
             {
                 if (_gridLinesRenderer == null)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+                    throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
                 }
                 return _gridLinesRenderer;
             }
@@ -714,7 +672,10 @@ namespace System.Windows.Controls
                     for (int i = 0, count = children.Count; i < count; ++i)
                     {
                         UIElement child = children[i];
-                        child?.Arrange(new Rect(arrangeSize));
+                        if (child != null)
+                        {
+                            child.Arrange(new Rect(arrangeSize));
+                        }
                     }
                 }
                 else
@@ -756,7 +717,10 @@ namespace System.Windows.Controls
 
                     //  update render bound on grid lines renderer visual
                     GridLinesRenderer gridLinesRenderer = EnsureGridLinesRenderer();
-                    gridLinesRenderer?.UpdateRenderBounds(arrangeSize);
+                    if (gridLinesRenderer != null)
+                    {
+                        gridLinesRenderer.UpdateRenderBounds(arrangeSize);
+                    }
                 }
             }
             finally
@@ -941,20 +905,19 @@ namespace System.Windows.Controls
                     continue;
                 }
 
-                CellCache cell = new CellCache
-                {
-                    //
-                    //  read and cache child positioning properties
-                    //
+                CellCache cell = new CellCache();
 
-                    //  read indices from the corresponding properties
-                    //      clamp to value < number_of_columns
-                    //      column >= 0 is guaranteed by property value validation callback
-                    ColumnIndex = Math.Min(GetColumn(child), DefinitionsU.Length - 1),
-                    //      clamp to value < number_of_rows
-                    //      row >= 0 is guaranteed by property value validation callback
-                    RowIndex = Math.Min(GetRow(child), DefinitionsV.Length - 1)
-                };
+                //
+                //  read and cache child positioning properties
+                //
+
+                //  read indices from the corresponding properties
+                //      clamp to value < number_of_columns
+                //      column >= 0 is guaranteed by property value validation callback
+                cell.ColumnIndex = Math.Min(GetColumn(child), DefinitionsU.Length - 1);
+                //      clamp to value < number_of_rows
+                //      row >= 0 is guaranteed by property value validation callback
+                cell.RowIndex = Math.Min(GetRow(child), DefinitionsV.Length - 1);
 
                 //  read span properties
                 //      clamp to not exceed beyond right side of the grid
@@ -2288,7 +2251,7 @@ namespace System.Windows.Controls
                     // Compute deltas
                     for (int i = 0; i < definitions.Length; ++i)
                     {
-                        roundingErrors[i] -= definitions[i].SizeCache;
+                        roundingErrors[i] = roundingErrors[i] - definitions[i].SizeCache;
                         definitionIndices[i] = i;
                     }
 
@@ -3285,7 +3248,7 @@ namespace System.Windows.Controls
         /// <summary>
         /// Returns *-weight, adjusted for scale computed during Phase 1
         /// </summary>
-        private static double StarWeight(DefinitionBase def, double scale)
+        static double StarWeight(DefinitionBase def, double scale)
         {
             if (scale < 0.0)
             {
@@ -3314,10 +3277,10 @@ namespace System.Windows.Controls
         private GridLinesRenderer _gridLinesRenderer;
 
         // Keeps track of definition indices.
-        private int[] _definitionIndices;
+        int[] _definitionIndices;
 
         // Stores unrounded values and rounding errors during layout rounding.
-        private double[] _roundingErrors;
+        double[] _roundingErrors;
 
         #endregion Private Fields
 
@@ -3921,8 +3884,8 @@ namespace System.Windows.Controls
             {
                 Debug.Assert(grid != null);
                 _currentEnumerator = -1;
-                _enumerator0 = new ColumnDefinitionCollection.Enumerator(grid.ExtData?.ColumnDefinitions);
-                _enumerator1 = new RowDefinitionCollection.Enumerator(grid.ExtData?.RowDefinitions);
+                _enumerator0 = new ColumnDefinitionCollection.Enumerator(grid.ExtData != null ? grid.ExtData.ColumnDefinitions : null);
+                _enumerator1 = new RowDefinitionCollection.Enumerator(grid.ExtData != null ? grid.ExtData.RowDefinitions : null);
                 // GridLineRenderer is NOT included into this enumerator.
                 _enumerator2Index = 0;
                 if (includeChildren)
@@ -3967,12 +3930,12 @@ namespace System.Windows.Controls
                 {
                     if (_currentEnumerator == -1)
                     {
-                        // IEnumerator.Current is documented to throw this exception
+                        #pragma warning suppress 6503 // IEnumerator.Current is documented to throw this exception
                         throw new InvalidOperationException(SR.EnumeratorNotStarted);
                     }
                     if (_currentEnumerator >= 3)
                     {
-                        // IEnumerator.Current is documented to throw this exception
+                        #pragma warning suppress 6503 // IEnumerator.Current is documented to throw this exception
                         throw new InvalidOperationException(SR.EnumeratorReachedEnd);
                     }
 
@@ -4037,7 +4000,7 @@ namespace System.Windows.Controls
                 {
                     Grid grid = VisualTreeHelper.GetParent(this) as Grid;
                     if (    grid == null
-                        || !grid.ShowGridLines)
+                        ||  grid.ShowGridLines == false )
                     {
                         return;
                     }

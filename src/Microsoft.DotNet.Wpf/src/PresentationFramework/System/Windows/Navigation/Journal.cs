@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -20,10 +21,21 @@
 //
 // 
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.Serialization;
+using System.Windows.Threading;
+using System.Security;
 
 using MS.Internal;
 using MS.Internal.AppModel;
+using MS.Utility;
+using System.ComponentModel;
+
+// Since we disable PreSharp warnings in this file, we first need to disable warnings about unknown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Navigation
 {
@@ -228,7 +240,7 @@ namespace System.Windows.Navigation
         }
 
         [NonSerialized()]
-        private EventHandler _backForwardStateChange;
+        EventHandler _backForwardStateChange;
         #endregion
 
         //------------------------------------------------------
@@ -253,7 +265,7 @@ namespace System.Windows.Navigation
                 {
                     return null;
                 }
-            } while (!IsNavigable(_journalEntryList[index]));
+            } while (IsNavigable(_journalEntryList[index]) == false);
             JournalEntry removedEntry = RemoveEntryInternal(index);
             Debug.Assert(ValidateIndexes());
             UpdateView();
@@ -464,9 +476,15 @@ namespace System.Windows.Navigation
                     Debug.Assert(je.GetType().IsSerializable);
                     // There can be keep-alive JEs creates for child frames.
                     DataStreams jds = je.JEGroupState.JournalDataStreams;
-                    jds?.PrepareForSerialization();
+                    if (jds != null)
+                    {
+                        jds.PrepareForSerialization();
+                    }
 
-                    je.RootViewerState?.PrepareForSerialization();
+                    if (je.RootViewerState != null)
+                    {
+                        je.RootViewerState.PrepareForSerialization();
+                    }
                 }
             }
         }
@@ -624,8 +642,8 @@ namespace System.Windows.Navigation
 
         private JournalEntryFilter  _filter;
 
-        private JournalEntryBackStack       _backStack;
-        private JournalEntryForwardStack    _forwardStack;
+        JournalEntryBackStack       _backStack;
+        JournalEntryForwardStack    _forwardStack;
 
         // This is where we get the id we assign to all JournalEntries.
         // It will be incremented each time.

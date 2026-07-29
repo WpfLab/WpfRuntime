@@ -1,5 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+using MS.Win32;
+using System.Windows.Threading;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -11,8 +21,8 @@ namespace System.Windows.Input
     {
         internal InputProviderSite(InputManager inputManager, IInputProvider inputProvider)
         {
-            _inputManager = inputManager;
-            _inputProvider = inputProvider;
+            _inputManager = new SecurityCriticalDataClass<InputManager>(inputManager);
+            _inputProvider = new SecurityCriticalDataClass<IInputProvider>(inputProvider);
         }
 
         /// <summary>
@@ -29,7 +39,13 @@ namespace System.Windows.Input
         /// <summary>
         ///     Returns the input manager that this site is attached to.
         /// </summary>
-        internal InputManager CriticalInputManager => _inputManager;
+        internal InputManager CriticalInputManager
+        {
+            get
+            {
+                return _inputManager.Value;
+            }
+        }
 
         /// <summary>
         ///     Unregisters this input provider.
@@ -41,11 +57,10 @@ namespace System.Windows.Input
             {
                 _isDisposed = true;
 
-                if (_inputManager is not null && _inputProvider is not null)
+                if (_inputManager != null && _inputProvider != null)
                 {
-                    _inputManager.UnregisterInputProvider(_inputProvider);
+                    _inputManager.Value.UnregisterInputProvider(_inputProvider.Value);
                 }
-
                 _inputManager = null;
                 _inputProvider = null;
             }
@@ -82,22 +97,20 @@ namespace System.Windows.Input
 
             bool handled = false;
 
-            InputReportEventArgs input = new InputReportEventArgs(null, inputReport)
-            {
-                RoutedEvent = InputManager.PreviewInputReportEvent
-            };
+            InputReportEventArgs input = new InputReportEventArgs(null, inputReport);
+            input.RoutedEvent=InputManager.PreviewInputReportEvent;
 
-            if (_inputManager is not null)
+            if(_inputManager != null)
             {
-                handled = _inputManager.ProcessInput(input);
+                handled = _inputManager.Value.ProcessInput(input);
             }
 
             return handled;
         }
 
         private bool _isDisposed;
-        private InputManager _inputManager;
-        private IInputProvider _inputProvider;
+        private SecurityCriticalDataClass<InputManager> _inputManager;
+        private SecurityCriticalDataClass<IInputProvider> _inputProvider;
     }
 }
 

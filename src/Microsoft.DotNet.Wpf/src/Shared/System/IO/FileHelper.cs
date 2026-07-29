@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //---------------------------------------------------------------------------
 //
@@ -11,9 +12,13 @@
 //
 //---------------------------------------------------------------------------
 
+using System;
+using System.IO;
+using System.Security;
+
 namespace System.IO
 {
-    internal static class FileHelper
+    static internal class FileHelper
     {
         // The normal way to create and open a temp file fails when an impolite
         // process opens the new file before we can
@@ -84,7 +89,7 @@ namespace System.IO
         /// <param name="fileOptions">desired options for the temp file (defaults to None)</param>
         /// <param name="extension">desired extension, or null (defaults to null)</param>
         /// <param name="subFolder">desired subfolder of temp folder, or null (defaults to "WPF")</param>
-        internal static FileStream CreateAndOpenTemporaryFile(
+        static internal FileStream CreateAndOpenTemporaryFile(
                     out string filePath,
                     FileAccess fileAccess=FileAccess.Write,
                     FileOptions fileOptions=FileOptions.None,
@@ -140,11 +145,16 @@ namespace System.IO
             return stream;
         }
 
+        // PreSharp uses message numbers that the C# compiler doesn't know about.
+        // Disable the C# complaints, per the PreSharp documentation.
+        #pragma warning disable 1634, 1691
+        #pragma warning disable 56502 // disable PreSharp warning about empty catch blocks
+
         ///<summary>
         /// Delete a temporary file robustly.
         ///</summary>
         /// <param name="filePath">Path to the temp file.</param>
-        internal static void DeleteTemporaryFile(string filePath)
+        static internal void DeleteTemporaryFile(string filePath)
         {
             if (!String.IsNullOrEmpty(filePath))
             {
@@ -158,12 +168,8 @@ namespace System.IO
                     // We may not be able to delete the file if it's being used by some other process (e.g. Anti-virus check).
                     // There's nothing we can do in that case, so just eat the exception and leave the file behind
                 }
-                catch(System.UnauthorizedAccessException)
-                {
-                    // We may not be able to delete the file if we do not have rights to delete from the file folder.
-                    // There's nothing we can do in that case, so just eat the exception and leave the file behind
-                }
             }
         }
+        #pragma warning restore 56502
     }
 }

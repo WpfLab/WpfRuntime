@@ -1,11 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: XamlToRtfWriter write Rtf content from Xaml content.
 //
 
 using System.Collections;
+using System.Diagnostics;
 using System.Text;
 using System.Windows.Media; // Color
 using System.Globalization;
@@ -437,7 +439,7 @@ namespace System.Windows.Documents
                         // Increment current listitem number
                         if (openLists.Count > 0)
                         {
-                            openCounts[openLists.Count - 1] += 1;
+                            openCounts[openLists.Count - 1] = openCounts[openLists.Count - 1] + 1;
                         }
                         break;
                     case DocumentNodeType.dnParagraph:
@@ -2235,29 +2237,29 @@ namespace System.Windows.Documents
             {
                 string imageFormatName = imageName.Substring(extensionIndex);
 
-                if (string.Equals(".png", imageFormatName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(".png", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     imageFormat = RtfImageFormat.Png;
                 }
-                if (string.Equals(".jpeg", imageFormatName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(".jpg", imageFormatName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(".jpeg", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                    string.Compare(".jpg", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     imageFormat = RtfImageFormat.Jpeg;
                 }
-                if (string.Equals(".gif", imageFormatName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(".gif", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     imageFormat = RtfImageFormat.Gif;
                 }
-                if (string.Equals(".tif", imageFormatName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(".tiff", imageFormatName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(".tif", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0 ||
+                    string.Compare(".tiff", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     imageFormat = RtfImageFormat.Tif;
                 }
-                if (string.Equals(".bmp", imageFormatName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(".bmp", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     imageFormat = RtfImageFormat.Bmp;
                 }
-                if (string.Equals(".dib", imageFormatName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(".dib", imageFormatName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     imageFormat = RtfImageFormat.Dib;
                 }
@@ -2269,11 +2271,11 @@ namespace System.Windows.Documents
         // Get the image stretch type
         private System.Windows.Media.Stretch GetImageStretch(string imageStretch)
         {
-            if (string.Equals("Fill", imageStretch, StringComparison.OrdinalIgnoreCase))
+            if (string.Compare("Fill", imageStretch, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 return System.Windows.Media.Stretch.Fill;
             }
-            else if (string.Equals("UniformToFill", imageStretch, StringComparison.OrdinalIgnoreCase))
+            else if (string.Compare("UniformToFill", imageStretch, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 return System.Windows.Media.Stretch.UniformToFill;
             }
@@ -2286,11 +2288,11 @@ namespace System.Windows.Documents
         // Get the image stretch direction type
         private System.Windows.Controls.StretchDirection GetImageStretchDirection(string imageStretchDirection)
         {
-            if (string.Equals("UpOnly", imageStretchDirection, StringComparison.OrdinalIgnoreCase))
+            if (string.Compare("UpOnly", imageStretchDirection, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 return System.Windows.Controls.StretchDirection.UpOnly;
             }
-            else if (string.Equals("DownOnly", imageStretchDirection, StringComparison.OrdinalIgnoreCase))
+            else if (string.Compare("DownOnly", imageStretchDirection, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 return System.Windows.Controls.StretchDirection.DownOnly;
             }
@@ -2718,19 +2720,19 @@ namespace System.Windows.Documents
             {
                 XamlToRtfError xamlToRtfError = XamlToRtfError.None;
 
-                if (string.Equals(name, "&gt;", StringComparison.OrdinalIgnoreCase))
+                if (string.Compare(name, "&gt;", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     return ((IXamlContentHandler)this).Characters(">");
                 }
-                else if (string.Equals(name, "&lt;", StringComparison.OrdinalIgnoreCase))
+                else if (string.Compare(name, "&lt;", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     return ((IXamlContentHandler)this).Characters("<");
                 }
-                else if (string.Equals(name, "&amp;", StringComparison.OrdinalIgnoreCase))
+                else if (string.Compare(name, "&amp;", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     return ((IXamlContentHandler)this).Characters("&");
                 }
-                else if (name.StartsWith("&#x", StringComparison.OrdinalIgnoreCase))
+                else if (name.IndexOf("&#x", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     xamlToRtfError = XamlToRtfError.InvalidFormat;
                     if (name.Length >= 5)
@@ -2744,7 +2746,7 @@ namespace System.Windows.Documents
                         }
                     }
                 }
-                else if (name.StartsWith("&#", StringComparison.OrdinalIgnoreCase))
+                else if (name.IndexOf("&#", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     if (name.Length >= 4)
                     {
@@ -2873,11 +2875,11 @@ namespace System.Windows.Documents
                                         break;
 
                                     case XamlAttribute.XAFontWeight:
-                                        if (string.Equals(valueString, "Normal", StringComparison.OrdinalIgnoreCase))
+                                        if (string.Compare(valueString, "Normal", StringComparison.OrdinalIgnoreCase) == 0)
                                         {
                                             formatState.Bold = false;
                                         }
-                                        else if (string.Equals(valueString, "Bold", StringComparison.OrdinalIgnoreCase))
+                                        else if (string.Compare(valueString, "Bold", StringComparison.OrdinalIgnoreCase) == 0)
                                         {
                                             formatState.Bold = true;
                                         }
@@ -2893,7 +2895,7 @@ namespace System.Windows.Documents
                                         break;
 
                                     case XamlAttribute.XAFontStyle:
-                                        if (string.Equals(valueString, "Italic", StringComparison.OrdinalIgnoreCase))
+                                        if (string.Compare(valueString, "Italic", StringComparison.OrdinalIgnoreCase) == 0)
                                         {
                                             formatState.Italic = true;
                                         }
@@ -3464,7 +3466,7 @@ namespace System.Windows.Documents
             {
                 for (int i = 0; i < entries.Length; i++)
                 {
-                    if (string.Equals(entries[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                    if (string.Compare(entries[i].Name, name, StringComparison.OrdinalIgnoreCase) == 0)
                     {
                         return entries[i].Value;
                     }
@@ -3670,11 +3672,11 @@ namespace System.Windows.Documents
             {
                 ulState = ULState.ULNone;
                 strikeState = StrikeState.StrikeNone;
-                if (decoration.Contains("Underline", StringComparison.OrdinalIgnoreCase))
+                if (decoration.IndexOf("Underline", StringComparison.OrdinalIgnoreCase) != -1)
                 {
                     ulState = ULState.ULNormal;
                 }
-                if (decoration.Contains("Strikethrough", StringComparison.OrdinalIgnoreCase))
+                if (decoration.IndexOf("Strikethrough", StringComparison.OrdinalIgnoreCase) != -1)
                 {
                     strikeState = StrikeState.StrikeNormal;
                 }
@@ -3687,12 +3689,12 @@ namespace System.Windows.Documents
                 if (dirName.Length == 0)
                     return false;
 
-                if (string.Equals("RightToLeft", dirName, StringComparison.OrdinalIgnoreCase))
+                if (string.Compare("RightToLeft", dirName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dirState = DirState.DirRTL;
                     return true;
                 }
-                else if (string.Equals("LeftToRight", dirName, StringComparison.OrdinalIgnoreCase))
+                else if (string.Compare("LeftToRight", dirName, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     dirState = DirState.DirLTR;
                     return true;

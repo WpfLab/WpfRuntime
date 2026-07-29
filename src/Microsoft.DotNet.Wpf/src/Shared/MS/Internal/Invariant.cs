@@ -1,15 +1,34 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Diagnostics.CodeAnalysis;
-using Microsoft.Win32;
+//
+//
+//
+// Description: Provides methods that assert an application is in a valid state.
+//
 
+#if WINDOWS_BASE
+using MS.Internal.WindowsBase;
+#elif DRT
+using MS.Internal.Drt;
+#else
+#error There is an attempt to use this class from an unexpected assembly.
+#endif
 namespace MS.Internal
 {
+    using System;
+    using System.Security; 
+    using Microsoft.Win32;
+    using System.Diagnostics;
+    using System.Windows;
+    
     /// <summary>
-    ///  Provides methods that assert an application is in a valid state.
+    /// Provides methods that assert an application is in a valid state. 
     /// </summary>
-    internal static class Invariant
+    [FriendAccessAllowed] // Built into Base, used by Framework.
+    internal // DO NOT MAKE PUBLIC - See security notes on Assert
+        static class Invariant
     {
         //------------------------------------------------------
         //
@@ -67,18 +86,7 @@ namespace MS.Internal
         {
             if (!condition)
             {
-                FailFast(message: null, detailMessage: null);
-            }
-        }
-
-        /// <summary>
-        ///  Checks <paramref name="value"/> for <see langword="null"/> and shuts down the application if true.
-        /// </summary>
-        internal static void AssertNotNull([NotNull] object value)
-        {
-            if (value is null)
-            {
-                FailFast("Value should not be null", null);
+                FailFast(null, null);
             }
         }
 
@@ -188,10 +196,10 @@ namespace MS.Internal
         /// <param name="detailMessage">
         ///     Additional message to display before shutting down the application.
         /// </param>
-        [DoesNotReturn]
-        private static void FailFast(string message, string detailMessage)
+        private // DO NOT MAKE PUBLIC OR INTERNAL -- See security note
+            static void FailFast(string message, string detailMessage)
         {
-            if (IsDialogOverrideEnabled)
+            if (Invariant.IsDialogOverrideEnabled)
             {
                 // This is the override for stress and other automation.
                 // Automated systems can't handle a popup-dialog, so let
@@ -199,7 +207,8 @@ namespace MS.Internal
                 Debugger.Break();
             }
 
-            Debug.Fail($"Invariant failure: {message}", detailMessage);
+            Debug.Assert(false, "Invariant failure: " + message, detailMessage);
+
             Environment.FailFast(SR.InvariantFailure);
         }
 
@@ -236,6 +245,7 @@ namespace MS.Internal
                 if (key != null)
                 {
                     object dbgJITDebugLaunchSettingValue = key.GetValue("DbgJITDebugLaunchSetting");
+                    string dbgManagedDebuggerValue = key.GetValue("DbgManagedDebugger") as string;
 
                     //
                     // Only count the enable if there's a JIT debugger to launch.
@@ -243,7 +253,7 @@ namespace MS.Internal
                     enabled = (dbgJITDebugLaunchSettingValue is int && ((int)dbgJITDebugLaunchSettingValue & 2) != 0);
                     if (enabled)
                     {
-                        enabled = key.GetValue("DbgManagedDebugger") is string dbgManagedDebuggerValue && dbgManagedDebuggerValue.Length > 0;
+                        enabled = dbgManagedDebuggerValue != null && dbgManagedDebuggerValue.Length > 0;
                     }
                 }
                 return enabled;

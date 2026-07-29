@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Navigation;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,6 +9,17 @@ using System.Windows.Navigation;
 
 namespace System.Windows.Documents
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Collections.Specialized;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Windows.Threading;
+    using System.Windows.Markup;
+    using System.Windows.Navigation;
+    using System.Windows.Media;
+
     ///<summary>
     ///     The IFixedNavigate interface will be implemented by FixedPage, FixedDocument, 
     ///     and FixedDocumentSequence to support fixed hyperlink.

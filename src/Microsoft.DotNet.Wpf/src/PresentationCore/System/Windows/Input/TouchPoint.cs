@@ -1,8 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
+
+using System;
+using System.Windows;
+using System.Windows.Input;
 
 namespace System.Windows.Input
 {
@@ -31,7 +36,10 @@ namespace System.Windows.Input
         /// </param>
         public TouchPoint(TouchDevice device, Point position, Rect bounds, TouchAction action)
         {
-            ArgumentNullException.ThrowIfNull(device);
+            if (device == null)
+            {
+                throw new ArgumentNullException("device");
+            }
 
             TouchDevice = device;
             Position = position;

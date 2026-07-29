@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -10,11 +11,16 @@
 *
 \***************************************************************************/
 
+using System;
+using System.Windows;
 using System.Collections;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Windows.Markup;
 using System.ComponentModel;
+using System.Collections.Generic;
 using MS.Internal;
+using MS.Internal.WindowsBase;
 using System.Runtime.CompilerServices;
 
 namespace System.Windows
@@ -35,8 +41,11 @@ namespace System.Windows
         /// <param name="scopedElement">object mapped to name</param>
         public void RegisterName(string name, object scopedElement)
         {
-            ArgumentNullException.ThrowIfNull(name);
-            ArgumentNullException.ThrowIfNull(scopedElement);
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
+
+            if (scopedElement == null)
+                throw new ArgumentNullException(nameof(scopedElement));
 
             if (name.Length == 0)
                 throw new ArgumentException(SR.NameScopeNameNotEmptyString);
@@ -80,7 +89,8 @@ namespace System.Windows
         /// <param name="name">name to be registered</param>
         public void UnregisterName(string name)
         {
-            ArgumentNullException.ThrowIfNull(name);
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
 
             if (name.Length == 0)
                 throw new ArgumentException(SR.NameScopeNameNotEmptyString);
@@ -123,7 +133,8 @@ namespace System.Windows
             INameScope nameScope = obj as INameScope;
             if (nameScope == null)
             {
-                if (obj is DependencyObject objAsDO)
+                DependencyObject objAsDO = obj as DependencyObject;
+                if (objAsDO != null)
                 {
                     nameScope = GetNameScope(objAsDO);
                 }
@@ -153,7 +164,10 @@ namespace System.Windows
         /// <param name="value">NameScope property value.</param>
         public static void SetNameScope(DependencyObject dependencyObject, INameScope value)
         {
-            ArgumentNullException.ThrowIfNull(dependencyObject);
+            if (dependencyObject == null)
+            {
+                throw new ArgumentNullException(nameof(dependencyObject));
+            }
 
             dependencyObject.SetValue(NameScopeProperty, value);
         }
@@ -166,7 +180,10 @@ namespace System.Windows
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public static INameScope GetNameScope(DependencyObject dependencyObject)
         {
-            ArgumentNullException.ThrowIfNull(dependencyObject);
+            if (dependencyObject == null)
+            {
+                throw new ArgumentNullException(nameof(dependencyObject));
+            }
 
             return ((INameScope)dependencyObject.GetValue(NameScopeProperty));
         }
@@ -181,7 +198,7 @@ namespace System.Windows
 
         #endregion Data
 
-        private IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+        IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
             return new Enumerator(this._nameMap);
         }
@@ -258,11 +275,11 @@ namespace System.Windows
         {
             if (item.Key == null)
             {
-                throw new ArgumentException(SR.Format(SR.ReferenceIsNull, "item.Key"), nameof(item));
+                throw new ArgumentException(SR.Format(SR.ReferenceIsNull, "item.Key"), "item");
             }
             if (item.Value == null)
             {
-                throw new ArgumentException(SR.Format(SR.ReferenceIsNull, "item.Value"), nameof(item));
+                throw new ArgumentException(SR.Format(SR.ReferenceIsNull, "item.Value"), "item");
             }
 
             Add(item.Key, item.Value);
@@ -272,7 +289,7 @@ namespace System.Windows
         {
             if (item.Key == null)
             {
-                throw new ArgumentException(SR.Format(SR.ReferenceIsNull, "item.Key"), nameof(item));
+                throw new ArgumentException(SR.Format(SR.ReferenceIsNull, "item.Key"), "item");
             }
             return ContainsKey(item.Key);
         }
@@ -283,13 +300,23 @@ namespace System.Windows
         {
             get
             {
-                ArgumentNullException.ThrowIfNull(key);
+                if (key == null)
+                {
+                    throw new ArgumentNullException("key");
+                }
                 return FindName(key);
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(key);
-                ArgumentNullException.ThrowIfNull(value);
+                if (key == null)
+                {
+                    throw new ArgumentNullException("key");
+                }
+
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 RegisterName(key, value);
             }
@@ -297,14 +324,20 @@ namespace System.Windows
 
         public void Add(string key, object value)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            if (key == null)
+            {
+                throw new ArgumentNullException("key");
+            }
 
             RegisterName(key, value);
         }
 
         public bool ContainsKey(string key)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            if (key == null)
+            {
+                throw new ArgumentNullException("key");
+            }
 
             object value = FindName(key);
             return (value != null);
@@ -369,9 +402,9 @@ namespace System.Windows
         #endregion
 
         #region class Enumerator
-        private class Enumerator : IEnumerator<KeyValuePair<string, object>>
+        class Enumerator : IEnumerator<KeyValuePair<string, object>>
         {
-            private IDictionaryEnumerator _enumerator;
+            IDictionaryEnumerator _enumerator;
             
             public Enumerator(HybridDictionary nameMap)
             {
@@ -419,7 +452,10 @@ namespace System.Windows
 
             void IEnumerator.Reset()
             {
-                _enumerator?.Reset();
+                if (_enumerator != null)
+                {
+                    _enumerator.Reset();
+                }
             }
         }
         #endregion

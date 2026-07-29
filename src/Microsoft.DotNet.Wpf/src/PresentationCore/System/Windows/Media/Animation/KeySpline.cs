@@ -1,7 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//                                             
+
+// Allow suppression of certain presharp messages
+#pragma warning disable 1634, 1691
+
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.InteropServices;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Animation
 {
@@ -286,7 +298,7 @@ namespace System.Windows.Media.Animation
         /// <param name="c">the third Bezier coefficient</param>
         /// <param name="t">the parameter value to evaluate at</param>
         /// <returns>the value of the Bezier function at the given parameter</returns>
-        private static double GetBezierValue(double b, double c, double t)
+        static private double GetBezierValue(double b, double c, double t)
         {
             double s  = 1.0 - t;
             double t2 = t * t;       

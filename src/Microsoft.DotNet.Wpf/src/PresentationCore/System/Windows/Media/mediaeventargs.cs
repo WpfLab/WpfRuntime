@@ -1,8 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
+
+using System;
 
 namespace System.Windows.Media
 {
@@ -20,7 +23,10 @@ namespace System.Windows.Media
         internal ExceptionEventArgs(Exception errorException)
             : base()
         {
-            ArgumentNullException.ThrowIfNull(errorException);
+            if (errorException == null)
+            {
+                throw new ArgumentNullException("errorException");
+            }
 
             _errorException = errorException;
         }
@@ -60,9 +66,15 @@ namespace System.Windows.Media
             string      parameterValue
             ) : base()
         {
-            ArgumentNullException.ThrowIfNull(parameterType);
+            if (parameterType == null)
+            {
+                throw new ArgumentNullException("parameterType");
+            }
 
-            ArgumentNullException.ThrowIfNull(parameterValue);
+            if (parameterValue == null)
+            {
+                throw new ArgumentNullException("parameterValue");
+            }
 
             _parameterType = parameterType;
             _parameterValue = parameterValue;

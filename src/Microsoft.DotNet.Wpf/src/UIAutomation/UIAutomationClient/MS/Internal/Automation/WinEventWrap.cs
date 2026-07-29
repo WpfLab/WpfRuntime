@@ -1,9 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Lightweight class to wrap Win32 WinEvents.
 
+// PRESHARP: In order to avoid generating warnings about unkown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
+
 using System;
+using System.Security;
 using System.Collections;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
@@ -105,7 +110,9 @@ namespace MS.Internal.Automation
             foreach (int eventId in _eventIds)
             {
                 // There is no indication in the Windows SDK documentation that SetWinEventHook()
-                // will set an error to be retrieved with GetLastError.
+                // will set an error to be retrieved with GetLastError, so set the pragma to ignore
+                // the PERSHARP warning.
+#pragma warning suppress 6523
                 _hHooks[i] = UnsafeNativeMethods.SetWinEventHook(eventId, eventId, IntPtr.Zero, _winEventProc, 0, 0, _fFlags);
                 if (_hHooks[i] == IntPtr.Zero)
                 {
@@ -129,12 +136,17 @@ namespace MS.Internal.Automation
                 if (_hHooks[i] != IntPtr.Zero)
                 {
                     // There is no indication in the Windows SDK documentation that UnhookWinEvent()
-                    // will set an error to be retrieved with GetLastError.
+                    // will set an error to be retrieved with GetLastError, so set the pragma to ignore
+                    // the PERSHARP warning.
+#pragma warning suppress 6523
                     UnsafeNativeMethods.UnhookWinEvent(_hHooks[i]);
                     _hHooks[i] = IntPtr.Zero;
                 }
             }
-            _qEvents?.Clear();
+            if (_qEvents != null)
+            {
+                _qEvents.Clear();
+            }
             _fBusy = false;
         }
 

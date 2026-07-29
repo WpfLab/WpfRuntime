@@ -1,6 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description: DefaultvalueFactory for Freezables
+//
+
+using MS.Internal.WindowsBase;
+using System;
+using System.Diagnostics;
 using System.Windows;
 
 namespace MS.Internal
@@ -13,6 +22,7 @@ namespace MS.Internal
     // the default value is modified it is automatically promoted from default to 
     // local.
     // </summary>
+    [FriendAccessAllowed] // built into Base, used by Core + Framework
     internal class FreezableDefaultValueFactory : DefaultValueFactory
     {
         /// <summary>
@@ -51,13 +61,14 @@ namespace MS.Internal
                 "It is the caller responsibility to ensure that owner and property are non-null.");
             
             Freezable result = _defaultValuePrototype;
-
+            Freezable ownerFreezable = owner as Freezable;
+            
             // If the owner is frozen, just return the frozen prototype.
-            if (owner is Freezable ownerFreezable && ownerFreezable.IsFrozen)
+            if (ownerFreezable != null && ownerFreezable.IsFrozen)
             {
                 return result;
             }
-
+            
             result = _defaultValuePrototype.Clone();
 
             // Wire up a FreezableDefaultPromoter to observe the default value we

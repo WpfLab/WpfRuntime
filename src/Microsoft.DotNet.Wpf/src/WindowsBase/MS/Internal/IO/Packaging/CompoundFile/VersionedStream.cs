@@ -1,11 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //   This class provides file versioning support for streams provided by 
 //   IDataTransform implementations.
+//
+//
+//
+//
 
-using System.IO;
+using System;
+using System.IO;                                // for Stream
+using System.Windows;                           // ExceptionStringTable
+using System.Globalization;                     // for CultureInfo
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
@@ -88,7 +99,8 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         {
             CheckDisposed();
 
-            ArgumentOutOfRangeException.ThrowIfNegative(newLength);
+            if (newLength < 0)
+                throw new ArgumentOutOfRangeException("newLength");
 
             _versionOwner.WriteAttempt();
             _stream.SetLength(newLength);
@@ -188,8 +200,11 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// <param name="versionOwner"></param>
         internal VersionedStream(Stream baseStream, VersionedStreamOwner versionOwner)
         {
-            ArgumentNullException.ThrowIfNull(baseStream);
-            ArgumentNullException.ThrowIfNull(versionOwner);
+            if (baseStream == null)
+                throw new ArgumentNullException("baseStream");
+
+            if (versionOwner == null)
+                throw new ArgumentNullException("versionOwner");
 
             _stream = baseStream;
             _versionOwner = versionOwner;
@@ -206,7 +221,8 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// <param name="baseStream"></param>
         protected VersionedStream(Stream baseStream)
         {
-            ArgumentNullException.ThrowIfNull(baseStream);
+            if (baseStream == null)
+                throw new ArgumentNullException("baseStream");
 
             _stream = baseStream;
 

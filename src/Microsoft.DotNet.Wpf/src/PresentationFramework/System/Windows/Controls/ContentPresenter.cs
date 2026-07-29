@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: ContentPresenter class
@@ -7,16 +8,25 @@
 // Specs:      Data Styling.mht
 //
 
+using System;
+using System.Diagnostics;
 using System.ComponentModel;
+using System.Reflection;
+
+using System.Windows.Threading;
+
+using System.Windows.Shapes;
 using System.Windows.Media;
 using System.Windows.Data;
 using System.Windows.Markup;
 using MS.Internal;
+using MS.Internal.Data;
 using MS.Internal.KnownBoxes;
 using System.Windows.Documents;
 
 using MS.Utility;
 using MS.Internal.PresentationFramework;
+using System.Collections.Specialized;
 
 namespace System.Windows.Controls
 {
@@ -59,10 +69,8 @@ namespace System.Windows.Controls
             // Default template for XmlNodes
             template = new DataTemplate();
             text = CreateTextBlockFactory();
-            binding = new Binding
-            {
-                XPath = "."
-            };
+            binding = new Binding();
+            binding.XPath = ".";
             text.SetBinding(TextBlock.TextProperty, binding);
             template.VisualTree = text;
             template.Seal();
@@ -95,7 +103,7 @@ namespace System.Windows.Controls
             Initialize();
         }
 
-        private void Initialize()
+        void Initialize()
         {
             // Initialize the _templateCache to the default value for TemplateProperty.
             // If the default value is non-null then wire it to the current instance.
@@ -673,45 +681,41 @@ namespace System.Windows.Controls
         //
         //------------------------------------------------------
 
-        private static DataTemplate XmlNodeContentTemplate
+        static DataTemplate XmlNodeContentTemplate
         {
             get { return s_XmlNodeTemplate; }
         }
 
-        private static DataTemplate UIElementContentTemplate
+        static DataTemplate UIElementContentTemplate
         {
             get { return s_UIElementTemplate; }
         }
 
-        private static DataTemplate DefaultContentTemplate
+        static DataTemplate DefaultContentTemplate
         {
             get { return s_DefaultTemplate; }
         }
 
-        private static DefaultSelector DefaultTemplateSelector
+        static DefaultSelector DefaultTemplateSelector
         {
             get { return s_DefaultTemplateSelector; }
         }
 
-        private DataTemplate FormattingAccessTextContentTemplate
+        DataTemplate FormattingAccessTextContentTemplate
         {
             get
             {
                 DataTemplate template = AccessTextFormattingTemplateField.GetValue(this);
                 if (template == null)
                 {
-                    Binding binding = new Binding
-                    {
-                        StringFormat = ContentStringFormat
-                    };
+                    Binding binding = new Binding();
+                    binding.StringFormat = ContentStringFormat;
 
                     FrameworkElementFactory text = CreateAccessTextFactory();
                     text.SetBinding(AccessText.TextProperty, binding);
 
-                    template = new DataTemplate
-                    {
-                        VisualTree = text
-                    };
+                    template = new DataTemplate();
+                    template.VisualTree = text;
                     template.Seal();
 
                     AccessTextFormattingTemplateField.SetValue(this, template);
@@ -720,25 +724,21 @@ namespace System.Windows.Controls
             }
         }
 
-        private DataTemplate FormattingStringContentTemplate
+        DataTemplate FormattingStringContentTemplate
         {
             get
             {
                 DataTemplate template = StringFormattingTemplateField.GetValue(this);
                 if (template == null)
                 {
-                    Binding binding = new Binding
-                    {
-                        StringFormat = ContentStringFormat
-                    };
+                    Binding binding = new Binding();
+                    binding.StringFormat = ContentStringFormat;
 
                     FrameworkElementFactory text = CreateTextBlockFactory();
                     text.SetBinding(TextBlock.TextProperty, binding);
 
-                    template = new DataTemplate
-                    {
-                        VisualTree = text
-                    };
+                    template = new DataTemplate();
+                    template.VisualTree = text;
                     template.Seal();
 
                     StringFormattingTemplateField.SetValue(this, template);
@@ -747,26 +747,22 @@ namespace System.Windows.Controls
             }
         }
 
-        private DataTemplate FormattingXmlNodeContentTemplate
+        DataTemplate FormattingXmlNodeContentTemplate
         {
             get
             {
                 DataTemplate template = XMLFormattingTemplateField.GetValue(this);
                 if (template == null)
                 {
-                    Binding binding = new Binding
-                    {
-                        XPath = ".",
-                        StringFormat = ContentStringFormat
-                    };
+                    Binding binding = new Binding();
+                    binding.XPath = ".";
+                    binding.StringFormat = ContentStringFormat;
 
                     FrameworkElementFactory text = CreateTextBlockFactory();
                     text.SetBinding(TextBlock.TextProperty, binding);
 
-                    template = new DataTemplate
-                    {
-                        VisualTree = text
-                    };
+                    template = new DataTemplate();
+                    template.VisualTree = text;
                     template.Seal();
 
                     XMLFormattingTemplateField.SetValue(this, template);
@@ -887,7 +883,7 @@ namespace System.Windows.Controls
         }
 
         // Select a template for string content
-        private DataTemplate SelectTemplateForString(string s)
+        DataTemplate SelectTemplateForString(string s)
         {
             DataTemplate template;
             string format = ContentStringFormat;
@@ -905,7 +901,7 @@ namespace System.Windows.Controls
         }
 
         // return true if the template was chosen by SelectTemplateForString
-        private bool IsUsingDefaultStringTemplate
+        bool IsUsingDefaultStringTemplate
         {
             get
             {
@@ -935,7 +931,7 @@ namespace System.Windows.Controls
 
 
         // Select a template for XML content
-        private DataTemplate SelectTemplateForXML()
+        DataTemplate SelectTemplateForXML()
         {
             return (String.IsNullOrEmpty(ContentStringFormat)) ? XmlNodeContentTemplate : FormattingXmlNodeContentTemplate;
         }
@@ -964,7 +960,7 @@ namespace System.Windows.Controls
         }
 
         // Create a TextBlock, to be used in a default "template" (via BuildVisualTree)
-        private static TextBlock CreateTextBlock(ContentPresenter container)
+        static TextBlock CreateTextBlock(ContentPresenter container)
         {
             TextBlock text = new TextBlock();
 
@@ -1137,7 +1133,7 @@ namespace System.Windows.Controls
             // via ITypeDescriptorContext.Instance.
             private class TypeContext : ITypeDescriptorContext
             {
-                private object _instance;
+                object _instance;
                 public TypeContext(object instance)
                 {
                     _instance = instance;

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,7 +9,9 @@
 //
 //
 
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Markup;
 using MS.Internal;
 
@@ -52,7 +55,7 @@ namespace System.Windows
             ArgumentNullException.ThrowIfNull(dp);
 
             // If the cached value is valid then return it
-            if (ReadInternalState(InternalState.HasCachedResourceValue))
+            if (ReadInternalState(InternalState.HasCachedResourceValue) == true)
                 return _cachedResourceValue;
 
             object source;
@@ -87,7 +90,7 @@ namespace System.Windows
             //   </Button.Background>
             // </Button
             // Button is the mentor for the ResourceReference on SolidColorBrush
-            if (!ReadInternalState(InternalState.IsMentorCacheValid))
+            if (ReadInternalState(InternalState.IsMentorCacheValid) == false)
             {
                 // Find the mentor by walking up the InheritanceContext
                 // links and update the cache
@@ -204,10 +207,9 @@ namespace System.Windows
             _targetObject = d;
             _targetProperty = dp;
 
-            FrameworkObject fo = new FrameworkObject(_targetObject)
-            {
-                HasResourceReference = true
-            };
+            FrameworkObject fo = new FrameworkObject(_targetObject);
+
+            fo.HasResourceReference = true;
 
             if (!fo.IsValid)
             {
@@ -275,11 +277,18 @@ namespace System.Windows
                         WriteInternalState(InternalState.IsListeningForInflated, false);
                     }
                 }
-                
-                // This will inflate the deferred reference, causing it
-                // to be removed from the list.  The list may also be
-                // purged of dead references.
-                deferredResourceReference.GetValue(BaseValueSourceInternal.Unknown);
+
+                if (FrameworkAppContextSwitches.DisableDynamicResourceOptimization)
+                {
+                    deferredResourceReference.RemoveFromDictionary();
+                }
+                else
+                {
+                    // This will inflate the deferred reference, causing it
+                    // to be removed from the list.  The list may also be
+                    // purged of dead references.
+                    deferredResourceReference.GetValue(BaseValueSourceInternal.Unknown);
+                }
             }
 
             StopListeningForFreezableChanges(resource);
@@ -298,7 +307,7 @@ namespace System.Windows
         /// </summary>
         private void InvalidateMentorCache()
         {
-            if (ReadInternalState(InternalState.IsMentorCacheValid))
+            if (ReadInternalState(InternalState.IsMentorCacheValid) == true)
             {
                 if (_mentorCache != null)
                 {

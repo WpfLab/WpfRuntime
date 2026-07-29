@@ -1,9 +1,29 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+
+using System;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
 using MS.Win32.PresentationCore;
+using System.Security;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Imaging
 {
@@ -37,12 +57,19 @@ namespace System.Windows.Media.Imaging
             {
                 throw new System.ArgumentException(
                         SR.Format(SR.Effect_PixelFormat, pixelFormat),
-                        nameof(pixelFormat)
+                        "pixelFormat"
                         );
             }
 
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelWidth);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelHeight);
+            if (pixelWidth <= 0)
+            {
+                throw new ArgumentOutOfRangeException("pixelWidth", SR.ParameterMustBeGreaterThanZero);
+            }
+
+            if (pixelHeight <= 0)
+            {
+                throw new ArgumentOutOfRangeException("pixelHeight", SR.ParameterMustBeGreaterThanZero);
+            }
 
             if (dpiX < DoubleUtil.DBL_EPSILON)
             {
@@ -213,8 +240,12 @@ namespace System.Windows.Media.Imaging
             // this happens by throwing away our reference to the previous DUCE bitmap source
             // and forcing the creation of a new one.
             _isSourceCached = false;
-            _convertedDUCEPtr?.Close();
-            _convertedDUCEPtr = null;
+
+            if (_convertedDUCEPtr != null)
+            {
+                _convertedDUCEPtr.Close();
+                _convertedDUCEPtr = null;
+            }
 
             // Register for update in the next render pass
             RegisterForAsyncUpdateResource();

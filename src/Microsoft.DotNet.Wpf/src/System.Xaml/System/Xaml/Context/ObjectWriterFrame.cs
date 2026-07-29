@@ -1,9 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Xaml;
+using System.Xaml.MS.Impl;
 using XAML3 = System.Windows.Markup;
 
 namespace MS.Internal.Xaml.Context
@@ -20,22 +23,21 @@ namespace MS.Internal.Xaml.Context
             : base()
         { }
 
+
         public ObjectWriterFrame(ObjectWriterFrame source)
             : base(source)
         {
-            // Calling the getter will instantiate new Dictionaries.
+            // Calling the getter will instantiate new Dictionaries. 
             // So we just check the field instead to verify that it isn't
             // being used.
-            if (source._preconstructionPropertyValues is not null)
+            if (source._preconstructionPropertyValues != null)
             {
                 _preconstructionPropertyValues = new Dictionary<XamlMember, object>(source.PreconstructionPropertyValues);
             }
-
-            if (source._assignedProperties is not null)
+            if (source._assignedProperties != null)
             {
                 _assignedProperties = new HashSet<XamlMember>(source.AssignedProperties);
             }
-
             _key = source._key;
             _flags = source._flags;
             Instance = source.Instance;
@@ -68,17 +70,18 @@ namespace MS.Internal.Xaml.Context
 
         public override string ToString()
         {
-            string type = (XamlType is null) ? string.Empty : XamlType.Name;
-            string prop = (Member is null) ? "-" : Member.Name;
-            string inst = (Instance is null) ? "-" : ((Instance is string) ? Instance.ToString() : "*");
-            string coll = (Collection is null) ? "-" : "*";
-            string res = string.Create(TypeConverterHelper.InvariantEnglishUS, $"{type}.{prop} inst={inst} coll={coll}");
+            string type = (XamlType == null) ? string.Empty : XamlType.Name;
+            string prop = (Member == null) ? "-" : Member.Name;
+            string inst = (Instance == null) ? "-" : ((Instance is string) ? Instance.ToString() : "*");
+            string coll = (Collection == null) ? "-" : "*";
+            string res = KS.Fmt("{0}.{1} inst={2} coll={3}",
+                                 type, prop, inst, coll);
             return res;
         }
 
         public object Instance { get; set; }
         public object Collection { get; set; }
-
+        
         public bool WasAssignedAtCreation
         {
             get { return GetFlag(ObjectWriterFrameFlags.WasAssignedAtCreation); }
@@ -137,11 +140,11 @@ namespace MS.Internal.Xaml.Context
             {
                 // We use a special KeyHolder in some x:Reference scenarios.
                 // We need to unwrap this when returning.
-                if (_key is FixupTargetKeyHolder ftkh)
+                FixupTargetKeyHolder ftkh = _key as FixupTargetKeyHolder;
+                if (ftkh != null)
                 {
                     return ftkh.Key;
                 }
-
                 return _key;
             }
             set
@@ -165,18 +168,17 @@ namespace MS.Internal.Xaml.Context
         {
             get
             {
-                if (_preconstructionPropertyValues is null)
+                if (_preconstructionPropertyValues == null)
                 {
                     _preconstructionPropertyValues = new Dictionary<XamlMember, object>();
                 }
-
                 return _preconstructionPropertyValues;
             }
         }
 
         public bool HasPreconstructionPropertyValuesDictionary
         {
-            get { return _preconstructionPropertyValues is not null; }
+            get { return _preconstructionPropertyValues != null; }
         }
 
         /// <summary>
@@ -186,11 +188,10 @@ namespace MS.Internal.Xaml.Context
         {
             get
             {
-                if (_assignedProperties is null)
+                if (_assignedProperties == null)
                 {
                     _assignedProperties = new HashSet<XamlMember>();
                 }
-
                 return _assignedProperties;
             }
         }
@@ -204,11 +205,11 @@ namespace MS.Internal.Xaml.Context
         {
             if (value)
             {
-                _flags |= flag;
+                _flags = _flags | flag;
             }
             else
             {
-                _flags &= ~flag;
+                _flags = _flags & ~flag;
             }
         }
 

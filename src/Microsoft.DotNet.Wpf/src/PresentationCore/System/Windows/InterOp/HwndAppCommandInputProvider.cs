@@ -1,9 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security;
+using MS.Utility;
+using MS.Internal;
 using MS.Internal.Interop;
 using MS.Win32;
 
@@ -13,21 +19,25 @@ namespace System.Windows.Interop
     {
         internal HwndAppCommandInputProvider( HwndSource source )
         {
-            _site = InputManager.Current.RegisterInputProvider(this);
-            _source = source;
+            _site = new SecurityCriticalDataClass<InputProviderSite>(InputManager.Current.RegisterInputProvider(this));
+
+            _source = new SecurityCriticalDataClass<HwndSource>(source);
         }
 
         public void Dispose( )
         {
-            _site?.Dispose();
-            _site = null;
+            if (_site != null)
+            {
+                _site.Value.Dispose();
+                _site = null;
+            }
             _source = null;
         }
 
         bool IInputProvider.ProvidesInputForRootVisual( Visual v )
         {
             Debug.Assert(null != _source);
-            return _source.RootVisual == v;
+            return _source.Value.RootVisual == v;
         }
 
         void IInputProvider.NotifyDeactivate() {}
@@ -35,7 +45,7 @@ namespace System.Windows.Interop
         internal IntPtr FilterMessage( IntPtr hwnd, WindowMessage msg, IntPtr wParam, IntPtr lParam, ref bool handled )
         {
             // It is possible to be re-entered during disposal.  Just return.
-            if(_source is null)
+            if(null == _source || null == _source.Value)
             {
                 return IntPtr.Zero;
             }
@@ -46,14 +56,14 @@ namespace System.Windows.Interop
                 // for example, by clicking an application command button using the mouse or typing an application command
                 // key on the keyboard.
                 RawAppCommandInputReport report = new RawAppCommandInputReport(
-                                                        _source,
+                                                        _source.Value,
                                                         InputMode.Foreground,
                                                         SafeNativeMethods.GetMessageTime(),
                                                         GetAppCommand(lParam),
                                                         GetDevice(lParam),
                                                         InputType.Command);
 
-                handled = _site.ReportInput(report);
+                handled = _site.Value.ReportInput(report);
             }
             
             return handled ? new IntPtr(1) : IntPtr.Zero ;
@@ -106,9 +116,9 @@ namespace System.Windows.Interop
             return inputType;
         }
 
-        private HwndSource _source;
+        private SecurityCriticalDataClass<HwndSource> _source;
 
-        private InputProviderSite _site;
+        private SecurityCriticalDataClass<InputProviderSite> _site;
     }
 }
 

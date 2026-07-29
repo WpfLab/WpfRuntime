@@ -1,9 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Manages Win32 proxies
 
+// PRESHARP: In order to avoid generating warnings about unkown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
+
 using System;
+using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Text;
@@ -12,6 +17,8 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System.Diagnostics;
+using System.Runtime.Serialization;
+using System.ComponentModel;
 using MS.Win32;
 
 namespace MS.Internal.Automation
@@ -170,14 +177,15 @@ namespace MS.Internal.Automation
                         {
                             proxyDescriptions[count++] = (ClientSideProviderDescription)o;
                         }
-                        else if (o is ClientSideProviderFactoryCallback pfc)
+                        else if (o is ClientSideProviderFactoryCallback)
                         {
+                            ClientSideProviderFactoryCallback pfc = (ClientSideProviderFactoryCallback)o;
                             proxyDescriptions[count++] = new ClientSideProviderDescription(pfc, null);
 
                         }
                         else
                         {
-                            foreach (Object o1 in (ArrayList)o)
+                            foreach( Object o1 in (ArrayList) o )
                             {
                                 proxyDescriptions[count++] = (ClientSideProviderDescription)o1;
                             }
@@ -262,7 +270,7 @@ namespace MS.Internal.Automation
 
             foreach (string str in BadImplClassnames)
             {
-                if (string.Equals(className, str, StringComparison.OrdinalIgnoreCase))
+                if (String.Compare(className, str, StringComparison.OrdinalIgnoreCase) == 0)
                     return true;
             }
 
@@ -354,16 +362,14 @@ namespace MS.Internal.Automation
             }
 
             AssemblyName ourAssembly = Assembly.GetAssembly(typeof(ProxyManager)).GetName();
-
+            
             // Attempt to discover the version of UIA that the caller is linked against,
             // and then use the correpsonding proxy dll version. If we can't do that,
             // we'll use the default version.
-            AssemblyName proxyAssemblyName = new AssemblyName
-            {
-                Name = _defaultProxyAssembly,
-                Version = ourAssembly.Version,
-                CultureInfo = ourAssembly.CultureInfo
-            };
+            AssemblyName proxyAssemblyName = new AssemblyName();
+            proxyAssemblyName.Name = _defaultProxyAssembly;
+            proxyAssemblyName.Version = ourAssembly.Version;
+            proxyAssemblyName.CultureInfo = ourAssembly.CultureInfo;
             proxyAssemblyName.SetPublicKeyToken( ourAssembly.GetPublicKeyToken() );
 
             if ( callingAssembly != null )
@@ -544,7 +550,7 @@ namespace MS.Internal.Automation
         }
 
 
-        private static IRawElementProviderSimple FindProxyFromImageFallback(ref string imageName, NativeMethods.HWND hwnd, int idChild, int idObject)
+        static private IRawElementProviderSimple FindProxyFromImageFallback(ref string imageName, NativeMethods.HWND hwnd, int idChild, int idObject)
         {
             int count;
             lock (_lockObj)
@@ -556,10 +562,12 @@ namespace MS.Internal.Automation
             if (count > 0)
             {
                 // Null and Empty string mean different things here.
+#pragma warning suppress 6507
                 if (imageName == null)
                     imageName = GetImageName(hwnd);
 
                 // Null and Empty string mean different things here.
+#pragma warning suppress 6507
                 if (imageName != null)
                 {
                     object entryOrArrayList;
@@ -577,7 +585,7 @@ namespace MS.Internal.Automation
 
         // Given a single entry or arraylist, check if it or each object in it matches.
         // This just handles the arraylist iteration, and calls through to GetProxyFromEntry to do the actual entry checking.
-        private static IRawElementProviderSimple FindProxyInEntryOrArrayList(ProxyScoping findType, object entryOrArrayList, ref string imageName, NativeMethods.HWND hwnd, int idChild, int idObject, string classNameForPartialMatch)
+        static private IRawElementProviderSimple FindProxyInEntryOrArrayList(ProxyScoping findType, object entryOrArrayList, ref string imageName, NativeMethods.HWND hwnd, int idChild, int idObject, string classNameForPartialMatch)
         {
             if (entryOrArrayList == null)
                 return null;
@@ -622,7 +630,7 @@ namespace MS.Internal.Automation
         // factory method to create the proxy.
         // (Because full classname matching is done via hash-table lookup, this only needs to do string comparisons
         // for partial classname matches.)
-        private static IRawElementProviderSimple GetProxyFromEntry(ProxyScoping findType, object entry, ref string imageName, NativeMethods.HWND hwnd, int idChild, int idObject, string classNameForPartialMatch)
+        static private IRawElementProviderSimple GetProxyFromEntry(ProxyScoping findType, object entry, ref string imageName, NativeMethods.HWND hwnd, int idChild, int idObject, string classNameForPartialMatch)
         {
             // First, determine if the entry matches, and if so, extract the factory callback...
             ClientSideProviderFactoryCallback factoryCallback = null;
@@ -640,7 +648,7 @@ namespace MS.Internal.Automation
                 ClientSideProviderDescription pi = (ClientSideProviderDescription)entry;
 
                 // Get the image name if necessary...
-                // Null and Empty string mean different things here.
+#pragma warning suppress 6507 // Null and Empty string mean different things here.
                 if (imageName == null && pi.ImageName != null)
                 {
                     imageName = GetImageName(hwnd);
@@ -663,14 +671,14 @@ namespace MS.Internal.Automation
                             break;
 
                         case ProxyScoping.PartialMatchApparentClassName:
-                            if (classNameForPartialMatch.Contains(pi.ClassName, StringComparison.Ordinal))
+                            if (classNameForPartialMatch.IndexOf(pi.ClassName, StringComparison.Ordinal) >= 0)
                             {
                                 factoryCallback = pi.ClientSideProviderFactoryCallback;
                             }
                             break;
 
                         case ProxyScoping.PartialMatchRealClassName:
-                            if (classNameForPartialMatch.Contains(pi.ClassName, StringComparison.Ordinal)
+                            if (classNameForPartialMatch.IndexOf(pi.ClassName, StringComparison.Ordinal) >= 0
                                 && ((pi.Flags & ClientSideProviderMatchIndicator.DisallowBaseClassNameMatch) == 0))
                             {
                                 factoryCallback = pi.ClientSideProviderFactoryCallback;
@@ -678,7 +686,7 @@ namespace MS.Internal.Automation
                             break;
 
                         default:
-                            Debug.Fail("unexpected switch() case:");
+                            Debug.Assert(false, "unexpected switch() case:");
                             break;
                     }
                 }

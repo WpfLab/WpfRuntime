@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
-using System.Collections;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Run-length table of document status for use the by the Speller.
@@ -10,6 +8,11 @@ using System.Collections;
 
 namespace System.Windows.Documents
 {
+    using MS.Internal;
+    using System.Collections;
+    using System.Diagnostics;
+    using System.Windows.Controls;
+
     // Run-length table of document status for use the by the Speller.
     //
     // The speller tracks all document content as either

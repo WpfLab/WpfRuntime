@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,8 +9,16 @@
 // Please see MilCodeGen.html for more information.
 //
 
+using MS.Internal;
+
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Media3D;
 
 namespace System.Windows.Media.Animation
 {
@@ -50,10 +59,9 @@ namespace System.Windows.Media.Animation
             {
                 if (s_emptyCollection == null)
                 {
-                    ByteKeyFrameCollection emptyCollection = new ByteKeyFrameCollection
-                    {
-                        _keyFrames = new List<ByteKeyFrame>(0)
-                    };
+                    ByteKeyFrameCollection emptyCollection = new ByteKeyFrameCollection();
+
+                    emptyCollection._keyFrames = new List< ByteKeyFrame>(0);
                     emptyCollection.Freeze();
 
                     s_emptyCollection = emptyCollection;
@@ -90,7 +98,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void CloneCore(Freezable sourceFreezable)
         {
-            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection)sourceFreezable;
+            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection) sourceFreezable;
             base.CloneCore(sourceFreezable);
 
             int count = sourceCollection._keyFrames.Count;
@@ -111,7 +119,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void CloneCurrentValueCore(Freezable sourceFreezable)
         {
-            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection)sourceFreezable;
+            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection) sourceFreezable;
             base.CloneCurrentValueCore(sourceFreezable);
 
             int count = sourceCollection._keyFrames.Count;
@@ -132,7 +140,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void GetAsFrozenCore(Freezable sourceFreezable)
         {
-            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection)sourceFreezable;
+            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection) sourceFreezable;
             base.GetAsFrozenCore(sourceFreezable);
 
             int count = sourceCollection._keyFrames.Count;
@@ -153,7 +161,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void GetCurrentValueAsFrozenCore(Freezable sourceFreezable)
         {
-            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection)sourceFreezable;
+            ByteKeyFrameCollection sourceCollection = (ByteKeyFrameCollection) sourceFreezable;
             base.GetCurrentValueAsFrozenCore(sourceFreezable);
 
             int count = sourceCollection._keyFrames.Count;
@@ -279,7 +287,10 @@ namespace System.Windows.Media.Animation
         /// </summary>
         public int Add(ByteKeyFrame keyFrame)
         {
-            ArgumentNullException.ThrowIfNull(keyFrame);
+            if (keyFrame == null)
+            {
+                throw new ArgumentNullException("keyFrame");
+            }
 
             WritePreamble();
 
@@ -360,7 +371,10 @@ namespace System.Windows.Media.Animation
         /// </summary>
         public void Insert(int index, ByteKeyFrame keyFrame)
         {
-            ArgumentNullException.ThrowIfNull(keyFrame);
+            if (keyFrame == null)
+            {
+                throw new ArgumentNullException("keyFrame");
+            }
 
             WritePreamble();
 

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,8 +10,14 @@
 //
 //
 
+using System;
 using System.ComponentModel;    // for TypeConverter
 using System.Globalization;     // for CultureInfo
+using System.Reflection;
+using MS.Internal;
+using System.Windows;
+using System.Windows.Input;
+using MS.Utility;
 
 namespace System.Windows.Input
 {
@@ -56,7 +63,7 @@ namespace System.Windows.Input
                 string modifiersToken;
 
                 if (fullName.Length == 0)
-                    return new MouseGesture(MouseAction.None, ModifierKeys.None);
+                    return new MouseGesture(MouseAction.None, ModifierKeys.None); ;
 
                 // break apart LocalName and Prefix
                 int Offset = fullName.LastIndexOf(MODIFIERS_DELIMITER);
@@ -138,8 +145,9 @@ namespace System.Windows.Input
         /// <returns>string if parameter is a MouseGesture</returns>
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            ArgumentNullException.ThrowIfNull(destinationType);
-
+            if (destinationType == null)
+                throw new ArgumentNullException("destinationType");
+ 
             if (destinationType == typeof(string))
             {
                 if (value == null)

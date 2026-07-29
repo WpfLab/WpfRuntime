@@ -1,7 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+
+// PRESHARP: In order to avoid generating warnings about unkown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
+
+using System;
 using MS.Internal.Automation;
+using System.Windows.Automation;
+using System.Runtime.InteropServices;
 
 namespace System.Windows.Automation
 {
@@ -28,11 +36,11 @@ namespace System.Windows.Automation
         /// <param name="conditions">One or more sub-condition</param>
         public AndCondition( params Condition [ ] conditions )
         {
-            ArgumentNullException.ThrowIfNull(conditions);
+            Misc.ValidateArgumentNonNull( conditions, "conditions" );
             Misc.ValidateArgument( conditions.Length >= 2, nameof(SR.MustBeAtLeastTwoConditions) );
             foreach( Condition condition in conditions )
             {
-                ArgumentNullException.ThrowIfNull(condition, nameof(conditions));
+                Misc.ValidateArgumentNonNull( condition, "conditions" );
             }
 
             // clone array to prevent accidental tampering
@@ -73,11 +81,11 @@ namespace System.Windows.Automation
         //  Private Fields
         //
         //------------------------------------------------------
-
+ 
         #region Private Fields
 
-        private Condition[ ] _conditions;
-        private SafeConditionMemoryHandle _conditionArrayHandle;
+        Condition [ ] _conditions;
+        SafeConditionMemoryHandle _conditionArrayHandle;
 
         #endregion Private Fields
     }

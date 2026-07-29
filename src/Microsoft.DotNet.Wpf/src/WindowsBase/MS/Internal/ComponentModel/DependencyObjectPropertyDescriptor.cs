@@ -1,13 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Collections;
-using System.ComponentModel;
-using System.Reflection;
-using System.Windows;
 
-namespace MS.Internal.ComponentModel
+namespace MS.Internal.ComponentModel 
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Reflection;
+    using System.Windows;
+    using System.Security;
+    using MS.Internal.WindowsBase;
+
+
     /// <summary>
     ///     An inplementation of a property descriptor for DependencyProperties.
     ///     This supports both normal and attached properties.
@@ -399,7 +408,7 @@ namespace MS.Internal.ComponentModel
                 method = reflectionType.GetMethod(methodName, f, _dpBinder, DpType, null);
 
                 lock(_getMethodCache) {
-                    _getMethodCache[dp] = (method ?? _nullMethodSentinel);
+                    _getMethodCache[dp] = (method == null ? _nullMethodSentinel : method);
                 }
             }
 
@@ -480,28 +489,28 @@ namespace MS.Internal.ComponentModel
 
                 foreach(Attribute attr in attrArray) 
                 {
-                    if (attr is AttributeProviderAttribute pa)
+                    AttributeProviderAttribute pa = attr as AttributeProviderAttribute;
+                    if (pa != null) 
                     {
                         Type providerType = Type.GetType(pa.TypeName);
-                        if (providerType != null)
+                        if (providerType != null) 
                         {
                             Attribute[] paAttrs = null;
-                            if (!string.IsNullOrEmpty(pa.PropertyName))
+                            if (!string.IsNullOrEmpty(pa.PropertyName)) 
                             {
                                 MemberInfo[] milist = providerType.GetMember(pa.PropertyName);
-                                if (milist.Length > 0 && milist[0] != null)
+                                if (milist.Length > 0 && milist[0] != null) 
                                 {
                                     paAttrs = (Attribute[])milist[0].GetCustomAttributes(typeof(Attribute), true);
                                 }
                             }
-                            else
-                            {
+                            else {
                                 paAttrs = (Attribute[])providerType.GetCustomAttributes(typeof(Attribute), true);
                             }
 
                             if (paAttrs != null)
                             {
-                                if (addAttrs == null)
+                                if (addAttrs == null) 
                                 {
                                     addAttrs = paAttrs;
                                 }
@@ -511,7 +520,7 @@ namespace MS.Internal.ComponentModel
                                     addAttrs.CopyTo(newArray, 0);
                                     paAttrs.CopyTo(newArray, addAttrs.Length);
                                     addAttrs = newArray;
-                                }
+}
                             }
                         }
                     }
@@ -571,7 +580,7 @@ namespace MS.Internal.ComponentModel
                 method = reflectionType.GetMethod(methodName, f, _dpBinder, paramTypes, null);
 
                 lock(_setMethodCache) {
-                    _setMethodCache[dp] = (method ?? _nullMethodSentinel);
+                    _setMethodCache[dp] = (method == null ? _nullMethodSentinel : method);
                 }
             }
 
@@ -663,16 +672,18 @@ namespace MS.Internal.ComponentModel
             foreach (Attribute a in baseAttributes) 
             {
                 Attribute attrToAdd = a;
+                DefaultValueAttribute defAttr = a as DefaultValueAttribute;
 
-                if (a is DefaultValueAttribute defAttr)
+                if (defAttr != null) 
                 {
                     // DP metadata always overrides CLR metadata for
                     // default value.
                     attrToAdd = null;
                 }
-                else
+                else 
                 {
-                    if (a is ReadOnlyAttribute roAttr)
+                    ReadOnlyAttribute roAttr = a as ReadOnlyAttribute;
+                    if (roAttr != null)
                     {
                         // DP metata is the merge of CLR metadata for
                         // read only

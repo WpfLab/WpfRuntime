@@ -1,23 +1,47 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: This file contains the implementation of TokenizerHelper.
 //              This class should be used by most - if not all - MIL parsers.
 //
 
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.ComponentModel;
 using System.Globalization;
 
-#if PBTCOMPILER
-using System;
-using System.Diagnostics;
-using MS.Utility;
+#if !PBTCOMPILER
+using System.Windows;
+#endif
 
+#if WINDOWS_BASE
+    using MS.Internal.WindowsBase;
+#elif PRESENTATION_CORE
+    using MS.Internal.PresentationCore;
+#elif PRESENTATIONFRAMEWORK
+    using MS.Internal.PresentationFramework;
+#elif PBTCOMPILER 
+    using MS.Utility ;     
+    using MS.Internal.Markup;
+#elif DRT
+    using MS.Internal.Drt;
+#else
+#error Attempt to use FriendAccessAllowedAttribute from an unknown assembly.
+using MS.Internal.YourAssemblyName;
+#endif
+
+#if PBTCOMPILER
 namespace MS.Internal.Markup
 #else
 namespace MS.Internal
 #endif
 {
+#if !PBTCOMPILER 
+    [FriendAccessAllowed]
+#endif
     internal class TokenizerHelper
     {
         /// <summary>
@@ -244,7 +268,7 @@ namespace MS.Internal
         }
 
         // helper to move the _charIndex to the next token or to the end of the string
-        private void ScanToNextToken(char separator)
+        void ScanToNextToken(char separator)
         {
             // if already at end of the string don't bother
             if (_charIndex < _strLen)
@@ -301,7 +325,7 @@ namespace MS.Internal
 
         // Helper to get the numeric list separator for a given IFormatProvider.
         // Separator is a comma [,] if the decimal separator is not a comma, or a semicolon [;] otherwise.
-        internal static char GetNumericListSeparator(IFormatProvider provider)
+        static internal char GetNumericListSeparator(IFormatProvider provider)
         {
             char numericSeparator = ',';
 
@@ -330,13 +354,13 @@ namespace MS.Internal
             }
         }
 
-        private char _quoteChar;
-        private char _argSeparator;
-        private string _str;
-        private int _strLen;
-        private int _charIndex;
+        char _quoteChar;
+        char _argSeparator;
+        string _str;
+        int _strLen;
+        int _charIndex;
         internal int _currentTokenIndex;
         internal int _currentTokenLength;
-        private bool _foundSeparator;
+        bool _foundSeparator;
     }
 }

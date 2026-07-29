@@ -1,7 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Documents;
 
@@ -338,7 +343,7 @@ namespace MS.Internal.Documents
                 else
                 {
                     // We handle junk in the tree, but it really shouldn't be there.                                       
-                    Debug.Fail("Garbage in logical tree.");
+                    Debug.Assert(false, "Garbage in logical tree.");
                 }
             }
 

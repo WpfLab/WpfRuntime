@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -7,11 +8,17 @@
 //
 //
 
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Threading;
+using System.Security;
+using System.Diagnostics;
+using System.Collections;
+using MS.Utility;
 using MS.Win32;
 using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
 
 namespace System.Windows.Input
 {
@@ -94,7 +101,7 @@ namespace System.Windows.Input
             }
 
             // Free up any remaining textstores.
-            if (_istimactivated)
+            if (_istimactivated == true)
             {
                 // Shut down the thread manager when the last TextStore goes away.
                 // On XP, if we're called on a worker thread (during AppDomain shutdown)
@@ -109,24 +116,30 @@ namespace System.Windows.Input
                 // be added to WPF setup....
                 if (!appDomainShutdown || System.Environment.OSVersion.Version.Major >= 6)
                 {
-                    _threadManager.Deactivate();
+                    _threadManager.Value.Deactivate();
                 }
                 _istimactivated = false;
             }
 
             // Release the empty dim.
-            if (_dimEmpty is not null)
+            if (_dimEmpty != null)
             {
-                Marshal.ReleaseComObject(_dimEmpty);
+                if (_dimEmpty.Value != null)
+                {
+                    Marshal.ReleaseComObject(_dimEmpty.Value);
+                }
                 _dimEmpty = null;
             }
 
             // Release the ThreadManager.
             // We don't do this in UnregisterTextStore because someone may have
             // called get_ThreadManager after the last TextStore was unregistered.
-            if (_threadManager is not null)
+            if (_threadManager != null)
             {
-                Marshal.ReleaseComObject(_threadManager);
+                if (_threadManager.Value != null)
+                {
+                    Marshal.ReleaseComObject(_threadManager.Value);
+                }
                 _threadManager = null;
             }
         }
@@ -151,12 +164,10 @@ namespace System.Windows.Input
 
             // We delay load cicero until someone creates an ITextStore.
             // Or this thread may not have a ThreadMgr.
-            if (_threadManager is null)
-            {
+            if ((_threadManager == null) || (_threadManager.Value == null))
                 return false;
-            }
 
-            keystrokeMgr = _threadManager as UnsafeNativeMethods.ITfKeystrokeMgr;
+            keystrokeMgr = _threadManager.Value as UnsafeNativeMethods.ITfKeystrokeMgr;
 
             switch (op)
             {
@@ -199,19 +210,19 @@ namespace System.Windows.Input
                 int editCookie = UnsafeNativeMethods.TF_INVALID_COOKIE;
 
                 // Activate TSF on this thread if this is the first TextStore.
-                if (!_istimactivated)
+                if (_istimactivated == false)
                 {
                     //temp variable created to retrieve the value
                     // which is then stored in the critical data.
                     int clientIdTemp;
                     threadManager.Activate(out clientIdTemp);
-                    _clientId = clientIdTemp;
+                    _clientId = new SecurityCriticalData<int>(clientIdTemp);
                     _istimactivated = true;
                 }
 
                 // Create a TSF document.
                 threadManager.CreateDocumentMgr(out doc);
-                doc.CreateContext(_clientId, flags: 0, _defaultTextStore, out context, out editCookie);
+                doc.CreateContext(_clientId.Value, 0 /* flags */, _defaultTextStore, out context, out editCookie);
                 doc.Push(context);
 
                 // Release any native resources we're done with.
@@ -266,9 +277,21 @@ namespace System.Windows.Input
         }
 
         /// <summary>
-        /// The ITfThreadMgr for this thread.
+        /// This is an internal, link demand protected method.
         /// </summary>
-        internal UnsafeNativeMethods.ITfThreadMgr ThreadManager => _threadManager ??= TextServicesLoader.Load();
+        internal UnsafeNativeMethods.ITfThreadMgr ThreadManager
+        {
+            // The ITfThreadMgr for this thread.
+            get
+            {
+                if (_threadManager == null)
+                {
+                    _threadManager = new SecurityCriticalDataClass<UnsafeNativeMethods.ITfThreadMgr>(TextServicesLoader.Load());
+                }
+
+                return _threadManager.Value;
+            }
+        }
 
         //------------------------------------------------------
         //
@@ -324,7 +347,10 @@ namespace System.Windows.Input
         {
             UnsafeNativeMethods.ITfThreadMgr threadmgr = ThreadManager;
 
-            threadmgr?.SetFocus(dim);
+            if (threadmgr != null)
+            {
+                threadmgr.SetFocus(dim);
+            }
         }
 
         // Start the transitory extestion for Cicero Level1/Level2 composition window support.
@@ -367,8 +393,11 @@ namespace System.Windows.Input
             {
                 UnsafeNativeMethods.ITfSource source;
                 source = _defaultTextStore.DocumentManager as UnsafeNativeMethods.ITfSource;
-                // DocumentManager only supports ITfSource on Longhorn, XP does not support it
-                source?.UnadviseSink(_defaultTextStore.TransitoryExtensionSinkCookie);
+                if (source != null)
+                {
+                    // DocumentManager only supports ITfSource on Longhorn, XP does not support it
+                    source.UnadviseSink(_defaultTextStore.TransitoryExtensionSinkCookie);
+                }
                 _defaultTextStore.TransitoryExtensionSinkCookie = UnsafeNativeMethods.TF_INVALID_COOKIE;
             }
 
@@ -412,16 +441,13 @@ namespace System.Windows.Input
                     {
                         return null;
                     }
-
                     //creating temp variable to retrieve from call and store in security critical data
                     UnsafeNativeMethods.ITfDocumentMgr dimEmptyTemp;
-
                     // Create a TSF document.
                     threadManager.CreateDocumentMgr(out dimEmptyTemp);
-                    _dimEmpty = dimEmptyTemp;
+                    _dimEmpty = new SecurityCriticalDataClass<UnsafeNativeMethods.ITfDocumentMgr>(dimEmptyTemp);
                 }
-
-                return _dimEmpty;
+                return _dimEmpty.Value;
             }
         }
 
@@ -443,13 +469,13 @@ namespace System.Windows.Input
         private bool _istimactivated;
 
         // The root TSF object, created on demand.
-        private UnsafeNativeMethods.ITfThreadMgr _threadManager;
+        private SecurityCriticalDataClass<UnsafeNativeMethods.ITfThreadMgr> _threadManager;
 
         // TSF ClientId from Activate call.
-        private int _clientId;
+        private SecurityCriticalData<int> _clientId;
 
         // The empty dim for this thread. Created on demand.
-        private UnsafeNativeMethods.ITfDocumentMgr _dimEmpty;
+        private SecurityCriticalDataClass<UnsafeNativeMethods.ITfDocumentMgr> _dimEmpty;
 
         #endregion Private Fields
 
@@ -464,7 +490,7 @@ namespace System.Windows.Input
             internal override void OnShutDown(object target, object sender, EventArgs e)
             {
                 TextServicesContext textServicesContext = (TextServicesContext)target;
-                textServicesContext.Uninitialize(appDomainShutdown: !(sender is Dispatcher));
+                textServicesContext.Uninitialize(!(sender is Dispatcher) /*appDomainShutdown*/);
             }
         }
 

@@ -1,12 +1,27 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //      The VisualCollection implementation is based on the
 //      CLR's Lightning ArrayList implementation.
+//
 
+using MS.Win32;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
+using System.Windows.Threading;
+
+using System;
+using System.Diagnostics;
 using System.Collections;
 using MS.Internal;
+using System.Runtime.InteropServices;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 //------------------------------------------------------------------------------
 //  - There is an exception thrown inside of ConnectChild which could render
@@ -14,6 +29,11 @@ using MS.Internal;
 //  - Performance: RemoveRange moves and nulls entry. It is better to null out
 //    after we moved all the items.
 //------------------------------------------------------------------------------
+
+
+// Since we disable PreSharp warnings in this file, we first need to disable
+// warnings about unknown message numbers and unknown pragmas:
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Media
 {
@@ -61,7 +81,10 @@ namespace System.Windows.Media
         /// </summary>
         public VisualCollection(Visual parent)
         {
-            ArgumentNullException.ThrowIfNull(parent);
+            if (parent == null)
+            {
+                throw new ArgumentNullException(nameof(parent));
+            }
             _owner = parent;
         }
 
@@ -167,15 +190,21 @@ namespace System.Windows.Media
         {
             VerifyAPIReadOnly();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException(nameof(array));
+            }
 
             if (array.Rank != 1)
             {
                 throw new ArgumentException(SR.Collection_BadRank);
             }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _size);
+            if ((index < 0) ||
+                (array.Length - index < _size))
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
 
             // System.Array does not have a CopyTo method that takes a count. Therefore
             // the loop is programmed here out.
@@ -195,10 +224,16 @@ namespace System.Windows.Media
 
             VerifyAPIReadOnly();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException(nameof(array));
+            }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _size);
+            if ((index < 0) ||
+                (array.Length - index < _size))
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
 
             // System.Array does not have a CopyTo method that takes a count. Therefore
             // the loop is programmed here out.
@@ -310,19 +345,22 @@ namespace System.Windows.Media
             get
             {
                 // We should likely skip the context checks here for performance reasons.
-                // The guy who gets the Visual won't be able to access the Visual anyway if he is in the wrong context.
-                // MediaSystem.VerifyContext(_owner);
+                //     MediaSystem.VerifyContext(_owner); The guy who gets the Visual won't be able to access the context
+                //     the Visual anyway if he is in the wrong context.
 
-                ArgumentOutOfRangeException.ThrowIfNegative(index);
-                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _size);
+                // Disable PREsharp warning about throwing exceptions in property
+                // get methods
+
+#pragma warning disable 6503
+                if (index < 0 || index >= _size) throw new ArgumentOutOfRangeException(nameof(index));
                 return _items[index];
+#pragma warning restore 6503
             }
             set
             {
                 VerifyAPIReadWrite(value);
 
-                ArgumentOutOfRangeException.ThrowIfNegative(index);
-                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _size);
+                if (index < 0 || index >= _size) throw new ArgumentOutOfRangeException(nameof(index));
 
                 Visual child = _items[index];
 
@@ -554,7 +592,10 @@ namespace System.Windows.Media
                 for (int i = indexToRemove; i < _size; i++)
                 {
                     Visual  child = _items[i+1];
-                    child?._parentIndex = i;
+                    if (child != null)
+                    {
+                        child._parentIndex = i;
+                    }
                     _items[i] = child;
                 }
 
@@ -677,8 +718,10 @@ namespace System.Windows.Media
         {
             VerifyAPIReadWrite(visual);
 
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, _size);
+            if (index < 0 || index > _size)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
 
             if ((visual != null) &&
                 ((visual._parent != null)   // Only visuals that are not connected to another tree
@@ -695,7 +738,10 @@ namespace System.Windows.Media
             for (int i = _size-1; i >= index; i--)
             {
                 Visual child = _items[i];
-                child?._parentIndex = i+1;
+                if (child != null)
+                {
+                    child._parentIndex = i+1;
+                }
                 _items[i+1] = child;
             }
             _items[index] = null;
@@ -724,8 +770,10 @@ namespace System.Windows.Media
         {
             VerifyAPIReadWrite();
 
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _size);
+            if (index < 0 || index >= _size)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
 
             InternalRemove(_items[index]);
         }
@@ -755,9 +803,18 @@ namespace System.Windows.Media
             VerifyAPIReadWrite();
 
             // Do we really need this extra check index >= _size.
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfNegative(count);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(count, _size - index);
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
+            if (_size - index < count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
 
             if (count > 0)
             {
@@ -774,7 +831,10 @@ namespace System.Windows.Media
                 for (int i = index; i < _size; i++)
                 {
                     Visual child = _items[i + count];
-                    child?._parentIndex = i;
+                    if (child != null)
+                    {
+                        child._parentIndex = i;
+                    }
                     _items[i] = child;
                     _items[i + count] = null;
                 }
@@ -817,7 +877,10 @@ namespace System.Windows.Media
                         for (int i = oldIndex; i < newIndex; i++)
                         {
                             Visual child = _items[i + 1];
-                            child?._parentIndex = i;
+                            if (child != null)
+                            {
+                                child._parentIndex = i;
+                            }
                             _items[i] = child;
                         }
                     }
@@ -830,7 +893,10 @@ namespace System.Windows.Media
                         for (int i = oldIndex; i > newIndex; i--)
                         {
                             Visual child = _items[i - 1];
-                            child?._parentIndex = i;
+                            if (child != null)
+                            {
+                                child._parentIndex = i;
+                            }
                             _items[i] = child;
                         }
                     }
@@ -939,6 +1005,11 @@ namespace System.Windows.Media
             {
                 get
                 {
+                    // Disable PREsharp warning about throwing exceptions in property
+                    // get methods
+
+#pragma warning disable 6503
+
                     if (_index < 0)
                     {
                         if (_index == -1)
@@ -953,8 +1024,9 @@ namespace System.Windows.Media
                             throw new InvalidOperationException(SR.Enumerator_ReachedEnd);
                         }
                     }
-
                     return _currentElement;
+
+#pragma warning restore 6503
                 }
             }
 

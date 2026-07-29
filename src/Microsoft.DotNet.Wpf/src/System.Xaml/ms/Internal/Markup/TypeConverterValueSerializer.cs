@@ -1,9 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//  Contents:  TypeConverter to ValueSerializer adapter
 
 using System.ComponentModel;
-using System.Xaml;
 using System.Windows.Markup;
+using System.Xaml;
 
 namespace MS.Internal.Serialization
 {
@@ -21,31 +24,24 @@ namespace MS.Internal.Serialization
             this.converter = converter;
         }
 
-        public override bool CanConvertToString(object? value, IValueSerializerContext? context)
+        public override bool CanConvertToString(object value, IValueSerializerContext context)
         {
             return converter.CanConvertTo(context, typeof(string));
         }
 
-        public override string? ConvertToString(object? value, IValueSerializerContext? context)
+        public override string ConvertToString(object value, IValueSerializerContext context)
         {
             return converter.ConvertToString(context, TypeConverterHelper.InvariantEnglishUS, value);
         }
 
-        public override bool CanConvertFromString(string? value, IValueSerializerContext? context)
+        public override bool CanConvertFromString(string value, IValueSerializerContext context)
         {
             return true;
         }
 
-        public override object? ConvertFromString(string value, IValueSerializerContext? context)
+        public override object ConvertFromString(string value, IValueSerializerContext context)
         {
-            if (value is not null)
-            {
-                return converter.ConvertFrom(context, TypeConverterHelper.InvariantEnglishUS, value);
-            }
-            else
-            {
-                throw GetConvertFromException(value);
-            }
+            return converter.ConvertFrom(context, TypeConverterHelper.InvariantEnglishUS, value);
         }
     }
 }

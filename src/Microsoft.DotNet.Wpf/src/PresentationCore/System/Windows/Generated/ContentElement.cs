@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,14 +11,21 @@
 
 using MS.Internal;
 using MS.Internal.KnownBoxes;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Security;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
+
 namespace System.Windows
 {
-    public partial class ContentElement : IAnimatable
+    partial class ContentElement : IAnimatable
     {
         static private readonly Type _typeofThis = typeof(ContentElement);
 
@@ -64,17 +72,24 @@ namespace System.Windows
             AnimationClock clock,
             HandoffBehavior handoffBehavior)
         {
-            ArgumentNullException.ThrowIfNull(dp);
+            if (dp == null)
+            {
+                throw new ArgumentNullException("dp");
+            }
 
             if (!AnimationStorage.IsPropertyAnimatable(this, dp))
             {
-                throw new ArgumentException(SR.Format(SR.Animation_DependencyPropertyIsNotAnimatable, dp.Name, this.GetType()), nameof(dp));
+        #pragma warning disable 56506 // Suppress presharp warning: Parameter 'dp' to this public method must be validated:  A null-dereference can occur here.
+                throw new ArgumentException(SR.Format(SR.Animation_DependencyPropertyIsNotAnimatable, dp.Name, this.GetType()), "dp");
+        #pragma warning restore 56506
             }
 
             if (clock != null
                 && !AnimationStorage.IsAnimationValid(dp, clock.Timeline))
             {
-                throw new ArgumentException(SR.Format(SR.Animation_AnimationTimelineTypeMismatch, clock.Timeline.GetType(), dp.Name, dp.PropertyType), nameof(clock));
+        #pragma warning disable 56506 // Suppress presharp warning: Parameter 'dp' to this public method must be validated:  A null-dereference can occur here.
+                throw new ArgumentException(SR.Format(SR.Animation_AnimationTimelineTypeMismatch, clock.Timeline.GetType(), dp.Name, dp.PropertyType), "clock");
+        #pragma warning restore 56506
             }
 
             if (!HandoffBehaviorEnum.IsDefined(handoffBehavior))
@@ -85,7 +100,7 @@ namespace System.Windows
             if (IsSealed)
             {
                 throw new InvalidOperationException(SR.Format(SR.IAnimatable_CantAnimateSealedDO, dp, this.GetType()));
-            }
+            }                    
 
             AnimationStorage.ApplyAnimationClock(this, dp, clock, handoffBehavior);
         }
@@ -129,17 +144,22 @@ namespace System.Windows
         /// </param>
         public void BeginAnimation(DependencyProperty dp, AnimationTimeline animation, HandoffBehavior handoffBehavior)
         {
-            ArgumentNullException.ThrowIfNull(dp);
+            if (dp == null)
+            {
+                throw new ArgumentNullException("dp");
+            }
 
             if (!AnimationStorage.IsPropertyAnimatable(this, dp))
             {
-                throw new ArgumentException(SR.Format(SR.Animation_DependencyPropertyIsNotAnimatable, dp.Name, this.GetType()), nameof(dp));
+        #pragma warning disable 56506 // Suppress presharp warning: Parameter 'dp' to this public method must be validated:  A null-dereference can occur here.
+                throw new ArgumentException(SR.Format(SR.Animation_DependencyPropertyIsNotAnimatable, dp.Name, this.GetType()), "dp");
+        #pragma warning restore 56506
             }
 
-            if (animation != null
+            if (   animation != null
                 && !AnimationStorage.IsAnimationValid(dp, animation))
             {
-                throw new ArgumentException(SR.Format(SR.Animation_AnimationTimelineTypeMismatch, animation.GetType(), dp.Name, dp.PropertyType), nameof(animation));
+                throw new ArgumentException(SR.Format(SR.Animation_AnimationTimelineTypeMismatch, animation.GetType(), dp.Name, dp.PropertyType), "animation");
             }
 
             if (!HandoffBehaviorEnum.IsDefined(handoffBehavior))
@@ -150,7 +170,7 @@ namespace System.Windows
             if (IsSealed)
             {
                 throw new InvalidOperationException(SR.Format(SR.IAnimatable_CantAnimateSealedDO, dp, this.GetType()));
-            }
+            }                    
 
             AnimationStorage.BeginAnimation(this, dp, animation, handoffBehavior);
         }
@@ -183,7 +203,10 @@ namespace System.Windows
         /// </returns>
         public object GetAnimationBaseValue(DependencyProperty dp)
         {
-            ArgumentNullException.ThrowIfNull(dp);
+            if (dp == null)
+            {
+                throw new ArgumentNullException("dp");
+            }
 
             return this.GetValueEntry(
                     LookupEntry(dp.GlobalIndex),
@@ -211,7 +234,10 @@ namespace System.Windows
             {
                 AnimationStorage storage = AnimationStorage.GetStorage(this, dp);
 
-                storage?.EvaluateAnimatedValue(metadata, ref entry);
+                if (storage != null)
+                {
+                    storage.EvaluateAnimatedValue(metadata, ref entry);                      
+                }
             }
         }
 
@@ -384,7 +410,10 @@ namespace System.Windows
         {
             // VerifyAccess();
 
-            ArgumentNullException.ThrowIfNull(e);
+            if (e == null)
+            {
+                throw new ArgumentNullException("e");
+            }
             e.ClearUserInitiated();
 
             UIElement.RaiseEventImpl(this, e);
@@ -396,7 +425,10 @@ namespace System.Windows
         /// </summary>
         internal void RaiseEvent(RoutedEventArgs args, bool trusted)
         {
-            ArgumentNullException.ThrowIfNull(args);
+            if (args == null)
+            {
+                throw new ArgumentNullException("args");
+            }
 
             if (trusted)
             {
@@ -412,7 +444,10 @@ namespace System.Windows
 
         internal void RaiseTrustedEvent(RoutedEventArgs args)
         {
-            ArgumentNullException.ThrowIfNull(args);
+            if (args == null)
+            {
+                throw new ArgumentNullException("args");
+            }
 
             // Try/finally to ensure that UserInitiated bit is cleared.
             args.MarkAsUserInitiated();
@@ -512,9 +547,15 @@ namespace System.Windows
         {
             // VerifyAccess();
 
-            ArgumentNullException.ThrowIfNull(routedEvent);
+            if (routedEvent == null)
+            {
+                throw new ArgumentNullException("routedEvent");
+            }
 
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             if (!routedEvent.IsLegalHandler(handler))
             {
@@ -524,7 +565,7 @@ namespace System.Windows
             EnsureEventHandlersStore();
             EventHandlersStore.AddRoutedEventHandler(routedEvent, handler, handledEventsToo);
 
-            OnAddHandler(routedEvent, handler);
+            OnAddHandler (routedEvent, handler);
         }
 
         /// <summary>
@@ -567,9 +608,15 @@ namespace System.Windows
         {
             // VerifyAccess();
 
-            ArgumentNullException.ThrowIfNull(routedEvent);
+            if (routedEvent == null)
+            {
+                throw new ArgumentNullException("routedEvent");
+            }
 
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             if (!routedEvent.IsLegalHandler(handler))
             {
@@ -581,7 +628,7 @@ namespace System.Windows
             {
                 store.RemoveRoutedEventHandler(routedEvent, handler);
 
-                OnRemoveHandler(routedEvent, handler);
+                OnRemoveHandler (routedEvent, handler);
 
                 if (store.Count == 0)
                 {
@@ -589,8 +636,7 @@ namespace System.Windows
                     EventHandlersStoreField.ClearValue(this);
                     WriteFlag(CoreFlags.ExistsEventHandlersStore, false);
                 }
-
-            }
+}
         }
 
         /// <summary>
@@ -628,8 +674,14 @@ namespace System.Windows
         /// </summary>
         public void AddToEventRoute(EventRoute route, RoutedEventArgs e)
         {
-            ArgumentNullException.ThrowIfNull(route);
-            ArgumentNullException.ThrowIfNull(e);
+            if (route == null)
+            {
+                throw new ArgumentNullException("route");
+            }
+            if (e == null)
+            {
+                throw new ArgumentNullException("e");
+            }
 
             // Get class listeners for this ContentElement
             RoutedEventHandlerInfoList classListeners =
@@ -638,7 +690,7 @@ namespace System.Windows
             // Add all class listeners for this ContentElement
             while (classListeners != null)
             {
-                for (int i = 0; i < classListeners.Handlers.Length; i++)
+                for(int i = 0; i < classListeners.Handlers.Length; i++)
                 {
                     route.Add(this, classListeners.Handlers[i].Handler, classListeners.Handlers[i].InvokeHandledEventsToo);
                 }
@@ -685,9 +737,10 @@ namespace System.Windows
         /// </remarks>
         internal EventHandlersStore EventHandlersStore
         {
+            [FriendAccessAllowed] // Built into Core, also used by Framework.
             get
             {
-                if (!ReadFlag(CoreFlags.ExistsEventHandlersStore))
+                if(!ReadFlag(CoreFlags.ExistsEventHandlersStore))
                 {
                     return null;
                 }
@@ -699,6 +752,7 @@ namespace System.Windows
         ///     Ensures that EventHandlersStore will return
         ///     non-null when it is called.
         /// </summary>
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
         internal void EnsureEventHandlersStore()
         {
             if (EventHandlersStore == null)
@@ -2240,7 +2294,7 @@ namespace System.Windows
 
         private static void IsMouseDirectlyOver_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ContentElement)d).RaiseIsMouseDirectlyOverChanged(e);
+            ((ContentElement) d).RaiseIsMouseDirectlyOverChanged(e);
         }
 
         /// <summary>
@@ -2315,7 +2369,7 @@ namespace System.Windows
 
         private static void IsMouseCaptured_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ContentElement)d).RaiseIsMouseCapturedChanged(e);
+            ((ContentElement) d).RaiseIsMouseCapturedChanged(e);
         }
 
         /// <summary>
@@ -2380,7 +2434,7 @@ namespace System.Windows
 
         private static void IsStylusDirectlyOver_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ContentElement)d).RaiseIsStylusDirectlyOverChanged(e);
+            ((ContentElement) d).RaiseIsStylusDirectlyOverChanged(e);
         }
 
         /// <summary>
@@ -2415,7 +2469,7 @@ namespace System.Windows
 
         private static void IsStylusCaptured_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ContentElement)d).RaiseIsStylusCapturedChanged(e);
+            ((ContentElement) d).RaiseIsStylusCapturedChanged(e);
         }
 
         /// <summary>
@@ -2480,7 +2534,7 @@ namespace System.Windows
 
         private static void IsKeyboardFocused_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ContentElement)d).RaiseIsKeyboardFocusedChanged(e);
+            ((ContentElement) d).RaiseIsKeyboardFocusedChanged(e);
         }
 
         /// <summary>

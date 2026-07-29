@@ -1,7 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
 using System.Windows.Media;
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input.StylusPlugIns
 {
@@ -23,12 +31,18 @@ namespace System.Windows.Input.StylusPlugIns
             GeneralTransform        tabletToElementTransform,
             StylusPlugInCollection targetPlugInCollection)
         {
-            ArgumentNullException.ThrowIfNull(report);
+            if (report == null)
+            {
+                throw new ArgumentNullException("report");
+            }
             if (tabletToElementTransform.Inverse == null)
             {
-                throw new ArgumentException(SR.Stylus_MatrixNotInvertable, nameof(tabletToElementTransform));
+                throw new ArgumentException(SR.Stylus_MatrixNotInvertable, "tabletToElementTransform");
             }
-            ArgumentNullException.ThrowIfNull(targetPlugInCollection);
+            if (targetPlugInCollection == null)
+            {
+                throw new ArgumentNullException("targetPlugInCollection");
+            }
 
             // We should always see this GeneralTransform is frozen since we access this from multiple threads.
             System.Diagnostics.Debug.Assert(tabletToElementTransform.IsFrozen);
@@ -74,10 +88,7 @@ namespace System.Windows.Input.StylusPlugIns
                     group.Children.Add(new MatrixTransform(_report.InputSource.CompositionTarget.TransformFromDevice));
                 }
                 group.Children.Add(_tabletToElementTransform);
-                if(transform != null)
-                {
-                    group.Children.Add(transform);
-                }
+                group.Children.Add(transform);
                 return new StylusPointCollection(_report.StylusPointDescription, _report.GetRawPacketData(), group, Matrix.Identity);
             }
             else
@@ -94,17 +105,20 @@ namespace System.Windows.Input.StylusPlugIns
         /// </remarks>
         /// <param name="stylusPoints">stylusPoints</param>
         public void SetStylusPoints(StylusPointCollection stylusPoints)
-        {
-            ArgumentNullException.ThrowIfNull(stylusPoints);
+        {            
+            if (null == stylusPoints)
+            {
+                throw new ArgumentNullException("stylusPoints");
+            }
 
             if (!StylusPointDescription.AreCompatible(  stylusPoints.Description,
                                                         _report.StylusPointDescription))
             {
-                throw new ArgumentException(SR.IncompatibleStylusPointDescriptions, nameof(stylusPoints));
+                throw new ArgumentException(SR.IncompatibleStylusPointDescriptions, "stylusPoints");
             }
             if (stylusPoints.Count == 0)
             {
-                throw new ArgumentException(SR.Stylus_StylusPointsCantBeEmpty, nameof(stylusPoints));
+                throw new ArgumentException(SR.Stylus_StylusPointsCantBeEmpty, "stylusPoints");
             }
 
             _stylusPoints = stylusPoints.Clone();
@@ -203,11 +217,11 @@ namespace System.Windows.Input.StylusPlugIns
 
         /////////////////////////////////////////////////////////////////////
 
-        private RawStylusInputReport    _report;
-        private GeneralTransform        _tabletToElementTransform;
-        private StylusPlugInCollection  _targetPlugInCollection;
-        private StylusPointCollection   _stylusPoints;
-        private StylusPlugIn            _currentNotifyPlugIn;
-        private RawStylusInputCustomDataList _customData;
-    }
+        RawStylusInputReport    _report;
+        GeneralTransform        _tabletToElementTransform;
+        StylusPlugInCollection  _targetPlugInCollection;
+        StylusPointCollection   _stylusPoints;
+        StylusPlugIn            _currentNotifyPlugIn;
+        RawStylusInputCustomDataList    _customData;
+}
 }

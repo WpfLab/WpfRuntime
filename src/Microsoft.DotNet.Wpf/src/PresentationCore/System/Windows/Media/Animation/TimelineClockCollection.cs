@@ -1,5 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+// ClockCollection.cs
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+using SR=MS.Internal.PresentationCore.SR;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows.Media.Animation
 {
@@ -89,11 +100,14 @@ namespace System.Windows.Media.Animation
         /// <returns></returns>
         public bool Contains(Clock item)
         {
-            ArgumentNullException.ThrowIfNull(item);
+            if (item == null)
+            {
+                throw new ArgumentNullException("item");
+            }
 
             foreach (Clock t in this)
             {
-                // the enumerator will not contain nulls
+                #pragma warning suppress 6506 // the enumerator will not contain nulls
                 if (t.Equals(item))
                     return true;
             }
@@ -122,8 +136,11 @@ namespace System.Windows.Media.Animation
             {
                 List<Clock> list = clockGroup.InternalChildren;
 
-                // Get free parameter validation from Array.Copy
-                list?.CopyTo(array, index);
+                if (list != null)
+                {
+                    // Get free parameter validation from Array.Copy
+                    list.CopyTo(array, index);
+                }
             }
 
             // Need to perform parameter validation in the list == null case
@@ -227,7 +244,9 @@ namespace System.Windows.Media.Animation
             else
             {
                 // Both are non-null.
+#pragma warning disable 56506 // Suppress presharp warning: Parameter 'objA' to this public method must be validated:  A null-dereference can occur here.
                 return objA._owner == objB._owner;
+#pragma warning restore 56506
             }
         }
 
@@ -281,7 +300,7 @@ namespace System.Windows.Media.Animation
 
                 if (list == null)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(index));
+                    throw new ArgumentOutOfRangeException("index");
                 }
 
                 return list[index];
@@ -423,7 +442,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         private ClockCollection()
         {
-            Debug.Fail("Parameterless constructor is illegal for ClockCollection.");
+            Debug.Assert(false, "Parameterless constructor is illegal for ClockCollection.");
         }
 
         #endregion

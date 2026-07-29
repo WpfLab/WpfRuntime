@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: CompositeCollection holds the list of items that constitute the content of a ItemsControl.
@@ -8,9 +9,18 @@
 //
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+
+using System.Windows;
+using System.Windows.Markup;
+
+using MS.Internal;              // Invariant.Assert
 using MS.Internal.Data;
+using MS.Utility;
+
+using System;
 
 namespace System.Windows.Data
 {
@@ -239,7 +249,7 @@ namespace System.Windows.Data
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(removeIndex),
+                throw new ArgumentOutOfRangeException("removeIndex",
                             SR.ItemCollectionRemoveArgumentOutOfRange);
             }
         }
@@ -472,7 +482,7 @@ namespace System.Windows.Data
         private void AddCollectionContainer(CollectionContainer cc)
         {
             if (InternalList.Contains(cc))
-                throw new ArgumentException(SR.CollectionContainerMustBeUniqueForComposite, nameof(cc));
+                throw new ArgumentException(SR.CollectionContainerMustBeUniqueForComposite, "cc");
 
             CollectionChangedEventManager.AddHandler(cc, OnContainedCollectionChanged);
 
@@ -492,7 +502,7 @@ namespace System.Windows.Data
         }
 
         // raise CollectionChanged event to any listeners
-        private void OnCollectionChanged(NotifyCollectionChangedAction action)
+        void OnCollectionChanged(NotifyCollectionChangedAction action)
         {
 #if DEBUG
             _hasRepeatedCollectionIsValid = false;
@@ -505,7 +515,7 @@ namespace System.Windows.Data
         }
 
         // raise CollectionChanged event to any listeners
-        private void OnCollectionChanged(NotifyCollectionChangedAction action, object item, int index)
+        void OnCollectionChanged(NotifyCollectionChangedAction action, object item, int index)
         {
             if (CollectionChanged != null)
             {
@@ -514,7 +524,7 @@ namespace System.Windows.Data
         }
 
         /// raise CollectionChanged event to any listeners
-        private void OnCollectionChanged(NotifyCollectionChangedAction action, object oldItem, object newItem, int index)
+        void OnCollectionChanged(NotifyCollectionChangedAction action, object oldItem, object newItem, int index)
         {
             if (CollectionChanged != null)
             {
@@ -590,7 +600,10 @@ namespace System.Windows.Data
             foreach (object o in InternalList)
             {
                 CollectionContainer cc = o as CollectionContainer;
-                cc?.GetCollectionChangedSources(level+1, format, sources);
+                if (cc != null)
+                {
+                    cc.GetCollectionChangedSources(level+1, format, sources);
+                }
             }
         }
 

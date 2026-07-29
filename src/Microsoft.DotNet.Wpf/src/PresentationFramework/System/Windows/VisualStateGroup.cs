@@ -1,9 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media.Animation;
 
@@ -93,38 +98,40 @@ namespace System.Windows
             }
         }
 
-        internal void StartNewThenStopOld(FrameworkElement element, params ReadOnlySpan<Storyboard> newStoryboards)
+        internal void StartNewThenStopOld(FrameworkElement element, params Storyboard[] newStoryboards)
         {
             // Remove the old Storyboards. Remove is delayed until the next TimeManager tick, so the
             // handoff to the new storyboard is unaffected.
-            for (int i = 0; i < CurrentStoryboards.Count; i++)
+            for (int index = 0; index < CurrentStoryboards.Count; ++index)
             {
-                Storyboard currentStoryboard = CurrentStoryboards[i];
-                if (currentStoryboard is null)
+                if (CurrentStoryboards[index] == null)
+                {
                     continue;
+                }
 
-                currentStoryboard.Remove(element);
+                CurrentStoryboards[index].Remove(element);
             }
-
             CurrentStoryboards.Clear();
 
             // Start the new Storyboards
-            foreach (Storyboard newStoryboard in newStoryboards)
-            { 
-                if (newStoryboard is null)
+            for (int index = 0; index < newStoryboards.Length; ++index)
+            {
+                if (newStoryboards[index] == null)
+                {
                     continue;
+                }
 
-                newStoryboard.Begin(element, HandoffBehavior.SnapshotAndReplace, true);
+                newStoryboards[index].Begin(element, HandoffBehavior.SnapshotAndReplace, true);
                 
                 // Hold on to the running Storyboards
-                CurrentStoryboards.Add(newStoryboard);
+                CurrentStoryboards.Add(newStoryboards[index]);
 
                 // Silverlight had an issue where initially, a checked CheckBox would not show the check mark
                 // until the second frame. They chose to do a Seek(0) at this point, which this line
                 // is supposed to mimic. It does not seem to be equivalent, though, and WPF ends up
                 // with some odd animation behavior. I haven't seen the CheckBox issue on WPF, so
                 // commenting this out for now.
-                // newStoryboard.SeekAlignedToLastTick(element, TimeSpan.Zero, TimeSeekOrigin.BeginTime);
+                // newStoryboards[index].SeekAlignedToLastTick(element, TimeSpan.Zero, TimeSeekOrigin.BeginTime);
             }
 
         }

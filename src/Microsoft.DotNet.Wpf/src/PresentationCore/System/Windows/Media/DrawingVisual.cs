@@ -1,9 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 
+using System;
+using System.Windows.Threading;
+
+using System.Windows.Media;
 using System.Windows.Media.Composition;
+using System.Diagnostics;
+using System.Collections.Generic;
+using MS.Internal;
+using MS.Win32;
+using System.Resources;
+using System.Runtime.InteropServices;
 
 namespace System.Windows.Media
 {
@@ -15,14 +26,17 @@ namespace System.Windows.Media
     {
         // bbox in inner coordinate space. Note that this bbox does not
         // contain the childrens extent.
-        private IDrawingContent _content;
+        IDrawingContent _content;
 
         /// <summary>
         /// HitTestCore implements precise hit testing against render contents
         /// </summary>
         protected override HitTestResult HitTestCore(PointHitTestParameters hitTestParameters)
         {
-            ArgumentNullException.ThrowIfNull(hitTestParameters);
+            if (hitTestParameters == null)
+            {
+                throw new ArgumentNullException("hitTestParameters");
+            }
 
             if (_content != null)
             {                
@@ -39,8 +53,11 @@ namespace System.Windows.Media
         /// HitTestCore implements precise hit testing against render contents
         /// </summary>
         protected override GeometryHitTestResult HitTestCore(GeometryHitTestParameters hitTestParameters)
-        {
-            ArgumentNullException.ThrowIfNull(hitTestParameters);
+        {                   
+            if (hitTestParameters == null)
+            {
+                throw new ArgumentNullException("hitTestParameters");
+            }
 
             if ((_content != null) && GetHitTestBounds().IntersectsWith(hitTestParameters.Bounds))
             {                 
@@ -91,7 +108,7 @@ namespace System.Windows.Media
                 // Remove the notification handlers.
                 //
 
-                oldContent.PropagateChangedHandler(ContentsChangedHandler, adding: false);
+                oldContent.PropagateChangedHandler(ContentsChangedHandler, false /* remove */);
 
 
                 //
@@ -108,8 +125,11 @@ namespace System.Windows.Media
             // Prepare the new content.
             // 
 
-            // Propagate notification handlers.
-            newContent?.PropagateChangedHandler(ContentsChangedHandler, adding: true);
+            if (newContent != null)
+            {
+                // Propagate notification handlers.
+                newContent.PropagateChangedHandler(ContentsChangedHandler, true /* adding */);                
+            }
 
             _content = newContent;
 
@@ -190,7 +210,10 @@ namespace System.Windows.Media
         {
             VerifyAPIReadOnly();
 
-            _content?.WalkContent(walker);
+            if (_content != null)
+            {
+                _content.WalkContent(walker);
+            }
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -17,7 +18,9 @@
 //  The stream is read only
 
 
+using System;
 using System.IO;
+using System.IO.Packaging;
 
 using MS.Internal.PresentationCore;     // for ExceptionStringTable
 
@@ -193,7 +196,10 @@ namespace MS.Internal.IO.Packaging
         /// <remarks>streamUri has to be a pack Uri</remarks>
         internal DeobfuscatingStream(Stream obfuscatedStream, Uri streamUri, bool leaveOpen)
         {
-            ArgumentNullException.ThrowIfNull(obfuscatedStream);
+            if (obfuscatedStream == null)
+            {
+                throw new ArgumentNullException("obfuscatedStream");
+            }
 
             // Make sure streamUri is in the correct form; getting partUri from it will do all necessary checks for error
             //    conditions; We also have to make sure that it has a part name

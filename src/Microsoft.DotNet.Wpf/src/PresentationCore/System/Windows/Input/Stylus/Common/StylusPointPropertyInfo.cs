@@ -1,7 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.ComponentModel;
+using MS.Utility;
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -53,13 +63,13 @@ namespace System.Windows.Input
             // validate min/max
             if (maximum < minimum)
             {
-                throw new ArgumentException(SR.Stylus_InvalidMax, nameof(maximum));
+                throw new ArgumentException(SR.Stylus_InvalidMax, "maximum");
             }
 
             // validate resolution
             if (resolution < 0.0f)
             {
-                throw new ArgumentException(SR.InvalidStylusPointPropertyInfoResolution, nameof(resolution));
+                throw new ArgumentException(SR.InvalidStylusPointPropertyInfoResolution, "resolution");
             }
 
             _min = minimum;

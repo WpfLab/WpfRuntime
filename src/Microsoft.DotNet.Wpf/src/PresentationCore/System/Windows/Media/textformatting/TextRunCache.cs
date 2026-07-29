@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,6 +12,10 @@
 //
 
 
+using System;
+using System.Collections.Generic;
+
+using MS.Internal.PresentationCore;
 using MS.Internal.TextFormatting;
 
 namespace System.Windows.Media.TextFormatting
@@ -46,11 +51,14 @@ namespace System.Windows.Media.TextFormatting
             int     removal
             )
         {
-            _imp?.Change(
+            if(_imp != null)
+            {
+                _imp.Change(
                     textSourceCharacterIndex,
                     addition,
                     removal
                     );
+            }
         }
 
 
@@ -75,6 +83,7 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
         public IList<TextSpan<TextRun>> GetTextRunSpans()
 #else
+        [FriendAccessAllowed]
         internal IList<TextSpan<TextRun>> GetTextRunSpans()
 #endif               
         {

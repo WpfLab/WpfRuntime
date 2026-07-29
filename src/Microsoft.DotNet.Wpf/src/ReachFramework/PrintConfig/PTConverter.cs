@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -13,9 +14,14 @@ Abstract:
 
 --*/
 
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Globalization;
+
+using System.Printing;
 using MS.Internal.Printing.Configuration;
+using System.Security;
 
 //[assembly:System.Runtime.InteropServices.ComVisibleAttribute(false)]
 

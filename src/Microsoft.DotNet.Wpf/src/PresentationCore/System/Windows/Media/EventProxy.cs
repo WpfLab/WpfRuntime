@@ -1,9 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+#pragma warning disable 1634, 1691 // Allow suppression of certain presharp messages
+
+using System.Windows.Media;
+using System;
 using MS.Internal;
 using MS.Win32;
+using System.Reflection;
+using System.Collections;
+using System.Diagnostics;
+using System.Security;
 using System.Runtime.InteropServices;
+using MS.Internal.PresentationCore;
 
 namespace System.Windows.Media
 {
@@ -69,13 +80,26 @@ namespace System.Windows.Media
 
         #endregion
 
+        #region Verify
+
+        private void Verify()
+        {
+            if (target == null)
+            {
+                throw new System.ObjectDisposedException("EventProxyWrapper");
+            }
+        }
+
+        #endregion
+
         #region Public methods
 
         public int RaiseEvent(byte[] buffer, uint cb)
         {
+#pragma warning disable 6500
             try
             {
-                ObjectDisposedException.ThrowIf(target == null, typeof(EventProxyWrapper));
+                Verify();
                 IInvokable invokable = (IInvokable)target.Target;
                 if (invokable != null)
                 {
@@ -92,6 +116,7 @@ namespace System.Windows.Media
             {
                 return Marshal.GetHRForException(e);
             }
+#pragma warning restore 6500
 
             return NativeMethods.S_OK;
         }
@@ -125,18 +150,20 @@ namespace System.Windows.Media
 
         internal static SafeMILHandle CreateEventProxyWrapper(IInvokable invokable)
         {
-            ArgumentNullException.ThrowIfNull(invokable);
+            if (invokable == null)
+            {
+                throw new System.ArgumentNullException("invokable");
+            }
 
             SafeMILHandle eventProxy = null;
 
             EventProxyWrapper epw = new EventProxyWrapper(invokable);
-            EventProxyDescriptor epd = new EventProxyDescriptor
-            {
-                pfnDispose = EventProxyStaticPtrs.pfnDispose,
-                pfnRaiseEvent = EventProxyStaticPtrs.pfnRaiseEvent,
+            EventProxyDescriptor epd = new EventProxyDescriptor();
 
-                m_handle = System.Runtime.InteropServices.GCHandle.Alloc(epw, System.Runtime.InteropServices.GCHandleType.Normal)
-            };
+            epd.pfnDispose = EventProxyStaticPtrs.pfnDispose;
+            epd.pfnRaiseEvent = EventProxyStaticPtrs.pfnRaiseEvent;
+
+            epd.m_handle = System.Runtime.InteropServices.GCHandle.Alloc(epw, System.Runtime.InteropServices.GCHandleType.Normal);
 
             HRESULT.Check(MILCreateEventProxy(ref epd, out eventProxy));
 
@@ -146,7 +173,7 @@ namespace System.Windows.Media
         #endregion
 
         [DllImport(DllImport.MilCore)]
-        private static extern int /* HRESULT */ MILCreateEventProxy(ref EventProxyDescriptor pEPD, out SafeMILHandle ppEventProxy);
+        private extern static int /* HRESULT */ MILCreateEventProxy(ref EventProxyDescriptor pEPD, out SafeMILHandle ppEventProxy);
     }
     #endregion
 }

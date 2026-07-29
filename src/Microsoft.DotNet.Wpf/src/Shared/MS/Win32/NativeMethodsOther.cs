@@ -1,13 +1,38 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
-using Microsoft.Win32.SafeHandles;
+// See the LICENSE file in the project root for more information.
 
 namespace MS.Win32
 {
+    using Accessibility;
+    using System;
+    using System.Runtime.ConstrainedExecution;
+    using System.Runtime.InteropServices;
+    using System.Security;
+    using System.Collections;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Text;
+    using MS.Win32;
+    using Microsoft.Win32.SafeHandles;
+
+
+#if WINDOWS_BASE
+    using MS.Internal.WindowsBase;
+#elif PRESENTATION_CORE
+    using MS.Internal.PresentationCore;
+#elif PRESENTATIONFRAMEWORK
+    using MS.Internal.PresentationFramework;
+#elif UIAUTOMATIONTYPES
+    using MS.Internal.UIAutomationTypes;
+#elif DRT
+    using MS.Internal.Drt;
+#else
+#error Attempt to use FriendAccessAllowedAttribute from an unknown assembly.
+    using MS.Internal.YourAssemblyName;
+#endif
+
+    [FriendAccessAllowed]
     internal partial class NativeMethods
     {
         // Translates Win32 error codes into HRESULTs.
@@ -1172,10 +1197,8 @@ namespace MS.Win32
             /// <returns></returns>
             public static HWND Cast(IntPtr h)
             {
-                HWND hTemp = new HWND
-                {
-                    h = h
-                };
+                HWND hTemp = new HWND();
+                hTemp.h = h;
                 return hTemp;
             }
 
@@ -1221,7 +1244,7 @@ namespace MS.Win32
             /// </summary>
             /// <param name="oCompare"></param>
             /// <returns></returns>
-            public override bool Equals(object oCompare)
+            override public bool Equals(object oCompare)
             {
                 HWND hr = Cast((HWND)oCompare);
                 return (h == hr.h);
@@ -1254,10 +1277,8 @@ namespace MS.Win32
             /// <returns></returns>
             public static HDC Cast(IntPtr h)
             {
-                HDC hTemp = new HDC
-                {
-                    h = h
-                };
+                HDC hTemp = new HDC();
+                hTemp.h = h;
                 return hTemp;
             }
 
@@ -1273,10 +1294,8 @@ namespace MS.Win32
             {
                 get
                 {
-                    HDC hTemp = new HDC
-                    {
-                        h = IntPtr.Zero
-                    };
+                    HDC hTemp = new HDC();
+                    hTemp.h = IntPtr.Zero;
                     return hTemp;
                 }
             }
@@ -1329,7 +1348,7 @@ namespace MS.Win32
         /// <param name="lpvOutData">Structure to receive data</param>
         /// <returns>0 if escape not implemented, negative if error, otherwise succeeds</returns>
         [DllImport("gdi32.dll")]
-        public static extern unsafe Int32 ExtEscape(HDC hdc, Int32 nEscape, Int32 cbInput, PrinterEscape* lpvInData, Int32 cbOutput, [Out] void* lpvOutData);
+        public static unsafe extern Int32 ExtEscape(HDC hdc, Int32 nEscape, Int32 cbInput, PrinterEscape* lpvInData, Int32 cbOutput, [Out] void* lpvOutData);
 
         public const int MM_ISOTROPIC = 7;
 
@@ -1357,7 +1376,7 @@ namespace MS.Win32
         /// <param name="docInfo">Document information</param>
         /// <returns>More than zero if succeeded</returns>
         [DllImport("gdi32.dll")]
-        public static extern unsafe Int32 StartDoc(HDC hdc, ref DocInfo docInfo);
+        public unsafe static extern Int32 StartDoc(HDC hdc, ref DocInfo docInfo);
 
         /// <summary>
         ///
@@ -1367,7 +1386,7 @@ namespace MS.Win32
         /// <param name="pDefaults"></param>
         /// <returns></returns>
         [DllImport("winspool.drv", BestFitMapping = false, ThrowOnUnmappableChar = true)]
-        public static extern unsafe Int32 OpenPrinterA(String printerName, IntPtr* phPrinter, void* pDefaults);
+        public unsafe static extern Int32 OpenPrinterA(String printerName, IntPtr* phPrinter, void* pDefaults);
 
         /// <summary>
         ///

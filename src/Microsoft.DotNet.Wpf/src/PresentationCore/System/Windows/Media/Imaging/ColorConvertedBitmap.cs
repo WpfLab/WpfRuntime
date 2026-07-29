@@ -1,9 +1,29 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+
+using System;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
 using MS.Win32.PresentationCore;
+using System.Security;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Imaging
 {
@@ -30,11 +50,20 @@ namespace System.Windows.Media.Imaging
         public ColorConvertedBitmap(BitmapSource source, ColorContext sourceColorContext, ColorContext destinationColorContext, PixelFormat format)
             : base(true) // Use base class virtuals
         {
-            ArgumentNullException.ThrowIfNull(source);
+            if (source == null)
+            {
+                throw new ArgumentNullException("source");
+            }
 
-            ArgumentNullException.ThrowIfNull(sourceColorContext);
+            if (sourceColorContext == null)
+            {
+                throw new ArgumentNullException("sourceColorContext");
+            }
 
-            ArgumentNullException.ThrowIfNull(destinationColorContext);
+            if (destinationColorContext == null)
+            {
+                throw new ArgumentNullException("destinationColorContext");
+            }
 
             _bitmapInit.BeginInit();
 
@@ -66,7 +95,7 @@ namespace System.Windows.Media.Imaging
             WritePreamble();
             _bitmapInit.EndInit();
 
-            IsValidForFinalizeCreation(throwIfInvalid: true);
+            IsValidForFinalizeCreation(/* throwIfInvalid = */ true);
             FinalizeCreation();
         }
 

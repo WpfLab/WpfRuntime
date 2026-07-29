@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
+using System.Collections.Generic;
 using System.Xaml;
 
 namespace MS.Internal.Xaml.Context
@@ -15,12 +15,12 @@ namespace MS.Internal.Xaml.Context
         {
             get
             {
-                if (_namespaces is null)
+                if (_namespaces == null)
                     _namespaces = new Dictionary<string, string>();
                 return _namespaces;
             }
         }
-
+        
         public XamlCommonFrame() : base()
         {
         }
@@ -30,7 +30,7 @@ namespace MS.Internal.Xaml.Context
             XamlType = source.XamlType;
             Member = source.Member;
 
-            if (source._namespaces is not null)
+            if (source._namespaces != null)
             {
                 SetNamespaces(source._namespaces);
             }
@@ -40,9 +40,12 @@ namespace MS.Internal.Xaml.Context
         {
             XamlType = null;
             Member = null;
-            _namespaces?.Clear();
+            if (_namespaces != null)
+            {
+                _namespaces.Clear();
+            }
         }
-
+        
         public XamlType XamlType { get; set; }
         public XamlMember Member { get; set; }
 
@@ -53,8 +56,11 @@ namespace MS.Internal.Xaml.Context
 
         public void SetNamespaces(Dictionary<string, string> namespaces)
         {
-            _namespaces?.Clear();
-            if (namespaces is not null)
+            if (_namespaces != null)
+            {
+                _namespaces.Clear();
+            }
+            if (namespaces != null)
             {
                 foreach (KeyValuePair<string, string> ns in namespaces)
                 {
@@ -65,11 +71,10 @@ namespace MS.Internal.Xaml.Context
 
         public bool TryGetNamespaceByPrefix(string prefix, out string xamlNs)
         {
-            if (_namespaces is not null && _namespaces.TryGetValue(prefix, out xamlNs))
+            if (_namespaces != null && _namespaces.TryGetValue(prefix, out xamlNs))
             {
                 return true;
             }
-
             xamlNs = null;
             return false;
         }
@@ -81,7 +86,6 @@ namespace MS.Internal.Xaml.Context
             {
                 _namespaceDeclarations.Add(new NamespaceDeclaration(kvp.Value, kvp.Key));
             }
-
             return _namespaceDeclarations;
         }
     }

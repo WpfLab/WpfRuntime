@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
+using System;
 
 namespace MS.Internal.Xaml.Parser
 {
@@ -10,7 +11,7 @@ namespace MS.Internal.Xaml.Parser
         private XamlPropertyName(XamlName owner, string prefix, string name)
             : base(name)
         {
-            if (owner is not null)
+            if (owner != null)
             {
                 Owner = owner;
                 _prefix = owner.Prefix ?? string.Empty;
@@ -23,7 +24,7 @@ namespace MS.Internal.Xaml.Parser
 
         public static XamlPropertyName Parse(string longName)
         {
-            if (string.IsNullOrEmpty(longName))
+            if(String.IsNullOrEmpty(longName))
             {
                 return null;
             }
@@ -44,7 +45,7 @@ namespace MS.Internal.Xaml.Parser
             {
                 owner = dottedName.Substring(start, dotIdx);
 
-                if (string.IsNullOrEmpty(owner))
+                if (String.IsNullOrEmpty(owner))
                 {
                     return null;
                 }
@@ -55,7 +56,7 @@ namespace MS.Internal.Xaml.Parser
             string name = (start == 0) ? dottedName : dottedName.Substring(start);
 
             XamlQualifiedName ownerName = null;
-            if (!string.IsNullOrEmpty(owner))
+            if (!String.IsNullOrEmpty(owner))
             {
                 ownerName = new XamlQualifiedName(prefix, owner);
             }
@@ -76,7 +77,7 @@ namespace MS.Internal.Xaml.Parser
             get
             {
                 return IsDotted ?
-                    $"{Owner.ScopedName}.{Name}" :
+                    Owner.ScopedName + "." + Name :
                     Name;
             }
         }
@@ -93,7 +94,7 @@ namespace MS.Internal.Xaml.Parser
 
         public bool IsDotted
         {
-            get { return Owner is not null; }
+            get { return Owner != null; }
         }
     }
 }

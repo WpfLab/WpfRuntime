@@ -1,11 +1,25 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Collections;
+using System.Security;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
 using MS.Win32.PresentationCore;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Imaging;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Imaging
 {
@@ -49,10 +63,12 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 1);
+                if ((value < 0.0) || (value > 1.0))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0.0, 1.0));
+                }
 
-                _imagequalitylevel = value;
+                _imagequalitylevel= value;
             }
         }
 
@@ -211,7 +227,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfZero(value);
+                if ((value < 1) || (value > 255))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 1, 255));
+                }
 
                 _qualitylevel = value;
             }
@@ -229,7 +248,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 3);
+                if ((value < 0) || (value > 3))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 3));
+                }
 
                 _subsamplinglevel = value;
             }
@@ -247,7 +269,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 2);
+                if ((value < 0) || (value > 2))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 2));
+                }
 
                 _overlaplevel = value;
             }
@@ -265,8 +290,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 4096);
+                if ((value < 0) || (value > 4096))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 4096));
+                }
 
                 _horizontaltileslices = value;
             }
@@ -284,8 +311,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 4096);
+                if ((value < 0) || (value > 4096))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 4096));
+                }
 
                 _verticaltileslices = value;
             }
@@ -333,6 +362,11 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
+                if ((value < 0) || (value > 255))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 255));
+                }
+
                 _alphaqualitylevel = value;
             }
         }
@@ -364,7 +398,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 3);
+                if ((value < 0) || (value > 3))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 3));
+                }
 
                 _imagedatadiscardlevel = value;
             }
@@ -382,7 +419,10 @@ namespace System.Windows.Media.Imaging
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 4);
+                if ((value < 0) || (value > 4))
+                {
+                    throw new System.ArgumentOutOfRangeException("value", SR.Format(SR.ParameterMustBeBetween, 0, 4));
+                }
 
                 _alphadatadiscardlevel = value;
             }

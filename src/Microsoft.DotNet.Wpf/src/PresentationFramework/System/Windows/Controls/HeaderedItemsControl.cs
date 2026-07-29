@@ -1,14 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections;
 using System.ComponentModel;
 using System.Windows.Threading;
 
 using System.Windows.Data;
+using System.Windows.Media;
+
+using MS.Utility;
 using MS.Internal;
 using MS.Internal.Controls;
 using MS.Internal.KnownBoxes;
+using MS.Internal.Data;
 using MS.Internal.PresentationFramework;
 
 namespace System.Windows.Controls
@@ -396,7 +402,7 @@ namespace System.Windows.Controls
         // As a convenience for hierarchical data, get the header template and
         // if it's a HierarchicalDataTemplate, set the ItemsSource, ItemTemplate,
         // ItemTemplateSelector, and ItemStringFormat properties from the template.
-        private void PrepareHierarchy(object item, ItemsControl parentItemsControl)
+        void PrepareHierarchy(object item, ItemsControl parentItemsControl)
         {
             // get the effective header template
             DataTemplate headerTemplate = HeaderTemplate;
@@ -521,14 +527,14 @@ namespace System.Windows.Controls
         }
 
         // return true if the dp is bound via the given Binding
-        private bool IsBound(DependencyProperty dp, Binding binding)
+        bool IsBound(DependencyProperty dp, Binding binding)
         {
             BindingExpressionBase bindExpr = BindingOperations.GetBindingExpression(this, dp);
             return (bindExpr != null && bindExpr.ParentBindingBase == binding);
         }
 
         // return true if the Header should be a logical child
-        private bool IsHeaderLogical()
+        bool IsHeaderLogical()
         {
             // use cached result, if available
             if (ReadControlFlag(ControlBoolFlags.HeaderIsNotLogical))
@@ -546,7 +552,7 @@ namespace System.Windows.Controls
         }
 
         // return true if the Header is a data item
-        private bool HeaderIsItem
+        bool HeaderIsItem
         {
             get { return ReadControlFlag(ControlBoolFlags.HeaderIsItem); }
             set { WriteControlFlag(ControlBoolFlags.HeaderIsItem, value); }

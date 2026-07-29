@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,21 +11,37 @@
 
 using MS.Internal;
 using MS.Internal.Collections;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Markup;
 using System.Windows.Media.Media3D.Converters;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
+using System.Windows.Media.Imaging;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows.Media.Media3D
 {
     /// <summary>
     /// A collection of GeneralTransform3D objects.
     /// </summary>
+
 
     public sealed partial class GeneralTransform3DCollection : Animatable, IList, IList<GeneralTransform3D>
     {
@@ -149,7 +166,7 @@ namespace System.Windows.Media.Media3D
             // not in the collection.  Therefore we need to first verify the old value exists
             // before calling OnFreezablePropertyChanged.  Since we already need to locate
             // the item in the collection we keep the index and use RemoveAt(...) to do
-            // the work.  (Windows OS #1016178)
+            // the work.#1016178)
 
             // We use the public IndexOf to guard our UIContext since OnFreezablePropertyChanged
             // is only called conditionally.  IList.IndexOf returns -1 if the value is not found.
@@ -238,14 +255,11 @@ namespace System.Windows.Media.Media3D
 
                 if (!Object.ReferenceEquals(_collection[ index ], value))
                 {
-
                     GeneralTransform3D oldValue = _collection[ index ];
                     OnFreezablePropertyChanged(oldValue, value);
 
                     _collection[ index ] = value;
-
-
-                }
+}
 
 
                 ++_version;
@@ -277,13 +291,18 @@ namespace System.Windows.Media.Media3D
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // This will not throw in the case that we are copying
             // from an empty collection.  This is consistent with the
             // BCL Collection implementations. (Windows 1587365)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _collection.Count);
+            if (index < 0  || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             _collection.CopyTo(array, index);
         }
@@ -387,13 +406,18 @@ namespace System.Windows.Media.Media3D
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // This will not throw in the case that we are copying
             // from an empty collection.  This is consistent with the
             // BCL Collection implementations. (Windows 1587365)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _collection.Count);
+            if (index < 0  || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             if (array.Rank != 1)
             {
@@ -481,10 +505,10 @@ namespace System.Windows.Media.Media3D
         {
             base.OnInheritanceContextChangedCore(args);
 
-            for (int i = 0; i < this.Count; i++)
+            for (int i=0; i<this.Count; i++)
             {
                 DependencyObject inheritanceChild = _collection[i];
-                if (inheritanceChild != null && inheritanceChild.InheritanceContext == this)
+                if (inheritanceChild!= null && inheritanceChild.InheritanceContext == this)
                 {
                     inheritanceChild.OnInheritanceContextChanged(args);
                 }
@@ -497,7 +521,10 @@ namespace System.Windows.Media.Media3D
 
         private GeneralTransform3D Cast(object value)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if( value == null )
+            {
+                throw new System.ArgumentNullException("value");
+            }
 
             if (!(value is GeneralTransform3D))
             {
@@ -577,7 +604,7 @@ namespace System.Windows.Media.Media3D
         /// </summary>
         protected override void CloneCore(Freezable source)
         {
-            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection)source;
+            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection) source;
 
             base.CloneCore(source);
 
@@ -587,19 +614,17 @@ namespace System.Windows.Media.Media3D
 
             for (int i = 0; i < count; i++)
             {
-                GeneralTransform3D newValue = (GeneralTransform3D)sourceGeneralTransform3DCollection._collection[i].Clone();
+                GeneralTransform3D newValue = (GeneralTransform3D) sourceGeneralTransform3DCollection._collection[i].Clone();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
-            }
-
-        }
+}
+}
         /// <summary>
         /// Implementation of Freezable.CloneCurrentValueCore()
         /// </summary>
         protected override void CloneCurrentValueCore(Freezable source)
         {
-            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection)source;
+            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection) source;
 
             base.CloneCurrentValueCore(source);
 
@@ -609,19 +634,17 @@ namespace System.Windows.Media.Media3D
 
             for (int i = 0; i < count; i++)
             {
-                GeneralTransform3D newValue = (GeneralTransform3D)sourceGeneralTransform3DCollection._collection[i].CloneCurrentValue();
+                GeneralTransform3D newValue = (GeneralTransform3D) sourceGeneralTransform3DCollection._collection[i].CloneCurrentValue();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
-            }
-
-        }
+}
+}
         /// <summary>
         /// Implementation of Freezable.GetAsFrozenCore()
         /// </summary>
         protected override void GetAsFrozenCore(Freezable source)
         {
-            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection)source;
+            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection) source;
 
             base.GetAsFrozenCore(source);
 
@@ -631,19 +654,17 @@ namespace System.Windows.Media.Media3D
 
             for (int i = 0; i < count; i++)
             {
-                GeneralTransform3D newValue = (GeneralTransform3D)sourceGeneralTransform3DCollection._collection[i].GetAsFrozen();
+                GeneralTransform3D newValue = (GeneralTransform3D) sourceGeneralTransform3DCollection._collection[i].GetAsFrozen();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
-            }
-
-        }
+}
+}
         /// <summary>
         /// Implementation of Freezable.GetCurrentValueAsFrozenCore()
         /// </summary>
         protected override void GetCurrentValueAsFrozenCore(Freezable source)
         {
-            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection)source;
+            GeneralTransform3DCollection sourceGeneralTransform3DCollection = (GeneralTransform3DCollection) source;
 
             base.GetCurrentValueAsFrozenCore(source);
 
@@ -653,13 +674,11 @@ namespace System.Windows.Media.Media3D
 
             for (int i = 0; i < count; i++)
             {
-                GeneralTransform3D newValue = (GeneralTransform3D)sourceGeneralTransform3DCollection._collection[i].GetCurrentValueAsFrozen();
+                GeneralTransform3D newValue = (GeneralTransform3D) sourceGeneralTransform3DCollection._collection[i].GetCurrentValueAsFrozen();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
-            }
-
-        }
+}
+}
         /// <summary>
         /// Implementation of <see cref="System.Windows.Freezable.FreezeCore">Freezable.FreezeCore</see>.
         /// </summary>
@@ -763,7 +782,6 @@ namespace System.Windows.Media.Media3D
 
             void IDisposable.Dispose()
             {
-
             }
 
             /// <summary>
@@ -902,58 +920,61 @@ namespace System.Windows.Media.Media3D
 
             WritePreamble();
 
-            ArgumentNullException.ThrowIfNull(collection);
-
-            bool needsItemValidation = true;
-            ICollection<GeneralTransform3D> icollectionOfT = collection as ICollection<GeneralTransform3D>;
-
-            if (icollectionOfT != null)
+            if (collection != null)
             {
-                _collection = new FrugalStructList<GeneralTransform3D>(icollectionOfT);
-            }
-            else
-            {
-                ICollection icollection = collection as ICollection;
+                bool needsItemValidation = true;
+                ICollection<GeneralTransform3D> icollectionOfT = collection as ICollection<GeneralTransform3D>;
 
-                if (icollection != null) // an IC but not and IC<T>
+                if (icollectionOfT != null)
                 {
-                    _collection = new FrugalStructList<GeneralTransform3D>(icollection);
+                    _collection = new FrugalStructList<GeneralTransform3D>(icollectionOfT);
                 }
-                else // not a IC or IC<T> so fall back to the slower Add
-                {
-                    _collection = new FrugalStructList<GeneralTransform3D>();
+                else
+                {       
+                    ICollection icollection = collection as ICollection;
 
+                    if (icollection != null) // an IC but not and IC<T>
+                    {
+                        _collection = new FrugalStructList<GeneralTransform3D>(icollection);
+                    }
+                    else // not a IC or IC<T> so fall back to the slower Add
+                    {
+                        _collection = new FrugalStructList<GeneralTransform3D>();
+
+                        foreach (GeneralTransform3D item in collection)
+                        {
+                            if (item == null)
+                            {
+                                throw new System.ArgumentException(SR.Collection_NoNull);
+                            }
+                            GeneralTransform3D newValue = item;
+                            OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
+                            _collection.Add(newValue);
+}
+
+                        needsItemValidation = false;
+                    }
+                }
+
+                if (needsItemValidation)
+                {
                     foreach (GeneralTransform3D item in collection)
                     {
                         if (item == null)
                         {
                             throw new System.ArgumentException(SR.Collection_NoNull);
                         }
-                        GeneralTransform3D newValue = item;
-                        OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
-                        _collection.Add(newValue);
-
-                    }
-
-                    needsItemValidation = false;
+                        OnFreezablePropertyChanged(/* oldValue = */ null, item);
+}
                 }
-            }
 
-            if (needsItemValidation)
+
+                WritePostscript();
+            }
+            else
             {
-                foreach (GeneralTransform3D item in collection)
-                {
-                    if (item == null)
-                    {
-                        throw new System.ArgumentException(SR.Collection_NoNull);
-                    }
-                    OnFreezablePropertyChanged(/* oldValue = */ null, item);
-
-                }
+                throw new ArgumentNullException("collection");
             }
-
-
-            WritePostscript();
         }
 
         #endregion Constructors

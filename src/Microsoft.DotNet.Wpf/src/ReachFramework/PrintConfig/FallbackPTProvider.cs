@@ -1,17 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.ComponentModel;
-using System.Globalization;
-using System.IO;
-using System.Printing;
-using System.Printing.Interop;
-using System.Runtime.InteropServices;
-using System.Windows.Xps.Serialization;
-using System.Xml;
-using MS.Utility;
-using MS.Internal.PrintWin32Thunk;
-using MS.Internal.ReachFramework;
+// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -28,6 +17,22 @@ Abstract:
 
 namespace MS.Internal.Printing.Configuration
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Globalization;
+    using System.IO;
+    using System.Printing;
+    using System.Printing.Interop;
+    using System.Runtime.InteropServices;
+    using System.Security;
+    using System.Windows.Xps.Serialization;
+    using System.Xml;
+    using MS.Utility;
+    using MS.Internal.PrintWin32Thunk;
+    using MS.Internal.ReachFramework;
+
+
     /// <summary>
     /// Managed PrintTicket provider class that inter-ops with unmanaged DDI driver
     /// </summary>
@@ -52,7 +57,7 @@ namespace MS.Internal.Printing.Configuration
             // indicate right away if there was an error in binding the provider
             // to the device.  Doing late binding would mean that any instance
             // method could throw a no such printer exception.
-            if (!UnsafeNativeMethods.OpenPrinterW(deviceName, out this._deviceHandle, new HandleRef(this, IntPtr.Zero)))
+            if (false == UnsafeNativeMethods.OpenPrinterW(deviceName, out this._deviceHandle, new HandleRef(this, IntPtr.Zero)))
             {
                 throw new PrintQueueException(Marshal.GetLastWin32Error(), "PrintConfig.Provider.BindFail", deviceName);
             }
@@ -112,7 +117,7 @@ namespace MS.Internal.Printing.Configuration
                         PrintSchemaTags.Framework.PrintTicketRoot,
                         PTUtility.GetTextFromResource("FormatException.XMLNotWellFormed"),
                         xmlException.Message),
-                    nameof(printTicket),
+                    "printTicket",
                     xmlException);
             }
 
@@ -349,7 +354,10 @@ namespace MS.Internal.Printing.Configuration
 
         public override void Release()
         {
-            _deviceHandle?.Dispose();
+            if (_deviceHandle != null)
+            {
+                _deviceHandle.Dispose();
+            }
 
             this._deviceHandle = null;
             this._deviceName = null;
@@ -561,7 +569,7 @@ namespace MS.Internal.Printing.Configuration
 
                 default:
                 {
-                    throw new ArgumentOutOfRangeException(nameof(baseType));
+                    throw new ArgumentOutOfRangeException("baseType");
                 }
             }
 
@@ -656,8 +664,11 @@ namespace MS.Internal.Printing.Configuration
 
             if (disposing)
             {
-                _deviceHandle?.Dispose();
-                _deviceHandle = null;
+                if (_deviceHandle != null)
+                {
+                    _deviceHandle.Dispose();
+                    _deviceHandle = null;
+                }
 
                 _deviceName = null;
                 _driverName = null;
@@ -745,28 +756,28 @@ namespace MS.Internal.Printing.Configuration
                     IntPtr ptr = pPrinterBuffer.Handle.DangerousGetHandle();
 
                     //   LPTSTR               pPrinterName;
-                    IntPtr pPrinterName = Marshal.ReadIntPtr(ptr, 1 * IntPtr.Size);
+                    IntPtr pPrinterName = Marshal.ReadIntPtr(ptr, 1 * Marshal.SizeOf(typeof(IntPtr)));
                     if (pPrinterName != IntPtr.Zero)
                     {
                         PRINTER_INFO_2.pPrinterName = Marshal.PtrToStringUni(pPrinterName);
                     }
 
                     //   LPTSTR               pPortName;
-                    IntPtr pPortName = Marshal.ReadIntPtr(ptr, 3 * IntPtr.Size);
+                    IntPtr pPortName = Marshal.ReadIntPtr(ptr, 3 * Marshal.SizeOf(typeof(IntPtr)));
                     if (pPortName != IntPtr.Zero)
                     {
                         PRINTER_INFO_2.pPortName = Marshal.PtrToStringUni(pPortName);
                     }
 
                     //   LPTSTR               pDriverName;
-                    IntPtr pDriverName = Marshal.ReadIntPtr(ptr, 4 * IntPtr.Size);
+                    IntPtr pDriverName = Marshal.ReadIntPtr(ptr, 4 * Marshal.SizeOf(typeof(IntPtr)));
                     if (pDriverName != IntPtr.Zero)
                     {
                         PRINTER_INFO_2.pDriverName = Marshal.PtrToStringUni(pDriverName);
                     }
 
                     //   LPDEVMODE            pDevMode;
-                    IntPtr pDevMode = Marshal.ReadIntPtr(ptr, 7 * IntPtr.Size);
+                    IntPtr pDevMode = Marshal.ReadIntPtr(ptr, 7 * Marshal.SizeOf(typeof(IntPtr)));
                     if (pDevMode != IntPtr.Zero)
                     {
                         PRINTER_INFO_2.pDevMode = DevMode.FromIntPtr(pDevMode);

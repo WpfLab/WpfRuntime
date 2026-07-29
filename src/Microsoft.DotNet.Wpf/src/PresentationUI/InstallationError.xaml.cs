@@ -1,19 +1,26 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
 using System;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Navigation;
 using System.Windows.Threading;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.IO;
+using MS.Internal.PresentationUI;
 using System.Windows.Interop;
+using System.Security;
+
 
 namespace Microsoft.Internal.DeploymentUI
 {
-    internal partial class InstallationErrorPage : IErrorPage
+    [FriendAccessAllowed] // Built into UI, used by Framework.
+    internal partial class InstallationErrorPage : Grid, IErrorPage
     {
-
         static InstallationErrorPage()
         {
             CommandManager.RegisterClassCommandBinding(typeof(InstallationErrorPage),
@@ -172,14 +179,15 @@ namespace Microsoft.Internal.DeploymentUI
 
         private void ShowLogFileButton()
         {
-            if (File.Exists(LogFilePath) && ErrorFlag)
+            if (File.Exists(LogFilePath) && ErrorFlag == true)
             {
                 LogFileButton.Visibility = Visibility.Visible;
                 FocusManager.SetFocusedElement(this, LogFileButton);
             }
         }
 
-        private static void OnCommandRefresh(object sender, RoutedEventArgs e)
+
+        static void OnCommandRefresh(object sender, RoutedEventArgs e)
         {
             InstallationErrorPage page = sender as InstallationErrorPage;
             if (page != null && page.RefreshCallback != null)
@@ -188,7 +196,7 @@ namespace Microsoft.Internal.DeploymentUI
             }
         }
 
-        private static void OnCanRefresh(object sender, CanExecuteRoutedEventArgs e)
+        static void OnCanRefresh(object sender, CanExecuteRoutedEventArgs e)
         {
             InstallationErrorPage page = sender as InstallationErrorPage;
             if (page != null)

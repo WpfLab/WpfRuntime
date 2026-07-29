@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 #if !DONOTREFPRINTINGASMMETA
 /*
@@ -8,13 +9,23 @@
         and its supporting enums.
 */
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Printing;
+using System.Security;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Xps;
 using MS.Internal.Printing;
 using System.Windows.Xps.Serialization;
 using System.Windows.Documents;
 using System.Windows.Documents.Serialization;  // WritingCompletedEventArgs
+using MS.Internal.PresentationFramework;
 
 namespace System.Windows.Controls
 {
@@ -240,8 +251,8 @@ namespace System.Windows.Controls
         {
             get
             {
-                if( ((!_isPrintableAreaWidthUpdated) && (!_isPrintableAreaHeightUpdated)) ||
-                    ((_isPrintableAreaWidthUpdated)  && (!_isPrintableAreaHeightUpdated)))
+                if( ((_isPrintableAreaWidthUpdated == false) && (_isPrintableAreaHeightUpdated == false)) ||
+                    ((_isPrintableAreaWidthUpdated == true)  && (_isPrintableAreaHeightUpdated == false)))
                 {
                     _isPrintableAreaWidthUpdated  = true;
                     _isPrintableAreaHeightUpdated = false;
@@ -262,8 +273,8 @@ namespace System.Windows.Controls
         {
             get
             {
-                if( ((!_isPrintableAreaWidthUpdated) && (!_isPrintableAreaHeightUpdated)) ||
-                    ((!_isPrintableAreaWidthUpdated)  && (_isPrintableAreaHeightUpdated)))
+                if( ((_isPrintableAreaWidthUpdated == false) && (_isPrintableAreaHeightUpdated == false)) ||
+                    ((_isPrintableAreaWidthUpdated == false)  && (_isPrintableAreaHeightUpdated == true)))
                 {
                     _isPrintableAreaWidthUpdated  = false;
                     _isPrintableAreaHeightUpdated = true;
@@ -287,15 +298,14 @@ namespace System.Windows.Controls
         ShowDialog()
         {
 
-            Win32PrintDialog dlg = new Win32PrintDialog
-            {
-                //
-                // Setup the old values if any exist.
-                //
-                PrintTicket = _printTicket,
-                PrintQueue = _printQueue,
-                MinPage = Math.Max(1, Math.Min(_minPage, _maxPage))
-            };
+            Win32PrintDialog dlg = new Win32PrintDialog();
+
+            //
+            // Setup the old values if any exist.
+            //
+            dlg.PrintTicket = _printTicket;
+            dlg.PrintQueue = _printQueue;
+            dlg.MinPage = Math.Max(1, Math.Min(_minPage, _maxPage));
             dlg.MaxPage = Math.Max(dlg.MinPage, Math.Max(_minPage, _maxPage));
             dlg.PageRangeEnabled = _userPageRangeEnabled;
             dlg.SelectedPagesEnabled = _selectedPagesEnabled;
@@ -341,7 +351,7 @@ namespace System.Windows.Controls
         {
             ArgumentNullException.ThrowIfNull(visual);
 
-            XpsDocumentWriter writer = CreateWriter(description);
+            dynamic writer = CreateWriter(description);
 
             writer.Write(visual, _printTicket);
 
@@ -370,7 +380,7 @@ namespace System.Windows.Controls
         {
             ArgumentNullException.ThrowIfNull(documentPaginator);
 
-            XpsDocumentWriter writer = CreateWriter(description);
+            dynamic writer = CreateWriter(description);
 
             writer.Write(documentPaginator, _printTicket);
 
@@ -510,25 +520,28 @@ namespace System.Windows.Controls
         }
 
         private
-        XpsDocumentWriter
+        dynamic
         CreateWriter(
             String  description
             )
         {
             PrintQueue        printQueue  = null;
             PrintTicket       printTicket = null;
-            XpsDocumentWriter writer      = null;
+            dynamic writer      = null;
 
             PickCorrectPrintingEnvironment(ref printQueue, ref printTicket);
 
-            printQueue?.CurrentJobSettings.Description = description;
+            if(printQueue != null)
+            {
+                printQueue.CurrentJobSettings.Description = description;
+            }
 
             writer = PrintQueue.CreateXpsDocumentWriter(printQueue);
 
             PrintDlgPrintTicketEventHandler eventHandler = new PrintDlgPrintTicketEventHandler(printTicket);
 
             writer.WritingPrintTicketRequired +=
-            new WritingPrintTicketRequiredEventHandler(eventHandler.SetPrintTicket);
+            new System.Windows.Documents.Serialization.WritingPrintTicketRequiredEventHandler(eventHandler.SetPrintTicket);
 
             return writer;
         }

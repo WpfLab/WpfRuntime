@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,8 +9,18 @@ using MS.Internal;
 //      DocumentSequenceTextPointer.
 //
 
+#pragma warning disable 1634, 1691 // To enable presharp warning disables (#pragma suppress) below.
+
 namespace System.Windows.Documents
 {
+    using MS.Internal.Documents;
+    using MS.Utility;
+    using MS.Internal;
+    using System.Windows;
+    using System;
+    using System.Diagnostics;
+
+
     /// <summary>
     /// DocumentSequenceTextPointer is an implementation of ITextPointer for FixedDocumentSequence
     /// </summary>
@@ -409,6 +418,7 @@ namespace System.Windows.Documents
         {
             get
             {
+                #pragma warning suppress 56503
                 throw new NotImplementedException();
             }
         }
@@ -782,7 +792,7 @@ namespace System.Windows.Documents
             {
                 if (!xGapAwareScan(newTp, distance))
                 {
-                    throw new ArgumentException(SR.BadDistance, nameof(distance));
+                    throw new ArgumentException(SR.BadDistance, "distance");
                 }
             }
             return newTp;
@@ -840,7 +850,7 @@ namespace System.Windows.Documents
 
         internal static string ToString(DocumentSequenceTextPointer thisTp)
         {
-            return $"{(thisTp is not null ? "DSTP" : "DSTN")} Id={thisTp.DebugId} B={thisTp.ChildBlock.DebugId} G={thisTp.ChildPointer.LogicalDirection}";
+            return $"{(thisTp is DocumentSequenceTextPointer ? "DSTP" : "DSTN")} Id={thisTp.DebugId} B={thisTp.ChildBlock.DebugId} G={thisTp.ChildPointer.LogicalDirection}";
         }
 #endif
         #endregion Internal Methods
@@ -1079,7 +1089,7 @@ namespace System.Windows.Documents
                         break;
 
                     default:
-                        Debug.Fail("invalid TextPointerContext");
+                        Debug.Assert(false, "invalid TextPointerContext");
                         break;
                 }
             }

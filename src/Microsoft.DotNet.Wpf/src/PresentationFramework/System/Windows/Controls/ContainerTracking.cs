@@ -1,5 +1,18 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 
 namespace System.Windows.Controls
 {
@@ -49,7 +62,10 @@ namespace System.Windows.Controls
         internal void StartTracking(ref ContainerTracking<T> root)
         {
             // Add the node to the root
-            root?._previous = this;
+            if (root != null)
+            {
+                root._previous = this;
+            }
 
             _next = root;
             root = this;
@@ -62,9 +78,15 @@ namespace System.Windows.Controls
         internal void StopTracking(ref ContainerTracking<T> root)
         {
             // Unhook the node from the list
-            _previous?._next = _next;
+            if (_previous != null)
+            {
+                _previous._next = _next;
+            }
 
-            _next?._previous = _previous;
+            if (_next != null)
+            {
+                _next._previous = _previous;
+            }
 
             // Update the root reference
             if (root == this)

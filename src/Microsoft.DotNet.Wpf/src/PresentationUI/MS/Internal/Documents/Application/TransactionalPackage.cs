@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description:
 //  This class represents a package which behaves similar to a Word document.
@@ -17,27 +18,32 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Packaging;
+using System.Text;
+using System.Security;
 using System.Windows.TrustUI;
+
+using MS.Internal;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// This class represents a Package which does not alter the original
-    /// and writes the changes to a temporary package (when provided) as a
-    /// type of change log; leaving the original untouched.
-    /// </summary>
-    /// <remarks>
-    /// In the descriptions below the following terms are used:
-    /// 
-    ///   Proxy: This is the reference being given to callers that
-    ///   contains underlying objects.
-    ///   Active: The underlying object that the proxy should pass calls to.
-    ///   Temp: This is the writeable object that contains changes.
-    ///   Original: This is the read only object that has the source data.
-    /// </remarks>
-    internal class TransactionalPackage : Package, IDisposable
+/// <summary>
+/// This class represents a Package which does not alter the original
+/// and writes the changes to a temporary package (when provided) as a
+/// type of change log; leaving the original untouched.
+/// </summary>
+/// <remarks>
+/// In the descriptions below the following terms are used:
+/// 
+///   Proxy: This is the reference being given to callers that
+///   contains underlying objects.
+///   Active: The underlying object that the proxy should pass calls to.
+///   Temp: This is the writeable object that contains changes.
+///   Original: This is the read only object that has the source data.
+/// </remarks>
+internal class TransactionalPackage : Package, IDisposable
 {
     #region Constructors
     //--------------------------------------------------------------------------
@@ -62,8 +68,8 @@ namespace MS.Internal.Documents.Application
 
         Package originalPackage = Package.Open(original);
 
-        _originalPackage = originalPackage;
-        _tempPackage = null;
+        _originalPackage = new SecurityCriticalDataForSet<Package>(originalPackage);
+        _tempPackage = new SecurityCriticalDataForSet<Package>(null);
     }
     #endregion Constructors
 
@@ -81,13 +87,13 @@ namespace MS.Internal.Documents.Application
         {
             throw new ArgumentException(
                 SR.PackagingWriteNotSupported,
-                nameof(workspace));
+                "workspace");
         }
 
         Package temporaryPackage = Package.Open(
             workspace, FileMode.Create, FileAccess.ReadWrite);
 
-        _tempPackage = temporaryPackage;
+        _tempPackage = new SecurityCriticalDataForSet<Package>(temporaryPackage);
     }
 
     /// <exception cref="System.ArgumentNullException" />
@@ -101,12 +107,12 @@ namespace MS.Internal.Documents.Application
             throw new InvalidOperationException();
         }
 
-        if (_tempPackage != null)
+        if (_tempPackage.Value != null)
         {
             Package destination = Package.Open(
                 target, FileMode.Open, FileAccess.ReadWrite);
 
-            foreach (PackagePart part in _tempPackage.GetParts())
+            foreach (PackagePart part in _tempPackage.Value.GetParts())
             {
                 if (destination.PartExists(part.Uri))
                 {
@@ -144,8 +150,8 @@ namespace MS.Internal.Documents.Application
         ArgumentNullException.ThrowIfNull(newOriginal);
 
         // close this as we will open a new one
-        _originalPackage.Close();
-        _trashCan.Add(_originalPackage);
+        _originalPackage.Value.Close();
+        _trashCan.Add(_originalPackage.Value);
         _isDirty = false;
 
         Package newPackage = Package.Open(newOriginal, FileMode.Open, FileAccess.Read);
@@ -160,7 +166,7 @@ namespace MS.Internal.Documents.Application
             }
         }
 
-        _originalPackage = newPackage;
+        _originalPackage.Value = newPackage;
     }
 
     #endregion Internal Methods
@@ -214,7 +220,7 @@ namespace MS.Internal.Documents.Application
         EnsureTempPackage();
 
         // the underlying temp package does all the physical work
-        PackagePart result = _tempPackage.CreatePart(
+        PackagePart result = _tempPackage.Value.CreatePart(
             partUri, contentType, compressionOption);
 
         Uri normalizedPartUri = PackUriHelper.GetNormalizedPartUri(partUri);
@@ -262,9 +268,9 @@ namespace MS.Internal.Documents.Application
     protected override void DeletePartCore(Uri partUri)
     {
         // Skipping parameter validation as it is done by CreatePart.
-        if (_tempPackage.PartExists(partUri))
+        if (_tempPackage.Value.PartExists(partUri))
         {
-            _tempPackage.DeletePart(partUri);
+            _tempPackage.Value.DeletePart(partUri);
 
             Trace.SafeWrite(Trace.Packaging, "Part {0} deleted.", partUri);
         }
@@ -286,16 +292,16 @@ namespace MS.Internal.Documents.Application
 
         if (disposing)
         {
-            if (_tempPackage != null)
+            if (_tempPackage.Value != null)
             {
-                ((IDisposable)_tempPackage).Dispose();
-                _tempPackage = null;
+                ((IDisposable)_tempPackage.Value).Dispose();
+                _tempPackage.Value = null;
             }
 
-            if (_originalPackage != null)
+            if (_originalPackage.Value != null)
             {
-                ((IDisposable)_originalPackage).Dispose();
-                _originalPackage = null;
+                ((IDisposable)_originalPackage.Value).Dispose();
+                _originalPackage.Value = null;
             }
 
             _activeParts.Clear();
@@ -313,7 +319,10 @@ namespace MS.Internal.Documents.Application
     /// </remarks>
     protected override void FlushCore()
     {
-        _tempPackage?.Flush();
+        if (_tempPackage.Value != null)
+        {
+            _tempPackage.Value.Flush();
+        }
     }
 
     /// <summary>
@@ -373,9 +382,9 @@ namespace MS.Internal.Documents.Application
         // or the temporary package, this method will return null.
 
         bool canGetFromTempPackage =
-            (_tempPackage != null) && (_tempPackage.PartExists(partUri));
+            (_tempPackage.Value != null) && (_tempPackage.Value.PartExists(partUri));
         bool canGetFromOriginalPackage =
-            canGetFromTempPackage ? false : _originalPackage.PartExists(partUri);
+            canGetFromTempPackage ? false : _originalPackage.Value.PartExists(partUri);
 
         if (_activeParts.ContainsKey(normalizedPartUri)
             && (canGetFromTempPackage || canGetFromOriginalPackage))
@@ -384,7 +393,7 @@ namespace MS.Internal.Documents.Application
         }
         else if (canGetFromTempPackage)
         {
-            result = _tempPackage.GetPart(partUri);
+            result = _tempPackage.Value.GetPart(partUri);
 
             result = new WriteableOnDemandPackagePart(
                 this, result, TempPackagePartFactory);
@@ -400,7 +409,7 @@ namespace MS.Internal.Documents.Application
         }
         else if (canGetFromOriginalPackage)
         {
-            PackagePart original = _originalPackage.GetPart(partUri);
+            PackagePart original = _originalPackage.Value.GetPart(partUri);
             result = new WriteableOnDemandPackagePart(
                 this, original, TempPackagePartFactory);
 
@@ -429,7 +438,7 @@ namespace MS.Internal.Documents.Application
     protected override PackagePart[] GetPartsCore()
     {
         // need to call get parts from the underlying reading package
-        PackagePartCollection parts = _originalPackage.GetParts();
+        PackagePartCollection parts = _originalPackage.Value.GetParts();
         // // a temporary list of proxied package parts which will be use to fill return value
         List<PackagePart> _proxiedParts = new List<PackagePart>();
 
@@ -453,7 +462,7 @@ namespace MS.Internal.Documents.Application
     // Protected Properties
     //-------------------------------------------------------------------------
 
-    protected Package TempPackage
+    protected SecurityCriticalDataForSet<Package> TempPackage
     {
         get
         {
@@ -487,13 +496,13 @@ namespace MS.Internal.Documents.Application
     private void EnsureTempPackage()
     {
         // if we can not edit ask for it
-        if (_tempPackage == null)
+        if (_tempPackage.Value == null)
         {
             DocumentManager.CreateDefault().EnableEdit(null);
         }
 
         // if we still don't have it fail
-        if (_tempPackage == null)
+        if (_tempPackage.Value == null)
         {
             throw new InvalidOperationException(
                 SR.PackagingWriteNotSupported);
@@ -523,7 +532,7 @@ namespace MS.Internal.Documents.Application
 
         PackagePart temp = null;
 
-        if (!_tempPackage.PartExists(partUri))
+        if (!_tempPackage.Value.PartExists(partUri))
         {
             Trace.SafeWrite(
                 Trace.Packaging,
@@ -532,7 +541,7 @@ namespace MS.Internal.Documents.Application
 
             _isDirty = true;
 
-            temp = _tempPackage.CreatePart(
+            temp = _tempPackage.Value.CreatePart(
                 partUri,
                 packagePart.ContentType,
                 packagePart.CompressionOption);
@@ -547,7 +556,7 @@ namespace MS.Internal.Documents.Application
         }
         else
         {
-            temp = _tempPackage.GetPart(partUri);
+            temp = _tempPackage.Value.GetPart(partUri);
 
             Trace.SafeWrite(
                 Trace.Packaging,
@@ -575,11 +584,11 @@ namespace MS.Internal.Documents.Application
     /// <summary>
     /// The original Package; this one is to be treated as read-only.
     /// </summary>
-    private Package _originalPackage;
+    private SecurityCriticalDataForSet<Package> _originalPackage;
     /// <summary>
     /// The temporary Package; this is the one we work in.
     /// </summary>
-    private Package _tempPackage;
+    private SecurityCriticalDataForSet<Package> _tempPackage;
 
     private List<Package> _trashCan = new List<Package>();
 

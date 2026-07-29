@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,16 +9,35 @@
 // Please see MilCodeGen.html for more information.
 //
 
+using MS.Internal.PresentationCore;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
+using System.Windows.Markup;
+using System.Windows.Converters;
+using MS.Internal.Collections;
 using MS.Utility;
+using SR = MS.Internal.PresentationCore.SR;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows
 {
     /// <summary>
     /// A collection of TextDecoration objects.
     /// </summary>
+
 
     public sealed partial class TextDecorationCollection : Animatable, IList, IList<TextDecoration>
     {
@@ -194,7 +214,7 @@ namespace System.Windows
         {
             WritePreamble();
 
-            TextDecoration oldValue = _collection[ index ];
+            TextDecoration oldValue = _collection[index];
 
             OnFreezablePropertyChanged(oldValue, null);
 
@@ -229,15 +249,12 @@ namespace System.Windows
 
                 WritePreamble();
 
-                if (!Object.ReferenceEquals(_collection[ index ], value))
+                if (!Object.ReferenceEquals(_collection[index], value))
                 {
-
-                    TextDecoration oldValue = _collection[ index ];
+                    TextDecoration oldValue = _collection[index];
                     OnFreezablePropertyChanged(oldValue, value);
 
-                    _collection[ index ] = value;
-
-
+                    _collection[index] = value;
                 }
 
 
@@ -270,13 +287,18 @@ namespace System.Windows
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // This will not throw in the case that we are copying
             // from an empty collection.  This is consistent with the
             // BCL Collection implementations. (Windows 1587365)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _collection.Count);
+            if (index < 0 || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             _collection.CopyTo(array, index);
         }
@@ -380,13 +402,18 @@ namespace System.Windows
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // This will not throw in the case that we are copying
             // from an empty collection.  This is consistent with the
             // BCL Collection implementations. (Windows 1587365)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _collection.Count);
+            if (index < 0 || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             if (array.Rank != 1)
             {
@@ -490,14 +517,17 @@ namespace System.Windows
 
         private TextDecoration Cast(object value)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if (value == null)
+            {
+                throw new System.ArgumentNullException("value");
+            }
 
             if (!(value is TextDecoration))
             {
                 throw new System.ArgumentException(SR.Format(SR.Collection_BadType, this.GetType().Name, value.GetType().Name, "TextDecoration"));
             }
 
-            return (TextDecoration) value;
+            return (TextDecoration)value;
         }
 
         // IList.Add returns int and IList<T>.Add does not. This
@@ -583,9 +613,7 @@ namespace System.Windows
                 TextDecoration newValue = (TextDecoration)sourceTextDecorationCollection._collection[i].Clone();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
             }
-
         }
         /// <summary>
         /// Implementation of Freezable.CloneCurrentValueCore()
@@ -605,9 +633,7 @@ namespace System.Windows
                 TextDecoration newValue = (TextDecoration)sourceTextDecorationCollection._collection[i].CloneCurrentValue();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
             }
-
         }
         /// <summary>
         /// Implementation of Freezable.GetAsFrozenCore()
@@ -627,9 +653,7 @@ namespace System.Windows
                 TextDecoration newValue = (TextDecoration)sourceTextDecorationCollection._collection[i].GetAsFrozen();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
             }
-
         }
         /// <summary>
         /// Implementation of Freezable.GetCurrentValueAsFrozenCore()
@@ -649,9 +673,7 @@ namespace System.Windows
                 TextDecoration newValue = (TextDecoration)sourceTextDecorationCollection._collection[i].GetCurrentValueAsFrozen();
                 OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
                 _collection.Add(newValue);
-
             }
-
         }
         /// <summary>
         /// Implementation of <see cref="System.Windows.Freezable.FreezeCore">Freezable.FreezeCore</see>.
@@ -756,7 +778,6 @@ namespace System.Windows
 
             void IDisposable.Dispose()
             {
-
             }
 
             /// <summary>
@@ -895,58 +916,61 @@ namespace System.Windows
 
             WritePreamble();
 
-            ArgumentNullException.ThrowIfNull(collection);
-
-            bool needsItemValidation = true;
-            ICollection<TextDecoration> icollectionOfT = collection as ICollection<TextDecoration>;
-
-            if (icollectionOfT != null)
+            if (collection != null)
             {
-                _collection = new FrugalStructList<TextDecoration>(icollectionOfT);
-            }
-            else
-            {
-                ICollection icollection = collection as ICollection;
+                bool needsItemValidation = true;
+                ICollection<TextDecoration> icollectionOfT = collection as ICollection<TextDecoration>;
 
-                if (icollection != null) // an IC but not and IC<T>
+                if (icollectionOfT != null)
                 {
-                    _collection = new FrugalStructList<TextDecoration>(icollection);
+                    _collection = new FrugalStructList<TextDecoration>(icollectionOfT);
                 }
-                else // not a IC or IC<T> so fall back to the slower Add
+                else
                 {
-                    _collection = new FrugalStructList<TextDecoration>();
+                    ICollection icollection = collection as ICollection;
 
+                    if (icollection != null) // an IC but not and IC<T>
+                    {
+                        _collection = new FrugalStructList<TextDecoration>(icollection);
+                    }
+                    else // not a IC or IC<T> so fall back to the slower Add
+                    {
+                        _collection = new FrugalStructList<TextDecoration>();
+
+                        foreach (TextDecoration item in collection)
+                        {
+                            if (item == null)
+                            {
+                                throw new System.ArgumentException(SR.Collection_NoNull);
+                            }
+                            TextDecoration newValue = item;
+                            OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
+                            _collection.Add(newValue);
+                        }
+
+                        needsItemValidation = false;
+                    }
+                }
+
+                if (needsItemValidation)
+                {
                     foreach (TextDecoration item in collection)
                     {
                         if (item == null)
                         {
                             throw new System.ArgumentException(SR.Collection_NoNull);
                         }
-                        TextDecoration newValue = item;
-                        OnFreezablePropertyChanged(/* oldValue = */ null, newValue);
-                        _collection.Add(newValue);
-
+                        OnFreezablePropertyChanged(/* oldValue = */ null, item);
                     }
-
-                    needsItemValidation = false;
                 }
-            }
 
-            if (needsItemValidation)
+
+                WritePostscript();
+            }
+            else
             {
-                foreach (TextDecoration item in collection)
-                {
-                    if (item == null)
-                    {
-                        throw new System.ArgumentException(SR.Collection_NoNull);
-                    }
-                    OnFreezablePropertyChanged(/* oldValue = */ null, item);
-
-                }
+                throw new ArgumentNullException("collection");
             }
-
-
-            WritePostscript();
         }
 
         #endregion Constructors

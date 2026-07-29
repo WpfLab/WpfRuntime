@@ -1,10 +1,25 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//+-----------------------------------------------------------------------
+//
+//
+//
 //  Contents:  Composite font info parsed from composite font file
+//
+//
 
+using System;
+using System.Globalization;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Media;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.FontFace
 {
@@ -42,7 +57,8 @@ namespace MS.Internal.FontFace
         internal void PrepareToAddFamilyMap(FontFamilyMap familyMap)
         {
             // Validate parameters.
-            ArgumentNullException.ThrowIfNull(familyMap);
+            if (familyMap == null)
+                throw new ArgumentNullException("familyMap");
 
             if (string.IsNullOrEmpty(familyMap.Target))
                 throw new ArgumentException(SR.FamilyMap_TargetNotSet);
@@ -304,7 +320,7 @@ namespace MS.Internal.FontFace
             get { return _baseline; }
             set 
             {
-                CompositeFontParser.VerifyNonNegativeMultiplierOfEm(nameof(Baseline), ref value);
+                CompositeFontParser.VerifyNonNegativeMultiplierOfEm("Baseline", ref value);
                 _baseline = value;
             }
         }
@@ -318,7 +334,7 @@ namespace MS.Internal.FontFace
             get { return _lineSpacing; }
             set
             {
-                CompositeFontParser.VerifyPositiveMultiplierOfEm(nameof(LineSpacing), ref value);
+                CompositeFontParser.VerifyPositiveMultiplierOfEm("LineSpacing", ref value);
                 _lineSpacing = value;
             }
         }

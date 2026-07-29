@@ -1,10 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.ComponentModel;
 
-namespace System.Windows
+namespace System.Windows 
 {
+    using System;
+    using System.ComponentModel;
+
     /// <summary>
     ///     This attribute declares that an attached property can only be attached 
     ///     to an object that defines the given attribute on its class. 
@@ -26,7 +29,7 @@ namespace System.Windows
         /// </summary>
         public AttachedPropertyBrowsableWhenAttributePresentAttribute(Type attributeType)
         {
-            ArgumentNullException.ThrowIfNull(attributeType);
+            if (attributeType == null) throw new ArgumentNullException("attributeType");
 
             _attributeType = attributeType;
         }
@@ -63,8 +66,8 @@ namespace System.Windows
         /// </summary>
         public override bool Equals(object obj) 
         {
-            if (obj is not AttachedPropertyBrowsableWhenAttributePresentAttribute other)
-                return false;
+            AttachedPropertyBrowsableWhenAttributePresentAttribute other = obj as AttachedPropertyBrowsableWhenAttributePresentAttribute;
+            if (other == null) return false;
             return _attributeType == other._attributeType;
         }
 
@@ -91,8 +94,8 @@ namespace System.Windows
         /// </summary>
         internal override bool IsBrowsable(DependencyObject d, DependencyProperty dp)
         {
-            ArgumentNullException.ThrowIfNull(d);
-            ArgumentNullException.ThrowIfNull(dp);
+            if (d == null) throw new ArgumentNullException("d");
+            if (dp == null) throw new ArgumentNullException("dp");
 
             Attribute a = TypeDescriptor.GetAttributes(d)[_attributeType];
             return (a != null && !a.IsDefaultAttribute());

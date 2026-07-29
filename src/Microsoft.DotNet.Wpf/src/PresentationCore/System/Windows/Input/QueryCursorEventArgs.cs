@@ -1,5 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 
 namespace System.Windows.Input
 {
@@ -43,7 +46,7 @@ namespace System.Windows.Input
         public Cursor Cursor
         {
             get {return _cursor;}
-            set {_cursor = (value ?? Cursors.None);}
+            set {_cursor = ((value == null) ? Cursors.None : value);}
         }
 
         /// <summary>

@@ -1,11 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
+using System.Security;
 using System.Threading;
 using System.Windows.Markup;
 using System.Xaml.Schema;
@@ -45,7 +46,7 @@ namespace System.Xaml
         }
 
         public XamlMember(PropertyInfo propertyInfo, XamlSchemaContext schemaContext, XamlMemberInvoker invoker)
-            : this(propertyInfo, schemaContext, invoker, new MemberReflector(isEvent: false))
+            : this(propertyInfo, schemaContext, invoker, new MemberReflector(false /*isEvent*/))
         {
         }
 
@@ -68,7 +69,7 @@ namespace System.Xaml
         }
 
         public XamlMember(EventInfo eventInfo, XamlSchemaContext schemaContext, XamlMemberInvoker invoker)
-            :this(eventInfo, schemaContext, invoker, new MemberReflector(isEvent: true))
+            :this(eventInfo, schemaContext, invoker, new MemberReflector(true /*isEvent*/))
         {
         }
 
@@ -93,7 +94,7 @@ namespace System.Xaml
 
         public XamlMember(string attachablePropertyName, MethodInfo getter, MethodInfo setter,
             XamlSchemaContext schemaContext, XamlMemberInvoker invoker)
-            :this(attachablePropertyName, getter, setter, schemaContext, invoker, new MemberReflector(getter, setter, isEvent: false))
+            :this(attachablePropertyName, getter, setter, schemaContext, invoker, new MemberReflector(getter, setter, false /*isEvent*/))
         {
         }
 
@@ -102,11 +103,10 @@ namespace System.Xaml
         {
             ArgumentNullException.ThrowIfNull(schemaContext);
             MethodInfo accessor = getter ?? setter;
-            if (accessor is null)
+            if (accessor == null)
             {
                 throw new ArgumentNullException(SR.GetterOrSetterRequired, (Exception)null);
             }
-
             _name = attachablePropertyName ?? throw new ArgumentNullException(nameof(attachablePropertyName));
 
             ValidateGetter(getter, nameof(getter));
@@ -127,7 +127,7 @@ namespace System.Xaml
 
         public XamlMember(string attachableEventName, MethodInfo adder, XamlSchemaContext schemaContext,
             XamlMemberInvoker invoker)
-            : this(attachableEventName, adder, schemaContext, invoker, new MemberReflector(null, adder, isEvent: true))
+            : this(attachableEventName, adder, schemaContext, invoker, new MemberReflector(null, adder, true /*isEvent*/))
         {
         }
 
@@ -162,11 +162,10 @@ namespace System.Xaml
             get
             {
                 EnsureReflector();
-                if (_reflector.Invoker is null)
+                if (_reflector.Invoker == null)
                 {
                     _reflector.Invoker = LookupInvoker() ?? XamlMemberInvoker.UnknownInvoker;
                 }
-
                 return _reflector.Invoker;
             }
         }
@@ -182,12 +181,12 @@ namespace System.Xaml
 
         public bool IsReadPublic
         {
-            get { return IsReadPublicIgnoringType && (_declaringType is null || _declaringType.IsPublic); }
+            get { return IsReadPublicIgnoringType && (_declaringType == null || _declaringType.IsPublic); }
         }
 
         public bool IsWritePublic
         {
-            get { return IsWritePublicIgnoringType && (_declaringType is null || _declaringType.IsPublic); }
+            get { return IsWritePublicIgnoringType && (_declaringType == null || _declaringType.IsPublic); }
         }
 
         public string Name { get { return _name; } }
@@ -200,7 +199,6 @@ namespace System.Xaml
                 {
                     _isNameValid = XamlName.IsValidXamlName(_name) ? ThreeValuedBool.True : ThreeValuedBool.False;
                 }
-
                 return _isNameValid == ThreeValuedBool.True;
             }
         }
@@ -214,7 +212,6 @@ namespace System.Xaml
                 {
                     return namespaces[0];
                 }
-
                 return null;
             }
         }
@@ -227,18 +224,15 @@ namespace System.Xaml
                 {
                     return _declaringType;
                 }
-
                 EnsureReflector();
-                if (_reflector.TargetType is null)
+                if (_reflector.TargetType == null)
                 {
                     if (_reflector.IsUnknown)
                     {
                         return XamlLanguage.Object;
                     }
-
                     _reflector.TargetType = LookupTargetType() ?? XamlLanguage.Object;
                 }
-
                 return _reflector.TargetType;
             }
         }
@@ -248,11 +242,10 @@ namespace System.Xaml
             get
             {
                 EnsureReflector();
-                if (_reflector.Type is null)
+                if (_reflector.Type == null)
                 {
                     _reflector.Type = LookupType() ?? XamlLanguage.Object;
                 }
-
                 return _reflector.Type;
             }
         }
@@ -266,7 +259,6 @@ namespace System.Xaml
                 {
                     _reflector.TypeConverter = LookupTypeConverter();
                 }
-
                 return _reflector.TypeConverter;
             }
         }
@@ -280,7 +272,6 @@ namespace System.Xaml
                 {
                     _reflector.ValueSerializer = LookupValueSerializer();
                 }
-
                 return _reflector.ValueSerializer;
             }
         }
@@ -294,7 +285,6 @@ namespace System.Xaml
                 {
                     _reflector.DeferringLoader = LookupDeferringLoader();
                 }
-
                 return _reflector.DeferringLoader;
             }
         }
@@ -307,7 +297,6 @@ namespace System.Xaml
                 {
                     _underlyingMember.SetIfNull(LookupUnderlyingMember());
                 }
-
                 return _underlyingMember.Value;
             }
         }
@@ -347,8 +336,8 @@ namespace System.Xaml
 
         public override string ToString()
         {
-            Debug.Assert(_declaringType is not null, "XamlDirective should not call base.ToString");
-            return $"{_declaringType}.{Name}";
+            Debug.Assert(_declaringType != null, "XamlDirective should not call base.ToString");
+            return _declaringType.ToString() + "." + Name;
         }
 
         public IList<XamlMember> DependsOn
@@ -356,11 +345,10 @@ namespace System.Xaml
             get
             {
                 EnsureReflector();
-                if (_reflector.DependsOn is null)
+                if (_reflector.DependsOn == null)
                 {
-                    _reflector.DependsOn = LookupDependsOn() ?? ReadOnlyCollection<XamlMember>.Empty;
+                    _reflector.DependsOn = LookupDependsOn() ?? XamlType.EmptyList<XamlMember>.Value;
                 }
-
                 return _reflector.DependsOn;
             }
         }
@@ -379,7 +367,6 @@ namespace System.Xaml
                 {
                     _reflector.SerializationVisibility = LookupSerializationVisibility();
                 }
-
                 return _reflector.SerializationVisibility ?? DesignerSerializationVisibility.Visible;
             }
         }
@@ -389,7 +376,7 @@ namespace System.Xaml
         /// a property of a MarkupExtension as a ReadOnlyDictionary. Opening bracket is the
         /// key, while the value is the closing bracket.
         /// </summary>
-        public IReadOnlyDictionary<char, char> MarkupExtensionBracketCharacters
+        public IReadOnlyDictionary<char,char> MarkupExtensionBracketCharacters
         {
             get
             {
@@ -414,7 +401,6 @@ namespace System.Xaml
                 {
                     _reflector.ConstructorArgument = LookupConstructorArgument();
                 }
-
                 return _reflector.ConstructorArgument;
             }
         }
@@ -438,7 +424,6 @@ namespace System.Xaml
                 {
                     _reflector.Getter = LookupUnderlyingGetter();
                 }
-
                 return _reflector.Getter;
             }
         }
@@ -462,7 +447,6 @@ namespace System.Xaml
                 {
                     _reflector.SerializationVisibility = LookupSerializationVisibility();
                 }
-
                 return _reflector.SerializationVisibility.HasValue;
             }
         }
@@ -476,7 +460,6 @@ namespace System.Xaml
                 {
                     _reflector.Setter = LookupUnderlyingSetter();
                 }
-
                 return _reflector.Setter;
             }
         }
@@ -495,15 +478,13 @@ namespace System.Xaml
             {
                 return true;
             }
-
             MethodInfo getter = Getter;
-            if (getter is not null)
+            if (getter != null)
             {
                 return MemberReflector.GenericArgumentsAreVisibleTo(getter, accessingAssembly, SchemaContext) &&
                     (MemberReflector.IsInternalVisibleTo(getter, accessingAssembly, SchemaContext) ||
                     MemberReflector.IsProtectedVisibleTo(getter, accessingType, SchemaContext));
             }
-
             return false;
         }
 
@@ -514,15 +495,13 @@ namespace System.Xaml
             {
                 return true;
             }
-
             MethodInfo setter = Setter;
-            if (setter is not null)
+            if (setter != null)
             {
-                return MemberReflector.GenericArgumentsAreVisibleTo(setter, accessingAssembly, SchemaContext) &&
+                return MemberReflector.GenericArgumentsAreVisibleTo(setter, accessingAssembly, SchemaContext) && 
                     (MemberReflector.IsInternalVisibleTo(setter, accessingAssembly, SchemaContext) ||
                     MemberReflector.IsProtectedVisibleTo(setter, accessingType, SchemaContext));
             }
-
             return false;
         }
 
@@ -530,11 +509,10 @@ namespace System.Xaml
 
         protected virtual XamlMemberInvoker LookupInvoker()
         {
-            if (UnderlyingMember is not null)
+            if (UnderlyingMember != null)
             {
                 return new XamlMemberInvoker(this);
             }
-
             return null;
         }
 
@@ -548,17 +526,15 @@ namespace System.Xaml
             if (AreAttributesAvailable)
             {
                 Type[] loaderTypes = _reflector.GetAttributeTypes(typeof(XamlDeferLoadAttribute), 2);
-                if (loaderTypes is not null)
+                if (loaderTypes != null)
                 {
                     return SchemaContext.GetValueConverter<XamlDeferringLoader>(loaderTypes[0], null);
                 }
             }
-
-            if (Type is not null)
+            if (Type != null)
             {
                 return Type.DeferringLoader;
             }
-
             return null;
         }
 
@@ -568,9 +544,8 @@ namespace System.Xaml
             {
                 return null;
             }
-
             List<string> doPropertyNames = _reflector.GetAllAttributeContents<string>(typeof(DependsOnAttribute));
-            if (doPropertyNames is null || doPropertyNames.Count == 0)
+            if (doPropertyNames == null || doPropertyNames.Count == 0)
             {
                 return null;
             }
@@ -582,12 +557,11 @@ namespace System.Xaml
 
                 // Normally we want to throw if property lookup fails to return anything
                 // but here we can not throw because v3.0 does not
-                if (member is not null)
+                if (member != null)
                 {
                     result.Add(member);
                 }
             }
-
             return XamlType.GetReadOnly(result);
         }
 
@@ -599,7 +573,6 @@ namespace System.Xaml
                 result = _reflector.GetAttributeValue<DesignerSerializationVisibility>(
                     typeof(DesignerSerializationVisibilityAttribute));
             }
-
             return result;
         }
 
@@ -609,7 +582,6 @@ namespace System.Xaml
             {
                 return _reflector.IsAttributePresent(typeof(AmbientAttribute));
             }
-
             return GetDefaultFlag(BoolMemberBits.Ambient);
         }
 
@@ -623,41 +595,37 @@ namespace System.Xaml
         protected virtual bool LookupIsReadPublic()
         {
             MethodInfo getter = Getter;
-            if (getter is not null && !getter.IsPublic)
+            if (getter != null && !getter.IsPublic)
             {
                 return false;
             }
-
             return !IsWriteOnly;
         }
 
         protected virtual bool LookupIsReadOnly()
         {
-            if (UnderlyingMember is not null)
+            if (UnderlyingMember != null)
             {
-                return (Setter is null);
+                return (Setter == null);
             }
-
             return GetDefaultFlag(BoolMemberBits.ReadOnly);
         }
 
         protected virtual bool LookupIsUnknown()
         {
-            if (_reflector is not null)
+            if (_reflector != null)
             {
                 return _reflector.IsUnknown;
             }
-
-            return UnderlyingMember is null;
+            return UnderlyingMember == null;
         }
 
         protected virtual bool LookupIsWriteOnly()
         {
-            if (UnderlyingMember is not null)
+            if (UnderlyingMember != null)
             {
-                return (Getter is null);
+                return (Getter == null);
             }
-
             return GetDefaultFlag(BoolMemberBits.WriteOnly);
         }
 
@@ -666,11 +634,10 @@ namespace System.Xaml
         protected virtual bool LookupIsWritePublic()
         {
             MethodInfo setter = Setter;
-            if (setter is not null && !setter.IsPublic)
+            if (setter != null && !setter.IsPublic)
             {
                 return false;
             }
-
             return !IsReadOnly;
         }
 
@@ -679,7 +646,7 @@ namespace System.Xaml
             if (IsAttachable)
             {
                 MethodInfo accessor = UnderlyingMember as MethodInfo;
-                if (accessor is not null)
+                if (accessor != null)
                 {
                     ParameterInfo[] parameters = accessor.GetParameters();
                     if (parameters.Length > 0)
@@ -688,10 +655,8 @@ namespace System.Xaml
                         return SchemaContext.GetXamlType(result);
                     }
                 }
-
                 return XamlLanguage.Object;
             }
-
             return _declaringType;
         }
 
@@ -701,13 +666,12 @@ namespace System.Xaml
             if (AreAttributesAvailable)
             {
                 Type converterType = _reflector.GetAttributeType(typeof(TypeConverterAttribute));
-                if (converterType is not null)
+                if (converterType != null)
                 {
                     result = SchemaContext.GetValueConverter<TypeConverter>(converterType, null);
                 }
             }
-
-            if (result is null && Type is not null)
+            if (result == null && Type != null)
             {
                 result = Type.TypeConverter;
             }
@@ -721,17 +685,15 @@ namespace System.Xaml
             if (AreAttributesAvailable)
             {
                 Type converterType = _reflector.GetAttributeType(typeof(ValueSerializerAttribute));
-                if (converterType is not null)
+                if (converterType != null)
                 {
                     result = SchemaContext.GetValueConverter<ValueSerializer>(converterType, null);
                 }
             }
-
-            if (result is null && Type is not null)
+            if (result == null && Type != null)
             {
                 result = Type.ValueSerializer;
             }
-
             return result;
         }
 
@@ -740,24 +702,23 @@ namespace System.Xaml
         /// a property of a MarkupExtension as a ReadOnlyDictionary. Opening bracket is the
         /// key, while the value is the closing bracket.
         /// </summary>
-        protected virtual IReadOnlyDictionary<char, char> LookupMarkupExtensionBracketCharacters()
+        protected virtual IReadOnlyDictionary<char,char> LookupMarkupExtensionBracketCharacters()
         {
             if (AreAttributesAvailable)
             {
                 IReadOnlyDictionary<char, char> bracketCharactersList = _reflector.GetBracketCharacterAttributes(typeof(MarkupExtensionBracketCharactersAttribute));
-                if (bracketCharactersList is not null)
+                if (bracketCharactersList != null)
                 {
                     _reflector.MarkupExtensionBracketCharactersArgument = bracketCharactersList;
                 }
             }
-
             return _reflector.MarkupExtensionBracketCharactersArgument;
         }
 
         protected virtual XamlType LookupType()
         {
             Type systemType = LookupSystemType();
-            return (systemType is not null) ? SchemaContext.GetXamlType(systemType) : null;
+            return (systemType != null) ? SchemaContext.GetXamlType(systemType) : null;
         }
 
         protected virtual MethodInfo LookupUnderlyingGetter()
@@ -765,13 +726,12 @@ namespace System.Xaml
             EnsureReflector();
             // Through normal paths, _reflector.Getter should always be null here.
             // But a user could always call this protected method directly, so check just in case
-            if (_reflector.Getter is not null)
+            if (_reflector.Getter != null)
             {
                 return _reflector.Getter;
             }
-
             PropertyInfo pi = UnderlyingMember as PropertyInfo;
-            return pi?.GetGetMethod(true);
+            return (pi != null) ? pi.GetGetMethod(true) : null;
         }
 
         protected virtual MethodInfo LookupUnderlyingSetter()
@@ -779,20 +739,19 @@ namespace System.Xaml
             EnsureReflector();
             // Through normal paths, _reflector.Setter should always be null here.
             // But a user could always call this protected method directly, so check just in case
-            if (_reflector.Setter is not null)
+            if (_reflector.Setter != null)
             {
                 return _reflector.Setter;
             }
-
             PropertyInfo pi = UnderlyingMember as PropertyInfo;
-            if (pi is not null)
+            if (pi != null)
             {
                 return pi.GetSetMethod(true);
             }
             else
             {
                 EventInfo ei = UnderlyingMember as EventInfo;
-                return ei?.GetAddMethod(true);
+                return (ei != null) ? ei.GetAddMethod(true) : null;
             }
         }
 
@@ -816,7 +775,6 @@ namespace System.Xaml
                     result = LookupIsReadPublic();
                     _reflector.SetFlag(BoolMemberBits.ReadPublic, result.Value);
                 }
-
                 return result.Value;
             }
         }
@@ -832,18 +790,16 @@ namespace System.Xaml
                     result = LookupIsWritePublic();
                     _reflector.SetFlag(BoolMemberBits.WritePublic, result.Value);
                 }
-
                 return result.Value;
             }
         }
 
         private static void ValidateGetter(MethodInfo method, string argumentName)
         {
-            if (method is null)
+            if (method == null)
             {
                 return;
             }
-
             if ((method.GetParameters().Length != 1) || (method.ReturnType == typeof(void)))
             {
                 throw new ArgumentException(SR.IncorrectGetterParamNum, argumentName);
@@ -852,7 +808,7 @@ namespace System.Xaml
 
         private static void ValidateSetter(MethodInfo method, string argumentName)
         {
-            if ((method is not null) && (method.GetParameters().Length != 2))
+            if ((method != null) && (method.GetParameters().Length != 2))
             {
                 throw new ArgumentException(SR.IncorrectSetterParamNum, argumentName);
             }
@@ -875,17 +831,15 @@ namespace System.Xaml
                 if (!_reflector.CustomAttributeProviderIsSetVolatile)
                 {
                     ICustomAttributeProvider attrProvider = LookupCustomAttributeProvider();
-                    if (attrProvider is null)
+                    if (attrProvider == null)
                     {
-                        // Set the member that _reflector will use. Note this also ensures that
+                        // Set the member that _reflector will use. Note this also ensures that 
                         // _underlyingMember is initialized, so it's safe to access the field directly below.
                         _reflector.UnderlyingMember = UnderlyingMember;
                     }
-
                     _reflector.SetCustomAttributeProviderVolatile(attrProvider);
                 }
-
-                return _reflector.CustomAttributeProvider is not null || UnderlyingMemberInternal.Value is not null;
+                return _reflector.CustomAttributeProvider != null || UnderlyingMemberInternal.Value != null;
             }
         }
 
@@ -909,8 +863,8 @@ namespace System.Xaml
             if (!_reflector.DefaultValueIsSet)
             {
                 DefaultValueAttribute defaultValueAttrib = null;
-                // Unlike other component-model attributes, DefaultValueAttribute is unsealed, and the
-                // Value property is virtual. So we cannot reliably process DefaultValueAttribute in ROL.
+                // Unlike other component-model attributes, DefaultValueAttribute is unsealed, and the 
+                // Value property is virtual. So we cannot reliably process DefaultValueAttribute in ROL. 
                 // The DefaultValue property is internal and is only called from XamlObjectReader, so it
                 // is safe to use live reflection.
                 if (AreAttributesAvailable)
@@ -922,8 +876,7 @@ namespace System.Xaml
                         defaultValueAttrib = (DefaultValueAttribute)attribs[0];
                     }
                 }
-
-                if (defaultValueAttrib is not null)
+                if (defaultValueAttrib != null)
                 {
                     _reflector.DefaultValue = defaultValueAttrib.Value;
                 }
@@ -937,7 +890,7 @@ namespace System.Xaml
         // We call this method a lot. Keep it really small, to make sure it inlines.
         private void EnsureReflector()
         {
-            if (_reflector is null)
+            if (_reflector == null)
             {
                 CreateReflector();
             }
@@ -952,7 +905,6 @@ namespace System.Xaml
                 result = LookupBooleanValue(flagBit);
                 _reflector.SetFlag(flagBit, result.Value);
             }
-
             return result.Value;
         }
 
@@ -984,7 +936,6 @@ namespace System.Xaml
                     result = GetDefaultFlag(flag);
                     break;
             }
-
             return result;
         }
 
@@ -995,7 +946,6 @@ namespace System.Xaml
             {
                 result = _reflector.GetAttributeString(typeof(ConstructorArgumentAttribute), out _);
             }
-
             return result;
         }
 
@@ -1003,32 +953,28 @@ namespace System.Xaml
         {
             MemberInfo underlyingMember = UnderlyingMember;
             PropertyInfo pi = underlyingMember as PropertyInfo;
-            if (pi is not null)
+            if (pi != null)
             {
                 return pi.PropertyType;
             }
-
             EventInfo ei = underlyingMember as EventInfo;
-            if (ei is not null)
+            if (ei != null)
             {
                 return ei.EventHandlerType;
             }
-
             MethodInfo mi = underlyingMember as MethodInfo;
-            if (mi is not null)
+            if (mi != null)
             {
-                if (mi.ReturnType is not null && mi.ReturnType != typeof(void))
+                if (mi.ReturnType != null && mi.ReturnType != typeof(void))
                 {
                     return mi.ReturnType;
                 }
-
                 ParameterInfo[] parameters = mi.GetParameters();
                 if (parameters.Length == 2)
                 {
                     return parameters[1].ParameterType;
                 }
             }
-
             return null;
         }
 
@@ -1042,8 +988,8 @@ namespace System.Xaml
 
         public override int GetHashCode()
         {
-            Debug.Assert(DeclaringType is not null, "XamlDirective should not call into base.GetHashCode");
-            return (Name is null ?  0 : Name.GetHashCode()) ^ (int)_memberType ^ DeclaringType.GetHashCode();
+            Debug.Assert(DeclaringType != null, "XamlDirective should not call into base.GetHashCode");
+            return (Name == null ?  0 : Name.GetHashCode()) ^ (int)_memberType ^ DeclaringType.GetHashCode();
         }
 
         public bool Equals(XamlMember other)
@@ -1057,17 +1003,14 @@ namespace System.Xaml
             {
                 return true;
             }
-
             if (xamlMember1 is null || xamlMember2 is null)
             {
                 return false;
             }
-
             if (xamlMember1._memberType != xamlMember2._memberType || xamlMember1.Name != xamlMember2.Name)
             {
                 return false;
             }
-
             if (xamlMember1.IsDirective)
             {
                 Debug.Assert(xamlMember2.IsDirective);
@@ -1090,7 +1033,7 @@ namespace System.Xaml
 
         #endregion
 
-        private enum MemberType : byte
+        enum MemberType : byte
         {
             Instance,
             Attachable,

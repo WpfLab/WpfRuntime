@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 //
@@ -7,7 +8,11 @@
 //
 
 
+using System;
 using System.Threading;
+using System.Windows;
+
+using MS.Internal;
 
 namespace MS.Internal.Utility
 {
@@ -38,8 +43,8 @@ namespace MS.Internal.Utility
             }
         }
 
-        private int _enterCount;
-        private object _syncRoot = new object();
+        int _enterCount;
+        object _syncRoot = new object();
 
         private class MonitorHelper : IDisposable
         {
@@ -50,8 +55,11 @@ namespace MS.Internal.Utility
 
             public void Dispose()
             {
-                _monitorWrapper?.Exit();
-                _monitorWrapper = null;
+                if (_monitorWrapper != null)
+                {
+                    _monitorWrapper.Exit();
+                    _monitorWrapper = null;
+                }
                 GC.SuppressFinalize(this);
             }
             private MonitorWrapper _monitorWrapper;

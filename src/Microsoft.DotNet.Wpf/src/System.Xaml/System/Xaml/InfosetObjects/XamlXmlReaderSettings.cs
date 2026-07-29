@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
+using System.Collections.Generic;
 
 namespace System.Xaml
 {
@@ -21,13 +22,12 @@ namespace System.Xaml
         public XamlXmlReaderSettings(XamlXmlReaderSettings settings)
             : base(settings)
         {
-            if (settings is not null)
+            if (settings != null)
             {
-                if (settings._xmlnsDictionary is not null)
+                if (settings._xmlnsDictionary != null)
                 {
                     _xmlnsDictionary = new Dictionary<string, string>(settings._xmlnsDictionary);
                 }
-
                 XmlLang = settings.XmlLang;
                 XmlSpacePreserve = settings.XmlSpacePreserve;
                 SkipXmlCompatibilityProcessing = settings.SkipXmlCompatibilityProcessing;

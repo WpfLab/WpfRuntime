@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -7,9 +8,21 @@
 //
 //
 
+using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Security;
+using System.ComponentModel;
 using System.Collections;
+using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Media;
+using System.Runtime.InteropServices;
+
+using MS.Win32;
+using MS.Utility;
+using MS.Internal;
 using MS.Internal.FontFace;
 using MS.Internal.Shaping;
 
@@ -17,6 +30,7 @@ using MS.Internal.PresentationCore;
 
 namespace MS.Internal.FontCache
 {
+    [FriendAccessAllowed]
     internal sealed class FontFaceLayoutInfo
     {
         private FontTechnology _fontTechnology;
@@ -37,9 +51,9 @@ namespace MS.Internal.FontCache
         private byte[] _gpos;
         private byte[] _gdef;
 
-        private Text.TextInterface.Font _font;
+        Text.TextInterface.Font _font;
 
-        private ushort _blankGlyphIndex;
+        ushort _blankGlyphIndex;
 
         
         //------------------------------------------------------
@@ -713,7 +727,10 @@ namespace MS.Internal.FontCache
 
             public void CopyTo(KeyValuePair<int, ushort>[] array, int arrayIndex)
             {
-                ArgumentNullException.ThrowIfNull(array);
+                if (array == null)
+                {
+                    throw new ArgumentNullException("array");
+                }
 
                 if (array.Rank != 1)
                 {
@@ -723,9 +740,10 @@ namespace MS.Internal.FontCache
                 // The extra "arrayIndex >= array.Length" check in because even if _collection.Count
                 // is 0 the index is not allowed to be equal or greater than the length
                 // (from the MSDN ICollection docs)
-                ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
-                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(arrayIndex, array.Length);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(arrayIndex, array.Length - Count);
+                if (arrayIndex < 0 || arrayIndex >= array.Length || (arrayIndex + Count) > array.Length)
+                {
+                    throw new ArgumentOutOfRangeException("arrayIndex");
+                }
 
                 foreach (KeyValuePair<int, ushort> pair in this)
                     array[arrayIndex++] = pair;

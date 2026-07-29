@@ -1,12 +1,36 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//+-----------------------------------------------------------------------
+//
+//
+//
+//  Contents:  Text formatter implementation
+//
+//
+
+
+using System;
+using System.Security;
+using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Media.TextFormatting;
 using MS.Utility;
+
+using SR=MS.Internal.PresentationCore.SR;
 using MS.Internal.Shaping;
 using MS.Internal.Text.TextInterface;
 using MS.Internal.FontCache;
+
+#if !OPTIMALBREAK_API
+using MS.Internal.PresentationCore;
+#endif
+
 
 namespace MS.Internal.TextFormatting
 {
@@ -441,11 +465,14 @@ namespace MS.Internal.TextFormatting
             TextRunCache                textRunCache
             )
         {
-            ArgumentNullException.ThrowIfNull(textSource);
+            if (textSource == null)
+                throw new ArgumentNullException("textSource");
 
-            ArgumentNullException.ThrowIfNull(textRunCache);
+            if (textRunCache == null)
+                throw new ArgumentNullException("textRunCache");
 
-            ArgumentNullException.ThrowIfNull(paragraphProperties);
+            if (paragraphProperties == null)
+                throw new ArgumentNullException("paragraphProperties");
 
             if (paragraphProperties.DefaultTextRunProperties == null)
                 throw new ArgumentNullException("paragraphProperties.DefaultTextRunProperties");
@@ -453,19 +480,37 @@ namespace MS.Internal.TextFormatting
             if (paragraphProperties.DefaultTextRunProperties.Typeface == null)
                 throw new ArgumentNullException("paragraphProperties.DefaultTextRunProperties.Typeface");
 
-            ArgumentOutOfRangeException.ThrowIfEqual(paragraphWidth, double.NaN);
-            ArgumentOutOfRangeException.ThrowIfNegative(paragraphWidth);
-            ArgumentOutOfRangeException.ThrowIfEqual(paragraphWidth, double.PositiveInfinity);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(paragraphWidth, Constants.RealInfiniteWidth);
+            if (double.IsNaN(paragraphWidth))
+                throw new ArgumentOutOfRangeException("paragraphWidth", SR.ParameterValueCannotBeNaN);
+
+            if (double.IsInfinity(paragraphWidth))
+                throw new ArgumentOutOfRangeException("paragraphWidth", SR.ParameterValueCannotBeInfinity);
+
+            if (    paragraphWidth < 0
+                || paragraphWidth > Constants.RealInfiniteWidth)
+            {
+                throw new ArgumentOutOfRangeException("paragraphWidth", SR.Format(SR.ParameterMustBeBetween, 0, Constants.RealInfiniteWidth));
+            }
 
             double realMaxFontRenderingEmSize = Constants.RealInfiniteWidth / Constants.GreatestMutiplierOfEm;
 
-            ArgumentOutOfRangeException.ThrowIfNegative(paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize, "paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize");
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize, realMaxFontRenderingEmSize, "paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize");
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(paragraphProperties.Indent, Constants.RealInfiniteWidth, "paragraphProperties.Indent");
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(paragraphProperties.LineHeight, Constants.RealInfiniteWidth, "paragraphProperties.LineHeight");
-            ArgumentOutOfRangeException.ThrowIfNegative(paragraphProperties.DefaultIncrementalTab, "paragraphProperties.DefaultIncrementalTab");
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(paragraphProperties.DefaultIncrementalTab, Constants.RealInfiniteWidth, "paragraphProperties.DefaultIncrementalTab");
+            if (    paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize < 0
+                ||  paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize > realMaxFontRenderingEmSize)
+            {
+                throw new ArgumentOutOfRangeException("paragraphProperties.DefaultTextRunProperties.FontRenderingEmSize", SR.Format(SR.ParameterMustBeBetween, 0, realMaxFontRenderingEmSize));
+            }
+
+            if (paragraphProperties.Indent > Constants.RealInfiniteWidth)
+                throw new ArgumentOutOfRangeException("paragraphProperties.Indent", SR.Format(SR.ParameterCannotBeGreaterThan, Constants.RealInfiniteWidth));
+
+            if (paragraphProperties.LineHeight > Constants.RealInfiniteWidth)
+                throw new ArgumentOutOfRangeException("paragraphProperties.LineHeight", SR.Format(SR.ParameterCannotBeGreaterThan, Constants.RealInfiniteWidth));
+
+            if (   paragraphProperties.DefaultIncrementalTab < 0
+                || paragraphProperties.DefaultIncrementalTab > Constants.RealInfiniteWidth)
+            {
+                throw new ArgumentOutOfRangeException("paragraphProperties.DefaultIncrementalTab", SR.Format(SR.ParameterMustBeBetween, 0, Constants.RealInfiniteWidth));
+            }
         }
 
 
@@ -478,10 +523,16 @@ namespace MS.Internal.TextFormatting
             int             cchLength
             )
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(cpFirst, characterHit.FirstCharacterIndex);
-            ArgumentOutOfRangeException.ThrowIfLessThan(cpFirst, characterHit.FirstCharacterIndex - cchLength);
+            if (    characterHit.FirstCharacterIndex < cpFirst
+                ||  characterHit.FirstCharacterIndex > cpFirst + cchLength)
+            {
+                throw new ArgumentOutOfRangeException("cpFirst", SR.Format(SR.ParameterMustBeBetween, cpFirst, cpFirst + cchLength));
+            }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(characterHit.TrailingLength, nameof(cchLength));
+            if (characterHit.TrailingLength < 0)
+            {
+                throw new ArgumentOutOfRangeException("cchLength", SR.ParameterCannotBeNegative);
+            }
         }
 
 
@@ -517,7 +568,7 @@ namespace MS.Internal.TextFormatting
                     if(context.Owner == null)
                         break;
                 }
-                else if (ploc == context.Ploc)
+                else if (ploc == context.Ploc.Value)
                 {
                     // LS requires that we use the exact same context for line
                     // destruction or hittesting (part of the reason is that LS

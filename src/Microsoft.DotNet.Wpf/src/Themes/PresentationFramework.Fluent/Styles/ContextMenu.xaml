@@ -38,16 +38,11 @@
                         <Border.RenderTransform>
                             <TranslateTransform />
                         </Border.RenderTransform>
-                        <ScrollViewer
-                            CanContentScroll="True"
-                            HorizontalScrollBarVisibility="Disabled"
-                            VerticalScrollBarVisibility="Auto">
-                            <StackPanel
-                                ClipToBounds="True"
-                                IsItemsHost="True"
-                                KeyboardNavigation.DirectionalNavigation="Cycle"
-                                Orientation="Vertical" />
-                        </ScrollViewer>
+                        <StackPanel
+                            ClipToBounds="True"
+                            IsItemsHost="True"
+                            KeyboardNavigation.DirectionalNavigation="Cycle"
+                            Orientation="Vertical" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsOpen" Value="True">

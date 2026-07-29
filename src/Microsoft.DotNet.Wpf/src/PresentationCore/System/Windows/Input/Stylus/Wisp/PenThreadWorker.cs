@@ -1,12 +1,25 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //#define TRACEPTW
 
+using System;
+using System.Diagnostics;
+using System.Collections;
 using System.Runtime.InteropServices;
+using System.Windows.Interop;
+using System.Windows.Threading;
+using System.Windows.Media;
 using System.Threading;
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using MS.Win32.Penimc;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -14,30 +27,30 @@ namespace System.Windows.Input
     internal sealed class PenThreadWorker
     {
          /// <summary>List of constants for PenImc</summary>
-        private const int PenEventNone           = 0;
-        private const int PenEventTimeout       = 1;
-        private const int PenEventPenInRange    = 707;
-        private const int PenEventPenOutOfRange = 708;
-        private const int PenEventPenDown       = 709;
-        private const int PenEventPenUp         = 710;
-        private const int PenEventPackets       = 711;
-        private const int PenEventSystem        = 714;
+        const int PenEventNone           = 0;
+        const int PenEventTimeout       = 1;
+        const int PenEventPenInRange    = 707;
+        const int PenEventPenOutOfRange = 708;
+        const int PenEventPenDown       = 709;
+        const int PenEventPenUp         = 710;
+        const int PenEventPackets       = 711;
+        const int PenEventSystem        = 714;
+        
+        const int MaxContextPerThread  = 31;  // (64 - 1) / 2 = 31.  Max handle limit for MsgWaitForMultipleMessageEx()
+        const int EventsFrequency       = 8;
 
-        private const int MaxContextPerThread  = 31;  // (64 - 1) / 2 = 31.  Max handle limit for MsgWaitForMultipleMessageEx()
-        private const int EventsFrequency       = 8;
+        IntPtr []             _handles = Array.Empty<IntPtr>();
 
-        private IntPtr []             _handles = Array.Empty<IntPtr>();
+        WeakReference []      _penContexts = Array.Empty<WeakReference>();
 
-        private WeakReference []      _penContexts = Array.Empty<WeakReference>();
-
-        private IPimcContext3 []       _pimcContexts = Array.Empty<IPimcContext3>();
+        IPimcContext3 []       _pimcContexts = Array.Empty<IPimcContext3>();
 
         /// <summary>
         /// A list of all WISP context COM object GIT keys that are locked via this thread.
         /// </summary>
-        private UInt32[] _wispContextKeys = Array.Empty<UInt32>();
+        UInt32[] _wispContextKeys = Array.Empty<UInt32>();
 
-        private readonly IntPtr                _pimcResetHandle;
+        private SecurityCriticalData<IntPtr>   _pimcResetHandle;
         private volatile bool                  __disposed;
         private List <WorkerOperation>         _workerOperation = new List<WorkerOperation>();
         private object                         _workerOperationLock = new Object();
@@ -61,7 +74,7 @@ namespace System.Windows.Input
         // Base class for all worker operations
         private abstract class WorkerOperation
         {
-            private AutoResetEvent  _doneEvent;
+            AutoResetEvent  _doneEvent;
 
             internal WorkerOperation()
             {
@@ -152,7 +165,7 @@ namespace System.Windows.Input
                 }
             }
 
-            private TabletDeviceInfo[] _tabletDevicesInfo = Array.Empty<TabletDeviceInfo>();
+            TabletDeviceInfo[] _tabletDevicesInfo = Array.Empty<TabletDeviceInfo>();
         }
 
         // Class that handles creating a context for a particular tablet device.        
@@ -186,7 +199,7 @@ namespace System.Windows.Input
                     // Set result data and signal we are done.
                     PenContextInfo result;
                     result.ContextId = id;
-                    result.PimcContext = pimcContext;
+                    result.PimcContext = new SecurityCriticalDataClass<IPimcContext3>(pimcContext);
 
                     // commHandle cannot be a IntPtr by itself because its native counterpart cannot be a
                     // INT_PTR. The reason being that INT_PTR (__int3264) always gets marshalled as a
@@ -195,7 +208,7 @@ namespace System.Windows.Input
                     // so that nothing gets lost during marshalling. The cast from Int64 to Int32 below
                     // should be lossless cast because both COM server and client are expected
                     // to be of same bitness (they are in the same process).
-                    result.CommHandle = Environment.Is64BitProcess ? (nint)commHandle : (int)commHandle;
+                    result.CommHandle = new SecurityCriticalDataClass<IntPtr>((IntPtr.Size == 4 ? new IntPtr((int)commHandle) : new IntPtr(commHandle)));
 
                     result.WispContextKey = MS.Win32.Penimc.UnsafeNativeMethods.QueryWispContextKey(pimcContext);
 
@@ -208,9 +221,9 @@ namespace System.Windows.Input
                 }
             }
 
-            private IntPtr _hwnd;
-            private IPimcTablet3 _pimcTablet;
-            private PenContextInfo _result = new PenContextInfo();
+            IntPtr _hwnd;
+            IPimcTablet3 _pimcTablet;
+            PenContextInfo _result = new PenContextInfo();
         }
 
         /// <summary>
@@ -239,12 +252,12 @@ namespace System.Windows.Input
             /// <summary>
             /// The PenIMC tablet
             /// </summary>
-            private IPimcTablet3 _tablet;
+            IPimcTablet3 _tablet;
 
             /// <summary>
             /// The GIT key for the WISP COM object.
             /// </summary>
-            private UInt32 _wispTabletKey;
+            UInt32 _wispTabletKey;
         }
 
         /// <summary>
@@ -273,12 +286,12 @@ namespace System.Windows.Input
             /// <summary>
             /// The PenIMC tablet
             /// </summary>
-            private IPimcTablet3 _tablet;
-
+            IPimcTablet3 _tablet;
+            
             /// <summary>
             /// The GIT key for the WISP COM object.
             /// </summary>
-            private UInt32 _wispTabletKey;
+            UInt32 _wispTabletKey;
         }
 
         // Class that handles refreshing the cursor devices for a particular tablet device.        
@@ -315,9 +328,9 @@ namespace System.Windows.Input
                 }
             }
 
-            private IPimcTablet3 _pimcTablet;
+            IPimcTablet3 _pimcTablet;
 
-            private StylusDeviceInfo[]  _stylusDevicesInfo = Array.Empty<StylusDeviceInfo>();
+            StylusDeviceInfo[]  _stylusDevicesInfo = Array.Empty<StylusDeviceInfo>();
         }
 
         // Class that handles getting info about a specific tablet device.
@@ -357,8 +370,8 @@ namespace System.Windows.Input
                 }
             }
 
-            private uint             _index;
-            private TabletDeviceInfo _tabletDeviceInfo = new TabletDeviceInfo();
+            uint             _index;
+            TabletDeviceInfo _tabletDeviceInfo = new TabletDeviceInfo();
         }
         
         // Class that handles getting the current rect for a tablet device.
@@ -397,8 +410,8 @@ namespace System.Windows.Input
                 }
             }
 
-            private IPimcTablet3 _pimcTablet;
-            private TabletDeviceSizeInfo _tabletDeviceSizeInfo = new TabletDeviceSizeInfo(new Size( 1, 1), new Size( 1, 1));
+            IPimcTablet3          _pimcTablet;
+            TabletDeviceSizeInfo _tabletDeviceSizeInfo = new TabletDeviceSizeInfo(new Size( 1, 1), new Size( 1, 1));
         }
 
 
@@ -425,11 +438,11 @@ namespace System.Windows.Input
             {
                 _result = _penThreadWorker.AddPenContext(_newPenContext);
             }
+                    
+            PenContext      _newPenContext;
+            PenThreadWorker _penThreadWorker;
 
-            private PenContext _newPenContext;
-            private PenThreadWorker _penThreadWorker;
-
-            private bool _result;
+            bool _result;
         }
 
         // Class that handles getting the current rect for a tablet device.
@@ -455,11 +468,11 @@ namespace System.Windows.Input
             {
                 _result = _penThreadWorker.RemovePenContext(_penContextToRemove);
             }
+                    
+            PenContext  _penContextToRemove;
+            PenThreadWorker _penThreadWorker;
 
-            private PenContext  _penContextToRemove;
-            private PenThreadWorker _penThreadWorker;
-
-            private bool _result;
+            bool _result;
         }
 
 
@@ -470,7 +483,7 @@ namespace System.Windows.Input
             IntPtr resetHandle;
             // Consider: We could use a AutoResetEvent handle instead and avoid the penimc.dll call.
             MS.Win32.Penimc.UnsafeNativeMethods.CreateResetEvent(out resetHandle);
-            _pimcResetHandle = resetHandle;
+            _pimcResetHandle = new SecurityCriticalData<IntPtr>(resetHandle);
 
             WorkerOperationThreadStart started = new WorkerOperationThreadStart();
             lock(_workerOperationLock)
@@ -478,10 +491,8 @@ namespace System.Windows.Input
                 _workerOperation.Add((WorkerOperation)started);
             }
 
-            Thread thread = new Thread(new ThreadStart(ThreadProc))
-            {
-                IsBackground = true // don't hold process open due to this thread.
-            };
+            Thread thread = new Thread(new ThreadStart(ThreadProc));
+            thread.IsBackground = true; // don't hold process open due to this thread.
             thread.Start();
             
             // Wait for this work to be completed (ie thread is started up).
@@ -496,7 +507,7 @@ namespace System.Windows.Input
                 __disposed = true;
                 
                 // Kick thread to wake up and see we are disposed.
-                MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+                MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
                 // Let it destroy the reset event.
             }
             GC.KeepAlive(this);
@@ -521,7 +532,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             addContextOperation.DoneEvent.WaitOne();
@@ -548,7 +559,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             removeContextOperation.DoneEvent.WaitOne();
@@ -570,7 +581,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             getTablets.DoneEvent.WaitOne();
@@ -591,7 +602,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             createContextOperation.DoneEvent.WaitOne();
@@ -616,7 +627,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             acquireOperation.DoneEvent.WaitOne();
@@ -641,7 +652,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             releaseOperation.DoneEvent.WaitOne();
@@ -660,7 +671,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             refreshCursorInfo.DoneEvent.WaitOne();
@@ -680,7 +691,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             getTabletInfo.DoneEvent.WaitOne();
@@ -699,7 +710,7 @@ namespace System.Windows.Input
             }
 
             // Kick thread to do this work.
-            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle);
+            MS.Win32.Penimc.UnsafeNativeMethods.RaiseResetEvent(_pimcResetHandle.Value);
 
             // Wait for this work to be completed.
             getUpdatedSizes.DoneEvent.WaitOne();
@@ -709,7 +720,7 @@ namespace System.Windows.Input
         }
 
         /////////////////////////////////////////////////////////////////////
-        private void FlushCache(bool goingOutOfRange)
+        void FlushCache(bool goingOutOfRange)
         {
             // Force any cached move/inairmove data to be flushed if we have any.
             if (_cachedMoveData != null)
@@ -730,7 +741,7 @@ namespace System.Windows.Input
 
         /////////////////////////////////////////////////////////////////////
 
-        private bool DoCacheEvent(int evt, PenContext penContext, int stylusPointerId, int [] data, int timestamp)
+        bool DoCacheEvent(int evt, PenContext penContext, int stylusPointerId, int [] data, int timestamp)
         {
             // NOTE: Big assumption is that we always get other events between packets (ie don't get move
             // down position followed by move in up position).  We don't account for that here but it should
@@ -851,10 +862,9 @@ namespace System.Windows.Input
         /// </summary>
         private static TabletDeviceInfo GetTabletInfoHelper(IPimcTablet3 pimcTablet)
         {
-            TabletDeviceInfo tabletInfo = new TabletDeviceInfo
-            {
-                PimcTablet = pimcTablet
-            };
+            TabletDeviceInfo tabletInfo = new TabletDeviceInfo();
+
+            tabletInfo.PimcTablet = new SecurityCriticalDataClass<IPimcTablet3>(pimcTablet);
             pimcTablet.GetKey(out tabletInfo.Id);
             pimcTablet.GetName(out tabletInfo.Name);
             pimcTablet.GetPlugAndPlayId(out tabletInfo.PlugAndPlayId);
@@ -1034,7 +1044,7 @@ namespace System.Windows.Input
                     // We'd have hole in our array if this ever happened.
                     Debug.Assert(pc != null && pc.CommHandle != IntPtr.Zero);
                     _handles[i] = pc.CommHandle; // Add to array.
-                    _pimcContexts[i] = pc._pimcContext;
+                    _pimcContexts[i] = pc._pimcContext.Value;
                     _penContexts[i] = new WeakReference(pc);
                     _wispContextKeys[i] = pc.WispContextKey;
                     pc = null;
@@ -1088,7 +1098,7 @@ namespace System.Windows.Input
                 // We'd have hole in our array if this ever happened.
                 Debug.Assert(pc != null && pc.CommHandle != IntPtr.Zero);
                 _handles[i] = pc.CommHandle; // Add to array.
-                _pimcContexts[i] = pc._pimcContext;
+                _pimcContexts[i] = pc._pimcContext.Value;
                 _penContexts[i] = new WeakReference(pc);
                 _wispContextKeys[i] = pc.WispContextKey;
                 pc = null;
@@ -1112,12 +1122,12 @@ namespace System.Windows.Input
                 // release the references to the underlying CPimcContext.  WPF will then use the
                 // raw pointer to this object without realizing it has been destructed, leading
                 // to AVs.
-                penContext._pimcContext.ShutdownComm();
+                penContext._pimcContext.Value.ShutdownComm();
 
                 
                 // Release the PenIMC object only when we are assured that the
                 // context was removed from the list of waiting handles.
-                Marshal.ReleaseComObject(penContext._pimcContext);
+                Marshal.ReleaseComObject(penContext._pimcContext.Value);
             }
 
             return removed;
@@ -1197,7 +1207,7 @@ namespace System.Windows.Input
                         if (_handles.Length == 1)
                         {
                             if (!MS.Win32.Penimc.UnsafeNativeMethods.GetPenEvent(
-                                _handles[0], _pimcResetHandle,
+                                _handles[0], _pimcResetHandle.Value,
                                 out evt, out stylusPointerId,
                                 out cPackets, out cbPacket, out pPackets))
                             {
@@ -1208,7 +1218,7 @@ namespace System.Windows.Input
                         else
                         {
                             if (!MS.Win32.Penimc.UnsafeNativeMethods.GetPenEventMultiple(
-                                _handles.Length, _handles, _pimcResetHandle,
+                                _handles.Length, _handles, _pimcResetHandle.Value,
                                 out iHandleEvt, out evt, out stylusPointerId,
                                 out cPackets, out cbPacket, out pPackets))
                             {
@@ -1246,7 +1256,8 @@ namespace System.Windows.Input
                             // we are doing this to compinsate for drivers that send a move after they send a outofrange
                             for (int i = 0; i < _penContexts.Length; i++)
                             {
-                                if (_penContexts[i].Target is PenContext penContext)
+                                PenContext penContext = _penContexts[i].Target as PenContext;
+                                if (penContext != null)
                                 {
                                     // we send 0 as the stulyspointerId to trigger code in PenContext::FirePenOutOfRange
                                     penContext.FirePenOutOfRange(0, Environment.TickCount);
@@ -1265,7 +1276,7 @@ namespace System.Windows.Input
                 __disposed = true;
 
                 // We've been disposed or hit thread abort.  Release this handle before exiting.
-                MS.Win32.Penimc.UnsafeNativeMethods.DestroyResetEvent(_pimcResetHandle);
+                MS.Win32.Penimc.UnsafeNativeMethods.DestroyResetEvent(_pimcResetHandle.Value);
 
                 
                 // Release the manager locks, both PenIMC and WISP here to balance lock calls.

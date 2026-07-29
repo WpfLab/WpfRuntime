@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,8 +9,17 @@ using MS.Internal;
 //      FixedTextPointer.
 //
 
+#pragma warning disable 1634, 1691 // To enable presharp warning disables (#pragma suppress) below.
+
 namespace System.Windows.Documents
 {
+    using MS.Utility;
+    using System.Windows;
+    using System;
+    using System.Diagnostics;
+    using MS.Internal;
+
+
     /// <summary>
     ///  FixedTextPointer is an implementation of TextPointer/TextNavigator
     ///  for Fixed Document. 
@@ -272,7 +280,7 @@ namespace System.Windows.Documents
             FlowPosition fp = (FlowPosition)_flowPosition.Clone();
             if (!fp.Move(distance))
             {
-                throw new ArgumentException(SR.BadDistance, nameof(distance));
+                throw new ArgumentException(SR.BadDistance, "distance");
             }
 
             return new FixedTextPointer(true, gravity, fp);
@@ -392,7 +400,7 @@ namespace System.Windows.Documents
     
             if (!_flowPosition.Move(offset))
             {
-                throw new ArgumentException(SR.BadDistance, nameof(offset));
+                throw new ArgumentException(SR.BadDistance, "offset");
             }
             else
             {
@@ -629,6 +637,7 @@ namespace System.Windows.Documents
         {
             get
             {
+                #pragma warning suppress 56503
                 throw new NotImplementedException();
             }
         }

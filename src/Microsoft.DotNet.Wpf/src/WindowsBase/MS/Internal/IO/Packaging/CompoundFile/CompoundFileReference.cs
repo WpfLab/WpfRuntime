@@ -1,5 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+//
+// Description:
+//   Implementation of the CompoundFileReference base class.
+//
 
 // Notes:
 //  Persistence of specific classes is mostly hard-coded in this base class because
@@ -7,8 +14,13 @@
 //  also intentionally not polymorphic because we don't allow arbitrary subclasses
 //  to participate.
 
-using System.Collections.Specialized;
+using System;
+using System.Collections.Specialized;       // for StringCollection class
 using System.IO;
+using System.Diagnostics;                   // for Debug.Assert
+using System.Windows;                       // for SR error message lookup
+
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
@@ -48,7 +60,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// <summary>
         /// Full name of the stream or storage this reference refers to (see StreamInfo and StorageInfo)
         /// </summary>
-        public abstract string FullName {get;}
+        abstract public string FullName {get;}
 
         #endregion
 
@@ -60,7 +72,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         int IComparable.CompareTo(object ob)
         {
             // this must be implemented by our inheritors
-            Debug.Fail("subclasses must override this method");
+            Debug.Assert(false, "subclasses must override this method");
             return 0;
         }
         #endregion
@@ -71,7 +83,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         public override bool Equals(object o)
         {
             // this must be implemented by our inheritors
-            Debug.Fail("subclasses must override this method");
+            Debug.Assert(false, "subclasses must override this method");
             return false;
         }
 
@@ -79,7 +91,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         public override int GetHashCode()
         {
             // this must be implemented by our inheritors
-            Debug.Fail("subclasses must override this method");
+            Debug.Assert(false, "subclasses must override this method");
             return 0;
         }
         #endregion
@@ -92,7 +104,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// This method will alter the stream pointer of the underlying stream as a side effect.
         /// Passing null simply calculates how many bytes would be written.</param>
         /// <returns>number of bytes written including any padding</returns>
-        internal static int Save(CompoundFileReference reference, BinaryWriter writer)
+        static internal int Save(CompoundFileReference reference, BinaryWriter writer)
         {
             int bytes = 0;
 
@@ -102,7 +114,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
             // what are we dealing with here?
             CompoundFileStreamReference streamReference = reference as CompoundFileStreamReference;
             if ((streamReference == null) && (!(reference is CompoundFileStorageReference)))
-                throw new ArgumentException(SR.UnknownReferenceSerialize, nameof(reference));
+                throw new ArgumentException(SR.UnknownReferenceSerialize, "reference");
 
             // first parse the path into strings
             string[] segments = ContainerUtilities.ConvertBackSlashPathToStringArrayPath(reference.FullName);

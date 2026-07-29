@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,10 +9,24 @@
 // Please see MilCodeGen.html for more information.
 //
 
+// Allow use of presharp: #pragma warning suppress <nnnn>
+#pragma warning disable 1634, 1691
+
+using MS.Internal;
+
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows.Media.Animation;   
 using System.Windows.Media.Media3D;
 
+using MS.Internal.PresentationCore;
+
+using SR=MS.Internal.PresentationCore.SR;
+
 namespace System.Windows.Media.Animation
-{
+{       
     /// <summary>
     ///
     /// </summary>
@@ -75,8 +90,14 @@ namespace System.Windows.Media.Animation
         public override sealed object GetCurrentValue(object defaultOriginValue, object defaultDestinationValue, AnimationClock animationClock)
         {
             // Verify that object arguments are non-null since we are a value type
-            ArgumentNullException.ThrowIfNull(defaultOriginValue);
-            ArgumentNullException.ThrowIfNull(defaultDestinationValue);
+            if (defaultOriginValue == null)
+            {
+                throw new ArgumentNullException("defaultOriginValue");
+            }
+            if (defaultDestinationValue == null)
+            {
+                throw new ArgumentNullException("defaultDestinationValue");
+            }
             return GetCurrentValue((Int16)defaultOriginValue, (Int16)defaultDestinationValue, animationClock);
         }
 
@@ -130,8 +151,15 @@ namespace System.Windows.Media.Animation
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(animationClock);
+            if (animationClock == null)
+            {
+                throw new ArgumentNullException("animationClock");
+            }
 
+            // We check for null above but presharp doesn't notice so we suppress the 
+            // warning here.
+
+            #pragma warning suppress 6506
             if (animationClock.CurrentState == ClockState.Stopped)
             {
                 return defaultDestinationValue;

@@ -1,40 +1,50 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
-using System.ComponentModel;
-using System.ComponentModel.Design.Serialization;
-using System.Globalization;
-using System.Reflection;
+//  Contents:  Limited converter for string <--> System.Uri
 
 namespace System.Xaml.Replacements
 {
-    /// <summary>
-    /// Limited converter for string <--> System.Uri
-    /// </summary>
+    using System;
+    using System.ComponentModel;
+    using System.ComponentModel.Design.Serialization;
+    using System.Globalization;
+    using System.Reflection;
+
     internal class TypeUriConverter : TypeConverter
     {
+        public TypeUriConverter()
+        { 
+        }
+
+        /// <inheritdoc />
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
-            ArgumentNullException.ThrowIfNull(sourceType);
+            if (sourceType == null)
+            {
+                throw new ArgumentNullException(nameof(sourceType));
+            }
 
             return sourceType == typeof(string) || sourceType == typeof(Uri);
         }
 
+        /// <inheritdoc />
         public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
         {
-            return
+            return 
                 destinationType == typeof(InstanceDescriptor) ||
                 destinationType == typeof(string) ||
                 destinationType == typeof(Uri);
         }
 
+        /// <inheritdoc />
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            if (value is Uri uri)
+            var uri = value as Uri;
+            if (uri != null)
             {
-                UriKind uriKind = UriKind.RelativeOrAbsolute;
+                var uriKind = UriKind.RelativeOrAbsolute;
                 if (uri.IsWellFormedOriginalString())
                 {
                     uriKind = uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative;
@@ -42,14 +52,25 @@ namespace System.Xaml.Replacements
 
                 if (destinationType == typeof(InstanceDescriptor))
                 {
-                    ConstructorInfo constructor = typeof(Uri).GetConstructor(new Type[] { typeof(string), typeof(UriKind) });
-                    return  new InstanceDescriptor(constructor, new object[] { uri.OriginalString, uriKind });
+                    var ci = 
+                        typeof(Uri)
+                        .GetConstructor(
+                            BindingFlags.Public | BindingFlags.Instance, 
+                            null, 
+                            new Type[] { typeof(string), typeof(UriKind) }, 
+                            null);
+                    return 
+                        new InstanceDescriptor(
+                            ci, 
+                            new object[] { uri.OriginalString, uriKind});
                 }
-                else if (destinationType == typeof(string))
+
+                if (destinationType == typeof(string))
                 {
                     return uri.OriginalString;
                 }
-                else if (destinationType == typeof(Uri))
+
+                if (destinationType == typeof(Uri))
                 {
                     return new Uri(uri.OriginalString, uriKind);
                 }
@@ -58,9 +79,11 @@ namespace System.Xaml.Replacements
             return base.ConvertTo(context, culture, value, destinationType);
         }
 
+        /// <inheritdoc />
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            if (value is string uriString)
+            var uriString = value as string;
+            if (uriString != null)
             {
                 if (Uri.IsWellFormedUriString(uriString, UriKind.Absolute))
                 {
@@ -75,7 +98,8 @@ namespace System.Xaml.Replacements
                 return new Uri(uriString, UriKind.RelativeOrAbsolute);
             }
 
-            if (value is Uri uri)
+            var uri = value as Uri;
+            if (uri != null)
             {
                 if (uri.IsWellFormedOriginalString())
                 {
@@ -88,9 +112,11 @@ namespace System.Xaml.Replacements
             return base.ConvertFrom(context, culture, value);
         }
 
+        /// <inheritdoc />
         public override bool IsValid(ITypeDescriptorContext context, object value)
         {
-            if (value is string uriString)
+            var uriString = value as string;
+            if (uriString != null)
             {
                 return Uri.TryCreate(uriString, UriKind.RelativeOrAbsolute, out _);
             }

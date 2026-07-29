@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  The COM and P/Invoke interop code necessary for the managed compound
 //  file layer to call the existing APIs in OLE32.DLL.
@@ -8,7 +11,16 @@
 //  Note that not everything is properly ported, for example the SNB type
 //  used in several IStorage methods is just ignored.
 
+//
+
+using System;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Windows;
+
+using MS.Internal.Interop;
+using MS.Internal.WindowsBase;  // for SecurityHelper
 
 using CultureInfo = System.Globalization.CultureInfo;
 
@@ -194,7 +206,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
                                                         UnsafeNativeCompoundFileMethods.UnsafeLockBytesOnStream lockBytesStream)
             {
 
-                ArgumentNullException.ThrowIfNull(storage);
+                if (storage == null)
+                {
+                    throw new ArgumentNullException("storage");
+                }
 
                 _unsafeStorage = storage;
                 _unsafePropertySetStorage = (UnsafeNativeCompoundFileMethods.UnsafeNativeIPropertySetStorage) _unsafeStorage;
@@ -225,7 +240,10 @@ namespace MS.Internal.IO.Packaging.CompoundFile
 
                         // If the storage was originally opened on lockbyte implementation
                         //  we need to dispose it as well
-                        _unsafeLockByteStream?.Dispose();
+                        if (_unsafeLockByteStream != null)
+                        {
+                            _unsafeLockByteStream.Dispose();
+                        }
                     }
                 }
                 finally

@@ -1,16 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 using System.ComponentModel;
 using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.Reflection;
+using System.Security;
 
-namespace System.Xaml.Replacements
+namespace System.Windows.Markup
 {
-    internal class DateTimeOffsetConverter2 : TypeConverter
+    class DateTimeOffsetConverter2 : TypeConverter
     {
         public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
         {
@@ -18,7 +18,6 @@ namespace System.Xaml.Replacements
             {
                 return true;
             }
-
             return base.CanConvertTo(context, destinationType);
         }
 
@@ -28,36 +27,45 @@ namespace System.Xaml.Replacements
             {
                 return true;
             }
-
             return base.CanConvertFrom(context, sourceType);
         }
 
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            if (value is DateTimeOffset dtOffset)
+            if ((destinationType == typeof(string)) && (value is DateTimeOffset))
             {
-                if (destinationType == typeof(string))
+                if (culture == null)
                 {
-                    return dtOffset.ToString("O", culture ?? CultureInfo.CurrentCulture);
+                    culture = CultureInfo.CurrentCulture;
                 }
-                else if (destinationType == typeof(InstanceDescriptor))
-                {
-                    // Use the year, month, day, hour, minute, second, millisecond, offset constructor
-                    ConstructorInfo constructor = typeof(DateTimeOffset).GetConstructor(new Type[]
-                    {
-                        typeof(int),
-                        typeof(int),
-                        typeof(int),
-                        typeof(int),
-                        typeof(int),
-                        typeof(int),
-                        typeof(int),
+
+                return ((DateTimeOffset)value).ToString("O", culture);
+            }
+            if ((destinationType == typeof(InstanceDescriptor)) && (value is DateTimeOffset))
+            {
+                // Use the year, month, day, hour, minute, second, millisecond, offset constructor
+                // Should there be a branch to use the calendar constructor?
+                DateTimeOffset dtOffset = (DateTimeOffset)value;
+
+                Type intType = typeof(int);
+                ConstructorInfo constructor = typeof(DateTimeOffset).GetConstructor(
+                    new Type[] {
+                        intType,
+                        intType,
+                        intType,
+                        intType,
+                        intType,
+                        intType,
+                        intType,
                         typeof(TimeSpan)
-                    });
+                    }
+                    );
+
+                if (constructor != null)
+                {
                     return new InstanceDescriptor(
                         constructor,
-                        new object[]
-                        {
+                        new object[] {
                             dtOffset.Year,
                             dtOffset.Month,
                             dtOffset.Day,
@@ -69,16 +77,23 @@ namespace System.Xaml.Replacements
                         },
                         true);
                 }
-            }
 
+                return null;
+            }
             return base.ConvertTo(context, culture, value, destinationType);
         }
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            if (value is string s)
+            if (value is string)
             {
-                return DateTimeOffset.Parse(s.Trim(), culture ?? CultureInfo.CurrentCulture, DateTimeStyles.None);
+                string s = ((string)value).Trim();
+
+                if (culture == null)
+                {
+                    culture = CultureInfo.CurrentCulture;
+                }
+                return DateTimeOffset.Parse(s, culture, DateTimeStyles.None);
             }
 
             return base.ConvertFrom(context, culture, value);

@@ -1,9 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // 
 // Description: BamlLocalizableResourceKey class
 //
+
+using System;
 
 namespace System.Windows.Markup.Localizer
 {
@@ -130,9 +133,9 @@ namespace System.Windows.Markup.Localizer
         //-------------------------------
         // Private members
         //-------------------------------
-        private readonly string _uid;
-        private readonly string _className;
-        private readonly string _propertyName;
-        private readonly string _assemblyName;
+        private string _uid;
+        private string _className;
+        private string _propertyName;
+        private string _assemblyName;
     }
 }

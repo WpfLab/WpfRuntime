@@ -1,8 +1,34 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//+-----------------------------------------------------------------------
+//
+//
+//
+//  Contents:  Implementation of TextFormatter context
+//
+//
+
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows.Threading;
+using System.Security;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media;
 
 using MS.Internal;
+using MS.Internal.PresentationCore;
 using MS.Internal.TextFormatting;
+
+using IndexedGlyphRun = System.Windows.Media.TextFormatting.IndexedGlyphRun;
+using SR=MS.Internal.PresentationCore.SR;
+
 
 namespace System.Windows.Media.TextFormatting
 {
@@ -17,10 +43,11 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
     public class TextFormatterContext
 #else
+    [FriendAccessAllowed]   // used by Framework
     internal class TextFormatterContext
 #endif
     {
-        private IntPtr  _ploc;              // Line Services context
+        private SecurityCriticalDataForSet<IntPtr>  _ploc;              // Line Services context
         private LineServicesCallbacks               _callbacks;         // object to hold all delegates for callback
         private State                               _state;             // internal state flags
         private BreakStrategies                     _breaking;          // context's breaking strategy
@@ -29,14 +56,14 @@ namespace System.Windows.Media.TextFormatting
 
         public TextFormatterContext()
         {
-            _ploc =  IntPtr.Zero;
+            _ploc =  new SecurityCriticalDataForSet<IntPtr>(IntPtr.Zero);
             Init();
         }
 
 
         private void Init()
         {
-            if(_ploc == System.IntPtr.Zero)
+            if(_ploc.Value == System.IntPtr.Zero)
             {
                 // Initializing context
                 LsErr lserr = LsErr.None;
@@ -126,7 +153,7 @@ namespace System.Windows.Media.TextFormatting
                     SetSpecialCharacters(ref contextInfo);
                 }
 
-                _ploc = ploc;
+                _ploc.Value = ploc;
                 GC.KeepAlive(contextInfo);
 
                 //  There is a trick here to pass in this resolution as in twips
@@ -162,7 +189,7 @@ namespace System.Windows.Media.TextFormatting
         /// </summary>
         internal TextPenaltyModule GetTextPenaltyModule()
         {
-            Invariant.Assert(_ploc != System.IntPtr.Zero);
+            Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
             return new TextPenaltyModule(_ploc);
         }
 
@@ -238,10 +265,10 @@ namespace System.Windows.Media.TextFormatting
         /// </summary>
         internal void Destroy()
         {
-            if(_ploc != System.IntPtr.Zero)
+            if(_ploc.Value != System.IntPtr.Zero)
             {
-                UnsafeNativeMethods.LoDestroyContext(_ploc);
-                _ploc = IntPtr.Zero;
+                UnsafeNativeMethods.LoDestroyContext(_ploc.Value);
+                _ploc.Value = IntPtr.Zero;
             }
         }
 
@@ -253,8 +280,8 @@ namespace System.Windows.Media.TextFormatting
         {
             if (_state == State.Uninitialized ||  breaking != _breaking)
             {
-                Invariant.Assert(_ploc != System.IntPtr.Zero);
-                LsErr lserr = UnsafeNativeMethods.LoSetBreaking(_ploc, (int) breaking);
+                Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
+                LsErr lserr = UnsafeNativeMethods.LoSetBreaking(_ploc.Value, (int) breaking);
 
                 if (lserr != LsErr.None)
                 {
@@ -283,10 +310,10 @@ namespace System.Windows.Media.TextFormatting
             out LsLineWidths    lineWidths
             )
         {
-            Invariant.Assert(_ploc != System.IntPtr.Zero);
+            Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
 
             return UnsafeNativeMethods.LoCreateLine(
-                _ploc,
+                _ploc.Value,
                 cpFirst,
                 lineLength,
                 maxWidth,
@@ -309,10 +336,10 @@ namespace System.Windows.Media.TextFormatting
             out int         bestFitIndex
             )
         {
-            Invariant.Assert(_ploc != System.IntPtr.Zero);
+            Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
 
             return UnsafeNativeMethods.LoCreateBreaks(
-                _ploc,
+                _ploc.Value,
                 cpFirst,
                 previousLineBreakRecord,
                 ploparabreak,
@@ -331,10 +358,10 @@ namespace System.Windows.Media.TextFormatting
             ref bool        penalizedAsJustified
             )
         {
-            Invariant.Assert(_ploc != System.IntPtr.Zero);
+            Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
 
             return UnsafeNativeMethods.LoCreateParaBreakingSession(
-                _ploc,
+                _ploc.Value,
                 cpFirst,
                 maxWidth,
                 previousLineBreakRecord,
@@ -350,9 +377,9 @@ namespace System.Windows.Media.TextFormatting
             ref LsDevRes    deviceInfo
             )
         {
-            Invariant.Assert(_ploc != System.IntPtr.Zero);
+            Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
             LsErr lserr = UnsafeNativeMethods.LoSetDoc(
-                _ploc,
+                _ploc.Value,
                 isDisplay ? 1 : 0,
                 isReferencePresentationEqual ? 1 : 0,
                 ref deviceInfo
@@ -370,9 +397,9 @@ namespace System.Windows.Media.TextFormatting
             int         tabStopCount
             )
         {
-            Invariant.Assert(_ploc != System.IntPtr.Zero);
+            Invariant.Assert(_ploc.Value != System.IntPtr.Zero);
             LsErr lserr = UnsafeNativeMethods.LoSetTabs(
-                _ploc,
+                _ploc.Value,
                 incrementalTab,
                 tabStopCount,
                 tabStops
@@ -385,7 +412,7 @@ namespace System.Windows.Media.TextFormatting
         }
 
 
-        internal static void ThrowExceptionFromLsError(string message, LsErr lserr)
+        static internal void ThrowExceptionFromLsError(string message, LsErr lserr)
         {
             if (lserr == LsErr.OutOfMemory)
                 throw new OutOfMemoryException (message);
@@ -394,12 +421,12 @@ namespace System.Windows.Media.TextFormatting
         }
 
 
-        internal static bool IsSpecialCharacter(char c)
+        static internal bool IsSpecialCharacter(char c)
         {
             return _specialCharacters.ContainsKey(c);
         }
 
-        private static void SetSpecialCharacters(ref LsContextInfo contextInfo)
+        static private void SetSpecialCharacters(ref LsContextInfo contextInfo)
         {
             Dictionary<char,bool> dict = new Dictionary<char,bool>();
 
@@ -478,7 +505,7 @@ namespace System.Windows.Media.TextFormatting
         /// <summary>
         /// Actual LS unmanaged context
         /// </summary>
-        internal IntPtr Ploc
+        internal SecurityCriticalDataForSet<IntPtr> Ploc
         {
             get { return _ploc; }
         }

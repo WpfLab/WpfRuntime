@@ -1,11 +1,36 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description: Implementation of the class PathGeometry
+//
+
+using System;
 using MS.Internal;
+using MS.Internal.PresentationCore;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
+using System.Reflection;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using System.Globalization;
+using System.Windows.Media;
 using System.Windows.Media.Composition;
+using System.Windows;
+using System.Text.RegularExpressions;
+using System.Windows.Media.Animation;
 using System.Windows.Markup;
+using System.Windows.Converters;
+using System.Runtime.InteropServices;
+using System.Security;
+using MS.Win32;
 
-using UnsafeNativeMethods = MS.Win32.PresentationCore.UnsafeNativeMethods;
+using SR=MS.Internal.PresentationCore.SR;
+using UnsafeNativeMethods=MS.Win32.PresentationCore.UnsafeNativeMethods;
 
 namespace System.Windows.Media
 {
@@ -41,11 +66,17 @@ namespace System.Windows.Media
         /// <param name="figures">A collection of figures</param>
         public PathGeometry(IEnumerable<PathFigure> figures)
         {
-            ArgumentNullException.ThrowIfNull(figures);
-
-            foreach (PathFigure item in figures)
+            if (figures != null)
             {
-                Figures.Add(item);
+                foreach (PathFigure item in figures)
+                {
+                    Figures.Add(item);
+                }
+            }
+            else
+            {
+                throw new ArgumentNullException("figures");   
+
             }
 
             SetDirty();
@@ -64,11 +95,16 @@ namespace System.Windows.Media
             {
                 FillRule = fillRule;
 
-                ArgumentNullException.ThrowIfNull(figures);
-
-                foreach (PathFigure item in figures)
+                if (figures != null)
                 {
-                    Figures.Add(item);
+                    foreach (PathFigure item in figures)
+                    {
+                        Figures.Add(item);
+                    }
+                }
+                else
+                {
+                    throw new ArgumentNullException("figures");
                 }
 
                 SetDirty();
@@ -351,7 +387,10 @@ namespace System.Windows.Media
         /// </summary>
         public void AddGeometry(Geometry geometry)
         {
-            ArgumentNullException.ThrowIfNull(geometry);
+            if (geometry == null)
+            {
+                throw new System.ArgumentNullException("geometry");
+            }
 
             if (geometry.IsEmpty())
             {
@@ -428,11 +467,10 @@ namespace System.Windows.Media
             {
                 if (pointCount >=1 && segmentCount >= 1)
                 {
-                    PathFigure figure = new PathFigure
-                    {
-                        IsFilled = isFilled,
-                        StartPoint = new Point(pPoints->X, pPoints->Y)
-                    };
+                    PathFigure figure = new PathFigure();
+
+                    figure.IsFilled = isFilled;
+                    figure.StartPoint = new Point(pPoints->X, pPoints->Y);
 
                     int pointIndex = 1;
                     int sameSegCount = 0;
@@ -663,7 +701,10 @@ namespace System.Windows.Media
         {
             PathFigureCollection figures = Figures;
 
-            figures?.Clear();
+            if (figures != null)
+            {
+                figures.Clear();
+            }
         }
         #endregion
 
@@ -755,7 +796,10 @@ namespace System.Windows.Media
                 double[] dashArray = null;
 
                 // If we have a pen, populate the CMD struct
-                pen?.GetBasicPenData(&penData, out dashArray);
+                if (pen != null)
+                {
+                    pen.GetBasicPenData(&penData, out dashArray);
+                }
 
                 MilMatrix3x2D worldMatrix3X2 = CompositionResourceManager.MatrixToMilMatrix3x2D(ref worldMatrix);
 
@@ -943,12 +987,10 @@ namespace System.Windows.Media
         /// </summary>
         internal override PathGeometryData GetPathGeometryData()
         {
-            PathGeometryData data = new PathGeometryData
-            {
-                FillRule = FillRule,
-                Matrix = CompositionResourceManager.TransformToMilMatrix3x2D(Transform)
-            };
-
+            PathGeometryData data = new PathGeometryData();
+            data.FillRule = FillRule;
+            data.Matrix = CompositionResourceManager.TransformToMilMatrix3x2D(Transform);
+            
             if (IsObviouslyEmpty())
             {
                 return Geometry.GetEmptyPathGeometryData();                

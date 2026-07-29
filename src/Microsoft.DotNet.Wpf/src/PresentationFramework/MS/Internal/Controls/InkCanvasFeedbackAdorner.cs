@@ -1,11 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
 //      A class which is used as the feedback adorner of the InkCanvas selection
 //
 
+using MS.Internal;
+using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -26,7 +30,7 @@ namespace MS.Internal.Controls
         /// </summary>
         /// <param name="inkCanvas">The adorned InkCanvas</param>
         internal InkCanvasFeedbackAdorner(InkCanvas inkCanvas)
-            : base((inkCanvas?.InnerCanvas))
+            : base((inkCanvas != null ? inkCanvas.InnerCanvas : null))
         {
             ArgumentNullException.ThrowIfNull(inkCanvas);
 

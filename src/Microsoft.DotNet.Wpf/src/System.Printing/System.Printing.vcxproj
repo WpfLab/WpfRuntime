@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|arm64">
+    <ProjectConfiguration Include="Debug|ARM64">
       <Configuration>Debug</Configuration>
-      <Platform>arm64</Platform>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|arm64">
+    <ProjectConfiguration Include="Release|ARM64">
       <Configuration>Release</Configuration>
-      <Platform>arm64</Platform>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -28,8 +28,8 @@
   </ItemGroup>
   <PropertyGroup>
     <UseDestinationLibFolder>true</UseDestinationLibFolder>
-    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
-    <TargetFrameworkVersion>v6.0</TargetFrameworkVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <RestoreProjectStyle>Unknown</RestoreProjectStyle>
     <!-- 
       Opting out of this to ensure _defineReference is used as 
@@ -40,11 +40,12 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <Keyword>NetCoreCProj</Keyword>
-    <CLRSupport>pure</CLRSupport>
+    <CLRSupport>NetCore</CLRSupport>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <PlatformToolset>v145</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
-  <Import Project="$(WpfCppProps)" />
+  <Import Project="$(WpfCppProps)" Condition="Exists('$(WpfCppProps)')" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{765E6BBC-772B-4808-BB72-E85615E8F237}</ProjectGuid>
@@ -57,10 +58,11 @@
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(WpfSharedDir)\inc;.\CPP;.\CPP\inc;.\CPP\inc\GDIExporter</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>$(CDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <CompileAsManaged>pure</CompileAsManaged>
+      <CompileAsManaged>NetCore</CompileAsManaged>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Win32Inc.hpp</PrecompiledHeaderFile>
       <ForceConformanceInForLoopScope>false</ForceConformanceInForLoopScope>
+      <ForcedUsingFiles>$(NuGetPackageRoot)system.io.packaging\$(SystemIOPackagingVersion)\lib\net8.0\System.IO.Packaging.dll;%(ForcedUsingFiles)</ForcedUsingFiles>
     </ClCompile>
     <Link>
       <AdditionalOptions>%(AdditionalOptions) /CLRUNMANAGEDCODECHECK:NO /ignore:4042</AdditionalOptions>
@@ -144,12 +146,12 @@
       <OutputItemType>_defineReference</OutputItemType>
       <Define>PRESENTATIONCORE_DLL</Define>
     </ProjectReference>
-    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-impl-cycle.csproj">
+    <ProjectReference Include="$(WpfCycleBreakersDir)PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>_defineReference</OutputItemType>
       <Define>PRESENTATIONFRAMEWORK_DLL</Define>
     </ProjectReference>
-    <ProjectReference Include="$(WpfSourceDir)ReachFramework\ReachFramework.csproj">
+    <ProjectReference Include="$(WpfCycleBreakersDir)ReachFramework\ReachFramework-System.Printing-api-cycle.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>_defineReference</OutputItemType>
       <Define>REACHFRAMEWORK_DLL</Define>
@@ -161,6 +163,12 @@
   <ItemGroup>
     <AdditionalPackageReference Include="$(SystemIOPackagingPackage)" Version="$(SystemIOPackagingVersion)" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Packaging">
+      <HintPath>$(NuGetPackageRoot)system.io.packaging\$(SystemIOPackagingVersion)\lib\net8.0\System.IO.Packaging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
   <!--
     Ignore ijwhost.dll during packaging
   -->
@@ -171,38 +179,10 @@
     <PropertyGroup>
       <_defineReferences>@(_defineReference->'%(Define)=&lt;%(Identity)&gt;')</_defineReferences>
     </PropertyGroup>
-    <!--
-        EnsureWpfProjectReference target would have filled in @(MicrosoftDotNetWpfGitHubReference)
-        Prior to that, CppCliHelper would have filled in @(Reference) with all the contents of Microsoft.DotNet.Wpf.GitHub
-
-        Use this knowledge to resolve reference paths for projects that do not exist locally.
-        Then remove them from @(Reference) and @(ReferencePath) since these assemblies will be reference using #using
-        in Win32Inc.hpp
-    -->
-    <ItemGroup>
-      <_projectRefsFromFallBacks Remove="@(_projectRefsFromFallBacks)" />
-      <__projectRefsFromFallBacksDeDuped Remove="@(_projectRefsFromFallBacksDeDuped)" />
-    </ItemGroup>
-    <FilterItem1ByItem2 Item1="@(MicrosoftDotNetWpfGitHubReference)" Item2="@(Reference->'%(FileName)')" Metadata2="Identity" PreserveItem1Metadata="true" PreserveItem2Metadata="true">
-      <Output ItemName="_projectRefsFromFallBacks" TaskParameter="Result" />
-    </FilterItem1ByItem2>
-    <RemoveDuplicates Inputs="@(_projectRefsFromFallBacks)">
-      <Output TaskParameter="Filtered" ItemName="_projectRefsFromFallBacksDeDuped" />
-    </RemoveDuplicates>
-    <ItemGroup>
-      <_projectFallBackHintPaths Include="@(_projectRefsFromFallBacksDeDuped->'%(HintPath)')" />
-    </ItemGroup>
-    <PropertyGroup>
-      <_defineReferences>$(_defineReferences);@(_projectFallBackHintPaths->'%(Define)=&lt;%(RootDir)%(Directory)..\..\lib\$(TargetFramework)\%(Filename).dll&gt;')</_defineReferences>
-    </PropertyGroup>
     <ItemGroup>
       <CLCompile>
         <PreprocessorDefinitions>%(CLCompile.PreprocessorDefinitions);$(_defineReferences)</PreprocessorDefinitions>
       </CLCompile>
-    </ItemGroup>
-    <ItemGroup>
-      <Reference Remove="@(_projectRefsFromFallBacksDeDuped->'%(OriginalItemSpec)')" />
-      <ReferencePath Remove="@(_projectRefsFromFallBacksDeDuped->'%(OriginalItemSpec)')" />
     </ItemGroup>
   </Target>
   <!--

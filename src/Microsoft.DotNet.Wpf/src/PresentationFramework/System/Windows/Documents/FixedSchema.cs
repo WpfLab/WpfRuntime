@@ -1,20 +1,30 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 #region Using directives
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Markup;
 using System.Xml;
 using System.IO;
 using System.IO.Packaging;
+using System.Xml.Schema;
+using System.Net;
 using System.Resources;
 using System.Reflection;
+using System.Globalization;
+using System.Security;
 using MS.Internal;
 
 #endregion
 
+using InternalPackUriHelper = MS.Internal.IO.Packaging.PackUriHelper;
 
 namespace System.Windows.Documents
 {
@@ -71,11 +81,10 @@ namespace System.Windows.Documents
             Uri baseUri
             )
         {
-            XmlTextReader xmlTextReader = new XmlEncodingEnforcingTextReader(objectStream)
-            {
-                ProhibitDtd = true,
-                Normalization = true
-            };
+            XmlTextReader xmlTextReader = new XmlEncodingEnforcingTextReader(objectStream);
+
+            xmlTextReader.ProhibitDtd = true;
+            xmlTextReader.Normalization = true;
 
             XmlReader xmlReader = xmlTextReader;
 
@@ -115,7 +124,7 @@ namespace System.Windows.Documents
 
         private
         XmlReader               _compatReader;
-        private static string [] _predefinedNamespaces = new string [1] { 
+        static private string [] _predefinedNamespaces = new string [1] { 
             XamlReaderHelper.DefinitionMetroNamespaceURI
         };
 
@@ -236,7 +245,7 @@ namespace System.Windows.Documents
         {
         }
 
-        protected static void RegisterSchema(XpsSchema schema, ContentType[] handledMimeTypes)
+        static protected void RegisterSchema(XpsSchema schema, ContentType[] handledMimeTypes)
         {
             foreach (ContentType mime in handledMimeTypes)
             {
@@ -257,16 +266,15 @@ namespace System.Windows.Documents
 
         public virtual XmlReaderSettings GetXmlReaderSettings()
         {
-            XmlReaderSettings xmlReaderSettings = new XmlReaderSettings
-            {
-                ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.ProcessIdentityConstraints | System.Xml.Schema.XmlSchemaValidationFlags.ReportValidationWarnings
-            };
+            XmlReaderSettings xmlReaderSettings = new XmlReaderSettings();
+
+            xmlReaderSettings.ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.ProcessIdentityConstraints | System.Xml.Schema.XmlSchemaValidationFlags.ReportValidationWarnings;
 
             return xmlReaderSettings;
         }
 
 
-        public virtual void ValidateRelationships(Package package, Uri packageUri, Uri partUri, ContentType mimeType)
+        public virtual void ValidateRelationships(SecurityCriticalData<Package> package, Uri packageUri, Uri partUri, ContentType mimeType)
         {
         }
 
@@ -315,7 +323,7 @@ namespace System.Windows.Documents
             return null;
         }
 
-        public static XpsSchema GetSchema(ContentType mimeType)
+        static public XpsSchema GetSchema(ContentType mimeType)
         {
             XpsSchema schema = null;
 
@@ -327,7 +335,7 @@ namespace System.Windows.Documents
             return schema;
         }
 
-        private static readonly Dictionary<ContentType, XpsSchema> _schemas = new Dictionary<ContentType, XpsSchema>(new ContentType.StrongComparer());
+        static private readonly Dictionary<ContentType, XpsSchema> _schemas = new Dictionary<ContentType, XpsSchema>(new ContentType.StrongComparer());
         private Hashtable _requiredResourceMimeTypes = new Hashtable(11);
     }
 
@@ -343,10 +351,9 @@ namespace System.Windows.Documents
         {
             if (_xmlReaderSettings == null)
             {
-                _xmlReaderSettings = new XmlReaderSettings
-                {
-                    ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.ProcessIdentityConstraints | System.Xml.Schema.XmlSchemaValidationFlags.ReportValidationWarnings
-                };
+                _xmlReaderSettings = new XmlReaderSettings();
+
+                _xmlReaderSettings.ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.ProcessIdentityConstraints | System.Xml.Schema.XmlSchemaValidationFlags.ReportValidationWarnings;
 
                 MemoryStream xpsSchemaStream = new MemoryStream(XpsS0Schema.S0SchemaBytes);
                 MemoryStream dictionarySchemaStream = new MemoryStream(XpsS0Schema.DictionarySchemaBytes);
@@ -449,8 +456,8 @@ namespace System.Windows.Documents
             return null;
         }
 
-        private
         static
+        private
         byte[] 
         S0SchemaBytes
         {
@@ -461,8 +468,8 @@ namespace System.Windows.Documents
             }
         }
 
-        private
         static
+        private
         byte[] 
         DictionarySchemaBytes
         {
@@ -473,39 +480,73 @@ namespace System.Windows.Documents
             }
         }
 
-        protected static ContentType _fontContentType = new("application/vnd.ms-opentype");
+        static
+        protected
+        ContentType _fontContentType = new ContentType("application/vnd.ms-opentype");
 
-        protected static ContentType _colorContextContentType = new("application/vnd.ms-color.iccprofile");
+        static
+        protected
+        ContentType _colorContextContentType = new ContentType("application/vnd.ms-color.iccprofile");
 
-        protected static ContentType _obfuscatedContentType = new("application/vnd.ms-package.obfuscated-opentype");
+        static
+        protected
+        ContentType _obfuscatedContentType = new ContentType("application/vnd.ms-package.obfuscated-opentype");
 
-        protected static ContentType _jpgContentType = new("image/jpeg");
+        static
+        protected
+        ContentType _jpgContentType = new ContentType("image/jpeg");
 
-        protected static ContentType _pngContentType = new("image/png");
+        static
+        protected
+        ContentType _pngContentType = new ContentType("image/png");
 
-        protected static ContentType _tifContentType = new("image/tiff");
+        static
+        protected
+        ContentType _tifContentType = new ContentType("image/tiff");
 
-        protected static ContentType _wmpContentType = new("image/vnd.ms-photo");
+        static
+        protected
+        ContentType _wmpContentType = new ContentType("image/vnd.ms-photo");
 
-        protected static ContentType _fixedDocumentSequenceContentType = new("application/vnd.ms-package.xps-fixeddocumentsequence+xml");
+        static
+        protected
+        ContentType _fixedDocumentSequenceContentType = new ContentType("application/vnd.ms-package.xps-fixeddocumentsequence+xml");
 
-        protected static ContentType _fixedDocumentContentType = new("application/vnd.ms-package.xps-fixeddocument+xml");
+        static
+        protected
+        ContentType _fixedDocumentContentType = new ContentType("application/vnd.ms-package.xps-fixeddocument+xml");
 
-        protected static ContentType _fixedPageContentType = new("application/vnd.ms-package.xps-fixedpage+xml");
+        static
+        protected
+        ContentType _fixedPageContentType = new ContentType("application/vnd.ms-package.xps-fixedpage+xml");
 
-        protected static ContentType _resourceDictionaryContentType = new("application/vnd.ms-package.xps-resourcedictionary+xml");
+        static
+        protected
+        ContentType _resourceDictionaryContentType = new ContentType("application/vnd.ms-package.xps-resourcedictionary+xml");
 
-        protected static ContentType _printTicketContentType = new("application/vnd.ms-printing.printticket+xml");
+        static
+        protected
+        ContentType _printTicketContentType = new ContentType("application/vnd.ms-printing.printticket+xml");
 
-        protected static ContentType _discardControlContentType = new("application/vnd.ms-package.xps-discard-control+xml");
+        static
+        protected
+        ContentType _discardControlContentType = new ContentType("application/vnd.ms-package.xps-discard-control+xml");
 
-        private const string _xpsS0SchemaNamespace = "http://schemas.microsoft.com/xps/2005/06";
+        private
+        const
+        String _xpsS0SchemaNamespace = "http://schemas.microsoft.com/xps/2005/06";
 
-        private const string _contextColor = "ContextColor ";
+        private
+        const
+        string _contextColor = "ContextColor ";
 
-        private const string _colorConvertedBitmap = "{ColorConvertedBitmap ";
+        private
+        const
+        string _colorConvertedBitmap = "{ColorConvertedBitmap ";
 
-        private static XmlReaderSettings _xmlReaderSettings;
+        static
+        private
+        XmlReaderSettings _xmlReaderSettings;
     }
 
     internal sealed class XpsS0FixedPageSchema : XpsS0Schema
@@ -533,9 +574,9 @@ namespace System.Windows.Documents
                     );
         }
 
-        public override void ValidateRelationships(Package package, Uri packageUri, Uri partUri, ContentType mimeType)
+        public override void ValidateRelationships(SecurityCriticalData<Package> package, Uri packageUri, Uri partUri, ContentType mimeType)
         {
-            PackagePart part = package.GetPart(partUri);
+            PackagePart part = package.Value.GetPart(partUri);
             PackageRelationshipCollection checkRels;
             int count;
 
@@ -554,7 +595,7 @@ namespace System.Windows.Documents
                 Uri targetUri = PackUriHelper.ResolvePartUri(partUri, rel.TargetUri);
                 Uri absTargetUri = PackUriHelper.Create(packageUri, targetUri);
 
-                PackagePart targetPart = package.GetPart(targetUri);
+                PackagePart targetPart = package.Value.GetPart(targetUri);
 
                 if (!_printTicketContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)))
                 {
@@ -576,7 +617,7 @@ namespace System.Windows.Documents
                 Uri targetUri = PackUriHelper.ResolvePartUri(partUri, rel.TargetUri);
                 Uri absTargetUri = PackUriHelper.Create(packageUri, targetUri);
 
-                PackagePart targetPart = package.GetPart(targetUri);
+                PackagePart targetPart = package.Value.GetPart(targetUri);
 
                 if (!_jpgContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)) &&
                     !_pngContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)))
@@ -596,7 +637,7 @@ namespace System.Windows.Documents
                     Uri targetUri = PackUriHelper.ResolvePartUri(partUri, rel.TargetUri);
                     Uri absTargetUri = PackUriHelper.Create(packageUri, targetUri);
 
-                    PackagePart targetPart = package.GetPart(targetUri);
+                    PackagePart targetPart = package.Value.GetPart(targetUri);
 
                     if (!_fontContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)) &&
                             !_obfuscatedContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)))
@@ -610,7 +651,7 @@ namespace System.Windows.Documents
             if (_fixedDocumentSequenceContentType.AreTypeAndSubTypeEqual(mimeType))
             {
                 // This is the XPS payload root part. We also should check if the Package only has at most one discardcontrol...
-                checkRels = package.GetRelationshipsByType(_discardControlRel);
+                checkRels = package.Value.GetRelationshipsByType(_discardControlRel);
                 count = 0;
                 foreach (PackageRelationship rel in checkRels)
                 {
@@ -624,7 +665,7 @@ namespace System.Windows.Documents
                     Uri targetUri = PackUriHelper.ResolvePartUri(partUri, rel.TargetUri);
                     Uri absTargetUri = PackUriHelper.Create(packageUri, targetUri);
 
-                    PackagePart targetPart = package.GetPart(targetUri);
+                    PackagePart targetPart = package.Value.GetPart(targetUri);
 
                     if (!_discardControlContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)))
                     {
@@ -633,7 +674,7 @@ namespace System.Windows.Documents
                 }
 
                 // This is the XPS payload root part. We also should check if the Package only has at most one thumbnail...
-                checkRels = package.GetRelationshipsByType(_thumbnailRel);
+                checkRels = package.Value.GetRelationshipsByType(_thumbnailRel);
                 count = 0;
                 foreach (PackageRelationship rel in checkRels)
                 {
@@ -647,7 +688,7 @@ namespace System.Windows.Documents
                     Uri targetUri = PackUriHelper.ResolvePartUri(partUri, rel.TargetUri);
                     Uri absTargetUri = PackUriHelper.Create(packageUri, targetUri);
 
-                    PackagePart targetPart = package.GetPart(targetUri);
+                    PackagePart targetPart = package.Value.GetPart(targetUri);
 
                     if (!_jpgContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)) &&
                         !_pngContentType.AreTypeAndSubTypeEqual(new ContentType(targetPart.ContentType)))
@@ -712,10 +753,9 @@ namespace System.Windows.Documents
         {
             if (_xmlReaderSettings == null)
             {
-                _xmlReaderSettings = new XmlReaderSettings
-                {
-                    ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.ProcessIdentityConstraints | System.Xml.Schema.XmlSchemaValidationFlags.ReportValidationWarnings
-                };
+                _xmlReaderSettings = new XmlReaderSettings();
+
+                _xmlReaderSettings.ValidationFlags = System.Xml.Schema.XmlSchemaValidationFlags.ProcessIdentityConstraints | System.Xml.Schema.XmlSchemaValidationFlags.ReportValidationWarnings;
 
                 MemoryStream xpsSchemaStream = new MemoryStream(XpsDocStructSchema.SchemaBytes);
 
@@ -744,8 +784,8 @@ namespace System.Windows.Documents
             }
         }
 
-        private
         static
+        private
         byte[]
         SchemaBytes
         {
@@ -756,20 +796,20 @@ namespace System.Windows.Documents
             }
         }
 
-        private
         static
+        private
         ContentType _documentStructureContentType = new ContentType("application/vnd.ms-package.xps-documentstructure+xml");
 
-        private
         static
+        private
         ContentType _storyFragmentsContentType    = new ContentType("application/vnd.ms-package.xps-storyfragments+xml");
         
         private
         const
         String _xpsDocStructureSchemaNamespace = "http://schemas.microsoft.com/xps/2005/06/documentstructure";
 
-        private
         static
+        private
         XmlReaderSettings _xmlReaderSettings;
     }
 }

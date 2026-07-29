@@ -1,11 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 
+using System;
 using System.Collections;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
+using System.Xml;
+using System.IO;
+using System.Security;
+using System.ComponentModel.Design.Serialization;
+using System.Windows.Xps.Packaging;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Markup;
+using System.Printing;
 using MS.Utility;
 
 //
@@ -28,7 +41,7 @@ using MS.Utility;
 
 namespace System.Windows.Xps.Serialization
 {
-    internal static class NgcSerializerUtil
+    static class NgcSerializerUtil
     {
         internal static String InferJobName(object  o)
         {
@@ -404,7 +417,10 @@ namespace System.Windows.Xps.Serialization
 
                     ReachSerializer serializer = SerializationManager.GetSerializer(page);
 
-                    serializer?.SerializeObject(page);
+                    if (serializer != null)
+                    {
+                        serializer.SerializeObject(page);
+                    }
                 }
             }
 
@@ -600,12 +616,18 @@ namespace System.Windows.Xps.Serialization
                 if (fixedDoc != null)
                 {
                     ReachSerializer serializer = SerializationManager.GetSerializer(fixedDoc);
-                    serializer?.SerializeObject(fixedDoc);
+                    if (serializer != null)
+                    {
+                        serializer.SerializeObject(fixedDoc);
+                    }
                 }
                 else
                 {
                     ReachSerializer serializer = SerializationManager.GetSerializer(idp.DocumentPaginator);
-                    serializer?.SerializeObject(idp);
+                    if (serializer != null)
+                    {
+                        serializer.SerializeObject(idp);
+                    }
                 }
             }
         }

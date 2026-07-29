@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,10 +10,15 @@
 //
 
 
+using System.Diagnostics;
+using System.Windows.Threading;
+
+using System.Windows;
 using System.Windows.Media;
 using System.ComponentModel;
 using MS.Internal;
 using MS.Internal.PresentationFramework;
+using System;
 
 namespace System.Windows.Shapes
 {
@@ -481,18 +487,16 @@ namespace System.Windows.Shapes
 
                 // This pen is internal to the system and
                 // must not participate in freezable treeness
-                _pen = new Pen
-                {
-                    CanBeInheritanceContext = false,
+                _pen = new Pen();
+                _pen.CanBeInheritanceContext = false;
 
-                    Thickness = thickness,
-                    Brush = Stroke,
-                    StartLineCap = StrokeStartLineCap,
-                    EndLineCap = StrokeEndLineCap,
-                    DashCap = StrokeDashCap,
-                    LineJoin = StrokeLineJoin,
-                    MiterLimit = StrokeMiterLimit
-                };
+                _pen.Thickness = thickness;
+                _pen.Brush = Stroke;
+                _pen.StartLineCap = StrokeStartLineCap;
+                _pen.EndLineCap = StrokeEndLineCap;
+                _pen.DashCap = StrokeDashCap;
+                _pen.LineJoin = StrokeLineJoin;
+                _pen.MiterLimit = StrokeMiterLimit;
 
                 // StrokeDashArray is usually going to be its default value and GetValue
                 // on a mutable default has a per-instance cost associated with it so we'll

@@ -1,7 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.ComponentModel;
+using MS.Internal;
+using System.Windows;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace System.Windows
 {
@@ -22,11 +28,11 @@ namespace System.Windows
         protected override string GetLocalizedString(string value)
         {
             // Return a localized version of the custom category
-            if (string.Equals(value, "Content", StringComparison.Ordinal))
+            if (String.Compare(value, "Content", StringComparison.Ordinal) == 0)
                 return SR.DesignerMetadata_CustomCategory_Content;
-            else if (string.Equals(value, "Accessibility", StringComparison.Ordinal))
+            else if(String.Compare(value, "Accessibility", StringComparison.Ordinal) == 0)
                 return SR.DesignerMetadata_CustomCategory_Accessibility;
-            else // if (string.Equals(value, "Navigation", StringComparison.Ordinal))
+            else /*if(String.Compare(value, "Navigation", StringComparison.Ordinal) == 0)*/
                 return SR.DesignerMetadata_CustomCategory_Navigation;
         }
     }

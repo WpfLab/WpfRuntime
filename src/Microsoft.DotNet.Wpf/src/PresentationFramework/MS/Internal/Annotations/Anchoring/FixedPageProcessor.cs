@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -12,12 +13,19 @@
 //
 //
 
+using System;
+using System.Diagnostics;
+using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Xml;
 using System.Windows;
 using System.Windows.Annotations;
+using System.Windows.Annotations.Storage;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
+using System.Windows.Media;
+using MS.Utility;
 
 namespace MS.Internal.Annotations.Anchoring
 {
@@ -167,7 +175,7 @@ namespace MS.Internal.Annotations.Anchoring
             ArgumentNullException.ThrowIfNull(startNode);
 
             if (PageNumberElementName != locatorPart.PartType)
-                throw new ArgumentException(SR.Format(SR.IncorrectLocatorPartType, $"{locatorPart.PartType.Namespace}:{locatorPart.PartType.Name}"), nameof(locatorPart));
+                throw new ArgumentException(SR.Format(SR.IncorrectLocatorPartType, $"{locatorPart.PartType.Namespace}:{locatorPart.PartType.Name}"), "locatorPart");
 
             // Initial value
             continueResolving = true;
@@ -178,7 +186,7 @@ namespace MS.Internal.Annotations.Anchoring
             if (pageNumberString != null)
                 pageNumber = Int32.Parse(pageNumberString, NumberFormatInfo.InvariantInfo);
             else
-                throw new ArgumentException(SR.Format(SR.IncorrectLocatorPartType, $"{locatorPart.PartType.Namespace}:{locatorPart.PartType.Name}"), nameof(locatorPart));
+                throw new ArgumentException(SR.Format(SR.IncorrectLocatorPartType, $"{locatorPart.PartType.Namespace}:{locatorPart.PartType.Name}"), "locatorPart");
 
 
             // Get the actual FixedPage for the page number specified in the LocatorPart.  We need
@@ -313,7 +321,7 @@ namespace MS.Internal.Annotations.Anchoring
         ///     the passed in node; null is returned if the locator part cannot
         ///     be created for the node
         /// </returns>
-        internal static ContentLocatorPart CreateLocatorPart(int page)
+        static internal ContentLocatorPart CreateLocatorPart(int page)
         {
             Debug.Assert(page >= 0, "page can not be negative");
 

@@ -1,34 +1,40 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
+// Description: the CompositionManager class
+//
+//
+
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Security;
+using System.Text;
 using System.Windows.Threading;
-using System.ComponentModel;
-using Microsoft.Win32;
+using System.Windows;
+using System.Runtime.InteropServices;
+
 using MS.Win32;
+using Microsoft.Win32; // for RegistryKey class
+using MS.Internal ; 
+using MS.Internal.PresentationCore;                        // SecurityHelper
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
-    /// <summary>
-    /// Modes when entering characters via Alt+Numpad keys.
-    /// </summary>
+    //
+    // Modes of AltNumpad.
+    //
     internal enum AltNumpadConversionMode
     {
-        /// <summary>
-        /// ACP code page encoding: Alt+Numpad0+NumpadX
-        /// </summary>
-        DefaultCodePage,
-        /// <summary>
-        /// OEM code page encoding: Alt+NumpadX
-        /// </summary>
-        OEMCodePage,
-        /// <summary>
-        /// HEX value in ACP: Alt+NumpadDOT+NumpadX
-        /// </summary>
-        HexDefaultCodePage,
-        /// <summary>
-        /// HEX value in Unicode: Alt+NumpadPlus+NumpadX
-        /// </summary>
-        HexUnicode,
+        DefaultCodePage,         // ACP code page encoding. Alt+Numpad0+NumpadX
+        OEMCodePage,             // OEM code page encoding. Alt+NumpadX
+        HexDefaultCodePage,      // HEX value in ACP.       Alt+NumpadDOT+NumpadX
+        HexUnicode,              // HEX value in Unicode.   Alt+NumpadPlus+NumpadX
     }
 
     /// <summary>
@@ -54,7 +60,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be added</param>
         public static void AddPreviewTextInputStartHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.AddHandler(element, PreviewTextInputStartEvent, handler);
         }
@@ -66,7 +75,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be removed</param>
         public static void RemovePreviewTextInputStartHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.RemoveHandler(element, PreviewTextInputStartEvent, handler);
         }
@@ -83,7 +95,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be added</param>
         public static void AddTextInputStartHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.AddHandler(element, TextInputStartEvent, handler);
         }
@@ -95,7 +110,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be removed</param>
         public static void RemoveTextInputStartHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.RemoveHandler(element, TextInputStartEvent, handler);
         }
@@ -112,7 +130,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be added</param>
         public static void AddPreviewTextInputUpdateHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.AddHandler(element, PreviewTextInputUpdateEvent, handler);
         }
@@ -124,7 +145,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be removed</param>
         public static void RemovePreviewTextInputUpdateHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.RemoveHandler(element, PreviewTextInputUpdateEvent, handler);
         }
@@ -141,7 +165,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be added</param>
         public static void AddTextInputUpdateHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.AddHandler(element, TextInputUpdateEvent, handler);
         }
@@ -153,7 +180,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be removed</param>
         public static void RemoveTextInputUpdateHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.RemoveHandler(element, TextInputUpdateEvent, handler);
         }
@@ -170,7 +200,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be added</param>
         public static void AddPreviewTextInputHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.AddHandler(element, PreviewTextInputEvent, handler);
         }
@@ -182,7 +215,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be removed</param>
         public static void RemovePreviewTextInputHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.RemoveHandler(element, PreviewTextInputEvent, handler);
         }
@@ -199,7 +235,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be added</param>
         public static void AddTextInputHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.AddHandler(element, TextInputEvent, handler);
         }
@@ -211,7 +250,10 @@ namespace System.Windows.Input
         /// <param name="handler">Event Handler to be removed</param>
         public static void RemoveTextInputHandler(DependencyObject element, TextCompositionEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             UIElement.RemoveHandler(element, TextInputEvent, handler);
         }
@@ -307,7 +349,10 @@ namespace System.Windows.Input
 
         private static bool UnsafeStartComposition(TextComposition composition)
         {
-            ArgumentNullException.ThrowIfNull(composition);
+            if (composition == null)
+            {
+                throw new ArgumentNullException("composition");
+            }
 
             if (composition._InputManager == null)
             {
@@ -320,17 +365,18 @@ namespace System.Windows.Input
             }
 
             composition.Stage = TextCompositionStage.Started;
-            TextCompositionEventArgs textargs = new TextCompositionEventArgs(composition._InputDevice, composition)
-            {
-                RoutedEvent = TextCompositionManager.PreviewTextInputStartEvent,
-                Source = composition.Source
-            };
+            TextCompositionEventArgs textargs = new TextCompositionEventArgs(composition._InputDevice, composition);
+            textargs.RoutedEvent=TextCompositionManager.PreviewTextInputStartEvent;
+            textargs.Source= composition.Source;
             return composition._InputManager.ProcessInput(textargs);
         }
 
         private static bool UnsafeUpdateComposition(TextComposition composition)
         {
-            ArgumentNullException.ThrowIfNull(composition);
+            if (composition == null)
+            {
+                throw new ArgumentNullException("composition");
+            }
 
             if (composition._InputManager == null)
             {
@@ -347,17 +393,18 @@ namespace System.Windows.Input
                 throw new ArgumentException(SR.Format(SR.TextCompositionManager_TextCompositionHasDone, "composition"));
             }
 
-            TextCompositionEventArgs textargs = new TextCompositionEventArgs(composition._InputDevice, composition)
-            {
-                RoutedEvent = TextCompositionManager.PreviewTextInputUpdateEvent,
-                Source = composition.Source
-            };
+            TextCompositionEventArgs textargs = new TextCompositionEventArgs(composition._InputDevice, composition);
+            textargs.RoutedEvent=TextCompositionManager.PreviewTextInputUpdateEvent;
+            textargs.Source= composition.Source;
             return composition._InputManager.ProcessInput(textargs);
         }
 
         private static bool UnsafeCompleteComposition(TextComposition composition)
         {
-            ArgumentNullException.ThrowIfNull(composition);
+            if (composition == null)
+            {
+                throw new ArgumentNullException("composition");
+            }
 
             if (composition._InputManager == null)
             {
@@ -375,43 +422,39 @@ namespace System.Windows.Input
             }
 
             composition.Stage = TextCompositionStage.Done;
-            TextCompositionEventArgs textargs = new TextCompositionEventArgs(composition._InputDevice, composition)
-            {
-                RoutedEvent = TextCompositionManager.PreviewTextInputEvent,
-                Source = composition.Source
-            };
+            TextCompositionEventArgs textargs = new TextCompositionEventArgs(composition._InputDevice, composition);
+            textargs.RoutedEvent=TextCompositionManager.PreviewTextInputEvent;
+            textargs.Source= composition.Source;
             return composition._InputManager.ProcessInput(textargs);
         }
 
         private static string GetCurrentOEMCPEncoding(int code)
         {
-            int codePage = UnsafeNativeMethods.GetOEMCP();
-
-            return CharacterEncoding(codePage, code);
+            int cp =  UnsafeNativeMethods.GetOEMCP();
+            return CharacterEncoding(cp, code);
         }
 
-        /// <summary>
-        /// Convert <paramref name="code"/> to a string based on the <paramref name="codePage"/>.
-        /// </summary>
-        private static unsafe string CharacterEncoding(int codePage, int code)
+        // Convert code to the string based on the code page.
+        private static string CharacterEncoding(int cp, int code)
         {
-            ReadOnlySpan<byte> multiByte = ConvertCodeToByteArray(code, stackalloc byte[2]);
-            Span<char> outputChars = stackalloc char[EncodingBufferLen]; // 4
-         
-            int charsWritten;
-            // Since we do not use [LibraryImport], Span<T> marshallers are not available by default
-            fixed (byte* ptrMultiByte = multiByte)
-            fixed (char* ptrOutputChars = outputChars)
-            {                                                                    // Win32K uses MB_PRECOMPOSED | MB_USEGLYPHCHARS.
-                charsWritten = UnsafeNativeMethods.MultiByteToWideChar(codePage, UnsafeNativeMethods.MB_PRECOMPOSED | UnsafeNativeMethods.MB_USEGLYPHCHARS,
-                                                                       ptrMultiByte, multiByte.Length, ptrOutputChars, outputChars.Length);
+            Byte[] bytes = ConvertCodeToByteArray(code);
+            StringBuilder sbuilder = new StringBuilder(EncodingBufferLen);
+
+            // Win32K uses MB_PRECOMPOSED | MB_USEGLYPHCHARS.
+            int nret = UnsafeNativeMethods.MultiByteToWideChar(cp, 
+                                                   UnsafeNativeMethods.MB_PRECOMPOSED | UnsafeNativeMethods.MB_USEGLYPHCHARS,
+                                                   bytes, bytes.Length,
+                                                   sbuilder, EncodingBufferLen);
+
+            if (nret == 0)
+            {
+                int win32Err = Marshal.GetLastWin32Error(); 
+                throw new System.ComponentModel.Win32Exception(win32Err);
             }
 
-            if (charsWritten == 0)
-                throw new Win32Exception(); // Initializes with Marshal.GetLastPInvokeError()
-
-            // Set the length as MultiByteToWideChar returns
-            return new string(outputChars.Slice(0, charsWritten));
+            // set the length as MultiByteToWideChar returns.
+            sbuilder.Length = nret;
+            return sbuilder.ToString();
         }
 
         // PreProcessInput event handler
@@ -483,37 +526,40 @@ namespace System.Windows.Input
         private void PostProcessInput(object sender, ProcessInputEventArgs e)
         {
             // KeyUp
-            if (e.StagingItem.Input.RoutedEvent == Keyboard.KeyUpEvent)
+            if(e.StagingItem.Input.RoutedEvent == Keyboard.KeyUpEvent)
             {
-                KeyEventArgs keyArgs = (KeyEventArgs)e.StagingItem.Input;
-                if (!keyArgs.Handled)
+                KeyEventArgs keyArgs = (KeyEventArgs) e.StagingItem.Input;
+                if(!keyArgs.Handled)
                 {
-                    if (keyArgs.RealKey is Key.LeftAlt or Key.RightAlt)
+                    if(keyArgs.RealKey == Key.LeftAlt || keyArgs.RealKey == Key.RightAlt)
                     {
                         // Make sure both Alt keys are up.
                         ModifierKeys modifiers = keyArgs.KeyboardDevice.Modifiers;
-                        if ((modifiers & ModifierKeys.Alt) == 0)
+                        if((modifiers & ModifierKeys.Alt) == 0)
                         {
-                            if (_altNumpadEntryMode)
+                            if(_altNumpadEntryMode)
                             {
                                 _altNumpadEntryMode = false;
 
                                 // Generate the Unicode equivalent if we
                                 // actually entered a number via the numpad.
-                                if (_altNumpadEntry != 0)
+                                if(_altNumpadEntry != 0)
                                 {
                                     _altNumpadcomposition.ClearTexts();
-                                    if (_altNumpadConversionMode is AltNumpadConversionMode.OEMCodePage)
+                                    if (_altNumpadConversionMode == AltNumpadConversionMode.OEMCodePage)
                                     {
                                         _altNumpadcomposition.SetText(GetCurrentOEMCPEncoding(_altNumpadEntry));
                                     }
-                                    else if (_altNumpadConversionMode is AltNumpadConversionMode.DefaultCodePage or AltNumpadConversionMode.HexDefaultCodePage)
+                                    else if ((_altNumpadConversionMode == AltNumpadConversionMode.DefaultCodePage) ||
+                                             (_altNumpadConversionMode == AltNumpadConversionMode.HexDefaultCodePage))
                                     {
                                         _altNumpadcomposition.SetText(CharacterEncoding(InputLanguageManager.Current.CurrentInputLanguage.TextInfo.ANSICodePage, _altNumpadEntry));
                                     }
-                                    else if (_altNumpadConversionMode is AltNumpadConversionMode.HexUnicode)
+                                    else if (_altNumpadConversionMode == AltNumpadConversionMode.HexUnicode)
                                     {
-                                        _altNumpadcomposition.SetText(((char)_altNumpadEntry).ToString());
+                                        Char[] chars = new Char[1];
+                                        chars[0] = (Char) _altNumpadEntry;
+                                        _altNumpadcomposition.SetText(new string(chars));
                                     }
                                 }
                             }
@@ -535,11 +581,9 @@ namespace System.Windows.Input
                 TextCompositionEventArgs textArgs = (TextCompositionEventArgs) e.StagingItem.Input;
                 if(!textArgs.Handled)
                 {
-                    TextCompositionEventArgs text = new TextCompositionEventArgs(textArgs.Device, textArgs.TextComposition)
-                    {
-                        RoutedEvent = TextCompositionManager.TextInputStartEvent,
-                        Source = textArgs.TextComposition.Source
-                    };
+                    TextCompositionEventArgs text = new TextCompositionEventArgs(textArgs.Device, textArgs.TextComposition);
+                    text.RoutedEvent=TextCompositionManager.TextInputStartEvent;
+                    text.Source= textArgs.TextComposition.Source;
                     e.PushInput(text, e.StagingItem);
                 }
             }
@@ -550,11 +594,9 @@ namespace System.Windows.Input
                 TextCompositionEventArgs textArgs = (TextCompositionEventArgs) e.StagingItem.Input;
                 if(!textArgs.Handled)
                 {
-                    TextCompositionEventArgs text = new TextCompositionEventArgs(textArgs.Device, textArgs.TextComposition)
-                    {
-                        RoutedEvent = TextCompositionManager.TextInputUpdateEvent,
-                        Source = textArgs.TextComposition.Source
-                    };
+                    TextCompositionEventArgs text = new TextCompositionEventArgs(textArgs.Device, textArgs.TextComposition);
+                    text.RoutedEvent=TextCompositionManager.TextInputUpdateEvent;
+                    text.Source= textArgs.TextComposition.Source;
                     e.PushInput(text, e.StagingItem);
                 }
             }
@@ -565,11 +607,9 @@ namespace System.Windows.Input
                 TextCompositionEventArgs textArgs = (TextCompositionEventArgs) e.StagingItem.Input;
                 if(!textArgs.Handled)
                 {
-                    TextCompositionEventArgs text = new TextCompositionEventArgs(textArgs.Device, textArgs.TextComposition)
-                    {
-                        RoutedEvent = TextCompositionManager.TextInputEvent,
-                        Source = textArgs.TextComposition.Source
-                    };
+                    TextCompositionEventArgs text = new TextCompositionEventArgs(textArgs.Device, textArgs.TextComposition);
+                    text.RoutedEvent=TextCompositionManager.TextInputEvent;
+                    text.Source= textArgs.TextComposition.Source;
                     e.PushInput(text, e.StagingItem);
                 }
             }
@@ -849,25 +889,22 @@ namespace System.Windows.Input
             return NumpadScanCode.DigitFromScanCode(scanCode);
         }
 
-        /// <summary>
-        /// Convert the code to byte array for DBCS/SBCS.
-        /// </summary>
-        private static ReadOnlySpan<byte> ConvertCodeToByteArray(int codeEntry, Span<byte> destination)
+        // Convert the code to byte array for DBCS/SBCS.
+        private static Byte[] ConvertCodeToByteArray(int codeEntry)
         {
-            Debug.Assert(destination.Length == 2, "Invalid buffer length");
-
-            if (codeEntry > 0xFF)
+            Byte[] bytes;
+            if (codeEntry > 0xff)
             {
-                destination[0] = (byte)(codeEntry >> 8);
-                destination[1] = (byte)codeEntry;
+                bytes = new Byte[2];
+                bytes[0] = (Byte)(codeEntry >> 8);
+                bytes[1] = (Byte)codeEntry;
             }
             else
             {
-                destination = destination.Slice(0, 1);
-                destination[0] = (byte)codeEntry;
+                bytes = new Byte[1];
+                bytes[0] = (Byte)codeEntry;
             }
-
-            return destination;
+            return bytes;
         }
 
         // clear the altnumpad composition object and reset entry.
@@ -888,7 +925,13 @@ namespace System.Windows.Input
         // Return true if we're in hex conversion mode.
         private bool HexConversionMode
         {
-            get => _altNumpadConversionMode is AltNumpadConversionMode.HexDefaultCodePage or AltNumpadConversionMode.HexUnicode;
+            get 
+            {
+                if ((_altNumpadConversionMode == AltNumpadConversionMode.HexDefaultCodePage) ||
+                    (_altNumpadConversionMode == AltNumpadConversionMode.HexUnicode))
+                    return true;
+                return false;
+            }
         }
 
         /// <summary>
@@ -900,11 +943,15 @@ namespace System.Windows.Input
             {
                 if (!_isHexNumpadRegistryChecked)
                 {
-                    RegistryKey key = Registry.CurrentUser.OpenSubKey("Control Panel\\Input Method");
+                    object obj;
+                    RegistryKey key;
+
+                    key = Registry.CurrentUser.OpenSubKey("Control Panel\\Input Method");
                     if (key != null)
                     {
-                        object obj = key.GetValue("EnableHexNumpad");
-                        if (obj is string value && value != "0")
+                        obj = key.GetValue("EnableHexNumpad");
+
+                        if ((obj is string) && ((string)obj != "0"))
                         {
                             _isHexNumpadEnabled = true;
                         }
@@ -912,7 +959,6 @@ namespace System.Windows.Input
 
                     _isHexNumpadRegistryChecked = true;
                 }
-
                 return _isHexNumpadEnabled;
             }
         }
@@ -955,21 +1001,23 @@ namespace System.Windows.Input
         // ScanCode of Numpad keys.
         internal static class NumpadScanCode
         {
-            internal static int DigitFromScanCode(int scanCode) => scanCode switch
+            internal static int DigitFromScanCode(int scanCode)
             {
-                Numpad0 => 0,
-                Numpad1 => 1,
-                Numpad2 => 2,
-                Numpad3 => 3,
-                Numpad4 => 4,
-                Numpad5 => 5,
-                Numpad6 => 6,
-                Numpad7 => 7,
-                Numpad8 => 8,
-                Numpad9 => 9,
-                _ => -1,
-            };
-
+                switch (scanCode)
+                {
+                    case Numpad0: return 0;
+                    case Numpad1: return 1;
+                    case Numpad2: return 2;
+                    case Numpad3: return 3;
+                    case Numpad4: return 4;
+                    case Numpad5: return 5;
+                    case Numpad6: return 6;
+                    case Numpad7: return 7;
+                    case Numpad8: return 8;
+                    case Numpad9: return 9;
+                }
+                return -1;
+            }
             internal const int NumpadDot      =  0x53;
             internal const int NumpadPlus     =  0x4e;
             internal const int Numpad0        =  0x52;

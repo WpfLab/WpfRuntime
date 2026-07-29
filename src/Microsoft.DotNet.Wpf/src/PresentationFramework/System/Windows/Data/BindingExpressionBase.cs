@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Defines BindingExpressionBase object,
@@ -13,15 +14,23 @@
 // BindingExpression.GetReference correctly
 //#define USE_ITEM_REFERENCE
 
+using System;
+using System.Collections.Generic;   // List<T>
 using System.Collections.ObjectModel;   // Collection<T>
 using System.ComponentModel;        // TypeConverter
+using System.Diagnostics;           // StackTrace
 using System.Globalization;         // CultureInfo
 using System.Threading;             // Thread
+
+using System.Windows;               // FrameworkElement
 using System.Windows.Controls;      // Validation
 using System.Windows.Markup;        // XmlLanguage
 using System.Windows.Threading;     // Dispatcher
 using MS.Internal;                  // Invariant.Assert
+using MS.Internal.Controls;         // ValidationErrorCollection
 using MS.Internal.Data;             // DataBindEngine
+using MS.Internal.KnownBoxes;       // BooleanBoxes
+using MS.Internal.Utility;          // TraceLog
 
 namespace System.Windows.Data
 {
@@ -1037,7 +1046,7 @@ namespace System.Windows.Data
             }
         }
 
-        private object RestoreUpdateTriggerOperation(object arg)
+        object RestoreUpdateTriggerOperation(object arg)
         {
             DependencyObject target = TargetElement;
             if (!IsDetached && target != null)
@@ -1241,9 +1250,9 @@ namespace System.Windows.Data
             internal object RawValue { get { return _rawValue; } }
             internal object ConvertedValue { get { return _convertedValue; } }
 
-            private BindingExpression   _bindingExpression;
-            private object              _rawValue;
-            private object              _convertedValue;
+            BindingExpression   _bindingExpression;
+            object              _rawValue;
+            object              _convertedValue;
         }
 
         /// <summary>
@@ -1313,7 +1322,8 @@ namespace System.Windows.Data
                 // When the target is a TextBox with a composition in effect,
                 // do this asynchronously, to avoid confusing the composition's Undo stack
                 System.Windows.Controls.Primitives.TextBoxBase tbb = Target as System.Windows.Controls.Primitives.TextBoxBase;
-                MS.Internal.Documents.UndoManager undoManager = tbb?.TextContainer.UndoManager;
+                MS.Internal.Documents.UndoManager undoManager = (tbb == null) ? null :
+                    tbb.TextContainer.UndoManager;
                 if (undoManager != null &&
                     undoManager.OpenedUnit != null &&
                     undoManager.OpenedUnit.GetType() != typeof(System.Windows.Documents.TextParentUndoUnit))
@@ -1335,7 +1345,7 @@ namespace System.Windows.Data
             ChangeFlag(PrivateFlags.iInUpdate | PrivateFlags.iNeedsUpdate, false);
         }
 
-        private object UpdateTargetCallback(object unused)
+        object UpdateTargetCallback(object unused)
         {
             ClearValue(Feature.UpdateTargetOperation);
             IsInUpdate = true;      // pretend to be in an update - as when this callback was posted
@@ -1493,12 +1503,12 @@ namespace System.Windows.Data
             }
         }
 
-        private void OnTimerTick(object sender, EventArgs e)
+        void OnTimerTick(object sender, EventArgs e)
         {
             ProcessDirty();
         }
 
-        private void OnPreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        void OnPreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
         {
             // if the IME composition we're waiting for completes, update the source.
             if (IsUpdateDeferredForComposition && e.TextComposition.Source == TargetElement && e.TextComposition.Stage == System.Windows.Input.TextCompositionStage.Done)
@@ -1844,7 +1854,7 @@ namespace System.Windows.Data
         }
 
         // mark a binding as non-grouped, so that we avoid doing the discovery again
-        private void MarkAsNonGrouped()
+        void MarkAsNonGrouped()
         {
             // Leaf bindings only get asked once, so there's no need to add a mark
             if (!(this is BindingExpression))
@@ -1992,7 +2002,7 @@ namespace System.Windows.Data
 
         internal Dispatcher Dispatcher
         {
-            get { return _engine?.Dispatcher; }
+            get { return (_engine != null) ? _engine.Dispatcher : null; }
         }
 
         internal object Value
@@ -2045,7 +2055,10 @@ namespace System.Windows.Data
         internal void Attach(DependencyObject target, DependencyProperty dp)
         {
             // make sure we're on the right thread to access the target
-            target?.VerifyAccess();
+            if (target != null)
+            {
+                target.VerifyAccess();
+            }
 
             IsAttaching = true;
             AttachOverride(target, dp);
@@ -2167,7 +2180,7 @@ namespace System.Windows.Data
             return result;
         }
 
-        private static object ConvertValue(object value, DependencyProperty dp, out Exception e)
+        static object ConvertValue(object value, DependencyProperty dp, out Exception e)
         {
             object result;
             e = null;
@@ -2184,6 +2197,14 @@ namespace System.Windows.Data
                 TypeConverter converter = DefaultValueConverter.GetConverter(dp.PropertyType);
                 if (converter != null && converter.CanConvertFrom(value.GetType()))
                 {
+                    // PreSharp uses message numbers that the C# compiler doesn't know about.
+                    // Disable the C# complaints, per the PreSharp documentation.
+                    #pragma warning disable 1634, 1691
+
+                    // PreSharp complains about catching NullReference (and other) exceptions.
+                    // It doesn't recognize that IsCriticalException() handles these correctly.
+                    #pragma warning disable 56500
+
                     try
                     {
                         result = converter.ConvertFrom(null, CultureInfo.InvariantCulture, value);
@@ -2201,6 +2222,9 @@ namespace System.Windows.Data
                     catch // non CLS compliant exception
                     {
                     }
+
+                    #pragma warning restore 56500
+                    #pragma warning restore 1634, 1691
                 }
 
                 if (!success)
@@ -2370,7 +2394,10 @@ namespace System.Windows.Data
             if (!skipBindingGroup)
             {
                 BindingGroup bindingGroup = BindingGroup;
-                bindingGroup?.AddValidationError(validationError);
+                if (bindingGroup != null)
+                {
+                    bindingGroup.AddValidationError(validationError);
+                }
             }
         }
 
@@ -2383,7 +2410,10 @@ namespace System.Windows.Data
             if (!skipBindingGroup)
             {
                 BindingGroup bindingGroup = BindingGroup;
-                bindingGroup?.RemoveValidationError(validationError);
+                if (bindingGroup != null)
+                {
+                    bindingGroup.RemoveValidationError(validationError);
+                }
             }
         }
 
@@ -2445,7 +2475,8 @@ namespace System.Windows.Data
             {
                 BindingExpressionBase bindExpr = bindingExpressions[i];
                 WeakDependencySource[] sources = (i==index) ? newSources :
-                                            bindExpr?.WeakSources;
+                                            (bindExpr != null) ? bindExpr.WeakSources :
+                                            null;
                 int m = (sources == null) ? 0 : sources.Length;
                 for (int j = 0; j < m; ++j)
                 {
@@ -2690,7 +2721,7 @@ namespace System.Windows.Data
             SetValue(Feature.EffectiveTargetNullValue, targetNullValue, DependencyProperty.UnsetValue);
         }
 
-        private void DetermineEffectiveUpdateBehavior()
+        void DetermineEffectiveUpdateBehavior()
         {
             // only need to honor update behavior when the binding does updates,
             // and isn't governed by a multibinding (which drives the updates)
@@ -2855,7 +2886,7 @@ namespace System.Windows.Data
 
         // change WeakDependencySources to (strong) DependencySources, and notify
         // the property engine about the new sources
-        private void ChangeSources(DependencyObject target, DependencyProperty dp, WeakDependencySource[] newSources)
+        void ChangeSources(DependencyObject target, DependencyProperty dp, WeakDependencySource[] newSources)
         {
             DependencySource[] sources;
 
@@ -2906,15 +2937,16 @@ namespace System.Windows.Data
         //
         //------------------------------------------------------
 
-        private BindingBase         _binding;
-        private WeakReference       _targetElement;
-        private DependencyProperty  _targetProperty;
-        private DataBindEngine      _engine;
-        private PrivateFlags        _flags;
-        private object              _value = DefaultValueObject;
-        private BindingStatusInternal _status;
-        private WeakDependencySource[]  _sources;
-        private object                  _culture = DefaultValueObject;
+        BindingBase         _binding;
+        WeakReference       _targetElement;
+        DependencyProperty  _targetProperty;
+        DataBindEngine      _engine;
+        PrivateFlags        _flags;
+        object              _value = DefaultValueObject;
+        BindingStatusInternal _status;
+        WeakDependencySource[]  _sources;
+
+        object                  _culture = DefaultValueObject;
 
         /// <summary> Sentinel meaning "field has its default value" </summary>
         internal static readonly object DefaultValueObject = new NamedObject("DefaultValue");
@@ -2924,7 +2956,7 @@ namespace System.Windows.Data
         internal static readonly object DisconnectedItem = new NamedObject("DisconnectedItem");
 
         // sentinel value meaning "no binding group"
-        private static readonly WeakReference<BindingGroup> NullBindingGroupReference = new WeakReference<BindingGroup>(null);
+        static readonly WeakReference<BindingGroup> NullBindingGroupReference = new WeakReference<BindingGroup>(null);
 
         #region Uncommon Values
 
@@ -2961,8 +2993,7 @@ namespace System.Windows.Data
         internal void      SetValue(Feature id, object value) { _values.SetValue((int)id, value); }
         internal void      SetValue(Feature id, object value, object defaultValue) { if (Object.Equals(value, defaultValue)) _values.ClearValue((int)id); else _values.SetValue((int)id, value); }
         internal void      ClearValue(Feature id) { _values.ClearValue((int)id); }
-
-        private UncommonValueTable  _values;
+        UncommonValueTable  _values;
 
         #endregion Uncommon Values
     }

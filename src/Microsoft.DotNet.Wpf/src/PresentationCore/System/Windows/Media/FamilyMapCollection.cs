@@ -1,8 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using SC = System.Collections;
+//
+//
+//
+//  Contents:  FontFamilyMapCollection
+//
+//
+
+using System;
+using System.Globalization;
+using SC=System.Collections;
+using System.Collections.Generic;
 using MS.Internal.FontFace;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
@@ -71,7 +84,8 @@ namespace System.Windows.Media
         /// </summary>
         public void CopyTo(FontFamilyMap[] array, int index)
         {
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+                throw new ArgumentNullException("array");
 
             if (index >= array.Length)
                 throw new ArgumentException(SR.Format(SR.Collection_CopyTo_IndexGreaterThanOrEqualToArrayLength, "index", "array"));
@@ -85,7 +99,8 @@ namespace System.Windows.Media
 
         void SC.ICollection.CopyTo(Array array, int index)
         {
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+                throw new ArgumentNullException("array");
 
             if (array.Rank != 1)
                 throw new ArgumentException(SR.Collection_CopyTo_ArrayCannotBeMultidimensional);
@@ -243,7 +258,8 @@ namespace System.Windows.Media
 
         private int InsertItem(int index, FontFamilyMap item)
         {
-            ArgumentNullException.ThrowIfNull(item);
+            if (item == null)
+                throw new ArgumentNullException("item");
 
             VerifyChangeable();
 
@@ -255,8 +271,8 @@ namespace System.Windows.Media
                 throw new InvalidOperationException(SR.CompositeFont_TooManyFamilyMaps);
 
             // Validate the index.
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, Count);
+            if (index < 0 || index > Count)
+                throw new ArgumentOutOfRangeException("index");
 
             // PrepareToAddFamilyMap validates the familyName and updates the internal state
             // of the CompositeFontInfo object.
@@ -291,7 +307,8 @@ namespace System.Windows.Media
 
         private void SetItem(int index, FontFamilyMap item)
         {
-            ArgumentNullException.ThrowIfNull(item);
+            if (item == null)
+                throw new ArgumentNullException("item");
 
             VerifyChangeable();
             RangeCheck(index);
@@ -348,8 +365,8 @@ namespace System.Windows.Media
 
         private void RangeCheck(int index)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _count);
+            if (index < 0 || index >= _count)
+                throw new ArgumentOutOfRangeException("index");
         }
 
         private void VerifyChangeable()
@@ -360,7 +377,8 @@ namespace System.Windows.Media
 
         private FontFamilyMap ConvertValue(object obj)
         {
-            ArgumentNullException.ThrowIfNull(obj);
+            if (obj == null)
+                throw new ArgumentNullException("obj");
 
             FontFamilyMap familyMap = obj as FontFamilyMap;
             if (familyMap == null)
@@ -371,10 +389,10 @@ namespace System.Windows.Media
 
         private class Enumerator : IEnumerator<FontFamilyMap>, SC.IEnumerator
         {
-            private FontFamilyMap[] _items;
-            private int _count;
-            private int _index;
-            private FontFamilyMap _current;
+            FontFamilyMap[] _items;
+            int _count;
+            int _index;
+            FontFamilyMap _current;
 
             internal Enumerator(FontFamilyMap[] items, int count)
             {

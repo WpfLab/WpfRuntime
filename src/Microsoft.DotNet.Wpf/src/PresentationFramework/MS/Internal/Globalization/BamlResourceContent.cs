@@ -1,14 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // 
 // Description: Utility that handles parsing Baml Resource Content
 // 
 
+using System;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Runtime.InteropServices;
-using System.Buffers;
+using System.Collections;
+using System.Diagnostics;
+using System.Collections.Generic;
+
+using System.Windows;
 
 namespace MS.Internal.Globalization
 {
@@ -22,10 +27,9 @@ namespace MS.Internal.Globalization
         /// </summary>
         internal static string EscapeString(string content)
         {
-            if (content is null)
-                return null;
+            if (content == null) return null;
 
-            StringBuilder builder = new(content.Length * 2);
+            StringBuilder builder = new StringBuilder();
             for (int i = 0; i < content.Length; i++)
             {
                 switch (content[i])
@@ -75,104 +79,51 @@ namespace MS.Internal.Globalization
         }
 
         /// <summary>
-        /// Holds all escape tokens used for initial string-search loop to find out whether we need to unescape the string.
-        /// </summary>
-        private static readonly SearchValues<string> s_escapeTokens = SearchValues.Create(["\\", "&quot;", "&apos;", "&amp;", "&lt;", "&gt;"], StringComparison.Ordinal);
-
-        /// <summary>
         /// Unescape a string. Note:
         /// Backslash following any character will become that character.
         /// Backslash by itself will be skipped.
         /// </summary>
-        /// <remarks>Prefer <see cref="UnescapeString(ReadOnlySpan{char})"/> overload when possible.</remarks>
-        internal static string UnescapeString(string content) => UnescapeString(content.AsSpan(), false) ?? content;
-
-        /// <summary>
-        /// Unescape a string. Note:
-        /// Backslash following any character will become that character.
-        /// Backslash by itself will be skipped.
-        /// </summary>
-        internal static string UnescapeString(ReadOnlySpan<char> contentSpan, bool returnNewInstance = true)
+        internal static string UnescapeString(string content)
         {
-            // Check whether there's anything to unescape
-            int firstEscapeToken = contentSpan.IndexOfAny(s_escapeTokens);
-            if (firstEscapeToken == -1)
-                return returnNewInstance ? new string(contentSpan) : null;
+            return UnescapePattern.Replace(
+                content,
+                UnescapeMatchEvaluator
+                );
+        }
 
-            // Allocate buffer and append the chunk without tokens (unescaped)
-            StringBuilder stringBuilder = new(contentSpan.Length);
-            stringBuilder.Append(contentSpan.Slice(0, firstEscapeToken));
+        // Regular expression
+        // need to use 4 backslash here because it is escaped by compiler and regular expressions
+        private static Regex UnescapePattern = new Regex("(\\\\.?|&lt;|&gt;|&quot;|&apos;|&amp;)", RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-            for (int i = firstEscapeToken; i < contentSpan.Length; i++)
+        // delegates to escape and unesacpe a matched pattern
+        private static MatchEvaluator UnescapeMatchEvaluator = new MatchEvaluator(UnescapeMatch);
+
+        /// <summary>
+        /// the delegate to Unescape the matched pattern
+        /// </summary>
+        private static string UnescapeMatch(Match match)
+        {
+            switch (match.Value)
             {
-                if (contentSpan[i] == BamlConst.EscapeChar) // An escape token ('\')
-                {
-                    if (contentSpan.Length > i + 1) // Check whether we're at the end
+                case "&lt;": return "<";
+                case "&gt;": return ">";
+                case "&amp;": return "&";
+                case "&apos;": return "'";
+                case "&quot;": return "\"";
+                default:
                     {
-                        i++;
-                        stringBuilder.Append(contentSpan[i]);
+                        // this is a '\' followed by 0 or 1 character                    
+                        Debug.Assert(match.Value.Length > 0 && match.Value[0] == BamlConst.EscapeChar);
+                        if (match.Value.Length == 2)
+                        {
+                            return match.Value[1].ToString();
+                        }
+                        else
+                        {
+                            return string.Empty;
+                        }
                     }
-                    else // We are, break out of the loop
-                        break;
-                }
-                else if (contentSpan[i] == '&') // A known escape sequence shall follow
-                {
-                    EvaulateEscapeSequence(stringBuilder, contentSpan, ref i);
-                }
-                else // Nothing interesting, append character
-                    stringBuilder.Append(contentSpan[i]);
             }
-
-            // Evaluates whether any of the known escape sequences follows '&' (&quot; - &apos; - &amp; - &lt; - &gt;)
-            static void EvaulateEscapeSequence(StringBuilder stringBuilder, ReadOnlySpan<char> contentSpan, ref int i)
-            {
-                contentSpan = contentSpan.Slice(i);
-
-                if (contentSpan.Length > 5 && contentSpan[5] == ';')
-                {
-                    if (contentSpan.Slice(0, 6).SequenceEqual("&quot;"))
-                    {
-                        stringBuilder.Append('"');
-                        i += 5;
-                        return;
-                    }
-                    else if (contentSpan.Slice(0, 6).SequenceEqual("&apos;"))
-                    {
-                        stringBuilder.Append('\'');
-                        i += 5;
-                        return;
-                    }
-                }
-                else if (contentSpan.Length > 4 && contentSpan[4] == ';')
-                {
-                    if (contentSpan.Slice(0, 5).SequenceEqual("&amp;"))
-                    {
-                        stringBuilder.Append('&');
-                        i += 4;
-                        return;
-                    }
-                }
-                else if (contentSpan.Length > 3 && contentSpan[3] == ';')
-                {
-                    if (contentSpan.Slice(0, 4).SequenceEqual("&lt;"))
-                    {
-                        stringBuilder.Append('<');
-                        i += 3;
-                        return;
-                    }
-                    else if (contentSpan.Slice(0, 4).SequenceEqual("&gt;"))
-                    {
-                        stringBuilder.Append('>');
-                        i += 3;
-                        return;
-                    }
-                }
-
-                // Default case, no escaped sequence found
-                stringBuilder.Append('&');
-            }
-
-            return stringBuilder.ToString();
         }
 
         /// <summary>
@@ -180,15 +131,12 @@ namespace MS.Internal.Globalization
         /// Element placeholders start with '#' and end with ';'. 
         /// In case of error, a null array is returned. 
         /// </summary>
-        internal static ReadOnlySpan<BamlStringToken> ParseChildPlaceholder(string input)
+        internal static BamlStringToken[] ParseChildPlaceholder(string input)
         {
-            if (input is null)
-                return ReadOnlySpan<BamlStringToken>.Empty;
+            if (input == null) return null;
 
-            List<BamlStringToken> tokens = new(8);
-            int tokenStart = 0;
-            bool inPlaceHolder = false;
-
+            List<BamlStringToken> tokens = new List<BamlStringToken>(8);
+            int tokenStart = 0; bool inPlaceHolder = false;
             for (int i = 0; i < input.Length; i++)
             {
                 if (input[i] == BamlConst.ChildStart)
@@ -198,7 +146,7 @@ namespace MS.Internal.Globalization
                         if (inPlaceHolder)
                         {
                             // All # needs to be escaped in a child place holder
-                            return ReadOnlySpan<BamlStringToken>.Empty; // error
+                            return null; // error
                         }
 
                         inPlaceHolder = true;
@@ -207,7 +155,7 @@ namespace MS.Internal.Globalization
                             tokens.Add(
                                 new BamlStringToken(
                                     BamlStringToken.TokenType.Text,
-                                    UnescapeString(input.AsSpan(tokenStart, i - tokenStart))
+                                    UnescapeString(input.Substring(tokenStart, i - tokenStart))
                                     )
                                 );
                             tokenStart = i;
@@ -224,7 +172,7 @@ namespace MS.Internal.Globalization
                         tokens.Add(
                             new BamlStringToken(
                                 BamlStringToken.TokenType.ChildPlaceHolder,
-                                UnescapeString(input.AsSpan(tokenStart + 1, i - tokenStart - 1))
+                                UnescapeString(input.Substring(tokenStart + 1, i - tokenStart - 1))
                             )
                         );
 
@@ -238,7 +186,7 @@ namespace MS.Internal.Globalization
             if (inPlaceHolder)
             {
                 // at the end of the string, all child placeholder must be closed
-                return ReadOnlySpan<BamlStringToken>.Empty; // error
+                return null; // error
             }
 
             if (tokenStart < input.Length)
@@ -246,17 +194,17 @@ namespace MS.Internal.Globalization
                 tokens.Add(
                     new BamlStringToken(
                         BamlStringToken.TokenType.Text,
-                        UnescapeString(input.AsSpan(tokenStart))
+                        UnescapeString(input.Substring(tokenStart))
                         )
                     );
             }
 
-            return CollectionsMarshal.AsSpan(tokens);
+            return tokens.ToArray();
         }
     }
 
 
-    internal readonly struct BamlStringToken
+    internal struct BamlStringToken
     {
         internal readonly TokenType Type;
         internal readonly string Value;

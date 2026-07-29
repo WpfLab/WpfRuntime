@@ -1,5 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using MS.Utility;
+using System;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Input;
+using System.Collections.Generic;
+using System.Windows.Ink;
+using MS.Internal.Ink.InkSerializedFormat;
+using System.Diagnostics;
+
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.Ink.InkSerializedFormat
 {
@@ -130,7 +146,10 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <returns>number of bits encoded, 0 for failure</returns>
         internal byte Encode(int data, int extra, BitStreamWriter writer)
         {
-            ArgumentNullException.ThrowIfNull(writer);
+            if (writer == null)
+            {
+                throw new ArgumentNullException("writer");
+            }
             if (data == 0)
             {
                 writer.Write((byte)0, 1); //more efficent

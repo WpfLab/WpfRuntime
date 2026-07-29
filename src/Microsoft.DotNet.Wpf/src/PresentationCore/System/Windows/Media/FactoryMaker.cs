@@ -1,11 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Security;
+using System.Diagnostics;
 using MS.Internal;
-using UnsafeNativeMethods = MS.Win32.PresentationCore.UnsafeNativeMethods;
+using MS.Win32;
+using System.Windows.Media.Composition;
+
+using SR=MS.Internal.PresentationCore.SR;
+using UnsafeNativeMethods=MS.Win32.PresentationCore.UnsafeNativeMethods;
 
 namespace System.Windows.Media
 {
@@ -54,7 +62,7 @@ namespace System.Windows.Media
         {
                 if (!_disposed)
                 {
-                    if (_fValidObject)
+                    if (_fValidObject == true)
                     {
                         lock (s_factoryMakerLock)
                         {

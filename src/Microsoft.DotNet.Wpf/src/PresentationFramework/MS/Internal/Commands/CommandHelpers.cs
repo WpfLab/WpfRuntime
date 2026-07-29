@@ -1,9 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Security;
 
 namespace MS.Internal.Commands
 {
@@ -14,7 +20,7 @@ namespace MS.Internal.Commands
 
         internal static void RegisterCommandHandler(Type controlType, RoutedCommand command, ExecutedRoutedEventHandler executedRoutedEventHandler)
         {
-            PrivateRegisterCommandHandler(controlType, command, executedRoutedEventHandler, null);
+            PrivateRegisterCommandHandler(controlType, command, executedRoutedEventHandler, null, null);
         }
 
         internal static void RegisterCommandHandler(Type controlType, RoutedCommand command, ExecutedRoutedEventHandler executedRoutedEventHandler,
@@ -38,7 +44,7 @@ namespace MS.Internal.Commands
         internal static void RegisterCommandHandler(Type controlType, RoutedCommand command, ExecutedRoutedEventHandler executedRoutedEventHandler,
                                                     CanExecuteRoutedEventHandler canExecuteRoutedEventHandler)
         {
-            PrivateRegisterCommandHandler(controlType, command, executedRoutedEventHandler, canExecuteRoutedEventHandler);
+            PrivateRegisterCommandHandler(controlType, command, executedRoutedEventHandler, canExecuteRoutedEventHandler, null);
         }
 
         internal static void RegisterCommandHandler(Type controlType, RoutedCommand command, ExecutedRoutedEventHandler executedRoutedEventHandler,
@@ -89,7 +95,7 @@ namespace MS.Internal.Commands
 
         // 'params' based method is private.  Call sites that use this bloat unwittingly due to implicit construction of the params array that goes into IL.
         private static void PrivateRegisterCommandHandler(Type controlType, RoutedCommand command, ExecutedRoutedEventHandler executedRoutedEventHandler,
-                                                          CanExecuteRoutedEventHandler canExecuteRoutedEventHandler, params ReadOnlySpan<InputGesture> inputGestures)
+                                                          CanExecuteRoutedEventHandler canExecuteRoutedEventHandler, params InputGesture[] inputGestures)
         {
             // Validate parameters
             Debug.Assert(controlType != null);
@@ -101,9 +107,12 @@ namespace MS.Internal.Commands
             CommandManager.RegisterClassCommandBinding(controlType, new CommandBinding(command, executedRoutedEventHandler, canExecuteRoutedEventHandler));
 
             // Create additional input binding for this command
-            for (int i = 0; i < inputGestures.Length; i++)
+            if (inputGestures != null)
             {
-                CommandManager.RegisterClassInputBinding(controlType, new InputBinding(command, inputGestures[i]));
+                for (int i = 0; i < inputGestures.Length; i++)
+                {
+                    CommandManager.RegisterClassInputBinding(controlType, new InputBinding(command, inputGestures[i]));
+                }
             }
         }
 

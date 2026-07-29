@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,9 +12,14 @@
 //     choose not to for our purposes.
 //
 
+using System;
+using System.Diagnostics;
 using System.Reflection;
+using System.Windows.Annotations.Storage;
 using System.Xml;
+using System.Xml.Schema;
 using System.Xml.Serialization;
+using MS.Internal;
 
 namespace MS.Internal.Annotations
 {

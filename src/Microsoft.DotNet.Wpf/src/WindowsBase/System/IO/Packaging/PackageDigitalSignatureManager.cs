@@ -1,14 +1,33 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
-//  This class provides api's to add/remove/verify signatures on an MMCF container.
+//  This class provides api's to add/remove/verify signatures on an MMCF container. 
+//
+//
+//
+//
 
+// Allow use of presharp warning numbers [6506] unknown to the compiler
+#pragma warning disable 1634, 1691
+
+using System;
+using System.Collections.Generic;
+using System.Windows;                                   // For Exception strings - SR
+using System.Text;                                      // for StringBuilder
+using System.Diagnostics;                               // for Assert
+using System.Security;                                  // for SecurityCritical tag
 using System.Security.Cryptography.Xml;                 // for SignedXml
 using System.Security.Cryptography.X509Certificates;    // for X509Certificate
 using MS.Internal.IO.Packaging;                         // for internal helpers
 using System.Collections.ObjectModel;                   // for ReadOnlyCollection<>
 using MS.Internal;                                      // for ContentType
+using MS.Internal.WindowsBase;
+
+using Package = System.IO.Packaging.Package;
 using MS.Internal.IO.Packaging.Extensions;
 
 namespace System.IO.Packaging
@@ -81,10 +100,11 @@ namespace System.IO.Packaging
             VerifyResult result)
         {
             // verify arguments
-            ArgumentNullException.ThrowIfNull(signature);
+            if (signature == null)
+                throw new ArgumentNullException("signature");
 
             if (result < VerifyResult.Success || result > VerifyResult.NotSigned)
-                throw new System.ArgumentOutOfRangeException(nameof(result));
+                throw new System.ArgumentOutOfRangeException("result");
 
             _signature = signature;
             _result = result;
@@ -198,10 +218,11 @@ namespace System.IO.Packaging
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 if (value.Length == 0)
-                    throw new ArgumentException(SR.UnsupportedHashAlgorithm, nameof(value));
+                    throw new ArgumentException(SR.UnsupportedHashAlgorithm, "value");
 
                 _hashAlgorithmString = value;
             }
@@ -220,7 +241,7 @@ namespace System.IO.Packaging
             set
             {
                 if ((value < CertificateEmbeddingOption.InCertificatePart) || (value > CertificateEmbeddingOption.NotEmbedded))
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
 
                 _certificateEmbeddingOption = value;
             }
@@ -252,7 +273,8 @@ namespace System.IO.Packaging
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 if (XmlSignatureProperties.LegalFormat(value))
                     _signatureTimeFormat = value;
@@ -287,7 +309,7 @@ namespace System.IO.Packaging
         /// Type of default signature origin relationship
         /// </summary>
         /// <value></value>
-        public static String SignatureOriginRelationshipType
+        static public String SignatureOriginRelationshipType
         {
             get
             {
@@ -299,7 +321,7 @@ namespace System.IO.Packaging
         /// Default hash algorithm
         /// </summary>
         /// <value></value>
-        public static String DefaultHashAlgorithm
+        static public String DefaultHashAlgorithm
         {
             get
             {
@@ -321,7 +343,8 @@ namespace System.IO.Packaging
         /// <exception cref="ArgumentNullException">package is null</exception>
         public PackageDigitalSignatureManager(Package package)
         {
-            ArgumentNullException.ThrowIfNull(package);
+            if (package == null)
+                throw new ArgumentNullException("package");
 
             _parentWindow = IntPtr.Zero;
             _container = package;
@@ -476,8 +499,14 @@ namespace System.IO.Packaging
             bool embedCertificateInSignaturePart = (_certificateEmbeddingOption == CertificateEmbeddingOption.InSignaturePart);
 
             // convert cert to version2 - more functionality
-            if (certificate is not X509Certificate2 exSigner)
+            X509Certificate2 exSigner = certificate as X509Certificate2;
+            if (exSigner == null)
                 exSigner = new X509Certificate2(certificate.Handle);
+
+            //PRESHARP: Parameter to this public method must be validated:  A null-dereference can occur here.
+            //      Parameter 'exSigner' to this public method must be validated:  A null-dereference can occur here. 
+            //This is a false positive as the checks above can gurantee no null dereference will occur  
+#pragma warning disable 6506
 
             PackageDigitalSignature signature = null;
             PackagePart newSignaturePart = null;
@@ -546,6 +575,7 @@ namespace System.IO.Packaging
                 newSignaturePart.CreateRelationship(certificatePartName, TargetMode.Internal, CertificatePart.RelationshipType);
                 signature.SetCertificatePart(certPart);
             }
+#pragma warning restore 6506
 
             _container.Flush();
 
@@ -590,7 +620,8 @@ namespace System.IO.Packaging
         /// returned signature.</remarks>
         public PackageDigitalSignature Countersign(X509Certificate certificate)
         {
-            ArgumentNullException.ThrowIfNull(certificate);
+            if (certificate == null)
+                throw new ArgumentNullException("certificate");
 
             // Counter-sign makes no sense if we are not already signed
             // Check before asking for certificate
@@ -620,8 +651,11 @@ namespace System.IO.Packaging
         /// <exception cref="ArgumentNullException">Both arguments must be non-null.</exception>
         public PackageDigitalSignature Countersign(X509Certificate certificate, IEnumerable<Uri> signatures)
         {
-            ArgumentNullException.ThrowIfNull(certificate);
-            ArgumentNullException.ThrowIfNull(signatures);
+            if (certificate == null)
+                throw new ArgumentNullException("certificate");
+
+            if (signatures == null)
+                throw new ArgumentNullException("signatures");
 
             // Counter-sign makes no sense if we are not already signed
             if (!IsSigned)
@@ -686,7 +720,8 @@ namespace System.IO.Packaging
             if (ReadOnly)
                 throw new InvalidOperationException(SR.CannotRemoveSignatureFromReadOnlyFile);
 
-            ArgumentNullException.ThrowIfNull(signatureUri);
+            if (signatureUri == null)
+                throw new ArgumentNullException("signatureUri");
 
             // empty?
             if (!IsSigned)      // calls EnsureSignatures for us
@@ -767,7 +802,8 @@ namespace System.IO.Packaging
         /// <returns>null if signature not found</returns>       
         public PackageDigitalSignature GetSignature(Uri signatureUri)
         {
-            ArgumentNullException.ThrowIfNull(signatureUri);
+            if (signatureUri == null)
+                throw new ArgumentNullException("signatureUri");
 
             int index = GetSignatureIndex(signatureUri);
             if (index < 0)
@@ -787,7 +823,8 @@ namespace System.IO.Packaging
         /// <returns>the first error encountered when inspecting the certificate chain or NoError if the certificate is valid</returns>
         public static X509ChainStatusFlags VerifyCertificate(X509Certificate certificate)
         {
-            ArgumentNullException.ThrowIfNull(certificate);
+            if (certificate == null)
+                throw new ArgumentNullException("certificate");
 
             X509ChainStatusFlags status = X509ChainStatusFlags.NoError;
 
@@ -836,7 +873,7 @@ namespace System.IO.Packaging
         /// </summary>
         /// <param name="hwndParent"></param>
         /// <returns>null if user cancels or no certificate could be located</returns>
-        internal static X509Certificate PromptForSigningCertificate(IntPtr hwndParent)
+        static internal X509Certificate PromptForSigningCertificate(IntPtr hwndParent)
         {
             X509Certificate2 X509cert = null;
 
@@ -894,7 +931,7 @@ namespace System.IO.Packaging
 
             public bool Match(String id)
             {
-                return (string.Equals(_id, id, StringComparison.Ordinal));
+                return (String.CompareOrdinal(_id, id) == 0);
             }
 
             private string _id;
@@ -919,7 +956,7 @@ namespace System.IO.Packaging
                         if (_signatures.Count == 0)
                             DeleteOriginPart();
 
-                        throw new ArgumentException(SR.PartToSignMissing, nameof(parts));
+                        throw new ArgumentException(SR.PartToSignMissing, "parts");
                     }
                 }
             }
@@ -941,7 +978,8 @@ namespace System.IO.Packaging
             IEnumerable<System.Security.Cryptography.Xml.DataObject> signatureObjects,
             IEnumerable<System.Security.Cryptography.Xml.Reference> objectReferences)
         {
-            ArgumentNullException.ThrowIfNull(certificate);
+            if (certificate == null)
+                throw new ArgumentNullException("certificate");
 
             // Check for empty collections in order to provide negative feedback as soon as possible.
             if (EnumeratorEmptyCheck(parts) && EnumeratorEmptyCheck(relationshipSelectors)
@@ -955,13 +993,13 @@ namespace System.IO.Packaging
                 foreach (DataObject obj in signatureObjects)
                 {
                     // ensure they don't duplicate the reserved one
-                    if (string.Equals(obj.Id, XTable.Get(XTable.ID.OpcAttrValue), StringComparison.Ordinal))
-                        throw new ArgumentException(SR.SignaturePackageObjectTagMustBeUnique, nameof(signatureObjects));
+                    if (String.CompareOrdinal(obj.Id, XTable.Get(XTable.ID.OpcAttrValue)) == 0)
+                        throw new ArgumentException(SR.SignaturePackageObjectTagMustBeUnique, "signatureObjects");
 
                     // check for duplicates
                     //if (ids.Contains(obj.Id))
                     if (ids.Exists(new StringMatchPredicate(obj.Id).Match))
-                        throw new ArgumentException(SR.SignatureObjectIdMustBeUnique, nameof(signatureObjects));
+                        throw new ArgumentException(SR.SignatureObjectIdMustBeUnique, "signatureObjects");
                     else
                         ids.Add(obj.Id);
                 }
@@ -977,7 +1015,7 @@ namespace System.IO.Packaging
                 }
                 catch (System.Xml.XmlException xmlException)
                 {
-                    throw new ArgumentException(SR.Format(SR.NotAValidXmlIdString, signatureId), nameof(signatureId), xmlException);
+                    throw new ArgumentException(SR.Format(SR.NotAValidXmlIdString, signatureId), "signatureId", xmlException);
                 }
             }
         }
@@ -993,7 +1031,8 @@ namespace System.IO.Packaging
                 return true;            // null means empty
 
             // see if it's really a collection as this is more efficient than enumerating
-            if (enumerable is System.Collections.ICollection collection)
+            System.Collections.ICollection collection = enumerable as System.Collections.ICollection;
+            if (collection != null)
             {
                 return (collection.Count == 0);
             }

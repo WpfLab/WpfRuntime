@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
@@ -22,7 +23,9 @@
 //               during Run and Dispose. 
 
 
+using System;
 using System.Globalization;
+using System.Security;
 using System.Threading;
 
 namespace MS.Internal
@@ -145,7 +148,10 @@ namespace MS.Internal
         /// </remarks>
         public static void Run(CulturePreservingExecutionContext executionContext, ContextCallback callback, object state)
         {
-            ArgumentNullException.ThrowIfNull(executionContext);
+            if (executionContext == null)
+            {
+                throw new ArgumentNullException(nameof(executionContext));
+            }
 
             if (callback == null) return; // Bail out early if callback is null
 

@@ -1,10 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+//
+//
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 using MS.Utility;
 using MS.Internal;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.Windows;
+using MS.Internal.PresentationCore;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Media3D
 {
@@ -91,8 +105,10 @@ namespace System.Windows.Media.Media3D
         /// </summary>
         public void RemoveAt(int index)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, InternalCount);
+            if (index < 0 || index >= InternalCount)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             VerifyAPIReadWrite(_collection[index]);
 
@@ -129,14 +145,18 @@ namespace System.Windows.Media.Media3D
         {
             VerifyAPIReadOnly();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // The extra "index >= array.Length" check in because even if _collection.Count
             // is 0 the index is not allowed to be equal or greater than the length
             // (from the MSDN ICollection docs)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, array.Length);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - Count);
+            if (index < 0 || index >= array.Length || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             _collection.CopyTo(array, index);
         }
@@ -145,14 +165,18 @@ namespace System.Windows.Media.Media3D
         {
             VerifyAPIReadOnly();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // The extra "index >= array.Length" check in because even if _collection.Count
             // is 0 the index is not allowed to be equal or greater than the length
             // (from the MSDN ICollection docs)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, array.Length);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - Count);
+            if (index < 0 || index >= array.Length || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             if (array.Rank != 1)
             {
@@ -197,7 +221,9 @@ namespace System.Windows.Media.Media3D
                 return -1;
             }
 
+#pragma warning disable 56506 // Suppress presharp warning: Parameter 'value' to this public method must be validated:  A null-dereference can occur here.
             return value.ParentIndex;
+#pragma warning restore 56506
         }
 
         /// <summary>
@@ -243,8 +269,10 @@ namespace System.Windows.Media.Media3D
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfNegative(index);
-                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, InternalCount);
+                if (index < 0 || index >= InternalCount)
+                {
+                    throw new ArgumentOutOfRangeException("index");
+                }
 
                 VerifyAPIForAdd(value);
 
@@ -443,8 +471,11 @@ namespace System.Windows.Media.Media3D
 
         private Visual3D Cast(object value)
         {
-            ArgumentNullException.ThrowIfNull(value);
-
+            if( value == null )
+            {
+                throw new System.ArgumentNullException("value");
+            }
+            
             if (!(value is Visual3D))
             {
                 throw new System.ArgumentException(SR.Format(SR.Collection_BadType, this.GetType().Name, value.GetType().Name, "Visual3D"));
@@ -663,6 +694,8 @@ namespace System.Windows.Media.Media3D
             /// </summary>
             public Visual3D Current
             {
+#pragma warning disable 1634, 1691
+#pragma warning disable 6503
                 get
                 {
                     if ((_index < 0) || (_index >= _list.Count))
@@ -672,6 +705,8 @@ namespace System.Windows.Media.Media3D
 
                     return _list[_index];
                 }
+#pragma warning restore 6503
+#pragma warning restore 1634, 1691
             }
 
             #endregion Public Methods

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -13,10 +14,21 @@
 
 using MS.Internal;
 using MS.Utility;
+using System;
 using System.Buffers;
+using System.ComponentModel;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Windows.Media.Imaging;
+using System.Windows.Media.Effects;
+using System.Security;
 
 namespace System.Windows.Media
 {
@@ -340,7 +352,10 @@ namespace System.Windows.Media
                     {
                         DUCE.IResource resource = _dependentResources[i] as DUCE.IResource;
 
-                        resource?.AddRefOnChannel(channel);
+                        if (resource != null)
+                        {
+                            resource.AddRefOnChannel(channel);
+                        }
                     }
 
                     UpdateResource(channel);
@@ -365,7 +380,10 @@ namespace System.Windows.Media
                     {
                         DUCE.IResource resource = _dependentResources[i] as DUCE.IResource;
 
-                        resource?.ReleaseOnChannel(channel);
+                        if (resource != null)
+                        {
+                            resource.ReleaseOnChannel(channel);
+                        }
                     }
                 }
             }

@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
-using System.Globalization;
 
 namespace System.Windows.Input.Manipulations
 {
@@ -233,10 +233,13 @@ namespace System.Windows.Input.Manipulations
         /// <param name="format"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        private static string Format(string format, params ReadOnlySpan<object> args)
+        private static string Format(string format, params object[] args)
         {
             Debug.Assert(format != null);
-            return string.Format(CultureInfo.CurrentCulture, format, args);
+            return string.Format(
+                System.Globalization.CultureInfo.CurrentCulture,
+                format,
+                args);
         }
     }
 }

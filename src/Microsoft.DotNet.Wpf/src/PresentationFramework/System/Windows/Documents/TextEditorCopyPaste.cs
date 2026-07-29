@@ -1,15 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
-using System.Globalization;
-using System.Xml;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Windows.Input;
-using System.Windows.Controls; // ScrollChangedEventArgs
-using System.Windows.Markup;
-using MS.Internal.Commands; // CommandHelpers
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: A Component of TextEditor supporting Cut/Copy/Paste commands
@@ -17,6 +8,29 @@ using MS.Internal.Commands; // CommandHelpers
 
 namespace System.Windows.Documents
 {
+    using MS.Internal;
+    using System.Globalization;
+    using System.Security;
+    using System.Threading;
+    using System.ComponentModel;
+    using System.Text;
+    using System.Xml;
+    using System.IO;
+    using System.Collections; // ArrayList
+    using System.Runtime.InteropServices;
+
+    using System.Windows.Threading;
+    using System.Windows.Input;
+    using System.Windows.Controls; // ScrollChangedEventArgs
+    using System.Windows.Controls.Primitives;  // CharacterCasing, TextBoxBase
+    using System.Windows.Media;
+    using System.Windows.Markup;
+
+    using MS.Utility;
+    using MS.Win32;
+    using MS.Internal.Documents;
+    using MS.Internal.Commands; // CommandHelpers
+
     /// <summary>
     /// Text editing service for controls.
     /// </summary>
@@ -286,7 +300,7 @@ namespace System.Windows.Documents
                     {
                         // The copy command was not terminated by application
                         // One of reason should be the opening fail of Clipboard by the destroyed hwnd.
-                        Clipboard.SetDataObject(dataObject, copy: true);
+                        Clipboard.CriticalSetDataObject(dataObject, true);
                     }
                     catch (ExternalException)
                         when (!FrameworkCompatibilityPreferences.ShouldThrowOnCopyOrCutFailure)
@@ -332,7 +346,7 @@ namespace System.Windows.Documents
                     {
                         // The copy command was not terminated by application
                         // One of reason should be the opening fail of Clipboard by the destroyed hwnd.
-                        Clipboard.SetDataObject(dataObject, copy: true);
+                        Clipboard.CriticalSetDataObject(dataObject, true);
                     }
                     catch (ExternalException) 
                         when (!FrameworkCompatibilityPreferences.ShouldThrowOnCopyOrCutFailure)
@@ -439,10 +453,8 @@ namespace System.Windows.Documents
                 using (Stream xamlStream = wpfPayload.CreateXamlStream())
                 {
                     // Create XamlRtfConverter to process the converting from Rtf to Xaml
-                    XamlRtfConverter xamlRtfConverter = new XamlRtfConverter
-                    {
-                        WpfPayload = wpfPayload
-                    };
+                    XamlRtfConverter xamlRtfConverter = new XamlRtfConverter();
+                    xamlRtfConverter.WpfPayload = wpfPayload;
 
                     string xamlContent = xamlRtfConverter.ConvertRtfToXaml(rtfContent);
                     if (xamlContent != string.Empty)

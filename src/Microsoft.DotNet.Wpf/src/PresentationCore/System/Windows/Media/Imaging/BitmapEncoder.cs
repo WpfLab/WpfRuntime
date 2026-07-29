@@ -1,11 +1,30 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
+using System.IO;
 using MS.Internal;
+using System.Diagnostics;
+using System.Windows.Media;
 using System.Windows.Threading;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Windows.Media.Imaging;
+using System.Security;
 using MS.Win32.PresentationCore;
+using SR=MS.Internal.PresentationCore.SR;
+using System.Diagnostics.CodeAnalysis;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows.Media.Imaging
 {
@@ -74,7 +93,7 @@ namespace System.Windows.Media.Imaging
             {
                 throw new ArgumentException(
                     SR.Format(SR.Image_GuidEmpty, "containerFormat"),
-                    nameof(containerFormat)
+                    "containerFormat"
                     );
             }
             else if (containerFormat == MILGuidData.GUID_ContainerFormatBmp)
@@ -127,7 +146,10 @@ namespace System.Windows.Media.Imaging
                 VerifyAccess();
                 EnsureBuiltIn();
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 if (!_supportsColorContext)
                 {
@@ -154,7 +176,10 @@ namespace System.Windows.Media.Imaging
                 VerifyAccess();
                 EnsureBuiltIn();
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 if (!_supportsGlobalThumbnail)
                 {
@@ -183,7 +208,10 @@ namespace System.Windows.Media.Imaging
                 VerifyAccess();
                 EnsureBuiltIn();
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 if (value.GuidFormat != ContainerFormat)
                 {
@@ -215,7 +243,10 @@ namespace System.Windows.Media.Imaging
                 VerifyAccess();
                 EnsureBuiltIn();
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 if (!_supportsPreview)
                 {
@@ -270,7 +301,10 @@ namespace System.Windows.Media.Imaging
                 VerifyAccess();
                 EnsureBuiltIn();
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 _palette = value;
             }
@@ -297,7 +331,10 @@ namespace System.Windows.Media.Imaging
                 VerifyAccess();
                 EnsureBuiltIn();
 
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 _frames = value;
             }

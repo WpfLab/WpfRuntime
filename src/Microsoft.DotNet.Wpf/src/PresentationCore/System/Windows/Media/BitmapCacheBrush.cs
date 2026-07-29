@@ -1,10 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//  Microsoft Windows Presentation Foudnation
+//
+
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Media.Media3D;
 using System.Windows.Media.Composition;
 using System.Windows.Media.Animation;
+using System.Security;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
@@ -148,12 +157,18 @@ namespace System.Windows.Media
         // to be specialized for Visual which doesn't implement DUCE.IResource
         internal void AddRefResource(Visual visual, DUCE.Channel channel)
         {
-            visual?.AddRefOnChannelForCyclicBrush(this, channel);
+            if (visual != null)
+            {
+                visual.AddRefOnChannelForCyclicBrush(this, channel);
+            }
         }
 
         internal void ReleaseResource(Visual visual, DUCE.Channel channel)
         {
-            visual?.ReleaseOnChannelForCyclicBrush(this, channel);
+            if (visual != null)
+            {
+                visual.ReleaseOnChannelForCyclicBrush(this, channel);
+            }
         }
 
         /// <summary>
@@ -375,9 +390,9 @@ namespace System.Windows.Media
 
         private static void StaticInitialize(Type typeofThis)
         {             
-            OpacityProperty.OverrideMetadata(typeofThis, new IndependentlyAnimatedPropertyMetadata(1.0, propertyChangedCallback: null, CoerceOpacity));
-            TransformProperty.OverrideMetadata(typeofThis, new UIPropertyMetadata(null, propertyChangedCallback: null, CoerceTransform));
-            RelativeTransformProperty.OverrideMetadata(typeofThis, new UIPropertyMetadata(null, propertyChangedCallback: null, CoerceRelativeTransform));
+            OpacityProperty.OverrideMetadata(typeofThis, new IndependentlyAnimatedPropertyMetadata(1.0, /* PropertyChangedHandle */ null, CoerceOpacity));
+            TransformProperty.OverrideMetadata(typeofThis, new UIPropertyMetadata(null, /* PropertyChangedHandle */ null, CoerceTransform));
+            RelativeTransformProperty.OverrideMetadata(typeofThis, new UIPropertyMetadata(null, /* PropertyChangedHandle */ null, CoerceRelativeTransform));
         }
 
         private ContainerVisual _dummyVisual;

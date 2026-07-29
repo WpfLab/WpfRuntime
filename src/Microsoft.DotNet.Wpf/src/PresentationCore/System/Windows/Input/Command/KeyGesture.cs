@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -13,7 +14,10 @@
 //
 //
 
+using System;
 using System.Globalization;
+using System.Windows.Input;
+using System.Windows;
 using System.Windows.Markup;
 using System.ComponentModel;
 using MS.Internal.PresentationCore;
@@ -93,9 +97,10 @@ namespace System.Windows.Input
             if(!IsDefinedKey(key))
                 throw new InvalidEnumArgumentException("key", (int)key, typeof(Key));
 
-            ArgumentNullException.ThrowIfNull(displayString);
+            if (displayString == null)
+                throw new ArgumentNullException("displayString");
 
-            if (validateGesture && !IsValid(key, modifiers))
+            if(validateGesture && !IsValid(key, modifiers))
             {
                 throw new NotSupportedException(SR.Format(SR.KeyGesture_Invalid, modifiers, key));
             }

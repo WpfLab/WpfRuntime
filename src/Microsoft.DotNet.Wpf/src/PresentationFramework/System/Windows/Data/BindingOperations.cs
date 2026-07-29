@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Helper operations for data bindings.
@@ -7,9 +8,18 @@
 // See spec at Data Binding.mht
 //
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.ComponentModel;
+using System.Globalization;
 using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Windows.Threading;
 
 using MS.Internal.Data;
 
@@ -88,7 +98,7 @@ namespace System.Windows.Data
         public static BindingBase GetBindingBase(DependencyObject target, DependencyProperty dp)
         {
             BindingExpressionBase b = GetBindingExpressionBase(target, dp);
-            return b?.ParentBindingBase;
+            return (b != null) ? b.ParentBindingBase : null;
         }
 
         /// <summary>
@@ -568,7 +578,10 @@ namespace System.Windows.Data
         internal static void LogException(Exception ex)
         {
             ExceptionLogger logger = _exceptionLogger;
-            logger?.LogException(ex);
+            if (logger != null)
+            {
+                logger.LogException(ex);
+            }
         }
 
         private static ExceptionLogger _exceptionLogger;
@@ -589,7 +602,7 @@ namespace System.Windows.Data
 
             internal List<Exception> Log { get { return _log; } }
 
-            private List<Exception> _log = new List<Exception>();
+            List<Exception> _log = new List<Exception>();
         }
         #endregion Exception logging
     }

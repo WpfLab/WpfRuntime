@@ -1,7 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Windows.Input
+
+using System;
+using System.Security; 
+using MS.Internal; 
+using MS.Internal.PresentationCore;                        // SecurityHelper
+
+namespace System.Windows.Input 
 {
     /// <summary>
     ///     The KeyEventArgs class contains information about key states.
@@ -26,7 +33,8 @@ namespace System.Windows.Input
         /// </param>
         public KeyEventArgs(KeyboardDevice keyboard, PresentationSource inputSource, int timestamp, Key key) : base(keyboard, timestamp)
         {
-            ArgumentNullException.ThrowIfNull(inputSource);
+            if (inputSource == null)
+                throw new ArgumentNullException("inputSource");
 
             if (!Keyboard.IsValidKey(key))
                 throw new System.ComponentModel.InvalidEnumArgumentException("key", (int)key, typeof(Key));

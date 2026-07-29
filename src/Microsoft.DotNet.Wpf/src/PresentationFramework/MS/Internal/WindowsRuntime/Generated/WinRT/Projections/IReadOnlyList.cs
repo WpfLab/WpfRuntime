@@ -1,13 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using WinRT;
 using WinRT.Interop;
-using global::System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 #pragma warning disable 0169 // warning CS0169: The field '...' is never used
 #pragma warning disable 0649 // warning CS0169: Field '...' is never assigned to
@@ -15,7 +18,7 @@ using global::System.Runtime.CompilerServices;
 namespace MS.Internal.WindowsRuntime.Windows.Foundation.Collections
 {
     [Guid("BBE1FA4C-B0E3-4583-BAEF-1F1B2E483E56")]
-    internal interface IVectorView<T> : IIterable<T>
+    interface IVectorView<T> : IIterable<T>
     {
         T GetAt(uint index);
         bool IndexOf(T value, out uint index);
@@ -26,6 +29,9 @@ namespace MS.Internal.WindowsRuntime.Windows.Foundation.Collections
 
 namespace MS.Internal.WindowsRuntime.ABI.System.Collections.Generic
 {
+    using global::System;
+    using global::System.Runtime.CompilerServices;
+
     [Guid("BBE1FA4C-B0E3-4583-BAEF-1F1B2E483E56")]
     internal class IReadOnlyList<T> : global::System.Collections.Generic.IReadOnlyList<T>
     {
@@ -360,8 +366,7 @@ namespace MS.Internal.WindowsRuntime.ABI.System.Collections.Generic
             _obj = obj;
             _FromVectorView = new FromAbiHelper(this);
         }
-
-        private FromAbiHelper _FromVectorView;
+        FromAbiHelper _FromVectorView;
 
         public unsafe T GetAt(uint index)
         {

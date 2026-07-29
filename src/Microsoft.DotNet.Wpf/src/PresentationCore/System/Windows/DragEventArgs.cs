@@ -1,7 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// 
+// Description: DragEventArgs for drag-and-drop operation.
+//
+// 
+//
+
+using System;
+using System.Diagnostics;
+using System.Windows.Media;
 using System.Windows.Input;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows
 {
@@ -41,17 +55,17 @@ namespace System.Windows
         {
             if (!DragDrop.IsValidDragDropKeyStates(dragDropKeyStates))
             {
-                Debug.Fail("Invalid dragDropKeyStates");
+                Debug.Assert(false, "Invalid dragDropKeyStates");
             }
 
             if (!DragDrop.IsValidDragDropEffects(allowedEffects))
             {
-                Debug.Fail("Invalid allowedEffects");
+                Debug.Assert(false, "Invalid allowedEffects");
             }
 
             if (target == null)
             {
-                Debug.Fail("Invalid target");
+                Debug.Assert(false, "Invalid target");
             }
 
             this._data = data;
@@ -79,7 +93,10 @@ namespace System.Windows
         {
             Point dropPoint;
 
-            ArgumentNullException.ThrowIfNull(relativeTo);
+            if (relativeTo == null)
+            {
+                throw new ArgumentNullException("relativeTo");
+            }
 
             dropPoint = new Point(0, 0);
 

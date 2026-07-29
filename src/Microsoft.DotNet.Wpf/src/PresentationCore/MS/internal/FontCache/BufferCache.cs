@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -7,6 +8,7 @@
 // Description: BufferCache class implementation.
 //
 
+using System;
 using System.Threading;
 using MS.Internal.Text.TextInterface;
 
@@ -230,7 +232,7 @@ namespace MS.Internal.FontCache
         private const int BuffersLength             = 3;
 
         // Guards access to _buffers.
-        private static long _mutex;
+        static private long _mutex;
 
         // Array of cached arrays, one bucker per supported type.
         // Currently, we cache just one array per type.  A more general cache would hold N byte arrays.
@@ -240,7 +242,7 @@ namespace MS.Internal.FontCache
         // a more general cache (UnicodeRange.GetFullRange could use a cached array), but the savings
         // in profiled scenarios are small, ~16k for MSNBaml.exe.  If we find a more compelling
         // scenario a change might be worthwhile.
-        private static Array[] _buffers;
+        static private Array[] _buffers;
 
         #endregion Private Fields
     }

@@ -1,11 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: 
 //    A collection of utility functions for dealing with e-mail address
 //    strings and Uri objects.
 using System;
 using System.Globalization;
+using System.Text.RegularExpressions;
+using MS.Internal.WindowsBase;
+
 
 namespace MS.Internal.Documents
 {
@@ -27,7 +31,14 @@ namespace MS.Internal.Documents
         /// <returns>Whether or not it is a mailto URI</returns>
         internal static bool IsMailtoUri(Uri mailtoUri)
         {
-            return mailtoUri is not null && string.Equals(mailtoUri.Scheme, Uri.UriSchemeMailto, StringComparison.OrdinalIgnoreCase);
+            if (mailtoUri != null)
+            {
+                return SecurityHelper.AreStringTypesEqual(
+                    mailtoUri.Scheme,
+                    Uri.UriSchemeMailto);
+            }
+
+            return false;
         }
 
         /// <summary>

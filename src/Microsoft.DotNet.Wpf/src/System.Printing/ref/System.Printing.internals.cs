@@ -1,6 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -66,14 +66,20 @@ namespace System.Printing
     }
     public partial class PrintQueue
     {
-        internal System.Windows.Xps.Serialization.RCW.IXpsOMPackageWriter XpsOMPackageWriter { set { } }
-        internal static uint GetDpiX(System.Printing.ILegacyDevice legacyDevice) { throw null; }
-        internal static uint GetDpiY(System.Printing.ILegacyDevice legacyDevice) { throw null; }
-        internal System.Printing.ILegacyDevice GetLegacyDevice() { throw null; }
+        internal global::System.Windows.Xps.Serialization.RCW.IXpsOMPackageWriter XpsOMPackageWriter { set { } }
+        internal static uint GetDpiX(global::System.Printing.ILegacyDevice legacyDevice) { throw null; }
+        internal static uint GetDpiY(global::System.Printing.ILegacyDevice legacyDevice) { throw null; }
+        internal global::System.Printing.ILegacyDevice GetLegacyDevice() { throw null; }
     }
     internal class PrintSystemDispatcherObject : System.Windows.Threading.DispatcherObject
     {
         public void VerifyThreadLocality() {}
+    }
+}
+namespace System.Windows.Xps.Serialization.RCW
+{
+    internal partial interface IXpsOMPackageWriter
+    {
     }
 }
 namespace System.Windows.Xps
@@ -82,5 +88,11 @@ namespace System.Windows.Xps
     {
         internal XpsDocumentWriter(System.Printing.PrintQueue printQueue) { }
         internal XpsDocumentWriter(System.Windows.Xps.Packaging.XpsDocument document) { }
+    }
+}
+namespace System.Windows.Xps.Packaging
+{
+    public partial class PackagingProgressEventArgs : System.EventArgs
+    {
     }
 }

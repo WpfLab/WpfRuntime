@@ -1,8 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 
 
@@ -195,7 +202,7 @@ namespace System.Windows.Automation.Peers
             }
         }
 
-        protected override AutomationLiveSetting GetLiveSettingCore()
+        override protected AutomationLiveSetting GetLiveSettingCore()
         {
             AutomationPeer wrapperPeer = OwningCellPeer;
             AutomationLiveSetting liveSetting = AutomationLiveSetting.Off;
@@ -350,7 +357,7 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override AutomationHeadingLevel GetHeadingLevelCore()
+        override protected AutomationHeadingLevel GetHeadingLevelCore()
         {
             AutomationPeer wrapperPeer = OwningCellPeer;
             AutomationHeadingLevel headingLevel = AutomationHeadingLevel.None;
@@ -367,7 +374,7 @@ namespace System.Windows.Automation.Peers
             return headingLevel;
         }
 
-        internal override Rect GetVisibleBoundingRectCore()
+        override internal Rect GetVisibleBoundingRectCore()
         {
             AutomationPeer wrapperPeer = OwningCellPeer;
             if (wrapperPeer != null)
@@ -492,15 +499,18 @@ namespace System.Windows.Automation.Peers
                 ThrowElementNotAvailableException();
         }
 
-        internal override bool IsDataItemAutomationPeer()
+        override internal bool IsDataItemAutomationPeer()
         {
             return true;
         }
 
-        internal override void AddToParentProxyWeakRefCache()
+        override internal void AddToParentProxyWeakRefCache()
         {
             DataGridItemAutomationPeer owningItemPeer = this.OwningItemPeer;
-            owningItemPeer?.AddProxyToWeakRefStorage(this.ElementProxyWeakReference, this);
+            if (owningItemPeer != null)
+            {
+                owningItemPeer.AddProxyToWeakRefStorage(this.ElementProxyWeakReference, this);
+            }
         }
 
 
@@ -846,7 +856,7 @@ namespace System.Windows.Automation.Peers
             get
             {
                 DataGrid dataGrid = this.OwningDataGrid;
-                return dataGrid?.TryFindCell(Item, _column);
+                return (dataGrid != null) ? dataGrid.TryFindCell(Item, _column) : null;
             }
         }
 
@@ -890,7 +900,7 @@ namespace System.Windows.Automation.Peers
 
         internal object Item
         {
-            get {  return _item?.Target; }
+            get {  return (_item == null) ? null : _item.Target; }
         }
 
         private DataGridItemAutomationPeer OwningItemPeer
@@ -921,7 +931,10 @@ namespace System.Windows.Automation.Peers
                 if (value)
                     return;
                 AutomationPeer wrapperPeer = OwningCellPeer;
-                wrapperPeer?.AncestorsInvalid = false;
+                if (wrapperPeer != null)
+                {
+                    wrapperPeer.AncestorsInvalid = false;
+                }
             }
         }
 

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -9,10 +10,16 @@
 //
 
 
+using System.Diagnostics;
+using System;
 using System.Runtime.InteropServices;
+using System.Collections;
 using System.Windows;                     // for ExceptionStringTable
+using System.Security;                    // for SecurityCritical
 
 using MS.Internal.Interop;                // for STAT_CHUNK, etc.
+using MS.Internal;                        // for Invariant
+using MS.Win32;
 
 namespace MS.Internal.IO.Packaging
 {
@@ -148,10 +155,9 @@ namespace MS.Internal.IO.Packaging
         /// <returns>An interop STAT_CHUNK from a ManagedChunk</returns>
         internal static STAT_CHUNK MarshalChunk(ManagedChunk chunk)
         {
-            STAT_CHUNK native = new STAT_CHUNK
-            {
-                idChunk = chunk.ID
-            };
+            STAT_CHUNK native = new STAT_CHUNK();
+
+            native.idChunk = chunk.ID;
             Invariant.Assert(chunk.BreakType >= CHUNK_BREAKTYPE.CHUNK_NO_BREAK && chunk.BreakType <= CHUNK_BREAKTYPE.CHUNK_EOC);
             native.breakType = chunk.BreakType;
             Invariant.Assert(    
@@ -185,19 +191,15 @@ namespace MS.Internal.IO.Packaging
                 if (obj is string)
                 {
                     pszVal = Marshal.StringToCoTaskMemAnsi((string)obj);
-
-                    v = new PROPVARIANT
-                    {
-                        vt = VARTYPE.VT_LPSTR
-                    };
+                    
+                    v = new PROPVARIANT();
+                    v.vt = VARTYPE.VT_LPSTR;
                     v.union.pszVal = pszVal;
                 }
                 else if (obj is DateTime)
                 {
-                    v = new PROPVARIANT
-                    {
-                        vt = VARTYPE.VT_FILETIME
-                    };
+                    v = new PROPVARIANT();
+                    v.vt = VARTYPE.VT_FILETIME;
                     long longFileTime = ((DateTime)obj).ToFileTime();
                     v.union.filetime.dwLowDateTime = (Int32)longFileTime;
                     v.union.filetime.dwHighDateTime = (Int32)((longFileTime >> 32) & 0xFFFFFFFF);
@@ -276,10 +278,8 @@ namespace MS.Internal.IO.Packaging
 
                 // Return STAT_CHUNK with idChunk as 0.
 
-                STAT_CHUNK chunk = new STAT_CHUNK
-                {
-                    idChunk = 0
-                };
+                STAT_CHUNK chunk = new STAT_CHUNK();
+                chunk.idChunk = 0;
                 return chunk;
 }
 

@@ -1,11 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Slider Proxy
 //
 
 using System;
+using System.Text;
+using System.Collections;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Windows;
@@ -13,7 +17,7 @@ using MS.Win32;
 
 namespace MS.Internal.AutomationProxies
 {
-    internal class WindowsSlider: ProxyHwnd, IRangeValueProvider
+    class WindowsSlider: ProxyHwnd, IRangeValueProvider
     {
         // ------------------------------------------------------
         //
@@ -23,7 +27,7 @@ namespace MS.Internal.AutomationProxies
 
         #region Constructors 
 
-        private WindowsSlider (IntPtr hwnd, ProxyFragment parent, int item)
+        WindowsSlider (IntPtr hwnd, ProxyFragment parent, int item)
             : base (hwnd, parent, item )
         {
             _fHorizontal = IsHorizontalSlider ();
@@ -50,7 +54,11 @@ namespace MS.Internal.AutomationProxies
         private static IRawElementProviderSimple Create(IntPtr hwnd, int idChild)
         {
             // Something is wrong if idChild is not zero 
-            ArgumentOutOfRangeException.ThrowIfNotEqual(idChild, 0);
+            if (idChild != 0)
+            {
+                System.Diagnostics.Debug.Assert (idChild == 0, "Invalid Child Id, idChild != 0");
+                throw new ArgumentOutOfRangeException("idChild", idChild, SR.ShouldBeZero);
+            }
 
             return new WindowsSlider(hwnd, null, idChild);
         }
@@ -345,7 +353,7 @@ namespace MS.Internal.AutomationProxies
 
         #region SliderItem 
 
-        private class SliderItem: ProxySimple, IInvokeProvider
+        class SliderItem: ProxySimple, IInvokeProvider
         {
             // ------------------------------------------------------
             //

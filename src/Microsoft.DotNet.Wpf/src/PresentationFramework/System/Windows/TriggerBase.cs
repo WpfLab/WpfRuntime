@@ -1,11 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Specialized;
+using System.IO;
+using System.Windows.Markup;
 
 using MS.Utility;
 using MS.Internal;
+
+using System;
 using System.ComponentModel;            // DesignerSerializationVisibilityAttribute & DefaultValue
+using System.Diagnostics;
 
 namespace System.Windows
 {
@@ -206,14 +212,12 @@ namespace System.Windows
         internal void AddToPropertyValues(string childName, DependencyProperty dp, object value, PropertyValueType valueType)
         {
             // Store original data
-            PropertyValue propertyValue = new PropertyValue
-            {
-                ValueType = valueType,
-                Conditions = null,  // Delayed - derived class is responsible for this item.
-                ChildName = childName,
-                Property = dp,
-                ValueInternal = value
-            };
+            PropertyValue propertyValue = new PropertyValue();
+            propertyValue.ValueType = valueType;
+            propertyValue.Conditions = null;  // Delayed - derived class is responsible for this item.
+            propertyValue.ChildName = childName;
+            propertyValue.Property = dp;
+            propertyValue.ValueInternal = value;
 
             PropertyValues.Add(propertyValue);
         }
@@ -249,8 +253,14 @@ namespace System.Windows
                 }
             }
 
-            _enterActions?.Seal(this);
-            _exitActions?.Seal(this);
+            if( _enterActions != null )
+            {
+                _enterActions.Seal(this);
+            }
+            if( _exitActions != null )
+            {
+                _exitActions.Seal(this);
+            }
 
             // Remove thread affinity so it can be accessed across threads
             DetachFromDispatcher();
@@ -383,7 +393,7 @@ namespace System.Windows
         private static readonly object Synchronized = new object();
 
         // Conditions
-        private TriggerCondition[] _triggerConditions;
+        TriggerCondition[] _triggerConditions;
 
         // Fields to implement DO's inheritance context
         private DependencyObject _inheritanceContext = null;

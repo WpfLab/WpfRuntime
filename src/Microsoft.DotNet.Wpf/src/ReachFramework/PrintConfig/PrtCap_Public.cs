@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -12,11 +13,17 @@ Abstract:
 
 --*/
 
+using System;
 using System.IO;
 using System.Xml;
+using System.Collections;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Globalization;
 
 using System.Printing;
+using MS.Internal.Printing.Configuration;
 
 namespace MS.Internal.Printing.Configuration
 {
@@ -107,7 +114,7 @@ namespace MS.Internal.Printing.Configuration
             if (feature < PrintSchema.CapabilityNameEnumMin ||
                 feature > PrintSchema.CapabilityNameEnumMax)
             {
-                throw new ArgumentOutOfRangeException(nameof(feature));
+                throw new ArgumentOutOfRangeException("feature");
             }
 
             return (_pcRootFeatures[(int)feature] != null);

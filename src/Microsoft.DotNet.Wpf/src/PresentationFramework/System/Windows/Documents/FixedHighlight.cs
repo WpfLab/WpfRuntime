@@ -1,11 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal.Documents;
-using System.Windows.Media;                 // Brush
-using System.Windows.Media.TextFormatting;  // CharacterHit
-using System.Windows.Shapes;                // Glyphs
-using System.Windows.Controls;              // Image
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -14,6 +9,17 @@ using System.Windows.Controls;              // Image
 
 namespace System.Windows.Documents
 {
+    using MS.Internal.Documents;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Windows.Media;                 // Brush
+    using System.Windows.Media.TextFormatting;  // CharacterHit
+    using System.Windows.Shapes;                // Glyphs
+    using System.Windows.Controls;              // Image
+
+
+
     //=====================================================================
     /// <summary>
     /// FixedHighlight represents partial glyph run that is highlighted on a fixed document. 
@@ -56,7 +62,7 @@ namespace System.Windows.Documents
         /// </summary>
         /// <param name="oCompare">the FixedHighlight to compare with</param>
         /// <returns>true if this FixedHighlight is on the same element with the same offset, and brush</returns>
-        public override bool Equals(object oCompare)
+        override public bool Equals(object oCompare)
         {
             FixedHighlight fh = oCompare as FixedHighlight;
 

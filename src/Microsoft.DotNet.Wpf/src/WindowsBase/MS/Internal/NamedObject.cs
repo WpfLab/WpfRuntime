@@ -1,7 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description: Placeholder object, with a name that appears in the debugger
+//
+
+using System;
 using System.Globalization;
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal
 {
@@ -10,6 +18,7 @@ namespace MS.Internal
     /// "new Object()".  The name will show up in the debugger, instead of
     /// merely "{object}"
     /// </summary>
+    [FriendAccessAllowed]   // Built into Base, also used by Framework.
     internal class NamedObject
     {
         public NamedObject(string name)
@@ -32,6 +41,6 @@ namespace MS.Internal
             return _name;
         }
 
-        private string _name;
+        string _name;
     }
 }

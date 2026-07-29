@@ -1,15 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-#if RIBBON_IN_FRAMEWORK
-using MS.Internal;
-#endif
-using System.Collections.Generic;
-using System.Windows;
+// See the LICENSE file in the project root for more information.
+        
 
 namespace Microsoft.Windows.Controls
 {
+#if RIBBON_IN_FRAMEWORK
+    using MS.Internal;
+#endif
+    using System.Collections.Generic;
+    using System.Windows;
+
     internal static class PropertyHelper
     {
         public static bool IsDefaultValue(DependencyObject d, DependencyProperty dp)

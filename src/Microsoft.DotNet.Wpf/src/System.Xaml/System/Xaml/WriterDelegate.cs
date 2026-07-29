@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xaml
 {
@@ -9,12 +8,12 @@ namespace System.Xaml
     // It turns XamlWriter calls into nodes and passes them up to the
     // provided _addDelegate.
     //
-    internal class WriterDelegate : XamlWriter, IXamlLineInfoConsumer
+    class WriterDelegate : XamlWriter, IXamlLineInfoConsumer
     {
-        private XamlNodeAddDelegate _addDelegate;
-        private XamlLineInfoAddDelegate _addLineInfoDelegate;
-        private XamlSchemaContext _schemaContext;
-
+        XamlNodeAddDelegate _addDelegate;
+        XamlLineInfoAddDelegate _addLineInfoDelegate;
+        XamlSchemaContext _schemaContext;
+        
         public WriterDelegate(XamlNodeAddDelegate add, XamlLineInfoAddDelegate addlineInfoDelegate, XamlSchemaContext xamlSchemaContext)
         {
             _addDelegate = add;
@@ -74,7 +73,7 @@ namespace System.Xaml
                 {
                     _addDelegate(XamlNodeType.None, XamlNode.InternalNodeType.EndOfStream);
                     _addDelegate = delegate { throw new XamlException(SR.WriterIsClosed); };
-                    if (_addLineInfoDelegate is not null)
+                    if (_addLineInfoDelegate != null)
                     {
                         _addLineInfoDelegate = delegate { throw new XamlException(SR.WriterIsClosed); };
                     }
@@ -108,14 +107,18 @@ namespace System.Xaml
             get
             {
                 ThrowIsDisposed();
-                return _addLineInfoDelegate is not null;
+                return _addLineInfoDelegate != null;
             }
         }
         #endregion
 
         private void ThrowIsDisposed()
         {
-            ObjectDisposedException.ThrowIf(IsDisposed, typeof(XamlWriter)); // Can't say ReaderMultiIndexDelegate because its internal.
+            if (IsDisposed)
+            {
+                throw new ObjectDisposedException("XamlWriter"); // Can't say ReaderMultiIndexDelegate because its internal.
+            }
         }
+
     }
 }

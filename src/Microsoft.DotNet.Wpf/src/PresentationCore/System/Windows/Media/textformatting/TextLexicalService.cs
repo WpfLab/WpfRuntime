@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,7 +10,11 @@
 //
 //
 
+
+using System;
 using System.Globalization;
+using MS.Internal.PresentationCore;
+
 
 namespace System.Windows.Media.TextFormatting
 {
@@ -20,6 +25,7 @@ namespace System.Windows.Media.TextFormatting
 #if HYPHENATION_API
     public abstract class TextLexicalService
 #else
+    [FriendAccessAllowed]   // used by Framework
     internal abstract class TextLexicalService
 #endif
     {

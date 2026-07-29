@@ -1,23 +1,29 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-//
 //
 // This file was generated, please do not edit it directly.
 // 
 // This file was generated from the codegen template located at:
-//     wpf\src\WpfGfx\codegen\mcg\generators\FrameworkElementTemplate.cs
+//     src\WpfGfx\codegen\mcg\generators\FrameworkElementTemplate.cs
 //
 // Please see MilCodeGen.html for more information.
 //
 
 using MS.Internal;
 using MS.Utility;
+
+using System;
 using System.Collections;
+using System.Diagnostics;
+using System.Security;
 using System.Windows.Controls;
 using System.Windows.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Markup;
+
+using SR=System.Windows.SR;
 
 namespace System.Windows
 {
@@ -212,7 +218,7 @@ namespace System.Windows
                 {
                     if (exceptionThrown)
                     {
-                        // Future: ILTN removal: make this more robust
+                        // ILTN removal: make this more robust
                         // At the very least we should disconnect the child that we failed to add.
 
                         // Consider doing this...
@@ -291,7 +297,10 @@ namespace System.Windows
             // to the dispatchers that the elements belong to.
             //
             this.VerifyAccess();
-            newParent?.VerifyAccess();
+            if(newParent != null)
+            {
+                newParent.VerifyAccess();
+            }
 
             // Logical Parent must first be dropped before you are attached to a newParent
             // This mitigates illegal tree state caused by logical child stealing as illustrated in bug 970706
@@ -333,7 +342,7 @@ namespace System.Windows
             ///////////////////
 
             // Invalidate relevant properties for this subtree
-            DependencyObject parent = newParent ?? oldParent;
+            DependencyObject parent = (newParent != null) ? newParent : oldParent;
             TreeWalkHelper.InvalidateOnTreeChange(/* fe = */ null, /* fce = */ this, parent, (newParent != null));
 
             // If no one has called BeginInit then mark the element initialized and fire Initialized event
@@ -357,7 +366,7 @@ namespace System.Windows
 
 
             // Synchronize ForceInherit properties
-            if (_parent != null)
+            if(_parent != null)
             {
                 UIElement.SynchronizeForceInheritProperties(null, this, null, _parent);
             }
@@ -387,7 +396,6 @@ namespace System.Windows
                 // Clear the HasStyleChanged flag
                 HasStyleChanged = false;
                 HasStyleInvalidated = false;
-
             }
 
             // If this is a tree add operation update the ShouldLookupImplicitStyles
@@ -513,7 +521,6 @@ namespace System.Windows
             finally
             {
                 AncestorChangeInProgress = false;
-
             }
         }
 
@@ -540,16 +547,16 @@ namespace System.Windows
                             return true;
                         }
                     }
-                    if (null != Style && Style.HasLoadedChangeHandler)
+                    if(null != Style && Style.HasLoadedChangeHandler)
                     {
                         return true;
                     }
-                    if (null != ThemeStyle && ThemeStyle.HasLoadedChangeHandler)
+                    if(null != ThemeStyle && ThemeStyle.HasLoadedChangeHandler)
                     {
                         return true;
                     }
 
-                    if (HasFefLoadedChangeHandler)
+                    if(HasFefLoadedChangeHandler)
                     {
                         return true;
                     }
@@ -561,17 +568,17 @@ namespace System.Windows
         {
             get
             {
-                if (null == TemplatedParent)
+                if(null == TemplatedParent)
                 {
                     return false;
                 }
                 FrameworkElementFactory fefRoot = BroadcastEventHelper.GetFEFTreeRoot(TemplatedParent);
-                if (null == fefRoot)
+                if(null == fefRoot)
                 {
                     return false;
                 }
                 FrameworkElementFactory fef = StyleHelper.FindFEF(fefRoot, TemplateChildIndex);
-                if (null == fef)
+                if(null == fef)
                 {
                     return false;
                 }
@@ -834,7 +841,7 @@ namespace System.Windows
         }
 
         // connect to a new mentor
-        private void ConnectMentor(DependencyObject mentor)
+        void ConnectMentor(DependencyObject mentor)
         {
             FrameworkObject foMentor = new FrameworkObject(mentor);
 
@@ -868,7 +875,7 @@ namespace System.Windows
         }
 
         // disconnect from an old mentor
-        private void DisconnectMentor(DependencyObject mentor)
+        void DisconnectMentor(DependencyObject mentor)
         {
             FrameworkObject foMentor = new FrameworkObject(mentor);
 
@@ -918,7 +925,7 @@ namespace System.Windows
         }
 
         // handle the Loaded event from the mentor
-        private void OnMentorLoaded(object sender, RoutedEventArgs e)
+        void OnMentorLoaded(object sender, RoutedEventArgs e)
         {
             FrameworkObject foMentor = new FrameworkObject((DependencyObject)sender);
 
@@ -932,7 +939,7 @@ namespace System.Windows
         }
 
         // handle the Unloaded event from the mentor
-        private void OnMentorUnloaded(object sender, RoutedEventArgs e)
+        void OnMentorUnloaded(object sender, RoutedEventArgs e)
         {
             FrameworkObject foMentor = new FrameworkObject((DependencyObject)sender);
 
@@ -945,7 +952,7 @@ namespace System.Windows
             BroadcastEventHelper.BroadcastUnloadedSynchronously(this, IsLoaded);
         }
 
-        private void ConnectLoadedEvents(ref FrameworkObject foMentor, bool isLoaded)
+        void ConnectLoadedEvents(ref FrameworkObject foMentor, bool isLoaded)
         {
             if (foMentor.IsValid)
             {
@@ -960,7 +967,7 @@ namespace System.Windows
             }
         }
 
-        private void DisconnectLoadedEvents(ref FrameworkObject foMentor, bool isLoaded)
+        void DisconnectLoadedEvents(ref FrameworkObject foMentor, bool isLoaded)
         {
             if (foMentor.IsValid)
             {
@@ -976,7 +983,7 @@ namespace System.Windows
         }
 
         // handle the InheritedPropertyChanged event from the mentor
-        private void OnMentorInheritedPropertyChanged(object sender, InheritedPropertyChangedEventArgs e)
+        void OnMentorInheritedPropertyChanged(object sender, InheritedPropertyChangedEventArgs e)
         {
             TreeWalkHelper.InvalidateOnInheritablePropertyChange(
 
@@ -985,7 +992,7 @@ namespace System.Windows
         }
 
         // handle the ResourcesChanged event from the mentor
-        private void OnMentorResourcesChanged(object sender, EventArgs e)
+        void OnMentorResourcesChanged(object sender, EventArgs e)
         {
             TreeWalkHelper.InvalidateOnResourcesChange(
 
@@ -1135,13 +1142,13 @@ namespace System.Windows
         // Says if there is a loaded event pending
         internal object[] LoadedPending
         {
-            get { return (object[])GetValue(LoadedPendingProperty); }
+            get { return (object[]) GetValue(LoadedPendingProperty); }
         }
 
         // Says if there is an unloaded event pending
         internal object[] UnloadedPending
         {
-            get { return (object[])GetValue(UnloadedPendingProperty); }
+            get { return (object[]) GetValue(UnloadedPendingProperty); }
         }
 
         // Indicates if this instance has multiple inheritance contexts

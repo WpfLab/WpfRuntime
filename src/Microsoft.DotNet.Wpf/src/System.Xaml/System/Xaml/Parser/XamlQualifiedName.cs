@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
+using System;
 
 namespace MS.Internal.Xaml.Parser
 {
@@ -18,7 +19,7 @@ namespace MS.Internal.Xaml.Parser
             {
                 return string.IsNullOrEmpty(Prefix) ?
                     Name :
-                    $"{Prefix}:{Name}";
+                    Prefix + ":" + Name;
             }
         }
 
@@ -28,12 +29,10 @@ namespace MS.Internal.Xaml.Parser
             {
                 return false;
             }
-
             if (!IsValidNameStartChar(name[0]))
             {
                 return false;
             }
-
             for (int i = 1; i < name.Length; i++)
             {
                 if (!IsValidQualifiedNameChar(name[i]))
@@ -41,7 +40,6 @@ namespace MS.Internal.Xaml.Parser
                     return false;
                 }
             }
-
             return true;
         }
 
@@ -51,12 +49,10 @@ namespace MS.Internal.Xaml.Parser
             {
                 return false;
             }
-
             if (!IsValidNameStartChar(name[0]))
             {
                 return false;
             }
-
             for (int i = 1; i < name.Length; i++)
             {
                 if (!IsValidQualifiedNameCharPlus(name[i]))
@@ -64,7 +60,6 @@ namespace MS.Internal.Xaml.Parser
                     return false;
                 }
             }
-
             return true;
         }
 
@@ -80,7 +75,7 @@ namespace MS.Internal.Xaml.Parser
             {
                 prefix = longName.Substring(start, colonIdx);
 
-                if (string.IsNullOrEmpty(prefix) || !IsNameValid(prefix))
+                if (String.IsNullOrEmpty(prefix) || !IsNameValid(prefix))
                 {
                     return false;
                 }
@@ -93,7 +88,7 @@ namespace MS.Internal.Xaml.Parser
             // we allow Internal type name (ie. Foo+Bar) on "trival" ie. "non-generic" type names.
             // This is back compat with 3.0.
             // Don't want to allow it in any of the new type name syntax.  (including trival typeArgs)
-            if (string.IsNullOrEmpty(name) || !IsNameValid_WithPlus(name))
+            if (String.IsNullOrEmpty(name) || !IsNameValid_WithPlus(name))
             {
                 return false;
             }

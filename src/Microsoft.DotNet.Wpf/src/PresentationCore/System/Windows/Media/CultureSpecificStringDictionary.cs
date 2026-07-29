@@ -1,8 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using SC = System.Collections;
-using System.Windows.Markup;
+//
+//
+//
+//  Contents:  LanguageSpecificStringDictionary
+//
+//
+
+using System;
+using System.ComponentModel;    // for TypeConverter
+using System.Globalization;
+using SC=System.Collections;
+using System.Collections.Generic;
+using System.Windows.Markup;    // for XmlLanguage and XmlLanguageConverter
+
+using MS.Internal.PresentationCore;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
@@ -105,9 +120,11 @@ namespace System.Windows.Media
         [CLSCompliant(false)]
         public void CopyTo(KeyValuePair<XmlLanguage, string>[] array, int index)
         {
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+                throw new ArgumentNullException("array");
 
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
+            if (index < 0)
+                throw new ArgumentOutOfRangeException("index");
 
             if (index >= array.Length)
                 throw new ArgumentException(SR.Format(SR.Collection_CopyTo_IndexGreaterThanOrEqualToArrayLength, "index", "array"));
@@ -139,9 +156,11 @@ namespace System.Windows.Media
 
         void SC.ICollection.CopyTo(Array array, int index)
         {
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+                throw new ArgumentNullException("array");
 
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
+            if (index < 0)
+                throw new ArgumentOutOfRangeException("index");
 
             if (index >= array.Length)
                 throw new ArgumentException(SR.Format(SR.Collection_CopyTo_IndexGreaterThanOrEqualToArrayLength, "index", "array"));
@@ -296,7 +315,8 @@ namespace System.Windows.Media
         // make sure value is not null
         private string ValidateValue(string value)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if (value == null)
+                throw new ArgumentNullException("value");
 
             return value;
         }
@@ -307,9 +327,10 @@ namespace System.Windows.Media
             string s = value as string;
             if (s == null)
             {
-                ArgumentNullException.ThrowIfNull(value);
-
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(string)), nameof(value));
+                if (value == null)
+                    throw new ArgumentNullException("value");
+                else
+                    throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(string)), "value");
             }
             return s;
         }
@@ -320,9 +341,10 @@ namespace System.Windows.Media
             XmlLanguage language = TryConvertKey(key);
             if (language == null)
             {
-                ArgumentNullException.ThrowIfNull(key);
-
-                throw new ArgumentException(SR.Format(SR.CannotConvertType, key.GetType(), typeof(XmlLanguage)), nameof(key));
+                if (key == null)
+                    throw new ArgumentNullException("key");
+                else
+                    throw new ArgumentException(SR.Format(SR.CannotConvertType, key.GetType(), typeof(XmlLanguage)), "key");
             }
             return language;
         }

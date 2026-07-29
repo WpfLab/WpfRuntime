@@ -1,9 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Windows.Markup;
 using System.Xaml.MS.Impl;
@@ -12,7 +12,7 @@ namespace System.Xaml
 {
     //
     // The implementation for this class is taken directly from the source of NameScope, including the use
-    // of HybridDictionary to match the performance semantics of 3.0 for the time being
+    // of HybridDictionary to match the performance semantics of 3.0 for the time being 
     // Note that the IEnumerable<T> uses KeyValuePair<string, object>
     // This means that we need to create KeyValuePairs on the fly
     // The other option would be to just use IEnumerable (or change the HybridDictionary to Dictionary<K,V>)
@@ -22,7 +22,7 @@ namespace System.Xaml
         private HybridDictionary _nameMap;
         private INameScope _underlyingNameScope;
         private FrugalObjectList<string> _names;
-
+        
         public NameScopeDictionary()
         {
         }
@@ -47,14 +47,14 @@ namespace System.Xaml
                 throw new ArgumentException(SR.Format(SR.NameScopeInvalidIdentifierName, name));
             }
 
-            if (_underlyingNameScope is not null)
+            if (_underlyingNameScope != null)
             {
                 _names.Add(name);
                 _underlyingNameScope.RegisterName(name, scopedElement);
             }
             else
             {
-                if (_nameMap is null)
+                if (_nameMap == null)
                 {
                     _nameMap = new HybridDictionary();
                     _nameMap[name] = scopedElement;
@@ -63,7 +63,7 @@ namespace System.Xaml
                 {
                     object nameContext = _nameMap[name];
 
-                    if (nameContext is null)
+                    if (nameContext == null)
                     {
                         _nameMap[name] = scopedElement;
                     }
@@ -82,14 +82,14 @@ namespace System.Xaml
             if (name.Length == 0)
                 throw new ArgumentException(SR.NameScopeNameNotEmptyString);
 
-            if (_underlyingNameScope is not null)
+            if (_underlyingNameScope != null)
             {
                 _underlyingNameScope.UnregisterName(name);
                 _names.Remove(name);
             }
             else
             {
-                if (_nameMap is not null && _nameMap[name] is not null)
+                if (_nameMap != null && _nameMap[name] != null)
                 {
                     _nameMap.Remove(name);
                 }
@@ -107,44 +107,43 @@ namespace System.Xaml
             if (name.Length == 0)
                 throw new ArgumentException(SR.NameScopeNameNotEmptyString);
 
-            if (_underlyingNameScope is not null)
+            if (_underlyingNameScope != null)
             {
                 return _underlyingNameScope.FindName(name);
             }
             else
             {
-                if (_nameMap is null)
+                if (_nameMap == null)
                 {
                     return null;
                 }
-
                 return _nameMap[name];
             }
         }
 
         internal INameScope UnderlyingNameScope { get { return _underlyingNameScope; } }
 
-        private class Enumerator : IEnumerator<KeyValuePair<string, object>>
+        class Enumerator : IEnumerator<KeyValuePair<string, object>>
         {
-            private int index;
-            private IDictionaryEnumerator dictionaryEnumerator;
-            private HybridDictionary _nameMap;
-            private INameScope _underlyingNameScope;
-            private FrugalObjectList<string> _names;
-
+            int index;
+            IDictionaryEnumerator dictionaryEnumerator;
+            HybridDictionary _nameMap;
+            INameScope _underlyingNameScope;
+            FrugalObjectList<string> _names;
+            
             public Enumerator(NameScopeDictionary nameScopeDictionary)
             {
                 _nameMap = nameScopeDictionary._nameMap;
                 _underlyingNameScope = nameScopeDictionary._underlyingNameScope;
                 _names = nameScopeDictionary._names;
 
-                if (_underlyingNameScope is not null)
+                if (_underlyingNameScope != null)
                 {
                     index = -1;
                 }
                 else
                 {
-                    if (_nameMap is not null)
+                    if (_nameMap != null)
                     {
                         dictionaryEnumerator = _nameMap.GetEnumerator();
                     }
@@ -160,14 +159,14 @@ namespace System.Xaml
             {
                 get
                 {
-                    if (_underlyingNameScope is not null)
+                    if (_underlyingNameScope != null)
                     {
                         string name = _names[index];
-                        return new KeyValuePair<string, object>(name, _underlyingNameScope.FindName(name));
+                        return new KeyValuePair<string,object>(name, _underlyingNameScope.FindName(name));
                     }
                     else
                     {
-                        if (_nameMap is not null)
+                        if (_nameMap != null)
                         {
                             return new KeyValuePair<string, object>((string)dictionaryEnumerator.Key, dictionaryEnumerator.Value);
                         }
@@ -179,7 +178,7 @@ namespace System.Xaml
 
             public bool MoveNext()
             {
-                if (_underlyingNameScope is not null)
+                if (_underlyingNameScope != null)
                 {
                     if (index == _names.Count - 1)
                     {
@@ -191,7 +190,7 @@ namespace System.Xaml
                 }
                 else
                 {
-                    if (_nameMap is not null)
+                    if (_nameMap != null)
                     {
                         return dictionaryEnumerator.MoveNext();
                     }
@@ -210,7 +209,7 @@ namespace System.Xaml
 
             void IEnumerator.Reset()
             {
-                if (_underlyingNameScope is not null)
+                if (_underlyingNameScope != null)
                 {
                     index = -1;
                 }
@@ -221,7 +220,7 @@ namespace System.Xaml
             }
         }
 
-        private IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+        IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
             return new Enumerator(this);
         }
@@ -286,7 +285,7 @@ namespace System.Xaml
 
         #region IDictionary<string, object> methods
         object IDictionary<string, object>.this[string key]
-        {
+        { 
             get
             {
                 throw new NotImplementedException();

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -66,11 +67,24 @@
 //
 //      </Manifest>
 
+//
+//
+//
+
+using System;
+using System.Diagnostics;
+using System.Collections;
+using System.Collections.Generic;
+//using System.Security;                      // for SecurityCritical and SecurityTreatAsSafe
 using System.Security.Cryptography;
 using System.Security.Cryptography.Xml;
+using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using System.IO;
+using System.Windows;
 using System.IO.Packaging;
+using MS.Internal;
+using MS.Internal.WindowsBase;
 
 using PackageRelationship = MS.Internal.IO.Packaging.Extensions.PackageRelationship;
 
@@ -117,8 +131,8 @@ namespace MS.Internal.IO.Packaging
             while (reader.Read() && (reader.MoveToContent() == XmlNodeType.Element))
             {
                 // should be on a <Reference> tag
-                if (string.Equals(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl, StringComparison.Ordinal)
-                    && (string.Equals(reader.LocalName, referenceTagName, StringComparison.Ordinal))
+                if (String.CompareOrdinal(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl) == 0
+                    && (String.CompareOrdinal(reader.LocalName, referenceTagName) == 0)
                     && reader.Depth == 2)
                 {
                     // Parse each reference - distinguish between Relationships and Parts
@@ -154,7 +168,7 @@ namespace MS.Internal.IO.Packaging
         {
             // verify namespace and lack of attributes
             if (PackagingUtilities.GetNonXmlnsAttributeCount(reader) > 1
-                || !string.Equals(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl, StringComparison.Ordinal)
+                || String.CompareOrdinal(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl) != 0
                 || reader.Depth != 3)
                 throw new XmlException(SR.XmlSignatureParseError);
 
@@ -181,7 +195,7 @@ namespace MS.Internal.IO.Packaging
 
             // verify namespace and lack of attributes
             if (PackagingUtilities.GetNonXmlnsAttributeCount(reader) > 0
-                || !string.Equals(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl, StringComparison.Ordinal)
+                || String.CompareOrdinal(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl) != 0
                 || reader.Depth != 3)
                 throw new XmlException(SR.XmlSignatureParseError);
 
@@ -247,7 +261,7 @@ namespace MS.Internal.IO.Packaging
             while (reader.Read() && (reader.MoveToContent() == XmlNodeType.Element))
             {
                 // Correct Namespace?
-                if (!string.Equals(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl, StringComparison.Ordinal)
+                if (String.CompareOrdinal(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl) != 0
                     || reader.Depth != 3)
                 {
                     throw new XmlException(SR.PackageSignatureCorruption);
@@ -255,7 +269,7 @@ namespace MS.Internal.IO.Packaging
 
                 // DigestMethod?
                 if (hashAlgorithm == null &&
-                    string.Equals(reader.LocalName, XTable.Get(XTable.ID.DigestMethodTagName), StringComparison.Ordinal))
+                    String.CompareOrdinal(reader.LocalName, XTable.Get(XTable.ID.DigestMethodTagName)) == 0)
                 {
                     hashAlgorithm = ParseDigestAlgorithmTag(reader);
                     continue;
@@ -263,7 +277,7 @@ namespace MS.Internal.IO.Packaging
 
                 // DigestValue?
                 if (hashValue == null &&
-                    string.Equals(reader.LocalName, XTable.Get(XTable.ID.DigestValueTagName), StringComparison.Ordinal))
+                    String.CompareOrdinal(reader.LocalName, XTable.Get(XTable.ID.DigestValueTagName)) == 0)
                 {
                     hashValue = ParseDigestValueTag(reader);
                     continue;
@@ -271,7 +285,7 @@ namespace MS.Internal.IO.Packaging
 
                 // TransformsTag?
                 if (!transformsParsed &&
-                    string.Equals(reader.LocalName, XTable.Get(XTable.ID.TransformsTagName), StringComparison.Ordinal))
+                    String.CompareOrdinal(reader.LocalName, XTable.Get(XTable.ID.TransformsTagName)) == 0)
                 {
                     transforms = ParseTransformsTag(reader, partUri, ref relationshipSelectors);
                     transformsParsed = true;
@@ -327,8 +341,8 @@ namespace MS.Internal.IO.Packaging
 
                 // at this level, all tags must be Transform tags
                 if (reader.Depth != 4
-                    || !string.Equals(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl, StringComparison.Ordinal)
-                    || !string.Equals(reader.LocalName, XTable.Get(XTable.ID.TransformTagName), StringComparison.Ordinal))
+                    || String.CompareOrdinal(reader.NamespaceURI, SignedXml.XmlDsigNamespaceUrl) != 0
+                    || String.CompareOrdinal(reader.LocalName, XTable.Get(XTable.ID.TransformTagName)) != 0)
                 {
                     throw new XmlException(SR.XmlSignatureParseError);
                 }
@@ -343,7 +357,7 @@ namespace MS.Internal.IO.Packaging
                 if ((transformName != null) && (transformName.Length > 0))
                 {
                     // what type of transform?
-                    if (string.Equals(transformName, XTable.Get(XTable.ID.RelationshipsTransformName), StringComparison.Ordinal))
+                    if (String.CompareOrdinal(transformName, XTable.Get(XTable.ID.RelationshipsTransformName)) == 0)
                     {
                         if (!relationshipTransformFound)
                         {
@@ -416,10 +430,10 @@ namespace MS.Internal.IO.Packaging
                 // both types have no children, a single required attribute and belong to the OPC namespace
                 if (reader.IsEmptyElement
                     && PackagingUtilities.GetNonXmlnsAttributeCount(reader) == 1
-                    && (string.Equals(reader.NamespaceURI, XTable.Get(XTable.ID.OpcSignatureNamespace), StringComparison.Ordinal)))
+                    && (String.CompareOrdinal(reader.NamespaceURI, XTable.Get(XTable.ID.OpcSignatureNamespace)) == 0))
                 {
                     // <RelationshipReference>?
-                    if (string.Equals(reader.LocalName, XTable.Get(XTable.ID.RelationshipReferenceTagName), StringComparison.Ordinal))
+                    if (String.CompareOrdinal(reader.LocalName, XTable.Get(XTable.ID.RelationshipReferenceTagName)) == 0)
                     {
                         // RelationshipReference tags are legal and these must be empty with a single SourceId attribute
                         // get the SourceId attribute 
@@ -434,7 +448,7 @@ namespace MS.Internal.IO.Packaging
                             continue;
                         }
                     }   // <RelationshipsGroupReference>?
-                    else if ((string.Equals(reader.LocalName, XTable.Get(XTable.ID.RelationshipsGroupReferenceTagName), StringComparison.Ordinal)))
+                    else if ((String.CompareOrdinal(reader.LocalName, XTable.Get(XTable.ID.RelationshipsGroupReferenceTagName)) == 0))
                     {
                         // RelationshipsGroupReference tags must be empty with a single SourceType attribute
                         string type = reader.GetAttribute(XTable.Get(XTable.ID.SourceTypeAttrName));
@@ -827,6 +841,6 @@ namespace MS.Internal.IO.Packaging
         //  Private Members
         //
         //------------------------------------------------------
-        private const string _contentTypeQueryStringPrefix = "?ContentType=";
+        const string _contentTypeQueryStringPrefix = "?ContentType=";
     }
 }

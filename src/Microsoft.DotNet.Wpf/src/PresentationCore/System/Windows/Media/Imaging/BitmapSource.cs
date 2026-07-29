@@ -1,14 +1,30 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Windows.Media.Composition;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+//
+//
+
+using System;
 using System.IO;
+using System.Collections;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Security;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
 using MS.Win32;
-
+using System.IO.Packaging;
 using UnsafeNativeMethods = MS.Win32.PresentationCore.UnsafeNativeMethods;
+using SR = MS.Internal.PresentationCore.SR;
+using MS.Internal.PresentationCore;                        // SecurityHelper
 
 namespace System.Windows.Media.Imaging
 {
@@ -67,7 +83,7 @@ namespace System.Windows.Media.Imaging
         /// <remarks>
         ///     Callers must have UnmanagedCode permission to call this API.
         /// </remarks>
-        public static unsafe BitmapSource Create(
+        unsafe public static BitmapSource Create(
             int pixelWidth,
             int pixelHeight,
             double dpiX,
@@ -389,7 +405,7 @@ namespace System.Windows.Media.Imaging
             // Demand Site Of origin on the URI if it passes then this  information is ok to expose
             CheckIfSiteOfOrigin();
 
-            CriticalCopyPixels(sourceRect, buffer, (uint)bufferSize, stride);
+            CriticalCopyPixels(sourceRect, buffer, bufferSize, stride);
         }
 
         /// <summary>
@@ -533,7 +549,7 @@ namespace System.Windows.Media.Imaging
 
         private void EnsureShouldUseVirtuals()
         {
-            if (!_useVirtuals)
+            if (_useVirtuals == false)
             {
                 throw new NotImplementedException();
             }
@@ -631,16 +647,18 @@ namespace System.Windows.Media.Imaging
         /// <param name="pixels"></param>
         /// <param name="stride"></param>
         /// <param name="offset"></param>
-        internal unsafe void CriticalCopyPixels(Int32Rect sourceRect, Array pixels, int stride, int offset)
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
+        unsafe internal void CriticalCopyPixels(Int32Rect sourceRect, Array pixels, int stride, int offset)
         {
             ReadPreamble();
             _bitmapInit.EnsureInitializedComplete();
             CompleteDelayedCreation();
 
-            ArgumentNullException.ThrowIfNull(pixels);
+            if (pixels == null)
+                throw new System.ArgumentNullException("pixels");
 
             if (pixels.Rank != 1)
-                throw new ArgumentException(SR.Collection_BadRank, nameof(pixels));
+                throw new ArgumentException(SR.Collection_BadRank, "pixels");
 
             if (offset < 0)
             {
@@ -661,15 +679,45 @@ namespace System.Windows.Media.Imaging
             if (elementSize == -1)
                 throw new ArgumentException(SR.Image_InvalidArrayForPixel);
 
-            uint destBufferSize = checked((uint)elementSize * (uint)(pixels.Length - offset));
+            int destBufferSize = checked(elementSize * (pixels.Length - offset));
 
-            // Check whether offset is out of bounds manually
-            if (offset >= pixels.Length)
-                throw new IndexOutOfRangeException();
 
-            fixed (byte* pixelArray = &Unsafe.AddByteOffset(ref MemoryMarshal.GetArrayDataReference(pixels), (nint)offset * elementSize))
-                CriticalCopyPixels(sourceRect, (nint)pixelArray, destBufferSize, stride);
-        }
+            if (pixels is byte[])
+            {
+                fixed (void* pixelArray = &((byte[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is short[])
+            {
+                fixed (void* pixelArray = &((short[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is ushort[])
+            {
+                fixed (void* pixelArray = &((ushort[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is int[])
+            {
+                fixed (void* pixelArray = &((int[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is uint[])
+            {
+                fixed (void* pixelArray = &((uint[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is float[])
+            {
+                fixed (void* pixelArray = &((float[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is double[])
+            {
+                fixed (void* pixelArray = &((double[])pixels)[offset])
+                    CriticalCopyPixels(sourceRect, (IntPtr)pixelArray, destBufferSize, stride);
+            }
+}
 
         /// <summary>
         /// CriticalCopyPixels
@@ -678,12 +726,13 @@ namespace System.Windows.Media.Imaging
         /// <param name="buffer"></param>
         /// <param name="bufferSize"></param>
         /// <param name="stride"></param>
-        internal void CriticalCopyPixels(Int32Rect sourceRect, IntPtr buffer, uint bufferSize, int stride)
+        internal void CriticalCopyPixels(Int32Rect sourceRect, IntPtr buffer, int bufferSize, int stride)
         {
             if (buffer == IntPtr.Zero)
-                throw new ArgumentNullException(nameof(buffer));
+                throw new ArgumentNullException("buffer");
 
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stride);
+            if (stride <= 0)
+                throw new ArgumentOutOfRangeException("stride", SR.ParameterMustBeGreaterThanZero);
 
             if (sourceRect.Width <= 0)
                 sourceRect.Width = PixelWidth;
@@ -691,14 +740,19 @@ namespace System.Windows.Media.Imaging
             if (sourceRect.Height <= 0)
                 sourceRect.Height = PixelHeight;
 
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(sourceRect.Width, PixelWidth, "sourceRect.Width");
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(sourceRect.Height, PixelHeight, "sourceRect.Height");
+            if (sourceRect.Width > PixelWidth)
+                throw new ArgumentOutOfRangeException("sourceRect.Width", SR.Format(SR.ParameterCannotBeGreaterThan, PixelWidth));
+
+            if (sourceRect.Height > PixelHeight)
+                throw new ArgumentOutOfRangeException("sourceRect.Height", SR.Format(SR.ParameterCannotBeGreaterThan, PixelHeight));
 
             int minStride = checked(((sourceRect.Width * Format.BitsPerPixel) + 7) / 8);
-            ArgumentOutOfRangeException.ThrowIfLessThan(stride, minStride);
+            if (stride < minStride)
+                throw new ArgumentOutOfRangeException("stride", SR.Format(SR.ParameterCannotBeLessThan, minStride));
 
-            uint minRequiredDestSize = checked(((uint)stride * (uint)(sourceRect.Height - 1)) + (uint)minStride);
-            ArgumentOutOfRangeException.ThrowIfLessThan(bufferSize, minRequiredDestSize);
+            int minRequiredDestSize = checked((stride * (sourceRect.Height - 1)) + minStride);
+            if (bufferSize < minRequiredDestSize)
+                throw new ArgumentOutOfRangeException("buffer", SR.Format(SR.ParameterCannotBeLessThan, minRequiredDestSize));
 
             lock (_syncObject)
             {
@@ -706,7 +760,7 @@ namespace System.Windows.Media.Imaging
                     WicSourceHandle,
                     ref sourceRect,
                     (uint)stride,
-                    bufferSize,
+                    (uint)bufferSize,
                     buffer
                     ));
             }
@@ -864,7 +918,8 @@ namespace System.Windows.Media.Imaging
                             }
                             finally
                             {
-                                pIWicConverter?.Close();
+                                if (pIWicConverter != null)
+                                    pIWicConverter.Close();
                             }
                         }
                     }
@@ -1221,7 +1276,7 @@ namespace System.Windows.Media.Imaging
                 // not set properly. Use IsValidForFinalizeCreation to validate, but don't throw
                 // if the validation fails.
                 if (_bitmapInit.IsInitAtLeastOnce &&
-                    IsValidForFinalizeCreation(throwIfInvalid: false))
+                    IsValidForFinalizeCreation(/* throwIfInvalid = */ false))
                 {
                     // FinalizeCreation() can throw because it usually makes pinvokes to things
                     // that return HRESULTs. Since firing the download events up the chain is
@@ -1586,7 +1641,7 @@ namespace System.Windows.Media.Imaging
 
         /// List of supported DUCE formats
         /// NOTE: Please add formats in increasing bpp order
-        private static readonly PixelFormat[] s_supportedDUCEFormats =
+        private readonly static PixelFormat[] s_supportedDUCEFormats =
             new PixelFormat[13]
             {
                 PixelFormats.Indexed1,
@@ -1692,7 +1747,10 @@ namespace System.Windows.Media.Imaging
 
             public ManagedBitmapSource(BitmapSource bitmapSource)
             {
-                ArgumentNullException.ThrowIfNull(bitmapSource);
+                if (bitmapSource == null)
+                {
+                    throw new System.ArgumentNullException("bitmapSource");
+                }
                 _bitmapSource = new WeakReference<BitmapSource>(bitmapSource);
             }
 

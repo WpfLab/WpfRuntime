@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -10,14 +11,15 @@
 *
 \***************************************************************************/
 using System.ComponentModel;            // DefaultValueAttribute
+using System.Diagnostics;               // Debug.Assert
 
 namespace System.Windows.Media.Animation
 {
-    /// <summary>
-    /// SetStoryboardSpeedRatio will set the speed for its Storyboard reference when
-    ///  it is triggered.
-    /// </summary>
-    public sealed class SetStoryboardSpeedRatio : ControllableStoryboardAction
+/// <summary>
+/// SetStoryboardSpeedRatio will set the speed for its Storyboard reference when
+///  it is triggered.
+/// </summary>
+public sealed class SetStoryboardSpeedRatio : ControllableStoryboardAction
 {
     /// <summary>
     ///     A speed ratio to use for this action.  If it is never explicitly
@@ -59,6 +61,6 @@ namespace System.Windows.Media.Animation
         }
     }
 
-        private double          _speedRatio = 1.0;
+    double          _speedRatio = 1.0;
 }
 }

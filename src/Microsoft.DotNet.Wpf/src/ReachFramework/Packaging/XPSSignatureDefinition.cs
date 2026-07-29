@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -15,6 +16,12 @@
 
 
 --*/
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.IO.Packaging;
 using System.Xml;
 using System.Globalization;
 using System.Windows.Markup;
@@ -93,9 +100,9 @@ namespace System.Windows.Xps.Packaging
             }
         }
 
-        private Uri         _pageUri;
-        private double      _startX;
-        private double      _startY;
+        Uri         _pageUri;
+        double      _startX;
+        double      _startY;
     }
 
     /// <summary>

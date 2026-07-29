@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -8,9 +9,17 @@
 *
 *
 \***************************************************************************/
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Diagnostics;
+using System.Windows.Documents;
 using System.Windows.Markup;
+using System.Reflection;
+using MS.Internal;
 using System.Xaml;
+using System.Collections.Generic;
 
 namespace System.Windows
 {
@@ -252,8 +261,9 @@ namespace System.Windows
                         return resourceDictionary;
                     }
                 }
-                if (ambientValue.Value is Style style)
+                if (ambientValue.Value is Style)
                 {
+                    var style = (Style)ambientValue.Value;
                     var resourceDictionary = style.FindResourceDictionary(ResourceKey);
                     if (resourceDictionary != null)
                     {

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //+-----------------------------------------------------------------------
 //
@@ -13,16 +14,22 @@
 //
 //
 
+using System;
 using System.Net;
+using System.Security;
+using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
+
+using System.Windows;
+using System.Windows.Interop;
 using MS.Win32;
 using MS.Internal.PresentationCore;
 
 namespace MS.Internal.AppModel
 {
-    internal static class CookieHandler
+static class CookieHandler
 {
     internal static void HandleWebRequest(WebRequest request)
     {
@@ -31,7 +38,7 @@ namespace MS.Internal.AppModel
         {
             try
             {
-                string cookies = GetCookie(httpRequest.RequestUri, throwIfNoCookie: false);
+                string cookies = GetCookie(httpRequest.RequestUri, false/*throwIfNoCookie*/);
                 if(!string.IsNullOrEmpty(cookies))
                 {
                     if (httpRequest.CookieContainer == null)
@@ -97,6 +104,7 @@ namespace MS.Internal.AppModel
         }
     }
 
+    [FriendAccessAllowed] // called by PF.Application.GetCookie()
     [SuppressMessage("Microsoft.Interoperability", "CA1404:CallGetLastErrorImmediatelyAfterPInvoke", 
         Justification="It's okay now. Be careful on change.")]
     internal static string GetCookie(Uri uri, bool throwIfNoCookie)
@@ -120,6 +128,7 @@ namespace MS.Internal.AppModel
         throw new Win32Exception(/*uses last error code*/);
     }
 
+    [FriendAccessAllowed] // called by PF.Application.SetCookie()
     internal static bool SetCookie(Uri uri, string cookieData)
     {
         return SetCookieUnsafe(uri, cookieData, null);

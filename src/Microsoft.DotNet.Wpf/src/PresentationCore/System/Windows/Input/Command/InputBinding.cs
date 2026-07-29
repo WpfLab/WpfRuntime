@@ -1,16 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Security;              // SecurityCritical, TreatAsSafe
+using System.Windows;
+using System.Windows.Markup;
 using System.ComponentModel;
 
 using MS.Internal;
 using MS.Internal.PresentationCore;
 
 
-namespace System.Windows.Input
+namespace System.Windows.Input 
 {
     /// <summary>
     /// InputBinding - InputGesture and ICommand combination
@@ -33,10 +38,12 @@ namespace System.Windows.Input
         /// <param name="command">Command</param>
         /// <param name="gesture">Input Gesture</param>
         public InputBinding(ICommand command, InputGesture gesture) 
-        {
-            ArgumentNullException.ThrowIfNull(command);
+        {   
+            if (command == null)
+                throw new ArgumentNullException("command");
 
-            ArgumentNullException.ThrowIfNull(gesture);
+            if (gesture == null)
+                throw new ArgumentNullException("gesture");
 
             Command = command;
             _gesture = gesture;
@@ -138,7 +145,8 @@ namespace System.Windows.Input
             set
             {
                 WritePreamble();
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 lock (_dataLock)
                 {

@@ -1,15 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using MS.Utility;
-using MS.Internal;
-using System.Threading;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
+using System.Globalization;
 using System.ComponentModel;
-using System.Windows.Markup;    // For ValueSerializerAttribute
-using MS.Internal.WindowsBase;
+using System.Windows.Markup;// For ValueSerializerAttribute
 using System.Windows.Threading; // For DispatcherObject
-using System.Runtime.CompilerServices;
+using MS.Utility;
+using MS.Internal.WindowsBase;
+using System.Reflection;   // for IsInstanceOfType
+using MS.Internal;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows
 {
@@ -140,6 +147,8 @@ namespace System.Windows
             }
 
             // Authorize registering type for read-only access, create key.
+            #pragma warning suppress 6506 // typeMetadata is never null, since we generate default metadata if none is provided.
+
             // Apply type-specific metadata to owner type only
             property.OverrideMetadata(ownerType, typeMetadata, authorizationKey);
 
@@ -235,23 +244,33 @@ namespace System.Windows
 
         private static void RegisterParameterValidation(string name, Type propertyType, Type ownerType)
         {
-            ArgumentNullException.ThrowIfNull(name);
+            if (name == null)
+            {
+                throw new ArgumentNullException("name");
+            }
 
             if (name.Length == 0)
             {
-                throw new ArgumentException(SR.StringEmpty, nameof(name));
+                throw new ArgumentException(SR.StringEmpty, "name");
             }
 
-            ArgumentNullException.ThrowIfNull(ownerType);
-            ArgumentNullException.ThrowIfNull(propertyType);
+            if (ownerType == null)
+            {
+                throw new ArgumentNullException("ownerType");
+            }
+
+            if (propertyType == null)
+            {
+                throw new ArgumentNullException("propertyType");
+            }
         }
 
         private static DependencyProperty RegisterCommon(string name, Type propertyType, Type ownerType, PropertyMetadata defaultMetadata, ValidateValueCallback validateValueCallback)
         {
-            FromNameKey key = new(name, ownerType);
+            FromNameKey key = new FromNameKey(name, ownerType);
             lock (Synchronized)
             {
-                if (PropertyFromName.ContainsKey(key))
+                if (PropertyFromName.Contains(key))
                 {
                     throw new ArgumentException(SR.Format(SR.PropertyAlreadyRegistered, name, ownerType.Name));
                 }
@@ -362,7 +381,7 @@ namespace System.Windows
             }
 
             ValidateDefaultValueCommon(defaultMetadata.DefaultValue, propertyType,
-                propertyName, validateValueCallback, checkThreadAffinity: true);
+                propertyName, validateValueCallback, /*checkThreadAffinity = */ true);
         }
 
         // Validate the given default value, used by PropertyMetadata.GetDefaultValue()
@@ -401,16 +420,18 @@ namespace System.Windows
                 // deriving from DispatcherObject are allowed - it is up to the user to
                 // make any custom types free-threaded.
 
+                DispatcherObject dispatcherObject = defaultValue as DispatcherObject;
 
-                if (defaultValue is DispatcherObject dispatcherObject && dispatcherObject.Dispatcher != null)
+                if (dispatcherObject != null && dispatcherObject.Dispatcher != null)
                 {
                     // Try to make the DispatcherObject free-threaded if it's an
                     // ISealable.
 
+                    ISealable valueAsISealable = dispatcherObject as ISealable;
 
-                    if (dispatcherObject is ISealable valueAsISealable && valueAsISealable.CanSeal)
+                    if (valueAsISealable != null && valueAsISealable.CanSeal)
                     {
-                        Invariant.Assert(!valueAsISealable.IsSealed,
+                        Invariant.Assert (!valueAsISealable.IsSealed,
                                "A Sealed ISealable must not have dispatcher affinity");
 
                         valueAsISealable.Seal();
@@ -447,8 +468,15 @@ namespace System.Windows
             out DependencyObjectType dType,
             out PropertyMetadata baseMetadata )
         {
-            ArgumentNullException.ThrowIfNull(forType);
-            ArgumentNullException.ThrowIfNull(typeMetadata);
+            if (forType == null)
+            {
+                throw new ArgumentNullException("forType");
+            }
+
+            if (typeMetadata == null)
+            {
+                throw new ArgumentNullException("typeMetadata");
+            }
 
             if (typeMetadata.Sealed)
             {
@@ -519,7 +547,10 @@ namespace System.Windows
 
             SetupOverrideMetadata(forType, typeMetadata, out dType, out baseMetadata);
 
-            ArgumentNullException.ThrowIfNull(key);
+            if (key == null)
+            {
+                throw new ArgumentNullException("key");
+            }
 
             if (ReadOnly)
             {
@@ -591,6 +622,7 @@ namespace System.Windows
         }
 
 
+        [FriendAccessAllowed]   // Built into Base, also used by Core & Framework.
         internal object GetDefaultValue(DependencyObjectType dependencyObjectType)
         {
             if (!IsDefaultValueChanged)
@@ -601,6 +633,7 @@ namespace System.Windows
             return GetMetadata(dependencyObjectType).DefaultValue;
         }
 
+        [FriendAccessAllowed]   // Built into Base, also used by Core & Framework.
         internal object GetDefaultValue(Type forType)
         {
             if (!IsDefaultValueChanged)
@@ -618,8 +651,11 @@ namespace System.Windows
         /// <returns>Property metadata</returns>
         public PropertyMetadata GetMetadata(Type forType)
         {
-            ArgumentNullException.ThrowIfNull(forType);
-            return GetMetadata(DependencyObjectType.FromSystemType(forType));
+            if (forType != null)
+            {
+                return GetMetadata(DependencyObjectType.FromSystemType(forType));
+            }
+            throw new ArgumentNullException("forType");
         }
 
         /// <summary>
@@ -629,8 +665,11 @@ namespace System.Windows
         /// <returns>Property metadata</returns>
         public PropertyMetadata GetMetadata(DependencyObject dependencyObject)
         {
-            ArgumentNullException.ThrowIfNull(dependencyObject);
-            return GetMetadata(dependencyObject.DependencyObjectType);
+            if (dependencyObject != null)
+            {
+                return GetMetadata(dependencyObject.DependencyObjectType);
+            }
+            throw new ArgumentNullException("dependencyObject");
         }
 
         /// <summary>
@@ -744,15 +783,18 @@ namespace System.Windows
         /// <returns>This property</returns>
         public DependencyProperty AddOwner(Type ownerType, PropertyMetadata typeMetadata)
         {
-            ArgumentNullException.ThrowIfNull(ownerType);
+            if (ownerType == null)
+            {
+                throw new ArgumentNullException("ownerType");
+            }
 
             // Map owner type to this property
             // Build key
-            FromNameKey key = new(Name, ownerType);
+            FromNameKey key = new FromNameKey(Name, ownerType);
 
             lock (Synchronized)
             {
-                if (PropertyFromName.ContainsKey(key))
+                if (PropertyFromName.Contains(key))
                 {
                     throw new ArgumentException(SR.Format(SR.PropertyAlreadyRegistered, Name, ownerType.Name));
                 }
@@ -763,10 +805,12 @@ namespace System.Windows
                 OverrideMetadata(ownerType, typeMetadata);
             }
 
+
             lock (Synchronized)
             {
                 PropertyFromName[key] = this;
             }
+
 
             return this;
         }
@@ -956,29 +1000,42 @@ namespace System.Windows
         /// <param name="name">Name of the property</param>
         /// <param name="ownerType">Owner type of the property</param>
         /// <returns>Dependency property</returns>
+        [FriendAccessAllowed]   // Built into Base, also used by Framework.
         internal static DependencyProperty FromName(string name, Type ownerType)
         {
             DependencyProperty dp = null;
 
-            ArgumentNullException.ThrowIfNull(name);
-            ArgumentNullException.ThrowIfNull(ownerType);
-
-            while (ownerType != null)
+            if (name != null)
             {
-                // Ensure static constructor of type has run
-                RuntimeHelpers.RunClassConstructor(ownerType.TypeHandle);
-
-                // Locate property
-                FromNameKey key = new(name, ownerType);
-                lock (Synchronized)
+                if (ownerType != null)
                 {
-                    if (PropertyFromName.TryGetValue(key, out dp))
-                        return dp;
+                    FromNameKey key = new FromNameKey(name, ownerType);
+
+                    while ((dp == null) && (ownerType != null))
+                    {
+                        // Ensure static constructor of type has run
+                        MS.Internal.WindowsBase.SecurityHelper.RunClassConstructor(ownerType);
+
+                        // Locate property
+                        key.UpdateNameKey(ownerType);
+
+                        lock (Synchronized)
+                        {
+                            dp = (DependencyProperty)PropertyFromName[key];
+                        }
+
+                        ownerType = ownerType.BaseType;
+                    }
                 }
-
-                ownerType = ownerType.BaseType;
+                else
+                {
+                    throw new ArgumentNullException("ownerType");
+                }
             }
-
+            else
+            {
+                throw new ArgumentNullException("name");
+            }
             return dp;
         }
 
@@ -1015,11 +1072,18 @@ namespace System.Windows
             return true;
         }
 
-        private readonly struct FromNameKey : IEquatable<FromNameKey>
+        private class FromNameKey
         {
             public FromNameKey(string name, Type ownerType)
             {
                 _name = name;
+                _ownerType = ownerType;
+
+                _hashCode = _name.GetHashCode() ^ _ownerType.GetHashCode();
+            }
+
+            public void UpdateNameKey(Type ownerType)
+            {
                 _ownerType = ownerType;
 
                 _hashCode = _name.GetHashCode() ^ _ownerType.GetHashCode();
@@ -1032,18 +1096,25 @@ namespace System.Windows
 
             public override bool Equals(object o)
             {
-                return o is FromNameKey key && Equals(key);
+                if ((o != null) && (o is FromNameKey))
+                {
+                    return Equals((FromNameKey)o);
+                }
+                else
+                {
+                    return false;
+                }
             }
 
             public bool Equals(FromNameKey key)
             {
-                return _name.Equals(key._name) && _ownerType == key._ownerType;
+                return (_name.Equals(key._name) && (_ownerType == key._ownerType));
             }
 
-            private readonly string _name;
-            private readonly Type _ownerType;
+            private string _name;
+            private Type _ownerType;
 
-            private readonly int _hashCode;
+            private int _hashCode;
         }
 
 
@@ -1166,13 +1237,13 @@ namespace System.Windows
         /* property */ internal static ItemStructList<DependencyProperty> RegisteredPropertyList = new ItemStructList<DependencyProperty>(768);
 
         // Synchronized: Covered by DependencyProperty.Synchronized
-        private static readonly Dictionary<FromNameKey, DependencyProperty> PropertyFromName = new();
+        private static Hashtable PropertyFromName = new Hashtable();
 
         // Synchronized: Covered by DependencyProperty.Synchronized
         private static int GlobalIndexCount;
 
         // Global, cross-object synchronization
-        internal static readonly Lock Synchronized = new();
+        internal static object Synchronized = new object();
 
         // Nullable Type
         private static Type NullableType = typeof(Nullable<>);

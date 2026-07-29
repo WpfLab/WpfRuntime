@@ -1,5 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using MS.Utility;
+using System;
+using System.ComponentModel;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using MS.Internal.Ink.InkSerializedFormat;
+using System.Windows.Media;
+using System.Reflection;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Ink
 {
@@ -147,7 +163,7 @@ namespace System.Windows.Ink
         {
             if (this.Contains(id))
             {
-                throw new ArgumentException(SR.EPExists, nameof(id));
+                throw new ArgumentException(SR.EPExists, "id");
             }
 
             ExtendedProperty extendedProperty = new ExtendedProperty(id, value);
@@ -165,7 +181,7 @@ namespace System.Windows.Ink
         {
             if (!Contains(id))
             {
-                throw new ArgumentException(SR.EPGuidNotFound, nameof(id));
+                throw new ArgumentException(SR.EPGuidNotFound, "id");
             }
 
             ExtendedProperty propertyToRemove = GetExtendedPropertyById(id);
@@ -225,13 +241,16 @@ namespace System.Windows.Ink
                 ExtendedProperty ep = GetExtendedPropertyById(attributeId);
                 if (ep == null)
                 {
-                    throw new ArgumentException(SR.EPNotFound, nameof(attributeId));
+                    throw new ArgumentException(SR.EPNotFound, "attributeId");
                 }
                 return ep.Value;
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 for (int i = 0; i < _extendedProperties.Count; i++)
                 {
                     ExtendedProperty currentProperty = _extendedProperties[i];

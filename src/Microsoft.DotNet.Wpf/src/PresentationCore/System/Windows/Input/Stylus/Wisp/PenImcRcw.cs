@@ -1,7 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Runtime.InteropServices;
+using System.Security;
 
 namespace MS.Win32.Penimc
 {
@@ -10,7 +13,7 @@ namespace MS.Win32.Penimc
     Guid("75C6AAEE-2BA4-4008-B523-4F1E033FF049"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)
     ]
-    internal interface IPimcContext3
+    interface IPimcContext3
     {
         void ShutdownComm();
         void GetPacketDescriptionInfo(out int cProps, out int cButtons);
@@ -24,7 +27,7 @@ namespace MS.Win32.Penimc
     Guid("CEB1EF24-BB4E-498B-9DF7-12887ED0EB24"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)
     ]
-    internal interface IPimcTablet3
+    interface IPimcTablet3
     {
         void GetKey(out Int32 key);
         void GetName([MarshalAs(UnmanagedType.LPWStr)] out string name);
@@ -51,7 +54,7 @@ namespace MS.Win32.Penimc
     Guid(PimcConstants.IPimcManager3IID),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)
     ]
-    internal interface IPimcManager3
+    interface IPimcManager3
     {
         void GetTabletCount(out UInt32 count);
         void GetTablet(UInt32 tablet, out IPimcTablet3 IPimcTablet);

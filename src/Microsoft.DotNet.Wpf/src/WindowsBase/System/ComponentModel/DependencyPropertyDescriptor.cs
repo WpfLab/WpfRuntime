@@ -1,9 +1,18 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using MS.Internal.ComponentModel;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
+using System.Text;
+using System.Security;
 using System.Windows;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.ComponentModel
 {
@@ -57,7 +66,7 @@ namespace System.ComponentModel
         /// </summary>
         public static DependencyPropertyDescriptor FromProperty(PropertyDescriptor property) 
         {
-            ArgumentNullException.ThrowIfNull(property);
+            if (property == null) throw new ArgumentNullException(nameof(property));
 
             DependencyPropertyDescriptor dpd;
             bool found;
@@ -81,14 +90,17 @@ namespace System.ComponentModel
             DependencyProperty dp = null;
             bool isAttached = false;
 
-            if (property is DependencyObjectPropertyDescriptor idpd)
+            DependencyObjectPropertyDescriptor idpd = property as DependencyObjectPropertyDescriptor;
+            if (idpd != null) 
             {
                 dp = idpd.DependencyProperty;
                 isAttached = idpd.IsAttached;
             }
-            else
+            else 
             {
-                if (property.Attributes[typeof(DependencyPropertyAttribute)] is DependencyPropertyAttribute dpa)
+                #pragma warning suppress 6506 // Property is obviously not null.
+                DependencyPropertyAttribute dpa = property.Attributes[typeof(DependencyPropertyAttribute)] as DependencyPropertyAttribute;
+                if (dpa != null)
                 {
                     dp = dpa.DependencyProperty;
                     isAttached = dpa.IsAttached;
@@ -117,8 +129,8 @@ namespace System.ComponentModel
         /// </summary>
         internal static DependencyPropertyDescriptor FromProperty(DependencyProperty dependencyProperty, Type ownerType, Type targetType, bool ignorePropertyType)
         {
-            ArgumentNullException.ThrowIfNull(dependencyProperty);
-            ArgumentNullException.ThrowIfNull(targetType);
+            if (dependencyProperty == null) throw new ArgumentNullException(nameof(dependencyProperty));
+            if (targetType == null) throw new ArgumentNullException(nameof(targetType));
 
             // We have a different codepath here for attached and direct
             // properties.  For direct properties, we route through Type
@@ -184,8 +196,8 @@ namespace System.ComponentModel
         /// </summary>
         public static DependencyPropertyDescriptor FromProperty(DependencyProperty dependencyProperty, Type targetType)
         {
-            ArgumentNullException.ThrowIfNull(dependencyProperty);
-            ArgumentNullException.ThrowIfNull(targetType);
+            if (dependencyProperty == null) throw new ArgumentNullException(nameof(dependencyProperty));
+            if (targetType == null) throw new ArgumentNullException(nameof(targetType));
 
             // We have a different codepath here for attached and direct
             // properties.  For direct properties, we route through Type
@@ -247,9 +259,9 @@ namespace System.ComponentModel
         /// </summary>
         public static DependencyPropertyDescriptor FromName(string name, Type ownerType, Type targetType)
         {
-            ArgumentNullException.ThrowIfNull(name);
-            ArgumentNullException.ThrowIfNull(ownerType);
-            ArgumentNullException.ThrowIfNull(targetType);
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            if (ownerType == null) throw new ArgumentNullException(nameof(ownerType));
+            if (targetType == null) throw new ArgumentNullException(nameof(targetType));
 
             DependencyProperty dp = DependencyProperty.FromName(name, ownerType);
             if (dp != null) 
@@ -270,9 +282,9 @@ namespace System.ComponentModel
         public static DependencyPropertyDescriptor FromName(string name, Type ownerType, Type targetType,
             bool ignorePropertyType)
         {
-            ArgumentNullException.ThrowIfNull(name);
-            ArgumentNullException.ThrowIfNull(ownerType);
-            ArgumentNullException.ThrowIfNull(targetType);
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            if (ownerType == null) throw new ArgumentNullException(nameof(ownerType));
+            if (targetType == null) throw new ArgumentNullException(nameof(targetType));
 
             DependencyProperty dp = DependencyProperty.FromName(name, ownerType);
             if (dp != null)
@@ -302,7 +314,8 @@ namespace System.ComponentModel
         /// </summary>
         public override bool Equals(object obj) 
         {
-            if (obj is DependencyPropertyDescriptor dp && dp._dp == _dp && dp._componentType == _componentType)
+            DependencyPropertyDescriptor dp = obj as DependencyPropertyDescriptor;
+            if (dp != null && dp._dp == _dp && dp._componentType == _componentType)
             {
                 return true;
             }

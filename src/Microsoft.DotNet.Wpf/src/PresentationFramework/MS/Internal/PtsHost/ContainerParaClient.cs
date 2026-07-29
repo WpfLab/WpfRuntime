@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 //
@@ -8,7 +9,12 @@
 //
 
 
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections;
+using System.Diagnostics;
+using System.Security;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Documents;
@@ -44,7 +50,7 @@ namespace MS.Internal.PtsHost
 
             // Query paragraph details
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // Adjust rectangle and offset to take into account MBPs
             MbpInfo mbp = MbpInfo.FromElement(Paragraph.Element, Paragraph.StructuralCache.TextFormatterHost.PixelsPerDip);
@@ -67,7 +73,7 @@ namespace MS.Internal.PtsHost
             {
                 // Get list of paragraphs
                 PTS.FSPARADESCRIPTION [] arrayParaDesc;
-                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                 PtsHelper.ArrangeParaList(PtsContext, subtrackDetails.fsrc, arrayParaDesc, fswdirSubtrack);
             }
@@ -86,7 +92,7 @@ namespace MS.Internal.PtsHost
 
             // Query paragraph details
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // Hittest subtrack content.
 
@@ -96,7 +102,7 @@ namespace MS.Internal.PtsHost
             {
                 // Get list of paragraphs
                 PTS.FSPARADESCRIPTION [] arrayParaDesc;
-                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                 // Render list of paragraphs
                 ie = PtsHelper.InputHitTestParaList(PtsContext, pt, ref subtrackDetails.fsrc, arrayParaDesc);
@@ -139,7 +145,7 @@ namespace MS.Internal.PtsHost
 
                 // Query paragraph details
                 PTS.FSSUBTRACKDETAILS subtrackDetails;
-                PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+                PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
                 // There might be possibility to get empty sub-track, skip the sub-track
                 // in such case.
@@ -148,7 +154,7 @@ namespace MS.Internal.PtsHost
                     // Get list of paragraphs
                     // No changes to offset, since there are no subpages generated, only lists of paragraphs
                     PTS.FSPARADESCRIPTION[] arrayParaDesc;
-                    PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+                    PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                     // Render list of paragraphs
                     rectangles = PtsHelper.GetRectanglesInParaList(PtsContext, e, start, length, arrayParaDesc);
@@ -174,7 +180,7 @@ namespace MS.Internal.PtsHost
         {
             // Query paragraph details
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // Draw border and background info.
 
@@ -194,7 +200,7 @@ namespace MS.Internal.PtsHost
             {
                 // Get list of paragraphs
                 PTS.FSPARADESCRIPTION [] arrayParaDesc;
-                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                 // Render list of paragraphs
                 PtsHelper.UpdateParaListVisuals(PtsContext, _visual.Children, fskupdInherited, arrayParaDesc);
@@ -215,14 +221,14 @@ namespace MS.Internal.PtsHost
         {
             // Query paragraph details
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // There might be possibility to get empty sub-track, skip the sub-track in such case.
             if (subtrackDetails.cParas != 0)
             {
                 // Get list of paragraphs
                 PTS.FSPARADESCRIPTION [] arrayParaDesc;
-                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                 // Render list of paragraphs
                 PtsHelper.UpdateViewportParaList(PtsContext, arrayParaDesc, ref viewport);
@@ -237,14 +243,14 @@ namespace MS.Internal.PtsHost
             /*
             // Query paragraph details
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // If there is just one paragraph, do not create container. Return just this paragraph.
             if (subtrackDetails.cParas == 1)
             {
                 // Get list of paragraphs
                 PTS.FSPARADESCRIPTION [] arrayParaDesc;
-                PtsHelper.ParaListFromSubtrack(_paraHandle, ref subtrackDetails, out arrayParaDesc);
+                PtsHelper.ParaListFromSubtrack(_paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                 BaseParaClient paraClient = PtsContext.HandleToObject(arrayParaDesc[0].pfsparaclient) as BaseParaClient;
                 PTS.ValidateHandle(paraClient);
@@ -268,7 +274,7 @@ namespace MS.Internal.PtsHost
             Invariant.Assert(elementOwner != null, "Expecting TextElement as owner of ContainerParagraph.");
 
             // Query paragraph details
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // If container is empty, return range for the entire element.
             // If the beginning and the end of content of the paragraph is 
@@ -280,7 +286,7 @@ namespace MS.Internal.PtsHost
             }
             else
             {
-                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+                PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
                 // Merge TextContentRanges for all paragraphs
                 textContentRange = new TextContentRange();
@@ -322,19 +328,19 @@ namespace MS.Internal.PtsHost
 #endif
             // Query paragraph details
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             // hasTextContent is set to true if any of the children paragraphs has text content, not just attached objects
             hasTextContent = false;
 
             if (subtrackDetails.cParas == 0) 
             {
-                return ReadOnlyCollection<ParagraphResult>.Empty;
+                return new ReadOnlyCollection<ParagraphResult>(new List<ParagraphResult>(0));
             }
 
             // Get list of paragraphs
             PTS.FSPARADESCRIPTION [] arrayParaDesc;
-            PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+            PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
             List<ParagraphResult> paragraphResults = new List<ParagraphResult>(arrayParaDesc.Length);
             for (int i = 0; i < arrayParaDesc.Length; i++)
@@ -372,7 +378,7 @@ namespace MS.Internal.PtsHost
         internal override int GetFirstTextLineBaseline()
         {
             PTS.FSSUBTRACKDETAILS subtrackDetails;
-            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle, out subtrackDetails));
+            PTS.Validate(PTS.FsQuerySubtrackDetails(PtsContext.Context, _paraHandle.Value, out subtrackDetails));
 
             if (subtrackDetails.cParas == 0) 
             {
@@ -381,7 +387,7 @@ namespace MS.Internal.PtsHost
 
             // Get list of paragraphs
             PTS.FSPARADESCRIPTION [] arrayParaDesc;
-            PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle, ref subtrackDetails, out arrayParaDesc);
+            PtsHelper.ParaListFromSubtrack(PtsContext, _paraHandle.Value, ref subtrackDetails, out arrayParaDesc);
 
             BaseParaClient paraClient = PtsContext.HandleToObject(arrayParaDesc[0].pfsparaclient) as BaseParaClient;
             PTS.ValidateHandle(paraClient);

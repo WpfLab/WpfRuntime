@@ -1,17 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Implements the Decorator pattern from Design Patterns for Stream
 
 using System;
 using System.IO;
+using System.Security;
+using System.Windows.TrustUI;
 
-using SR = System.Windows.TrustUI.SR;
+using SR=System.Windows.TrustUI.SR;
 
 namespace MS.Internal.Documents.Application
 {
 
-    internal sealed class RightsManagementSuppressedStream : StreamProxy
+internal sealed class RightsManagementSuppressedStream : StreamProxy
 {
     #region Constructors
     //--------------------------------------------------------------------------
@@ -29,7 +32,7 @@ namespace MS.Internal.Documents.Application
     internal RightsManagementSuppressedStream(Stream targetOfProxy, bool isWriteAllowed)
         : base(targetOfProxy, true)
     {
-        _allowWrite = isWriteAllowed;
+        _allowWrite.Value = isWriteAllowed;
     }
 
     #endregion Constructors
@@ -179,7 +182,7 @@ namespace MS.Internal.Documents.Application
     {
         get
         {
-            return _allowWrite;
+            return _allowWrite.Value;
         }
     }
 
@@ -193,7 +196,7 @@ namespace MS.Internal.Documents.Application
     /// <summary>
     /// Whether or not the proxy should enforce that the stream is read-only.
     /// </summary>
-    private bool _allowWrite;
+    private SecurityCriticalDataForSet<bool> _allowWrite;
 
     #endregion Private Fields
 }

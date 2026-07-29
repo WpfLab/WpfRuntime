@@ -1,8 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 
+using System;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Automation;
@@ -46,7 +51,7 @@ namespace System.Windows.Controls.Primitives
         {
             var details = d as DataGridDetailsPresenter;
             var row = details.DataGridRowOwner;
-            var dataGrid = row?.DataGridOwner;
+            var dataGrid = row != null ? row.DataGridOwner : null;
             return DataGridHelper.GetCoercedTransferPropertyValue(
                 details, 
                 baseValue, 
@@ -64,7 +69,7 @@ namespace System.Windows.Controls.Primitives
         {
             var details = d as DataGridDetailsPresenter;
             var row = details.DataGridRowOwner;
-            var dataGrid = row?.DataGridOwner;
+            var dataGrid = row != null ? row.DataGridOwner : null;
             return DataGridHelper.GetCoercedTransferPropertyValue(
                 details, 
                 baseValue, 
@@ -104,13 +109,13 @@ namespace System.Windows.Controls.Primitives
         private void OnAnyMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
         {
             // Ignore actions if the button down arises from a different presentation source
-            if (!PresentationSource.IsUnderSamePresentationSource(e.OriginalSource as DependencyObject, this))
+            if (!PresentationSource.UnderSamePresentationSource(e.OriginalSource as DependencyObject, this))
             {
                 return;
             }
 
             DataGridRow rowOwner = DataGridRowOwner;
-            DataGrid dataGridOwner = rowOwner?.DataGridOwner;
+            DataGrid dataGridOwner = rowOwner != null ? rowOwner.DataGridOwner : null;
             if ((dataGridOwner != null) && (rowOwner != null))
             {
                 // HandleSelectionForRowHeaderAndDetailsInput below sets the CurrentCell
@@ -157,7 +162,7 @@ namespace System.Windows.Controls.Primitives
         internal void SyncProperties()
         {
             DataGridRow owner = DataGridRowOwner;
-            Content = owner?.Item;
+            Content = owner != null ? owner.Item : null;
             DataGridHelper.TransferProperty(this, ContentTemplateProperty);
             DataGridHelper.TransferProperty(this, ContentTemplateSelectorProperty);
         }
@@ -287,10 +292,8 @@ namespace System.Windows.Controls.Primitives
                 DataGridHelper.IsGridLineVisible(dataGrid, /*isHorizontal = */ true))
             {
                 double thickness = dataGrid.HorizontalGridLineThickness;
-                Rect rect = new Rect(new Size(RenderSize.Width, thickness))
-                {
-                    Y = RenderSize.Height - thickness
-                };
+                Rect rect = new Rect(new Size(RenderSize.Width, thickness));
+                rect.Y = RenderSize.Height - thickness;
 
                 drawingContext.DrawRectangle(dataGrid.HorizontalGridLinesBrush, null, rect);
             }

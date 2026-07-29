@@ -1,13 +1,30 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
 //  Contents:  Cache object of paragraph content used to improve performance
 //             of optimal paragraph formatting
 //
 //  Spec:      Text Formatting API.doc
+//
+//
+
+using System;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Security;
+using System.Windows;
+using System.Windows.Media;
 
 using MS.Internal;
 using MS.Internal.TextFormatting;
+using MS.Internal.PresentationCore;
+using SR = MS.Internal.PresentationCore.SR;
+
 
 namespace System.Windows.Media.TextFormatting
 {
@@ -20,13 +37,14 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
     public sealed class TextParagraphCache : IDisposable
 #else
+    [FriendAccessAllowed]
     internal sealed class TextParagraphCache : IDisposable
 #endif
     {
-        private FullTextState  _fullText;                  // full text state of the whole paragraph
-        private IntPtr         _ploparabreak;              // unmanaged LS resource for parabreak session
-        private int            _finiteFormatWidth;         // finite formatting ideal width
-        private bool           _penalizedAsJustified;      // flag indicating whether the paragraph should be penalized as fully-justified one
+        private FullTextState                       _fullText;                  // full text state of the whole paragraph
+        private SecurityCriticalDataForSet<IntPtr>  _ploparabreak;              // unmanaged LS resource for parabreak session
+        private int                                 _finiteFormatWidth;         // finite formatting ideal width
+        private bool                                _penalizedAsJustified;      // flag indicating whether the paragraph should be penalized as fully-justified one
 
 
         /// <summary>
@@ -82,7 +100,7 @@ namespace System.Windows.Media.TextFormatting
                 }
             }
 
-            _ploparabreak = ploparabreakValue;
+            _ploparabreak.Value = ploparabreakValue;
 
             // keep context alive till here
             GC.KeepAlive(context);
@@ -145,11 +163,11 @@ namespace System.Windows.Media.TextFormatting
         /// </summary>
         private void Dispose(bool disposing)
         {
-            if(_ploparabreak != IntPtr.Zero)
+            if(_ploparabreak.Value != IntPtr.Zero)
             {
-                UnsafeNativeMethods.LoDisposeParaBreakingSession(_ploparabreak, !disposing);
+                UnsafeNativeMethods.LoDisposeParaBreakingSession(_ploparabreak.Value, !disposing);
 
-                _ploparabreak = IntPtr.Zero;
+                _ploparabreak.Value = IntPtr.Zero;
                 GC.KeepAlive(this);
             }
         }
@@ -159,16 +177,20 @@ namespace System.Windows.Media.TextFormatting
         /// </summary>
         private int VerifyMaxLineWidth(double maxLineWidth)
         {
-            ArgumentOutOfRangeException.ThrowIfEqual(maxLineWidth, double.NaN);
+            if (double.IsNaN(maxLineWidth))
+                throw new ArgumentOutOfRangeException("maxLineWidth", SR.ParameterValueCannotBeNaN);                                        
             
             if (maxLineWidth == 0 || double.IsPositiveInfinity(maxLineWidth))
             {
                 // consider 0 or positive infinity as maximum ideal width
                 return Constants.IdealInfiniteWidth;
             }
-
-            ArgumentOutOfRangeException.ThrowIfNegative(maxLineWidth);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(maxLineWidth, Constants.RealInfiniteWidth);
+            
+            if (    maxLineWidth < 0 
+                ||  maxLineWidth > Constants.RealInfiniteWidth)
+            {
+                throw new ArgumentOutOfRangeException("maxLineWidth", SR.Format(SR.ParameterMustBeBetween, 0, Constants.RealInfiniteWidth));
+            }
 
             // convert real value to ideal value
             return TextFormatterImp.RealToIdeal(maxLineWidth);
@@ -185,7 +207,7 @@ namespace System.Windows.Media.TextFormatting
         /// <summary>
         /// Unmanaged LS parabreak session object
         /// </summary>
-        internal IntPtr Ploparabreak
+        internal SecurityCriticalDataForSet<IntPtr> Ploparabreak
         {
             get { return _ploparabreak; }
         }

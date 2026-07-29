@@ -1,17 +1,40 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 //
 //  Description:    BindUriHelper class. Allows bindToObject, bindToStream
 //
 
+using System;
+using System.IO;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Text; 
+using MS.Win32; 
 
 #if PRESENTATIONFRAMEWORK
 
 using System.Windows;
 using System.Windows.Navigation;
+using System.Windows.Media;
+using MS.Internal.PresentationFramework;
 using MS.Internal.AppModel;
+using System.Windows.Controls;
+using MS.Internal ; 
+using System.Security; 
+using System.IO.Packaging; 
+using System.Reflection;
+using MS.Internal.Utility;
+using System.Net;
+
+// In order to avoid generating warnings about unknown message numbers and 
+// unknown pragmas when compiling your C# source code with the actual C# compiler, 
+// you need to disable warnings 1634 and 1691. (Presharp Documentation)
+#pragma warning disable 1634, 1691
+
 
 namespace MS.Internal.Utility
 {
@@ -20,10 +43,10 @@ namespace MS.Internal.Utility
     internal  static partial  class BindUriHelper
     {
         private const string PLACEBOURI = "http://microsoft.com/";
-        private static Uri placeboBase = new Uri(PLACEBOURI);
+        static private Uri placeboBase = new Uri(PLACEBOURI);
         private const string FRAGMENTMARKER = "#";
         
-        internal static Uri GetResolvedUri(Uri originalUri)
+        static internal Uri GetResolvedUri(Uri originalUri)
         {
             return GetResolvedUri(null, originalUri);
         }                
@@ -65,11 +88,11 @@ namespace MS.Internal.Utility
         /// <param name="baseUri"></param>
         /// <param name="inputUri"></param>
         /// <returns></returns>
-        internal static Uri GetUriToNavigate(DependencyObject element, Uri baseUri, Uri inputUri)
+        static internal Uri GetUriToNavigate(DependencyObject element, Uri baseUri, Uri inputUri)
         {
             Uri uriToNavigate = inputUri;
 
-            if ((inputUri == null) || (inputUri.IsAbsoluteUri))
+            if ((inputUri == null) || (inputUri.IsAbsoluteUri == true))
             {
                 return uriToNavigate;
             }
@@ -84,7 +107,7 @@ namespace MS.Internal.Utility
 
             if (baseUri != null)
             {
-                if (!baseUri.IsAbsoluteUri)
+                if (baseUri.IsAbsoluteUri == false)
                 {
                     uriToNavigate = GetResolvedUri(BindUriHelper.GetResolvedUri(null, baseUri), inputUri);
                 }
@@ -111,7 +134,7 @@ namespace MS.Internal.Utility
                     {
                         NavigationService ns = null;
                         ns = element.GetValue(NavigationService.NavigationServiceProperty) as NavigationService;
-                        currentSource = ns?.CurrentSource;
+                        currentSource = (ns == null) ? null : ns.CurrentSource;
                     }
                 }
 
@@ -135,19 +158,19 @@ namespace MS.Internal.Utility
             return uriToNavigate;
         }
 
-        internal static bool StartWithFragment(Uri uri)
+        static internal bool StartWithFragment(Uri uri)
         {
             return uri.OriginalString.StartsWith(FRAGMENTMARKER, StringComparison.Ordinal);
         }
 
         // Return Fragment string for a given uri without the leading #
-        internal static string GetFragment(Uri uri)
+        static internal string GetFragment(Uri uri)
         {
             Uri workuri = uri;
             string fragment = String.Empty;
             string frag;
 
-            if (!uri.IsAbsoluteUri)
+            if (uri.IsAbsoluteUri == false)
             {
                 // this is a relative uri, and Fragement() doesn't work with relative uris.  The base uri is completley irrelevant 
                 // here and will never affect the returned fragment, but the method requires something to be there.  Therefore, 
@@ -167,7 +190,7 @@ namespace MS.Internal.Utility
         
         // In NavigationService we do not want to show users pack://application,,,/ with the
         // Source property or any event arguments.
-        internal static Uri GetUriRelativeToPackAppBase(Uri original)
+        static internal Uri GetUriRelativeToPackAppBase(Uri original)
         {
             if (original == null)
             {
@@ -181,7 +204,7 @@ namespace MS.Internal.Utility
             return relative;
         }
 
-        internal static bool IsXamlMimeType(ContentType mimeType)
+        static internal bool IsXamlMimeType(ContentType mimeType)
         {
             if (MimeTypeMapper.XamlMime.AreTypeAndSubTypeEqual(mimeType)
                 || MimeTypeMapper.FixedDocumentSequenceMime.AreTypeAndSubTypeEqual(mimeType) 

@@ -1,10 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
 // Description: Contains base class for DrawingContext iterators
 //
+
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
+
+using MS.Internal;
 
 namespace System.Windows.Media
 {
@@ -25,7 +38,7 @@ namespace System.Windows.Media
         /// <summary>
         /// DrawingContextWalker implementations are never opened, so they shouldn't be closed.
         /// </summary>
-        public sealed override void Close()
+        public override sealed void Close()
         {
             Debug.Assert(false);
         }

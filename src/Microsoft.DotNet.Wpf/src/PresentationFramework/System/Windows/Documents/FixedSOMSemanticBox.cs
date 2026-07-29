@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Media;
+// See the LICENSE file in the project root for more information.
 
 /*++                                                     
     Description:
@@ -11,6 +10,12 @@ using System.Windows.Media;
 
 namespace System.Windows.Documents
 {
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Windows.Media;
+    using System.Windows.Markup;
+    
     internal abstract class FixedSOMSemanticBox : IComparable
     {
         //--------------------------------------------------------------------
@@ -91,7 +96,7 @@ namespace System.Windows.Documents
 
             if (!(o is FixedSOMSemanticBox))
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, o.GetType(), typeof(FixedSOMSemanticBox)), nameof(o));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, o.GetType(), typeof(FixedSOMSemanticBox)), "o");
             }
 
             SpatialComparison compareHor = _CompareHorizontal(o as FixedSOMSemanticBox, false);

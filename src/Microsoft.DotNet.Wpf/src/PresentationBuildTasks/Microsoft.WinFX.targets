@@ -1,10 +1,32 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net10.0</_PresentationBuildTasksTfm>
+    <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' == 'Core'">net8.0</_PresentationBuildTasksTfm>
     <_PresentationBuildTasksTfm Condition="'$(MSBuildRuntimeType)' != 'Core'">net472</_PresentationBuildTasksTfm>
-    <_PresentationBuildTasksAssembly Condition="'$(_PresentationBuildTasksAssembly)'==''">$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_PresentationBuildTasksAssembly>
+    <BuildPresentationBuildTasksOnDemand Condition="'$(BuildPresentationBuildTasksOnDemand)' == ''">true</BuildPresentationBuildTasksOnDemand>
+    <_PresentationBuildTasksProject>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)PresentationBuildTasks.csproj'))))</_PresentationBuildTasksProject>
+    <_BuiltPresentationBuildTasksAssembly>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(_PresentationBuildTasksTfm)\PresentationBuildTasks.dll'))))</_BuiltPresentationBuildTasksAssembly>
+    <_PresentationBuildTasksAssembly>$(_BuiltPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
   </PropertyGroup>
+
+  <Target Name="BuildPresentationBuildTasksOnDemand"
+          Condition="'$(BuildPresentationBuildTasksOnDemand)' == 'true' and !Exists('$(_BuiltPresentationBuildTasksAssembly)') and Exists('$(_PresentationBuildTasksProject)')"
+          BeforeTargets="ValidatePresentationBuildTasksAssembly">
+    <Message Importance="high"
+             Text="PresentationBuildTasks.dll was not found at '$(_BuiltPresentationBuildTasksAssembly)'. Building '$(_PresentationBuildTasksProject)' for '$(_PresentationBuildTasksTfm)' once before markup compilation." />
+    <MSBuild Projects="$(_PresentationBuildTasksProject)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration);Platform=$(WpfNativePlatform);TargetFramework=$(_PresentationBuildTasksTfm);BuildPresentationBuildTasksOnDemand=false"
+             StopOnFirstFailure="true" />
+    <PropertyGroup Condition="Exists('$(_BuiltPresentationBuildTasksAssembly)')">
+      <_PresentationBuildTasksAssembly>$(_BuiltPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="ValidatePresentationBuildTasksAssembly" BeforeTargets="MarkupCompilePass1;MarkupCompilePass2;MainResourcesGeneration">
+    <Error Condition="!Exists('$(_PresentationBuildTasksAssembly)')"
+           Text="PresentationBuildTasks.dll was not found at '$(_BuiltPresentationBuildTasksAssembly)'. Build PresentationBuildTasks first, or keep BuildPresentationBuildTasksOnDemand=true so Microsoft.WinFX.targets can build it before markup compilation." />
+  </Target>
 
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.MarkupCompilePass1" AssemblyFile="$(_PresentationBuildTasksAssembly)" />
   <UsingTask TaskName="Microsoft.Build.Tasks.Windows.UidManager" AssemblyFile="$(_PresentationBuildTasksAssembly)" />
@@ -79,7 +101,7 @@
   <PropertyGroup>
         <!-- Add Markup compilation to the CoreCompileDependsOn so that the IDE inproc compilers (particularly VB)
              can "see" the generated source files. -->
-      <CoreCompileDependsOn Condition="'$(BuildingInsideVisualStudio)' == 'true' Or '$(DesignTimeBuild)' == 'true'">
+      <CoreCompileDependsOn Condition="'$(BuildingInsideVisualStudio)' == 'true' ">
           DesignTimeMarkupCompilation;
           $(CoreCompileDependsOn)
       </CoreCompileDependsOn>
@@ -88,7 +110,7 @@
 
   <Target Name="DesignTimeMarkupCompilation">
         <!-- Only if we are not actually performing a compile i.e. we are in design mode -->
-        <CallTarget Condition="'$(BuildingProject)' != 'true' Or '$(DesignTimeBuild)' == 'true'"
+        <CallTarget Condition="'$(BuildingProject)' != 'true' Or $(DesignTimeBuild) == 'true'"
                 Targets="MarkupCompilePass1" />
   </Target>
 
@@ -205,7 +227,7 @@
         -->
         <PropertyGroup>
             <_IntellisenseOnlyCompile>false</_IntellisenseOnlyCompile>
-            <_IntellisenseOnlyCompile Condition="'$(BuildingProject)' != 'true' Or '$(DesignTimeBuild)' == 'true'">true</_IntellisenseOnlyCompile>
+            <_IntellisenseOnlyCompile Condition="'$(BuildingProject)' != 'true'">true</_IntellisenseOnlyCompile>
         </PropertyGroup>
 
         <MarkupCompilePass1

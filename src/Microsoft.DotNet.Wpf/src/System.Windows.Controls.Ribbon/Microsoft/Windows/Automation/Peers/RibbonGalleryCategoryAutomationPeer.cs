@@ -1,14 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-
-#region Using declarations
-
-using System.Windows.Controls;
-using System.Collections.Generic;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Automation.Peers
@@ -16,6 +9,17 @@ namespace System.Windows.Automation.Peers
 namespace Microsoft.Windows.Automation.Peers
 #endif
 {
+
+    #region Using declarations
+
+    using System;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Collections.Generic;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Automation.Provider;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon;
 #else
     using Microsoft.Windows.Controls.Ribbon;
 #endif
@@ -54,13 +58,13 @@ namespace Microsoft.Windows.Automation.Peers
         }
 
         ///
-        protected override string GetClassNameCore()
+        override protected string GetClassNameCore()
         {
             return "RibbonGalleryCategory";
         }
 
         ///
-        protected override AutomationControlType GetAutomationControlTypeCore()
+        override protected AutomationControlType GetAutomationControlTypeCore()
         {
             return AutomationControlType.Group;
         }

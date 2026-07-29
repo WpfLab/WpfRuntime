@@ -1,0 +1,59 @@
+﻿<Window x:Class="WpfDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfDemo"
+        mc:Ignorable="d"
+        Title="Repository WPF Demo"
+        Width="920"
+        Height="620"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Padding="18" Background="{StaticResource AccentBrush}" CornerRadius="8">
+            <StackPanel>
+                <TextBlock FontSize="26" FontWeight="SemiBold" Foreground="White"
+                           Text="Repository WPF development host" />
+                <TextBlock Margin="0,6,0,0" Foreground="White"
+                           Text="This XAML and window are compiled and rendered by the WPF assemblies built from this repository." />
+            </StackPanel>
+        </Border>
+
+        <WrapPanel Grid.Row="1" Margin="0,16,0,12">
+            <Button Padding="14,7" Click="OnRunProbeClick" Content="Validate loading sources" />
+            <TextBlock Margin="18,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold"
+                       Text="PresentationCore playground:" />
+            <Rectangle Width="84" Height="28" Margin="8,0,0,0" RadiusX="6" RadiusY="6">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#60A5FA" Offset="0" />
+                        <GradientStop Color="#7C3AED" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+        </WrapPanel>
+
+        <TextBox x:Name="ProbeOutputTextBox"
+                 Grid.Row="2"
+                 Padding="12"
+                 FontFamily="Consolas"
+                 FontSize="13"
+                 IsReadOnly="True"
+                 TextWrapping="NoWrap"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto" />
+
+        <StatusBar Grid.Row="3" Margin="0,12,0,0">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusTextBlock" Text="Waiting for repository WPF validation" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

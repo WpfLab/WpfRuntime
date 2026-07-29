@@ -1,12 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Windows.Input
+
+using System;
+using MS.Internal.PresentationCore;
+
+namespace System.Windows.Input 
 {
     /// <summary>
     ///     The InputReportEventArgs class contains information about an input
     ///     report that is being processed.
     /// </summary>
+    [FriendAccessAllowed]
     internal class InputReportEventArgs : InputEventArgs
     {
         /// <summary>
@@ -21,7 +27,8 @@ namespace System.Windows.Input
         public InputReportEventArgs(InputDevice inputDevice, 
                                     InputReport report) : base(inputDevice, ((report != null) ? report.Timestamp : -1))
         {
-            ArgumentNullException.ThrowIfNull(report);
+            if (report == null)
+                throw new ArgumentNullException("report");
 
             _report = report;
         }

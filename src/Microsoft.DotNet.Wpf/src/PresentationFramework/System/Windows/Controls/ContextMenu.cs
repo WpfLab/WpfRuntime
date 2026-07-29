@@ -1,15 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using MS.Internal;
 using MS.Internal.KnownBoxes;
+using MS.Utility;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Threading;
+using System.Windows;
 #if OLD_AUTOMATION
 using System.Windows.Automation.Provider;
 #endif
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Controls.Primitives;
+using System.Windows.Markup;
+using System.Windows.Shapes;
 
 namespace System.Windows.Controls
 {
@@ -479,10 +488,9 @@ namespace System.Windows.Controls
         {
             Debug.Assert(_parentPopup == null, "_parentPopup should be null");
 
-            _parentPopup = new Popup
-            {
-                AllowsTransparency = true
-            };
+            _parentPopup = new Popup();
+
+            _parentPopup.AllowsTransparency = true;
 
             // Coerce HasDropShadow property in case popup can't be transparent
             CoerceValue(HasDropShadowProperty);
@@ -628,7 +636,7 @@ namespace System.Windows.Controls
             // in this case.
             //
             // See MenuBase.OnIsKeyboardFocusWithinChanged
-            if(!(bool)e.NewValue)
+            if((bool)e.NewValue == false)
             {
                 _weakRefToPreviousFocus = null;
             }

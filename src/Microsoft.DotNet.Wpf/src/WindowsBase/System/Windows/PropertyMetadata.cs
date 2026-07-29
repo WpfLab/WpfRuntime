@@ -1,10 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using MS.Internal;
 using MS.Utility;
+using System;
+using System.Diagnostics;
+using System.Collections.Generic;
 using System.Collections;
 using System.Windows.Threading;  // for DispatcherObject
+
+using MS.Internal.WindowsBase;
 
 namespace System.Windows
 {
@@ -75,7 +81,8 @@ namespace System.Windows
         {
             get
             {
-                if (_defaultValue is not DefaultValueFactory defaultFactory)
+                DefaultValueFactory defaultFactory = _defaultValue as DefaultValueFactory;
+                if (defaultFactory == null)
                 {
                     return _defaultValue;
                 }
@@ -125,6 +132,7 @@ namespace System.Windows
         /// <param name="owner"></param>
         /// <param name="property"></param>
         /// <returns></returns>
+        [FriendAccessAllowed] // Built into Base, also used by Framework.
         internal object GetDefaultValue(DependencyObject owner, DependencyProperty property)
         {
             Debug.Assert(owner != null && property != null,
@@ -132,7 +140,8 @@ namespace System.Windows
 
             // If we are not using a DefaultValueFactory (common case)
             // just return _defaultValue
-            if (_defaultValue is not DefaultValueFactory defaultFactory)
+            DefaultValueFactory defaultFactory = _defaultValue as DefaultValueFactory;
+            if (defaultFactory == null)
             {
                 return _defaultValue;
             }
@@ -252,9 +261,12 @@ namespace System.Windows
         {
             FrugalMapBase map = _defaultValueFactoryCache.GetValue(owner);
 
-            // Iterate through all the items in the map (each representing a DP)
-            // and promote them to locally-set.
-            map?.Iterate(null, _promotionCallback);
+            if (map != null)
+            {
+                // Iterate through all the items in the map (each representing a DP)
+                // and promote them to locally-set.
+                map.Iterate(null, _promotionCallback);
+            }
         }
 
         /// <summary>
@@ -290,7 +302,9 @@ namespace System.Windows
         /// <param name="value">The cached default</param>
         private static void DefaultValueCacheRemovalCallback(ArrayList list, int key, object value)
         {
-            if (value is Freezable cachedDefault)
+            Freezable cachedDefault = value as Freezable;
+
+            if (cachedDefault != null)
             {
                 // Freeze fires the Changed event so we need to clear off the handlers before
                 // calling it.  Otherwise the promoter would run and attempt to set the
@@ -311,7 +325,9 @@ namespace System.Windows
         /// <param name="value">The cached default</param>
         private static void DefaultValueCachePromotionCallback(ArrayList list, int key, object value)
         {
-            if (value is Freezable cachedDefault)
+            Freezable cachedDefault = value as Freezable;
+
+            if (cachedDefault != null)
             {
                 // The only way to promote a cached default is to fire its Changed event.
                 cachedDefault.FireChanged();
@@ -373,6 +389,7 @@ namespace System.Windows
         ///     This is used exclusively by FrameworkElement.ActualWidth and ActualHeight to save 48 bytes
         ///     of state per FrameworkElement.
         /// </remarks>
+        [FriendAccessAllowed] // Built into Base, also used by Framework.
         internal virtual GetReadOnlyValueCallback GetReadOnlyValueCallback
         {
             get
@@ -391,6 +408,7 @@ namespace System.Windows
         ///     decide whether to do a "deep" freeze, a "shallow" freeze, to
         ///     fail the freeze attempt, etc.
         /// </remarks>
+        [FriendAccessAllowed] // Currently used by Storyboard in PresentationFramework.
         internal FreezeValueCallback FreezeValueCallback
         {
             get
@@ -454,7 +472,9 @@ namespace System.Windows
 
                 if (value != null)
                 {
-                    if (value is Freezable valueAsFreezable)
+                    Freezable valueAsFreezable = value as Freezable;
+
+                    if (valueAsFreezable != null)
                     {
                         if (!valueAsFreezable.Freeze(isChecking))
                         {
@@ -473,7 +493,9 @@ namespace System.Windows
                     }
                     else  // not a Freezable
                     {
-                        if (value is DispatcherObject valueAsDispatcherObject)
+                        DispatcherObject valueAsDispatcherObject = value as DispatcherObject;
+
+                        if (valueAsDispatcherObject != null)
                         {
                             if (valueAsDispatcherObject.Dispatcher == null)
                             {
@@ -496,7 +518,7 @@ namespace System.Windows
                                         d,
                                         dp,
                                         dp.OwnerType,
-                                        valueAsDispatcherObject);
+                                        valueAsDispatcherObject );
                                 }
 
                                 return false;
@@ -546,7 +568,10 @@ namespace System.Windows
         /// <param name="dp">DependencyProperty that this metadata is being applied to</param>
         protected virtual void Merge(PropertyMetadata baseMetadata, DependencyProperty dp)
         {
-            ArgumentNullException.ThrowIfNull(baseMetadata);
+            if (baseMetadata == null)
+            {
+                throw new ArgumentNullException("baseMetadata");
+            }
 
             if (Sealed)
             {
@@ -569,21 +594,14 @@ namespace System.Windows
 
                 // Build the handler list such that handlers added
                 // via OverrideMetadata are called last (base invocation first)
-                PropertyChangedCallback headHandler = null;
-                foreach (PropertyChangedCallback handler in Delegate.EnumerateInvocationList(baseMetadata.PropertyChangedCallback))
+                Delegate[] handlers = baseMetadata.PropertyChangedCallback.GetInvocationList();
+                if (handlers.Length > 0)
                 {
-                    if (headHandler is null)
+                    PropertyChangedCallback headHandler = (PropertyChangedCallback)handlers[0];
+                    for (int i = 1; i < handlers.Length; i++)
                     {
-                        headHandler = handler;
+                        headHandler += (PropertyChangedCallback)handlers[i];
                     }
-                    else
-                    {
-                        headHandler += handler;
-                    }
-                }
-
-                if (headHandler is not null)
-                {
                     headHandler += _propertyChangedCallback;
                     _propertyChangedCallback = headHandler;
                 }
@@ -670,6 +688,7 @@ namespace System.Windows
         //    track the factory with a bit rather than casting
         //    every time.
 
+        [FriendAccessAllowed] // Built into Base, also used by Core and Framework.
         internal enum MetadataFlags : uint
         {
             DefaultValueModifiedID                       = 0x00000001,
@@ -710,6 +729,7 @@ namespace System.Windows
 
 
         // PropertyMetadata, UIPropertyMetadata, and FrameworkPropertyMetadata.
+        [FriendAccessAllowed] // Built into Base, also used by Core and Framework.
         internal MetadataFlags _flags;
 
         private void SetModified(MetadataFlags id) { _flags |= id; }
@@ -718,6 +738,7 @@ namespace System.Windows
         /// <summary>
         ///     Write a flag value
         /// </summary>
+        [FriendAccessAllowed] // Built into Base, also used by Core and Framework.
         internal void WriteFlag(MetadataFlags id, bool value)
         {
             if (value)
@@ -733,10 +754,12 @@ namespace System.Windows
         /// <summary>
         ///     Read a flag value
         /// </summary>
+        [FriendAccessAllowed] // Built into Base, also used by Core and Framework.
         internal bool ReadFlag(MetadataFlags id) { return (id & _flags) != 0; }
 
         internal bool Sealed
         {
+            [FriendAccessAllowed] // Built into Base, also used by Core.
             get { return ReadFlag(MetadataFlags.SealedID); }
             set { WriteFlag(MetadataFlags.SealedID, value); }
         }
@@ -755,6 +778,7 @@ namespace System.Windows
     ///     it eliminates the possibility of a self-managed store missing modifiers such as expressions, coercion,
     ///     and animation.
     /// </summary>
+    [FriendAccessAllowed] // Built into Base, also used by Framework.
     internal delegate object GetReadOnlyValueCallback(DependencyObject d, out BaseValueSourceInternal source);
 }
 

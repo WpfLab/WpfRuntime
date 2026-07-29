@@ -1,10 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // 
 // Description: Virtualization cache length implementation
 //
 
+using MS.Internal;
 using System.ComponentModel;
 using System.Globalization;
 
@@ -119,10 +121,11 @@ namespace System.Windows.Controls
         /// <param name="oCompare">Reference to an object for comparison.</param>
         /// <returns><c>true</c>if this VirtualizationCacheLength instance has the same value 
         /// and unit type as oCompare.</returns>
-        public override bool Equals(object oCompare)
+        override public bool Equals(object oCompare)
         {
-            if (oCompare is VirtualizationCacheLength l)
+            if (oCompare is VirtualizationCacheLength)
             {
+                VirtualizationCacheLength l = (VirtualizationCacheLength)oCompare;
                 return (this == l);
             }
             else

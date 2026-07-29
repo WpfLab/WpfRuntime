@@ -1,18 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Win32 Up/Down proxy
 
 using System;
 using System.Windows;
+using System.Collections;
+using System.ComponentModel;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
+using System.Text;
+using System.Runtime.InteropServices;
 using MS.Win32;
 using NativeMethodsSetLastError = MS.Internal.UIAutomationClientSideProviders.NativeMethodsSetLastError;
 
 namespace MS.Internal.AutomationProxies
 {
-    internal class WindowsUpDown : ProxyHwnd, IRangeValueProvider
+    class WindowsUpDown : ProxyHwnd, IRangeValueProvider
     {
         // ------------------------------------------------------
         //
@@ -50,7 +55,11 @@ namespace MS.Internal.AutomationProxies
         internal static IRawElementProviderSimple Create(IntPtr hwnd, int idChild)
         {
             // Something is wrong if idChild is not zero
-            ArgumentOutOfRangeException.ThrowIfNotEqual(idChild, 0);
+            if (idChild != 0)
+            {
+                System.Diagnostics.Debug.Assert (idChild == 0, "Invalid Child Id, idChild != 0");
+                throw new ArgumentOutOfRangeException("idChild", idChild, SR.ShouldBeZero);
+            }
 
             return new WindowsUpDown(hwnd, null, idChild);
         }
@@ -84,7 +93,10 @@ namespace MS.Internal.AutomationProxies
                 WindowsUpDown wtv = new WindowsUpDown(hwnd, null, -1);
                 button = wtv.CreateSpinButtonItem(SpinItem.UpArrow);
             }
-            button?.DispatchEvents(NativeMethods.EventObjectInvoke, InvokePattern.InvokedEvent, idObject, idChild);
+            if (button != null)
+            {
+                button.DispatchEvents(NativeMethods.EventObjectInvoke, InvokePattern.InvokedEvent, idObject, idChild);
+            }
         }
 
         // Creates a list item RawElementBase Item
@@ -365,7 +377,7 @@ namespace MS.Internal.AutomationProxies
             // If this is a Spinner UpDown Control, the buddy window should be a control with
             // the class of EDIT.
             IntPtr hwndBuddy = HwndBuddy(_hwnd);
-            return hwndBuddy != IntPtr.Zero && Misc.ProxyGetClassName(hwndBuddy).Contains("EDIT", StringComparison.OrdinalIgnoreCase);
+            return hwndBuddy != IntPtr.Zero && Misc.ProxyGetClassName(hwndBuddy).IndexOf("EDIT", StringComparison.OrdinalIgnoreCase) != -1;
         }
 
         private double Max
@@ -406,7 +418,7 @@ namespace MS.Internal.AutomationProxies
 
         #region SpinButtonItem
 
-        private class SpinButtonItem: ProxySimple, IInvokeProvider
+        class SpinButtonItem: ProxySimple, IInvokeProvider
         {
             //------------------------------------------------------
             //
@@ -553,7 +565,7 @@ namespace MS.Internal.AutomationProxies
 
             #region Internal Methods
 
-            internal static Rect GetBoundingRectangle(IntPtr hwnd, WindowsUpDown.SpinItem item)
+            static internal Rect GetBoundingRectangle(IntPtr hwnd, WindowsUpDown.SpinItem item)
             {
                 NativeMethods.Win32Rect updownRect = new NativeMethods.Win32Rect();
 

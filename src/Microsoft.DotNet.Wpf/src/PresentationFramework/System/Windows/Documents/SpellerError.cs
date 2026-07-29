@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Documents;
-using MS.Internal;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: A misspelled word in a TextBox or RichTextBox.
@@ -10,6 +8,11 @@ using MS.Internal;
 
 namespace System.Windows.Controls
 {
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Windows.Documents;
+    using MS.Internal;
+
     /// <summary>
     /// A misspelled word in a TextBox or RichTextBox.
     /// </summary>
@@ -91,7 +94,15 @@ namespace System.Windows.Controls
         /// </remarks>
         public IEnumerable<string> Suggestions
         {
-            get => _speller.GetSuggestionsForError(this);
+            get
+            {
+                IList suggestions = _speller.GetSuggestionsForError(this);
+
+                for (int i=0; i<suggestions.Count; i++)
+                {
+                    yield return (string)suggestions[i];
+                }
+            }
         }
 
         #endregion Public Properties

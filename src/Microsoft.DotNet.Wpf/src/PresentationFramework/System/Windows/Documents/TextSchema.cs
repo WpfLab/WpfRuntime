@@ -1,9 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
-using System.Windows.Controls; // TextBox, TextBlock
-using System.Windows.Media; // Brush
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: A static class providing information about text content schema
@@ -11,6 +8,11 @@ using System.Windows.Media; // Brush
 
 namespace System.Windows.Documents
 {
+    using MS.Internal;
+    using System.Collections.Generic;
+    using System.Windows.Controls; // TextBox, TextBlock
+    using System.Windows.Media; // Brush
+
     /// <summary>
     /// Provides an information about text structure schema.
     /// The schema is used in editing operations for maintaining
@@ -283,7 +285,7 @@ namespace System.Windows.Documents
         internal static bool IsNonMergeableInline(Type elementType)
         {
             TextElementEditingBehaviorAttribute att = (TextElementEditingBehaviorAttribute)Attribute.GetCustomAttribute(elementType, typeof(TextElementEditingBehaviorAttribute));
-            if (att != null && !att.IsMergeable)
+            if (att != null && att.IsMergeable == false)
             {
                 return true;
             }
@@ -501,7 +503,7 @@ namespace System.Windows.Documents
             }
             else if (typeof(LineBreak).IsAssignableFrom(type))
             {
-                return Array.Empty<DependencyProperty>();
+                return _emptyPropertyList;
             }
             else if (typeof(Floater).IsAssignableFrom(type))
             {
@@ -559,7 +561,7 @@ namespace System.Windows.Documents
             }
 
             Invariant.Assert(false, "We do not expect any unknown elements derived directly from TextElement. Schema must have been checking for that");
-            return Array.Empty<DependencyProperty>(); // to make compiler happy
+            return _emptyPropertyList; // to make compiler happy
         }
 
         // Compares two values for equality
@@ -590,24 +592,28 @@ namespace System.Windows.Documents
             // Comparing null with empty collections
             if (value1 == null)
             {
-                if (value2 is TextDecorationCollection decorations2)
+                if (value2 is TextDecorationCollection)
                 {
+                    TextDecorationCollection decorations2 = (TextDecorationCollection)value2;
                     return decorations2.Count == 0;
                 }
-                else if (value2 is TextEffectCollection effects2)
+                else if (value2 is TextEffectCollection)
                 {
+                    TextEffectCollection effects2 = (TextEffectCollection)value2;
                     return effects2.Count == 0;
                 }
                 return false;
             }
             else if (value2 == null)
             {
-                if (value1 is TextDecorationCollection decorations1)
+                if (value1 is TextDecorationCollection)
                 {
+                    TextDecorationCollection decorations1 = (TextDecorationCollection)value1;
                     return decorations1.Count == 0;
                 }
-                else if (value1 is TextEffectCollection effects1)
+                else if (value1 is TextEffectCollection)
                 {
+                    TextEffectCollection effects1 = (TextEffectCollection)value1;
                     return effects1.Count == 0;
                 }
                 return false;
@@ -627,8 +633,9 @@ namespace System.Windows.Documents
                 TextDecorationCollection decorations2 = (TextDecorationCollection)value2;
                 return decorations1.ValueEquals(decorations2);
             }
-            else if (value1 is FontFamily fontFamily1)
+            else if (value1 is FontFamily)
             {
+                FontFamily fontFamily1 = (FontFamily)value1;
                 FontFamily fontFamily2 = (FontFamily)value2;
                 return fontFamily1.Equals(fontFamily2);
             }
@@ -1200,6 +1207,9 @@ namespace System.Windows.Documents
             { 
                 UIElement.AllowDropProperty,
             };
+
+        // Empty property list
+        private static readonly DependencyProperty[] _emptyPropertyList = new DependencyProperty[] { };
 
         // Structural property list.
         // NB: Existing code depends on these being inheritable properties.

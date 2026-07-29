@@ -1,5 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using MS.Utility;
+using System;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Ink;
+using MS.Internal.Ink.InkSerializedFormat;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.Ink.InkSerializedFormat
 {
@@ -66,7 +81,10 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <returns></returns>
         internal byte[] CompressPacketData(int[] input, byte compression)
         {
-            ArgumentNullException.ThrowIfNull(input);
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
 
             List<byte> compressedData = new List<byte>();
             //leave room at the beginning of 
@@ -144,12 +162,18 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <returns></returns>
         internal uint DecompressPacketData(byte[] input, int[] outputBuffer)
         {
-            ArgumentNullException.ThrowIfNull(input);
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
             if (input.Length < 2)
             {
                 throw new ArgumentException(StrokeCollectionSerializer.ISFDebugMessage("Input buffer passed was shorter than expected"));
             }
-            ArgumentNullException.ThrowIfNull(outputBuffer);
+            if (outputBuffer == null)
+            {
+                throw new ArgumentNullException("outputBuffer");
+            }
             if (outputBuffer.Length == 0)
             {
                 throw new ArgumentException(StrokeCollectionSerializer.ISFDebugMessage("output buffer length was zero"));
@@ -304,7 +328,10 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <returns></returns>
         internal byte[] DecompressPropertyData(byte[] input)
         {
-            ArgumentNullException.ThrowIfNull(input);
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
             if (input.Length < 2)
             {
                 throw new ArgumentException(StrokeCollectionSerializer.ISFDebugMessage("input.Length must be at least 2"));
@@ -442,7 +469,7 @@ namespace MS.Internal.Ink.InkSerializedFormat
         internal const byte DefaultBAACount = 8;
         internal const byte MaxBAACount = 10;
 
-        private static ReadOnlySpan<double> DefaultFirstSquareRoot => [1, 1, 1, 4, 9, 16, 36, 49];
 
+        private static readonly double[] DefaultFirstSquareRoot = { 1, 1, 1, 4, 9, 16, 36, 49};
     }
 }

@@ -1,16 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Windows.Threading;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Reflection;
+using System.Security;
 using MS.Internal;
 using MS.Internal.Interop;
 using MS.Internal.PresentationCore;                        // SecurityHelper
 using MS.Win32;
 using MS.Utility;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Interop
 {
@@ -18,8 +23,9 @@ namespace System.Windows.Interop
     {
         internal HwndMouseInputProvider(HwndSource source)
         {
-            _site = InputManager.Current.RegisterInputProvider(this);
-            _source = source;
+            _site = new SecurityCriticalDataClass<InputProviderSite>(InputManager.Current.RegisterInputProvider(this));
+
+            _source = new SecurityCriticalDataClass<HwndSource>(source);
 
             // MITIGATION_SETCURSOR
             _setCursorState = SetCursorState.SetCursorNotReceived;
@@ -34,12 +40,14 @@ namespace System.Windows.Interop
                 //Console.WriteLine("Disposing");
 
                 // Cleanup the mouse tracking.
-                StopTracking(_source.Handle);
+                StopTracking(_source.Value.CriticalHandle);
 
                 // If we have capture, release it.
                 try
                 {
-                    if(_source.HasCapture)
+                    Debug.Assert(null != _source && null != _source.Value);
+
+                    if(_source.Value.HasCapture )
                     {
                         SafeNativeMethods.ReleaseCapture();
                     }
@@ -60,7 +68,7 @@ namespace System.Windows.Interop
                     System.Diagnostics.Debug.WriteLine("HwndMouseInputProvider: Dispose: GetCapture failed!");
                 }
 
-                _site.Dispose();
+                _site.Value.Dispose();
                 _site = null;
             }
             _source = null;
@@ -68,14 +76,16 @@ namespace System.Windows.Interop
 
         bool IInputProvider.ProvidesInputForRootVisual(Visual v)
         {
-            return _source.RootVisual == v;
+            Debug.Assert(null != _source && null != _source.Value);
+
+            return _source.Value.RootVisual == v;
         }
 
         void IInputProvider.NotifyDeactivate()
         {
             if(_active)
             {
-                StopTracking(_source.Handle);
+                StopTracking(_source.Value.CriticalHandle);
 
                 _active = false;
             }
@@ -116,13 +126,13 @@ namespace System.Windows.Interop
 
             bool success = true;
 
-            Debug.Assert(_source is not null);
+            Debug.Assert(null != _source && null != _source.Value);
 
             try
             {
-                SafeNativeMethods.SetCapture(new HandleRef(this, _source.Handle));
+                SafeNativeMethods.SetCapture(new HandleRef(this,_source.Value.CriticalHandle));
                 IntPtr capture = SafeNativeMethods.GetCapture();
-                if (capture != _source.Handle)
+                if (capture != _source.Value.CriticalHandle)
                 {
                     success = false;
                 }
@@ -150,7 +160,7 @@ namespace System.Windows.Interop
                 {
                     try
                     {
-                        SafeNativeMethods.ScreenToClient(new HandleRef(this, _source.Handle), ref ptCursor);
+                        SafeNativeMethods.ScreenToClient(new HandleRef(this, _source.Value.CriticalHandle), ref ptCursor);
                     }
                     catch(System.ComponentModel.Win32Exception)
                     {
@@ -161,7 +171,7 @@ namespace System.Windows.Interop
 
                     if(success)
                     {
-                        ReportInput(_source.Handle,
+                        ReportInput(_source.Value.CriticalHandle,
                                     InputMode.Foreground,
                                     _msgTime,
                                     RawMouseActions.AbsoluteMove,
@@ -292,8 +302,11 @@ namespace System.Windows.Interop
 
                             // Translate the point from the root to the visual.
                             GeneralTransform gDown = inputSource.RootVisual.TransformToDescendant(VisualTreeHelper.GetContainingVisual2D(containingVisual));
-                            //  should we throw if the point could not be transformed?
-                            gDown?.TryTransform(currentPosition, out currentPosition);
+                            if (gDown != null)
+                            {
+                                //  should we throw if the point could not be transformed?
+                                gDown.TryTransform(currentPosition, out currentPosition);
+                            }
 
                             points[cpt++] = currentPosition;
                         }
@@ -316,7 +329,7 @@ namespace System.Windows.Interop
             IntPtr result = IntPtr.Zero ;
 
             // It is possible to be re-entered during disposal.  Just return.
-            if(_source is null)
+            if(null == _source || null == _source.Value)
             {
                 return result;
             }
@@ -409,8 +422,11 @@ namespace System.Windows.Interop
 
                     // Abort the pending operation waiting to update the cursor, because we
                     // are going to update it as part of this mouse move processing.
-                    _queryCursorOperation?.Abort();
-                    _queryCursorOperation = null;
+                    if (_queryCursorOperation != null)
+                    {
+                        _queryCursorOperation.Abort();
+                        _queryCursorOperation = null;
+                    }
 
                     // MITIGATION_SETCURSOR
                     if (_haveCapture)
@@ -663,7 +679,7 @@ namespace System.Windows.Interop
                     try
                     {
                         IntPtr hwndCapture = SafeNativeMethods.GetCapture();
-                        IntPtr hwndCurrent = _source.Handle;
+                        IntPtr hwndCurrent = _source.Value.CriticalHandle;
                         if (hwndCapture != hwndCurrent)
                         {
                             PossiblyDeactivate(hwndCapture, false);
@@ -717,7 +733,7 @@ namespace System.Windows.Interop
                     // If someone else is taking capture, we may need
                     // to deactivate the mouse input stream too.
 
-                    if(lParam != _source.Handle) // Ignore odd messages that claim we are losing capture to ourselves.
+                    if(lParam != _source.Value.CriticalHandle) // Ignore odd messages that claim we are losing capture to ourselves.
                     {
                         // MITIGATION_SETCURSOR
                         _haveCapture = false;
@@ -769,7 +785,7 @@ namespace System.Windows.Interop
                     // to this we release capture if we currently have it.
                     try
                     {
-                        if(_source.HasCapture)
+                        if(_source.Value.HasCapture )
                         {
                             SafeNativeMethods.ReleaseCapture();
                         }
@@ -856,8 +872,8 @@ namespace System.Windows.Interop
                 // needs to check for that.
                 int dispatcherHashCode = 0;
 
-                if(_source != null && !_source.IsDisposed && _source.CompositionTarget != null)
-                    dispatcherHashCode = _source.CompositionTarget.Dispatcher.GetHashCode();
+                if( _source != null && !_source.Value.IsDisposed && _source.Value.CompositionTarget != null)
+                    dispatcherHashCode = _source.Value.CompositionTarget.Dispatcher.GetHashCode();
 
                 // The ETW manifest for this event declares the lParam and
                 // wParam values to be integers.  This is not always true for
@@ -881,7 +897,7 @@ namespace System.Windows.Interop
         {
             // we may have been disposed by a re-entrant call
             // If so, there's nothing more to do.
-            if (_source is null)
+            if (null == _source || null == _source.Value )
             {
                 return;
             }
@@ -928,7 +944,7 @@ namespace System.Windows.Interop
                     System.Diagnostics.Debug.WriteLine("HwndMouseInputProvider: WindowFromPoint failed!");
                 }
 
-                if (!stillActiveIfOverSelf && hwndToCheck == _source.Handle)
+                if (!stillActiveIfOverSelf && hwndToCheck == _source.Value.CriticalHandle)
                 {
                     hwndToCheck = IntPtr.Zero;
                 }
@@ -970,7 +986,7 @@ namespace System.Windows.Interop
             // Only deactivate the mouse input stream if needed.
             if(deactivate)
             {
-                ReportInput(_source.Handle,
+                ReportInput(_source.Value.CriticalHandle,
                             InputMode.Foreground,
                             _msgTime,
                             RawMouseActions.Deactivate,
@@ -1079,7 +1095,7 @@ namespace System.Windows.Interop
 
             // get a reference to PresentationFramework, either from our own
             // HwndSource, or (as a fallback) from the target HwndSource
-            Assembly presentationFramework = GetPresentationFrameworkFromHwndSource(_source);
+            Assembly presentationFramework = GetPresentationFrameworkFromHwndSource(_source.Value);
             if (presentationFramework == null)
             {
                 presentationFramework = GetPresentationFrameworkFromHwndSource(hwndSource);
@@ -1175,7 +1191,7 @@ namespace System.Windows.Interop
             bool isOurWindow = false;
             hwndSource = null;
 
-            Debug.Assert(_source is not null);
+            Debug.Assert(null != _source && null != _source.Value);
 
             if(hwnd != IntPtr.Zero)
             {
@@ -1183,7 +1199,7 @@ namespace System.Windows.Interop
 
                 if(hwndSource != null)
                 {
-                    if(hwndSource.Dispatcher == _source.Dispatcher)
+                    if(hwndSource.Dispatcher == _source.Value.Dispatcher)
                     {
                         // The window has the same dispatcher, must be ours.
                         isOurWindow = true;
@@ -1219,14 +1235,14 @@ namespace System.Windows.Interop
             int y,
             int wheel)
         {
-            // If there's no HwndSource, we shouldn't get here. But just in case...
-            Debug.Assert(_source is not null);
-            if (_source is null)
+            // if there's no HwndSource, we shouldn't get here.  But just in case...
+            Debug.Assert(null != _source && null != _source.Value);
+            if (_source == null || _source.Value == null)
             {
                 return false;
             }
 
-            PresentationSource source = _source;
+            PresentationSource source = _source.Value;
             CompositionTarget ct = source.CompositionTarget;
 
             // Input reports should only be generated if the window is still valid.
@@ -1259,7 +1275,7 @@ namespace System.Windows.Interop
                 // report mouse wheel events as if they came from the window that
                 // is under the mouse (even though they are reported to the window
                 // with keyboard focus)
-                MouseDevice mouse = _site.CriticalInputManager.PrimaryMouseDevice;
+                MouseDevice mouse = _site.Value.CriticalInputManager.PrimaryMouseDevice;
                 if (mouse != null && mouse.CriticalActiveSource != null)
                 {
                     source = mouse.CriticalActiveSource;
@@ -1378,13 +1394,13 @@ namespace System.Windows.Interop
                 {
                     try
                     {
-                        //This has a SUC on it and accesses Handle
-                        int windowStyle = SafeNativeMethods.GetWindowStyle(new HandleRef(this, _source.Handle), true);
+                        //This has a SUC on it and accesses CriticalHandle
+                        int windowStyle = SafeNativeMethods.GetWindowStyle(new HandleRef(this, _source.Value.CriticalHandle), true);
 
                         if((windowStyle & NativeMethods.WS_EX_LAYOUTRTL) == NativeMethods.WS_EX_LAYOUTRTL)
                         {
                             NativeMethods.RECT rcClient = new NativeMethods.RECT();
-                            SafeNativeMethods.GetClientRect(new HandleRef(this, _source.Handle), ref rcClient);
+                            SafeNativeMethods.GetClientRect(new HandleRef(this,_source.Value.Handle), ref rcClient);
                             x = rcClient.right - x;
                         }
                     }
@@ -1419,7 +1435,7 @@ namespace System.Windows.Interop
                                                                  extraInformation);
 
 
-            bool handled = _site.ReportInput(report);
+            bool handled = _site.Value.ReportInput(report);
 
             return handled;
         }
@@ -1434,7 +1450,7 @@ namespace System.Windows.Interop
             // (x,y) is in client coordinates, but the system buffer uses screen
             // coordinates.  Convert the new position into screen coordinates.
             Point currentPosition = new Point(x, y);
-            currentPosition = PointUtil.ClientToScreen(currentPosition, _source);
+            currentPosition = PointUtil.ClientToScreen(currentPosition, _source.Value);
 
             // roll the MouseMove buffer forward
             _previousMovePoint = _latestMovePoint;
@@ -1445,8 +1461,8 @@ namespace System.Windows.Interop
         }
 
 
-        private HwndSource _source;
-        private  InputProviderSite _site;
+        private SecurityCriticalDataClass<HwndSource> _source;
+        private  SecurityCriticalDataClass<InputProviderSite> _site;
         private int _msgTime;
         private NativeMethods.MOUSEMOVEPOINT _latestMovePoint;      // screen coordinates
         private NativeMethods.MOUSEMOVEPOINT _previousMovePoint;    // screen coordinates
@@ -1466,7 +1482,7 @@ namespace System.Windows.Interop
         private NativeMethods.TRACKMOUSEEVENT _tme = new NativeMethods.TRACKMOUSEEVENT();
 
         // accessors into PresentationFramework classes
-        private const string PresentationFrameworkAssemblyFullName = "PresentationFramework, Version=" + BuildInfo.WCP_VERSION + ", Culture=neutral, PublicKeyToken=" + BuildInfo.WCP_PUBLIC_KEY_TOKEN;
+        const string PresentationFrameworkAssemblyFullName = "PresentationFramework, Version=" + BuildInfo.WCP_VERSION + ", Culture=neutral, PublicKeyToken=" + BuildInfo.WCP_PUBLIC_KEY_TOKEN;
         private static DependencyProperty WindowChromeWorkerProperty;
         private static MethodInfo GetEffectiveClientAreaMI;
 

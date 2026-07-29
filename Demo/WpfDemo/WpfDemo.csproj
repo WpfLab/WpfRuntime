@@ -1,0 +1,40 @@
+﻿<Project>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateResxSource>false</GenerateResxSource>
+    <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RepoWpfConsumerEnabled)' == 'true'">
+    <FrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
+    <ProjectReference Include="$(WpfSourceDir)PresentationFramework\PresentationFramework.csproj"
+                      Targets="Restore;Build"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="@(RepoWpfThemeProject)"
+                      Targets="Restore;Build"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Resource1.resx"
+                      GenerateSource="false"
+                      XlfInput="false" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets"
+          Condition="'$(RepoWpfConsumerEnabled)' == 'true'" />
+</Project>

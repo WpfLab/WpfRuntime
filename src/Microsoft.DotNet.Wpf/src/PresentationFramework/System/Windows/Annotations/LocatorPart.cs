@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,7 +11,11 @@
 //     Spec: Simplifying Store Cache Model.doc
 //
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Xml;
 
@@ -346,7 +351,7 @@ namespace System.Windows.Annotations
         {
             if (_propertyChanged != null)
             {
-                _propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(NameValuePairs)));
+                _propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("NameValuePairs"));
             }
         }
 

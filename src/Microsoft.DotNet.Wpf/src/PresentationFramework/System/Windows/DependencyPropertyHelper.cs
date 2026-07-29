@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,6 +10,7 @@
 // See spec at GetValueSource.mht
 //
 
+using System;
 using MS.Internal;
 
 namespace System.Windows
@@ -117,9 +119,11 @@ namespace System.Windows
         /// </summary>
         public override bool Equals(object o)
         {
-            if (o is ValueSource that)
+            if (o is ValueSource)
             {
-                return this._baseValueSource == that._baseValueSource &&
+                ValueSource that = (ValueSource)o;
+
+                return  this._baseValueSource == that._baseValueSource &&
                         this._isExpression == that._isExpression &&
                         this._isAnimated == that._isAnimated &&
                         this._isCoerced == that._isCoerced;
@@ -148,11 +152,11 @@ namespace System.Windows
 
         #endregion Object overrides - required by FxCop
 
-        private BaseValueSource _baseValueSource;
-        private bool            _isExpression;
-        private bool            _isAnimated;
-        private bool            _isCoerced;
-        private bool            _isCurrent;
+        BaseValueSource _baseValueSource;
+        bool            _isExpression;
+        bool            _isAnimated;
+        bool            _isCoerced;
+        bool            _isCurrent;
     }
 
     /// <summary>

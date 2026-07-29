@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: 
 //    RightsTable is the grid control used to represent permisions 
@@ -8,6 +9,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
+using System.Security;
 using System.Windows.Forms;
 using System.Windows.TrustUI;
 
@@ -354,12 +357,11 @@ namespace MS.Internal.Documents
             /// <returns>The new DataGridViewDisableCheckBoxCell</returns>
             private DataGridViewDisableCheckBoxCell CreateCheckBoxCell(bool enabled, bool value)
             {
-                DataGridViewDisableCheckBoxCell boolCell = new DataGridViewDisableCheckBoxCell
-                {
-                    Enabled = enabled,
-                    Value = value,
-                    Style = _boolCellStyle
-                };
+                DataGridViewDisableCheckBoxCell boolCell = new DataGridViewDisableCheckBoxCell();
+
+                boolCell.Enabled = enabled;
+                boolCell.Value = value;
+                boolCell.Style = _boolCellStyle;
 
                 return boolCell;
             }
@@ -377,11 +379,9 @@ namespace MS.Internal.Documents
                 DataGridViewRow row = new DataGridViewRow();
 
                 // Name
-                DataGridViewCell nameCell = new DataGridViewTextBoxCell
-                {
-                    Value = newUser.Name,
-                    Style = _textCellStyle
-                };
+                DataGridViewCell nameCell = new DataGridViewTextBoxCell();
+                nameCell.Value = newUser.Name;
+                nameCell.Style = _textCellStyle;
                 row.Cells.Add(nameCell);
 
                 // AllowView
@@ -458,19 +458,15 @@ namespace MS.Internal.Documents
                     CreateColumnHeader("AllowOwner", SR.RMPublishingOwnerHeader, typeof(bool), -1));
 
                 // Set the TextBox cell style
-                _textCellStyle = new DataGridViewCellStyle
-                {
-                    Alignment = DataGridViewContentAlignment.MiddleLeft,
-                    NullValue = string.Empty,
-                    WrapMode = DataGridViewTriState.False
-                };
+                _textCellStyle = new DataGridViewCellStyle();
+                _textCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+                _textCellStyle.NullValue = string.Empty;
+                _textCellStyle.WrapMode = DataGridViewTriState.False;
 
                 // Set the CheckBox cell style
-                _boolCellStyle = new DataGridViewCellStyle
-                {
-                    Alignment = DataGridViewContentAlignment.MiddleCenter,
-                    NullValue = false
-                };
+                _boolCellStyle = new DataGridViewCellStyle();
+                _boolCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                _boolCellStyle.NullValue = false;
 
                 // Set the cell border style
                 AdvancedCellBorderStyle.All = DataGridViewAdvancedCellBorderStyle.None;

@@ -1,11 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: TextPointer object representing a location in formatted text.
 //
 
+using System;
 using MS.Internal;
+using System.Threading;
+using System.Windows;
+using System.Windows.Media;
+using System.Collections;
 using System.Windows.Controls; // doc comments
 
 namespace System.Windows.Documents
@@ -1384,7 +1390,7 @@ namespace System.Windows.Documents
             _tree.EmptyDeadPositionList();
             SyncToTreeGeneration();
 
-            ValidationHelper.ValidateChild(this, textElement, nameof(textElement));
+            ValidationHelper.ValidateChild(this, textElement, "textElement");
 
             if (textElement.Parent != null)
             {
@@ -2140,7 +2146,7 @@ namespace System.Windows.Documents
             _tree.EmptyDeadPositionList();
             SyncToTreeGeneration();
 
-            ValidationHelper.ValidateChild(this, uiElement, nameof(uiElement));
+            ValidationHelper.ValidateChild(this, uiElement, "uiElement");
 
             if (!((TextElement)this.Parent).IsEmpty) // the parent may be InlineUIContainer or BlockUIContainer
             {
@@ -2167,7 +2173,7 @@ namespace System.Windows.Documents
             SyncToTreeGeneration();
 
             elementNode = GetAdjacentTextElementNodeSibling(direction);
-            return elementNode?.TextElement;
+            return (elementNode == null) ? null : elementNode.TextElement;
         }
 
         /// <summary>
@@ -2417,7 +2423,7 @@ namespace System.Windows.Documents
 
             element = GetElement(direction);
 
-            return element?.GetType();
+            return element != null ? element.GetType() : null;
         }
 
         bool ITextPointer.HasEqualScope(ITextPointer position)
@@ -3615,7 +3621,7 @@ namespace System.Windows.Documents
 
                 DependencyObject element = this.Parent;
 
-                return element?.GetType();
+                return element != null ? element.GetType() : null;
             }
         }
 
@@ -3807,7 +3813,7 @@ namespace System.Windows.Documents
 
 #if DEBUG
         // Debug-only unique identifier for this instance.
-        private int DebugId
+        int DebugId
         {
             get
             {
@@ -4121,7 +4127,7 @@ namespace System.Windows.Documents
 
             elementNode = GetAdjacentTextElementNode(direction);
 
-            return elementNode?.TextElement;
+            return (elementNode == null) ? null : elementNode.TextElement;
         }
 
         // Invariant.Strict only.  Asserts this position has good state.

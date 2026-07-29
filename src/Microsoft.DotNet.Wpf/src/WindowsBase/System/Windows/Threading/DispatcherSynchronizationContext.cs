@@ -1,7 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Threading;
+using System.Diagnostics;
+using System.ComponentModel;
+using System.Security;                       // CAS
+using System.Runtime.ConstrainedExecution;
+using System.Windows;                        // BaseCompatibilityPreferences
 
 namespace System.Windows.Threading
 {
@@ -32,8 +39,11 @@ namespace System.Windows.Threading
         /// </summary>
         public DispatcherSynchronizationContext(Dispatcher dispatcher, DispatcherPriority priority)
         {
-            ArgumentNullException.ThrowIfNull(dispatcher);
-
+            if(dispatcher == null)
+            {
+                throw new ArgumentNullException("dispatcher");
+            }
+            
             Dispatcher.ValidatePriority(priority, "priority");
             
             _dispatcher = dispatcher;

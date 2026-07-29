@@ -1,8 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
 
 namespace System.Windows.Input
 {
@@ -25,7 +30,10 @@ namespace System.Windows.Input
         /// <param name="parameter">The parameter that was passed when executing the command.</param>
         internal ExecutedRoutedEventArgs(ICommand command, object parameter)
         {
-            ArgumentNullException.ThrowIfNull(command);
+            if (command == null)
+            {
+                throw new ArgumentNullException("command");
+            }
 
             _command = command;
             _parameter = parameter;

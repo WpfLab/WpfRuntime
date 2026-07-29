@@ -1,12 +1,26 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+
+using System;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using MS.Internal;
 using MS.Win32;
+using System.Security;
+using System.Collections;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
+using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Win32.SafeHandles;
-
-using UnsafeNativeMethodsMilCoreApi = MS.Win32.PresentationCore.UnsafeNativeMethods;
+using SR=MS.Internal.PresentationCore.SR;
+using UnsafeNativeMethodsMilCoreApi=MS.Win32.PresentationCore.UnsafeNativeMethods;
 
 namespace System.Windows.Media
 {
@@ -115,7 +129,7 @@ namespace System.Windows.Media
 
         #region Data members
 
-        private SafeProfileHandle _profileHandle;
+        SafeProfileHandle _profileHandle;
 
         #endregion
     }

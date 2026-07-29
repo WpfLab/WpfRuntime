@@ -1,19 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Windows ListView Group helper classes
 //
 
 
 using System;
+using System.Windows.Automation;
+using System.Windows.Automation.Provider;
+using System.Windows;
 using System.Collections;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
 using MS.Win32;
 
 namespace MS.Internal.AutomationProxies
 {
     // Class representing collection of ListView GroupManagers
-    internal class GroupManagerCollection
+    class GroupManagerCollection
     {
         //------------------------------------------------------
         //
@@ -88,13 +93,13 @@ namespace MS.Internal.AutomationProxies
 
         #region Private Fields
 
-        private static Hashtable _groupManagers = new Hashtable(10);
+        static private Hashtable _groupManagers = new Hashtable(10);
 
         #endregion Private Fields
     }
 
     // Class responsible for managing listview groups
-    internal class GroupManager
+    class GroupManager
     {
         // ------------------------------------------------------
         //
@@ -201,10 +206,9 @@ namespace MS.Internal.AutomationProxies
             // Make sure that no new group have been added, try to match all the GroupId to an 
             // existing one.
             int itemCount = WindowsListView.GetItemCount (_hwnd);
-            NativeMethods.LVITEM_V6 item = new NativeMethods.LVITEM_V6
-            {
-                mask = NativeMethods.LVIF_GROUPID
-            };
+            NativeMethods.LVITEM_V6 item = new NativeMethods.LVITEM_V6 ();
+
+            item.mask = NativeMethods.LVIF_GROUPID;
 
             for (item.iItem = 0; item.iItem < itemCount; item.iItem++)
             {
@@ -272,15 +276,15 @@ namespace MS.Internal.AutomationProxies
             //------------------------------------------------------
 
             #region Public Methods
-            public static bool operator true(GroupInfo info)
+            static public bool operator true(GroupInfo info)
             {
                 return info._items != null;
             }
-            public static bool operator false(GroupInfo info)
+            static public bool operator false(GroupInfo info)
             {
                 return info._items == null;
             }
-            public static bool operator !(GroupInfo info)
+            static public bool operator !(GroupInfo info)
             {
                 if (info)
                 {
@@ -326,7 +330,7 @@ namespace MS.Internal.AutomationProxies
 
             internal int[] _items;
             internal int _count;
-            internal static readonly GroupInfo Null = new GroupInfo(null, -1);
+            static readonly internal GroupInfo Null = new GroupInfo(null, -1);
 
             #endregion Internal Fields
         }
@@ -366,10 +370,8 @@ namespace MS.Internal.AutomationProxies
             bool isComctrlV6OnOsVerV6orHigher = Misc.IsComctrlV6OnOsVerV6orHigher(hwnd);
            
             int itemCount = WindowsListView.GetItemCount(hwnd);
-            NativeMethods.LVITEM_V6 item = new NativeMethods.LVITEM_V6
-            {
-                mask = NativeMethods.LVIF_GROUPID
-            };
+            NativeMethods.LVITEM_V6 item = new NativeMethods.LVITEM_V6();
+            item.mask = NativeMethods.LVIF_GROUPID;
 
             // The only place where the GroupManager gets constructed
             GroupManager manager = new GroupManager(itemCount, hwnd, isComctrlV6OnOsVerV6orHigher);
@@ -408,7 +410,7 @@ namespace MS.Internal.AutomationProxies
                     {
                         // we had problem adding item to the needed group at this point it makes no
                         // sense to continue
-                        System.Diagnostics.Debug.Fail("Cannot add item to the needed group");
+                        System.Diagnostics.Debug.Assert(false, "Cannot add item to the needed group");
                         return null;
                     }
                 }
@@ -433,7 +435,7 @@ namespace MS.Internal.AutomationProxies
                     {
                         // we had problem adding item to the needed group at this point it makes no
                         // sense to continue
-                        System.Diagnostics.Debug.Fail("Cannot add item to the needed group");
+                        System.Diagnostics.Debug.Assert(false, "Cannot add item to the needed group");
                         return null;
                     }
                 }

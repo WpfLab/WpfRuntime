@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,19 +11,22 @@
 //
 //
 
+using System;
 using System.Collections;   // In order to use IEnumerator
+using System.Diagnostics;
+using MS.Utility;           // In order to use SR
 
 namespace System.Windows
 {
-    /*
-        public delegate bool ParentTraversalCallback(FrameworkElement parentFE, FrameworkContentElement parentFCE, object data);
-        public delegate bool ChildTraversalCallback(FrameworkElement childFE, FrameworkContentElement childFCE, object child, object data);
-    */
-
-    /// <summary>
-    /// Static helper functions for dealing with the logical tree
-    /// </summary>
-    public static class LogicalTreeHelper
+/*
+    public delegate bool ParentTraversalCallback(FrameworkElement parentFE, FrameworkContentElement parentFCE, object data);
+    public delegate bool ChildTraversalCallback(FrameworkElement childFE, FrameworkContentElement childFCE, object child, object data);
+*/
+    
+/// <summary>
+/// Static helper functions for dealing with the logical tree
+/// </summary>
+public static class LogicalTreeHelper
 {
     //------------------------------------------------------
     //
@@ -89,7 +93,7 @@ namespace System.Windows
             {
                 childEnumerator.Reset();
                 while( namedElement == null &&
-                       childEnumerator.MoveNext())
+                       childEnumerator.MoveNext() == true)
                 {
                     childNode = childEnumerator.Current as DependencyObject;
 
@@ -181,10 +185,16 @@ namespace System.Windows
         ArgumentNullException.ThrowIfNull(current);
 
         FrameworkElement fe = current as FrameworkElement;
-        fe?.BringIntoView();
+        if (fe != null)
+        {
+            fe.BringIntoView();
+        }
 
         FrameworkContentElement fce = current as FrameworkContentElement;
-        fce?.BringIntoView();
+        if (fce != null)
+        {
+            fce.BringIntoView();
+        }
     }
 
 /*
@@ -361,7 +371,10 @@ namespace System.Windows
             else
             {
                 FrameworkContentElement parentFCE = parent as FrameworkContentElement;
-                parentFCE?.AddLogicalChild(child);
+                if (parentFCE != null)
+                {
+                    parentFCE.AddLogicalChild(child);
+                }
             }
         }
     }
@@ -374,9 +387,9 @@ namespace System.Windows
             {
                 parentFE.AddLogicalChild(child);
             }
-            else
+            else if (parentFCE != null)
             {
-                parentFCE?.AddLogicalChild(child);
+                parentFCE.AddLogicalChild(child);
             }
         }
     }
@@ -393,7 +406,10 @@ namespace System.Windows
             else
             {
                 FrameworkContentElement parentFCE = parent as FrameworkContentElement;
-                parentFCE?.RemoveLogicalChild(child);
+                if (parentFCE != null)
+                {
+                    parentFCE.RemoveLogicalChild(child);
+                }
             }
         }
     }
@@ -466,7 +482,7 @@ namespace System.Windows
             return _enumerator;
         }
 
-            private IEnumerator _enumerator;
+        IEnumerator _enumerator;
 
 
         internal static EnumeratorWrapper Empty
@@ -482,7 +498,7 @@ namespace System.Windows
             }
         }
 
-            private static EnumeratorWrapper _emptyInstance;
+        static EnumeratorWrapper _emptyInstance;
     }
 }
 }

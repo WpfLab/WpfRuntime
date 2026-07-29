@@ -1,9 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using MS.Internal;
+using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using MS.Internal.PresentationCore;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.Media
 {
@@ -84,9 +91,9 @@ namespace MS.Internal.Media
             {
                 visual.SetFlagsToRoot(value, flags);
             }
-            else
+            else if (visual3D != null)
             {
-                visual3D?.SetFlagsToRoot(value, flags);
+                visual3D.SetFlagsToRoot(value, flags);
             }
         }
 
@@ -185,7 +192,7 @@ namespace MS.Internal.Media
         /// </summary>
         internal static void EnsureNonNullVisual(DependencyObject element)
         {
-            EnsureVisual(element, allowNull: false);
+            EnsureVisual(element, /* allowNull = */ false);
         }
 
         /// <summary>
@@ -194,7 +201,7 @@ namespace MS.Internal.Media
         /// </summary>
         internal static void EnsureVisual(DependencyObject element)
         {
-            EnsureVisual(element, allowNull: true);
+            EnsureVisual(element, /* allowNull = */ true);
         }
 
         /// <summary>
@@ -207,7 +214,7 @@ namespace MS.Internal.Media
             {
                 if (!allowNull)
                 {
-                    throw new ArgumentNullException(nameof(element));
+                    throw new ArgumentNullException("element");
                 }
 
                 return;
@@ -228,7 +235,10 @@ namespace MS.Internal.Media
         /// </summary>
         internal static void AsNonNullVisual(DependencyObject element, out Visual visual, out Visual3D visual3D)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             AsVisual(element, out visual, out visual3D);
 
@@ -280,7 +290,7 @@ namespace MS.Internal.Media
             {
                 Debug.Fail(String.Format(
                                "'{0}' is not a Visual or Visual3D. Caller is responsible for guaranteeing that element is a Visual type.",
-                               element?.GetType()));
+                               element != null ? element.GetType() : null));
             }
 
             return castSucceeded;

@@ -1,13 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-
-#region Using delcarations
-
-using System.Collections.Generic;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Automation.Peers
@@ -15,6 +9,16 @@ namespace System.Windows.Automation.Peers
 namespace Microsoft.Windows.Automation.Peers
 #endif
 {
+
+    #region Using delcarations
+
+    using System.Collections.Generic;
+    using System.Windows;
+    using System.Windows.Automation;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Shapes;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon;
 #else
     using Microsoft.Windows.Controls.Ribbon;
 #endif
@@ -139,10 +143,13 @@ namespace Microsoft.Windows.Automation.Peers
         {
             AutomationPeer dataPeer = EventsSource;
 
-            dataPeer?.RaisePropertyChangedEvent(
+            if (dataPeer != null)
+            {
+                dataPeer.RaisePropertyChangedEvent(
                     ExpandCollapsePatternIdentifiers.ExpandCollapseStateProperty,
                     oldValue ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed,
                     newValue ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed);
+            }
         }
 
         // Never inline, as we don't want to unnecessarily link the 

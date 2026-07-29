@@ -1,7 +1,10 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Windows.Input;
+using MS.Internal.KnownBoxes;
 
 namespace System.Windows
 {
@@ -34,11 +37,9 @@ namespace System.Windows
             {
                 return;
             }
-
-            StylusEventArgs stylusEventArgs = new StylusEventArgs(Stylus.CurrentStylusDevice, Environment.TickCount)
-            {
-                RoutedEvent = oldValue ? Stylus.StylusLeaveEvent : Stylus.StylusEnterEvent
-            };
+            
+            StylusEventArgs stylusEventArgs = new StylusEventArgs(Stylus.CurrentStylusDevice, Environment.TickCount);
+            stylusEventArgs.RoutedEvent = oldValue ? Stylus.StylusLeaveEvent : Stylus.StylusEnterEvent;
 
             if (uie != null)
             {
@@ -48,9 +49,9 @@ namespace System.Windows
             {
                 ce.RaiseEvent(stylusEventArgs);
             }
-            else
+            else if (uie3D != null)
             {
-                uie3D?.RaiseEvent(stylusEventArgs);
+                uie3D.RaiseEvent(stylusEventArgs);
             }
         }
     }

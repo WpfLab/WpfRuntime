@@ -1,5 +1,35 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+// 
+//
+// Description: The FontEmbeddingManager class handles physical and composite font embedding.
+//
+//              See spec at http://avalon/text/DesignDocsAndSpecs/Font%20embedding%20APIs.htm
+// 
+//
+//
+
+using System;
+using System.Text;
+using System.IO;
+using System.Globalization;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows;
+
+using MS.Internal.FontCache;
+using MS.Internal.FontFace;
+using MS.Internal.Shaping;
+using System.Security;
+
+using SR=MS.Internal.PresentationCore.SR;
+
+// Allow suppression of presharp warnings
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Media
 {
@@ -40,8 +70,12 @@ namespace System.Windows.Media
         /// <param name="glyphRun">Glyph run to obtain typeface and index information from.</param>
         public void RecordUsage(GlyphRun glyphRun)
         {
-            ArgumentNullException.ThrowIfNull(glyphRun);
+            if (glyphRun == null)
+                throw new ArgumentNullException("glyphRun");
 
+            // Suppress PRESharp parameter validation warning about glyphRun.GlyphTypeface because
+            // GlyphRun.GlyphTypeface property cannot be null.
+#pragma warning suppress 56506
             Uri glyphTypeface = glyphRun.GlyphTypeface.FontUri;
 
             Dictionary<ushort, bool> glyphSet;
@@ -84,7 +118,7 @@ namespace System.Windows.Media
             Dictionary<ushort, bool> glyphsUsed = _collectedGlyphTypefaces[glyphTypeface];
             if (glyphsUsed == null)
             {
-                throw new ArgumentException(SR.GlyphTypefaceNotRecorded, nameof(glyphTypeface));
+                throw new ArgumentException(SR.GlyphTypefaceNotRecorded, "glyphTypeface");
             }
             return glyphsUsed.Keys;
         }

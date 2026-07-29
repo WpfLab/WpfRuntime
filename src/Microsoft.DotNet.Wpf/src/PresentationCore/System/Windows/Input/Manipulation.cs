@@ -1,10 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Input.Manipulations;
 using MS.Internal.PresentationCore;
@@ -30,7 +34,10 @@ namespace System.Windows.Input
         /// <returns>True if there is an active manipulation, false otherwise.</returns>
         public static bool IsManipulationActive(UIElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             return GetActiveManipulationDevice(element) != null;
         }
@@ -55,10 +62,16 @@ namespace System.Windows.Input
         /// <param name="element">The element on which there is an active manipulation.</param>
         public static void StartInertia(UIElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = ManipulationDevice.GetManipulationDevice(element);
-            device?.CompleteManipulation(withInertia: true);
+            if (device != null)
+            {
+                device.CompleteManipulation(/* withInertia = */ true);
+            }
         }
 
         /// <summary>
@@ -67,7 +80,10 @@ namespace System.Windows.Input
         /// <param name="element">The element on which there is an active manipulation.</param>
         public static void CompleteManipulation(UIElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
             if (!TryCompleteManipulation(element))
             {
                 throw new InvalidOperationException(SR.Manipulation_ManipulationNotActive);
@@ -79,7 +95,7 @@ namespace System.Windows.Input
             ManipulationDevice device = ManipulationDevice.GetManipulationDevice(element);
             if (device != null)
             {
-                device.CompleteManipulation(withInertia: false);
+                device.CompleteManipulation(/* withInertia = */ false);
                 return true;
             }
 
@@ -93,7 +109,10 @@ namespace System.Windows.Input
         /// <param name="mode">The new manipulation mode.</param>
         public static void SetManipulationMode(UIElement element, ManipulationModes mode)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = GetActiveManipulationDevice(element);
             if (device != null)
@@ -113,7 +132,10 @@ namespace System.Windows.Input
         /// <returns>The current manipulation mode.</returns>
         public static ManipulationModes GetManipulationMode(UIElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = ManipulationDevice.GetManipulationDevice(element);
             if (device != null)
@@ -134,7 +156,10 @@ namespace System.Windows.Input
         /// <param name="container">The container that defines the coordinate space.</param>
         public static void SetManipulationContainer(UIElement element, IInputElement container)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = GetActiveManipulationDevice(element);
             if (device != null)
@@ -155,7 +180,10 @@ namespace System.Windows.Input
         /// <returns>The container that defines the coordinate space.</returns>
         public static IInputElement GetManipulationContainer(UIElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = ManipulationDevice.GetManipulationDevice(element);
             if (device != null)
@@ -173,7 +201,10 @@ namespace System.Windows.Input
         /// <param name="pivot">The new pivot for single-finger manipulation.</param>
         public static void SetManipulationPivot(UIElement element, ManipulationPivot pivot)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = GetActiveManipulationDevice(element);
             if (device != null)
@@ -193,7 +224,10 @@ namespace System.Windows.Input
         /// <returns>The pivot for single-finger manipulation.</returns>
         public static ManipulationPivot GetManipulationPivot(UIElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
 
             ManipulationDevice device = ManipulationDevice.GetManipulationDevice(element);
             if (device != null)
@@ -212,8 +246,14 @@ namespace System.Windows.Input
         /// <param name="manipulator">The manipulator, such as a TouchDevice.</param>
         public static void AddManipulator(UIElement element, IManipulator manipulator)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(manipulator);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (manipulator == null)
+            {
+                throw new ArgumentNullException("manipulator");
+            }
             if (!element.IsManipulationEnabled)
             {
                 throw new InvalidOperationException(SR.Manipulation_ManipulationNotEnabled);
@@ -231,8 +271,14 @@ namespace System.Windows.Input
         /// <param name="manipulator">The manipulator, such as a TouchDevice.</param>
         public static void RemoveManipulator(UIElement element, IManipulator manipulator)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(manipulator);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (manipulator == null)
+            {
+                throw new ArgumentNullException("manipulator");
+            }
 
             if (!TryRemoveManipulator(element, manipulator))
             {
@@ -260,8 +306,14 @@ namespace System.Windows.Input
         [Browsable(false)]
         public static void SetManipulationParameter(UIElement element, ManipulationParameters2D parameter)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(parameter);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (parameter == null)
+            {
+                throw new ArgumentNullException("parameter");
+            }
 
             ManipulationDevice device = GetActiveManipulationDevice(element);
             if (device != null)

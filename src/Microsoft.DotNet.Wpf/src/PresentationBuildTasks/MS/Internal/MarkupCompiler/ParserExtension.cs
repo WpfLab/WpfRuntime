@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //---------------------------------------------------------------------------
 //
@@ -18,6 +19,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.CodeDom;
+using System.CodeDom.Compiler;
+using System.ComponentModel;
 using MS.Utility;   // for SR
 
 namespace MS.Internal
@@ -494,7 +497,7 @@ namespace MS.Internal
                             {
                                 // This direct comparison is ok to do in pass2 as it has already been validated in pass1.
                                 // This is to avoid a costly instantiation of the CodeDomProvider in pass2.
-                                _isInternalRoot = !string.Equals("public", xmlReader.Value.Trim(), StringComparison.OrdinalIgnoreCase);
+                                _isInternalRoot = string.Compare("public", xmlReader.Value.Trim(), StringComparison.OrdinalIgnoreCase) != 0;
                             }
                         }
                     }
@@ -514,7 +517,7 @@ namespace MS.Internal
                         xmlReader.MoveToAttribute(attrName);
                 }
             }
-            else if (!_compiler.IsBamlNeeded && _compiler.IsCompilingEntryPointClass && xmlReader.Depth > 0)
+            else if (!_compiler.IsBamlNeeded && !_compiler.ProcessingRootContext && _compiler.IsCompilingEntryPointClass && xmlReader.Depth > 0)
             {
                 if ((!localName.Equals(MarkupCompiler.CODETAG) &&
                      !localName.Equals($"{MarkupCompiler.CODETAG}Extension")) ||
@@ -676,8 +679,12 @@ namespace MS.Internal
                 _compiler.ConnectNameAndEvents(_name, _events, _connectionId);
 
                 _name = null;
-                _events?.Clear();
-                _events = null;
+
+                if (_events != null)
+                {
+                    _events.Clear();
+                    _events = null;
+                }
             }
             else
             {
@@ -757,10 +764,9 @@ namespace MS.Internal
                 if (addMapping)
                 {
                     ClrNamespaceAssemblyPair namespaceMapping = new ClrNamespaceAssemblyPair(xamlPIMappingNode.ClrNamespace,
-                                                                                             xamlPIMappingNode.AssemblyName)
-                    {
-                        LocalAssembly = true
-                    };
+                                                                                             xamlPIMappingNode.AssemblyName);
+
+                    namespaceMapping.LocalAssembly = true;
                     XamlTypeMapper.PITable[xamlPIMappingNode.XmlNamespace] = namespaceMapping;
                     XamlTypeMapper.InvalidateMappingCache(xamlPIMappingNode.XmlNamespace);
                     if (!_pass2 && BamlRecordWriter != null)
@@ -909,7 +915,7 @@ namespace MS.Internal
             return _pass2;
         }
 
-        private bool ProcessedRootElement
+        bool ProcessedRootElement
         {
             get { return _processedRootElement; }
             set { _processedRootElement = value; }

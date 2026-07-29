@@ -1,13 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Table column object implementation.
 //
 
+using System;
+using System.Diagnostics;
+using System.Windows.Threading;
+
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using MS.Internal.PtsHost.UnsafeNativeMethods; // PTS restrictions
+using System.Collections;
+using System.Collections.Generic;
 
 using MS.Internal.Documents;
 
@@ -262,7 +271,10 @@ namespace System.Windows.Documents
         private static void OnWidthChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             Table table = ((TableColumn) d).Table;
-            table?.InvalidateColumns();
+            if(table != null)
+            {
+                table.InvalidateColumns();
+            }
         }
 
         /// <summary>
@@ -271,7 +283,10 @@ namespace System.Windows.Documents
         private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             Table table = ((TableColumn) d).Table;
-            table?.InvalidateColumns();
+            if(table != null)
+            {
+                table.InvalidateColumns();
+            }
         }
 
         #endregion Static Initialization 

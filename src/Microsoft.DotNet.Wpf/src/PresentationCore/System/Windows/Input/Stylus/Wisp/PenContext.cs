@@ -1,7 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Diagnostics;
+using System.Collections.Specialized;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Collections;
+using System.Collections.Generic;
+using System.Security;
+using MS.Internal;
 using MS.Win32.Penimc;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -14,11 +28,11 @@ namespace System.Windows.Input
                                 int id, IntPtr commHandle, int tabletDeviceId, UInt32 wispContextKey)
         {
             _contexts = contexts;
-            _pimcContext = pimcContext;
+            _pimcContext = new SecurityCriticalDataClass<IPimcContext3>(pimcContext);
             _id = id;
             _tabletDeviceId = tabletDeviceId;
-            _commHandle = commHandle;
-            _hwnd = hwnd;
+            _commHandle = new SecurityCriticalData<IntPtr>(commHandle);
+            _hwnd = new SecurityCriticalData<IntPtr>(hwnd);
             _supportInRange = supportInRange;
             _isIntegrated = isIntegrated;
             WispContextKey = wispContextKey;
@@ -52,7 +66,13 @@ namespace System.Windows.Input
 
         /////////////////////////////////////////////////////////////////////
 
-        internal IntPtr CommHandle => _commHandle;
+        internal IntPtr CommHandle
+        {
+            get
+            {
+                return _commHandle.Value;
+            }
+        }
 
         /////////////////////////////////////////////////////////////////////
 
@@ -99,12 +119,12 @@ namespace System.Windows.Input
 
             // Make sure we are never called on the application thread when we need to talk
             // to penimc or else we can cause reentrancy!
-            Debug.Assert(!_contexts._inputSource.CheckAccess());
+            Debug.Assert(!_contexts._inputSource.Value.CheckAccess());
 
             // We should always have a valid IPimcContext3 interface pointer.
-            Debug.Assert(_pimcContext != null);
+            Debug.Assert(_pimcContext != null && _pimcContext.Value != null);
             
-            _pimcContext.GetPacketDescriptionInfo(out cProps, out cButtons); // Calls Unmanaged code - SecurityCritical with SUC.
+            _pimcContext.Value.GetPacketDescriptionInfo(out cProps, out cButtons); // Calls Unmanaged code - SecurityCritical with SUC.
 
             List<StylusPointPropertyInfo> propertyInfos = new List<StylusPointPropertyInfo>(cProps + cButtons + 3);
             for (int i = 0; i < cProps; i++)
@@ -113,7 +133,7 @@ namespace System.Windows.Input
                 int min, max;
                 int units;
                 float res;
-                _pimcContext.GetPacketPropertyInfo(i, out guid, out min, out max, out units, out res); // Calls Unmanaged code - SecurityCritical with SUC.
+                _pimcContext.Value.GetPacketPropertyInfo(i, out guid, out min, out max, out units, out res); // Calls Unmanaged code - SecurityCritical with SUC.
 
                 if (pressureIndex == -1 && guid == StylusPointPropertyIds.NormalPressure)
                 {
@@ -138,7 +158,7 @@ namespace System.Windows.Input
                 for (int i = 0; i < cButtons; i++)
                 {
                     Guid buttonGuid;
-                    _pimcContext.GetPacketButtonInfo(i, out buttonGuid); // Calls Unmanaged code - SecurityCritical with SUC.
+                    _pimcContext.Value.GetPacketButtonInfo(i, out buttonGuid); // Calls Unmanaged code - SecurityCritical with SUC.
 
                     StylusPointProperty buttonProperty = new StylusPointProperty(buttonGuid, true);
                     StylusPointPropertyInfo buttonInfo = new StylusPointPropertyInfo(buttonProperty);
@@ -165,7 +185,7 @@ namespace System.Windows.Input
 
         internal void Enable()
         {
-            if (_pimcContext is not null)
+            if (_pimcContext != null && _pimcContext.Value != null)
             {
                 _penThreadPenContext = PenThreadPool.GetPenThreadForPenContext(this);
             }
@@ -400,7 +420,7 @@ namespace System.Windows.Input
             int x, y, buttonState; // (these are not used)
 
             MS.Win32.Penimc.UnsafeNativeMethods.GetLastSystemEventData(
-                _commHandle,
+                _commHandle.Value,
                 out id, out modifier, out character,
                 out x, out y, out stylusMode, out buttonState);
 
@@ -507,25 +527,27 @@ namespace System.Windows.Input
 
         /////////////////////////////////////////////////////////////////////
 
-        internal IPimcContext3 _pimcContext;
-        private readonly IntPtr _hwnd;
-        private readonly IntPtr _commHandle;
+        internal SecurityCriticalDataClass<IPimcContext3> _pimcContext;
         
-        private PenContexts             _contexts;
+        SecurityCriticalData<IntPtr> _hwnd;
         
-        private PenThread               _penThreadPenContext;
-        private int                     _id;
-        private int                     _tabletDeviceId;
-        private StylusPointPropertyInfo _infoX;
-        private StylusPointPropertyInfo _infoY;
-        private bool                    _supportInRange;
-        private List<int>               _stylusDevicesInRange;
-        private bool                    _isIntegrated;
+        SecurityCriticalData<IntPtr> _commHandle;
+        
+        PenContexts             _contexts;
+        
+        PenThread               _penThreadPenContext;
+        int                     _id;
+        int                     _tabletDeviceId;
+        StylusPointPropertyInfo _infoX;
+        StylusPointPropertyInfo _infoY;
+        bool                    _supportInRange;
+        List<int>               _stylusDevicesInRange;
+        bool                    _isIntegrated;
 
-        private StylusPointDescription  _stylusPointDescription;
-        private int                     _statusPropertyIndex = -1;
+        StylusPointDescription  _stylusPointDescription;
+        int                     _statusPropertyIndex = -1;
 
-        private int                     _lastInRangeTime;
-        private int                     _queuedInRangeCount;
+        int                     _lastInRangeTime;
+        int                     _queuedInRangeCount;
     }
 }

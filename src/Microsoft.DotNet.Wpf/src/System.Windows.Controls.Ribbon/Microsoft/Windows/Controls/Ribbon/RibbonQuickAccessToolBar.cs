@@ -1,18 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-#region Using declarations
-
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Windows.Automation.Peers;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon.Primitives;
-using Microsoft.Windows.Controls;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -20,6 +9,23 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    #region Using declarations
+
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.Specialized;
+    using System.ComponentModel;
+    using System.Windows;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
+    using System.Windows.Data;
+    using System.Windows.Input;
+    using System.Windows.Markup;
+    using System.Windows.Media;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon.Primitives;
+    using Microsoft.Windows.Controls;
 #else
     using Microsoft.Windows.Automation.Peers;
     using Microsoft.Windows.Controls.Ribbon.Primitives;
@@ -186,7 +192,10 @@ namespace Microsoft.Windows.Controls.Ribbon
 
             // Raise UI Automation Events
             RibbonQuickAccessToolBarAutomationPeer peer = UIElementAutomationPeer.FromElement(qat) as RibbonQuickAccessToolBarAutomationPeer;
-            peer?.RaiseExpandCollapseAutomationEvent(!(bool)e.OldValue, !(bool)e.NewValue);
+            if (peer != null)
+            {
+                peer.RaiseExpandCollapseAutomationEvent(!(bool)e.OldValue, !(bool)e.NewValue);
+            }
         }
 
         private static object OnCoerceIsOverflowOpen(DependencyObject d, object baseValue)
@@ -287,15 +296,24 @@ namespace Microsoft.Windows.Controls.Ribbon
         {
             base.OnApplyTemplate();
 
-            _mainPanel?.Children.Clear();
+            if (_mainPanel != null)
+            {
+                _mainPanel.Children.Clear();
+            }
 
-            _overflowPanel?.Children.Clear();
+            if (_overflowPanel != null)
+            {
+                _overflowPanel.Children.Clear();
+            }
 
             _mainPanel = GetTemplateChild(MainPanelTemplatePartName) as RibbonQuickAccessToolBarPanel;
             _overflowPanel = GetTemplateChild(OverflowPanelTemplatePartName) as RibbonQuickAccessToolBarOverflowPanel;
             _overflowPopup = GetTemplateChild(OverflowPopupTemplatePartName) as Popup;
             _overflowButton = GetTemplateChild(OverflowButtonTemplatePartName) as RibbonToggleButton;
-            _overflowButton?.ToolTipTitle = _overflowButtonToolTipText;
+            if (_overflowButton != null)
+            {
+                _overflowButton.ToolTipTitle = _overflowButtonToolTipText;
+            }
 
             // Set KeyTipAutoGenerationElements property on self.
             IEnumerable<DependencyObject> keyTipAutoGenerationElements = new KeyTipAutoGenerationElements(this);
@@ -317,7 +335,10 @@ namespace Microsoft.Windows.Controls.Ribbon
             InvalidateMeasure();
 
             RibbonQuickAccessToolBarPanel toolBarPanel = this.MainPanel;
-            toolBarPanel?.InvalidateMeasure();
+            if (toolBarPanel != null)
+            {
+                toolBarPanel.InvalidateMeasure();
+            }
         }
 
         /// <summary>
@@ -549,7 +570,7 @@ namespace Microsoft.Windows.Controls.Ribbon
                 QuickAccessToolBar = quickAccessToolBar;
             }
 
-            private RibbonQuickAccessToolBar QuickAccessToolBar
+            RibbonQuickAccessToolBar QuickAccessToolBar
             {
                 get;
                 set;

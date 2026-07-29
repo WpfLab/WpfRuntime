@@ -1,9 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+using System.Windows;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using System.Windows.Media;
+
+using MS.Internal;
+using MS.Win32;
 
 namespace System.Windows.Automation.Peers
 {
@@ -16,19 +29,19 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override string GetClassNameCore()
+        override protected string GetClassNameCore()
         {
             return "TreeViewItem";
         }
 
         ///
-        protected override AutomationControlType GetAutomationControlTypeCore()
+        override protected AutomationControlType GetAutomationControlTypeCore()
         {
             return AutomationControlType.TreeItem;
         }
 
         ///
-        public override object GetPattern(PatternInterface patternInterface)
+        override public object GetPattern(PatternInterface patternInterface)
         {
             if (patternInterface == PatternInterface.ExpandCollapse)
             {
@@ -112,7 +125,10 @@ namespace System.Windows.Automation.Peers
                             if (peer != null)
                             {
                                 AutomationPeer wrapperPeer = (peer as ItemAutomationPeer).GetWrapperPeer();
-                                wrapperPeer?.EventsSource = peer;
+                                if (wrapperPeer != null)
+                                {
+                                    wrapperPeer.EventsSource = peer;
+                                }
 
                                 if (dataChildren[dataItem] == null && peer is ItemAutomationPeer)
                                 {
@@ -149,7 +165,7 @@ namespace System.Windows.Automation.Peers
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        protected internal override ItemAutomationPeer FindOrCreateItemAutomationPeer(object item)
+        protected override internal ItemAutomationPeer FindOrCreateItemAutomationPeer(object item)
         {
             ItemAutomationPeer peer = ItemPeers[item];
             AutomationPeer parentPeer = this;
@@ -165,13 +181,19 @@ namespace System.Windows.Automation.Peers
             {
                 peer = CreateItemAutomationPeer(item);
 
-                peer?.TrySetParentInfo(parentPeer);
+                if(peer != null)
+                {
+                    peer.TrySetParentInfo(parentPeer);
+                }
             }
 
             if(peer != null)
             {
                 AutomationPeer wrapperPeer = (peer as ItemAutomationPeer).GetWrapperPeer();
-                wrapperPeer?.EventsSource = peer;
+                if (wrapperPeer != null)
+                {
+                    wrapperPeer.EventsSource = peer;
+                }
             }
 
             return peer;
@@ -209,13 +231,13 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override ItemAutomationPeer CreateItemAutomationPeer(object item)
+        override protected ItemAutomationPeer CreateItemAutomationPeer(object item)
         {
             return new TreeViewDataItemAutomationPeer(item, this, EventsSource as TreeViewDataItemAutomationPeer);
         }
 
         //
-        internal override IDisposable UpdateChildren()
+        override internal IDisposable UpdateChildren()
         {
             // To ensure that the Updation of children should be initiated from DataPeer so as to have the right parent value stored for children
             TreeViewDataItemAutomationPeer dataPeer = EventsSource as TreeViewDataItemAutomationPeer;

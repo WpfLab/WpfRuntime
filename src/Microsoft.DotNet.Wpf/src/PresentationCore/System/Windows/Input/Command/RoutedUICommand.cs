@@ -1,14 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
 using System.ComponentModel; // for TypeConverter
+using System.Windows;
+using System.Windows.Markup;
+using System.Windows.Media;
 
 using MS.Internal.PresentationCore;
 
-namespace System.Windows.Input
+namespace System.Windows.Input 
 {
     /// <summary>
     ///     RoutedCommand with added UI Information.
@@ -45,7 +50,10 @@ namespace System.Windows.Input
         public RoutedUICommand(string text, string name, Type ownerType, InputGestureCollection inputGestures)
             : base(name, ownerType, inputGestures)
         {
-            ArgumentNullException.ThrowIfNull(text);
+            if (text == null)
+            {
+                throw new ArgumentNullException("text");
+            }
             _text = text; 
         }
 
@@ -74,7 +82,10 @@ namespace System.Windows.Input
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 _text = value;
             }
         }

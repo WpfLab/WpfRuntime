@@ -1,0 +1,16 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\WpfRuntimeDependencies.props" />
+
+  <PropertyGroup>
+	<RepoWpfConsumerEnabled Condition="'$(RepoWpfConsumerEnabled)' == ''">true</RepoWpfConsumerEnabled>
+	<RepoWpfConfiguration Condition="'$(RepoWpfConfiguration)' == ''">$(Configuration)</RepoWpfConfiguration>
+	<RepoWpfPlatform Condition="'$(RepoWpfPlatform)' == ''">$(WpfNativePlatform)</RepoWpfPlatform>
+	<ImportFrameworkWinFXTargets Condition="'$(RepoWpfConsumerEnabled)' == 'true'">true</ImportFrameworkWinFXTargets>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RepoWpfConsumerEnabled)' == 'true'">
+	<PackageDownload Include="Microsoft.WindowsDesktop.App.Runtime.win-x64"
+					 Version="[$(RepoWpfWindowsDesktopRuntimeVersion)]" />
+	<PackageReference Include="@(RepoWpfRuntimePackage)" />
+  </ItemGroup>
+</Project>

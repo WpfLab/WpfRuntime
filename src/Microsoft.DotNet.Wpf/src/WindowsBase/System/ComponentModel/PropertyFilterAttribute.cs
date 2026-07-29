@@ -1,8 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.ComponentModel
+
+namespace System.ComponentModel 
 {
+    using System;
+    using System.Diagnostics.CodeAnalysis;
+
     /// <summary>
     ///     This attribute is a "query" attribute.  It is
     ///     an attribute that causes the type description provider
@@ -46,7 +51,8 @@ namespace System.ComponentModel
         /// </summary>
         public override bool Equals(object value) 
         {
-            if (value is PropertyFilterAttribute a && a._filter.Equals(_filter))
+            PropertyFilterAttribute a = value as PropertyFilterAttribute;
+            if (a != null && a._filter.Equals(_filter)) 
             {
                 return true;
             }
@@ -70,8 +76,8 @@ namespace System.ComponentModel
         /// </summary>
         public override bool Match(object value) 
         {
-            if (value is not PropertyFilterAttribute a)
-                return false;
+            PropertyFilterAttribute a = value as PropertyFilterAttribute;
+            if (a == null) return false;
             return ((_filter & a._filter) == _filter);
         }
 
@@ -123,6 +129,7 @@ namespace System.ComponentModel
         ///     what should be done if the attribute is not defined.
         ///     Our default is to return all properties.
         /// </summary>
+        [SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly PropertyFilterAttribute Default = new PropertyFilterAttribute(PropertyFilterOptions.All);
 
         #endregion Public Fields

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description:
 //      Class to create a queue on the client context.  
@@ -7,16 +8,19 @@
 //      A seperate thread is created by the win32 proxy to manage the hooks.
 //              
 
+using System.Windows.Automation;
+using System.Windows.Automation.Provider;
 using System;
 using System.Threading;
 using System.Collections;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using MS.Win32;
 using Microsoft.Win32.SafeHandles;
 
 namespace MS.Internal.AutomationProxies
 {
-    internal class QueueProcessor
+    class QueueProcessor
     {
         // ------------------------------------------------------
         //
@@ -55,10 +59,8 @@ namespace MS.Internal.AutomationProxies
         internal void StartOnThread ()
         {
             ThreadStart threadStart = new ThreadStart(WaitForWork);
-            Thread thread = new Thread(threadStart)
-            {
-                IsBackground = true
-            };
+            Thread thread = new Thread(threadStart);
+            thread.IsBackground = true;
             thread.Start();
         }
 
@@ -124,7 +126,7 @@ namespace MS.Internal.AutomationProxies
                     int result = Misc.MsgWaitForMultipleObjects(handle, false, NativeMethods.INFINITE, NativeMethods.QS_ALLINPUT);
                     if (result == NativeMethods.WAIT_FAILED || result == NativeMethods.WAIT_TIMEOUT)
                     {
-                        Debug.Fail("MsgWaitForMultipleObjects failed while WaitForWork");
+                        Debug.Assert(false, "MsgWaitForMultipleObjects failed while WaitForWork");
                         break;
                     }
                 }
@@ -166,7 +168,7 @@ namespace MS.Internal.AutomationProxies
     #region QueueItem Abstract Class
 
     // Abstract class for worker objects queued to the QueueProcessor class
-    internal abstract class QueueItem
+    abstract class QueueItem
     {
         // ------------------------------------------------------
         //

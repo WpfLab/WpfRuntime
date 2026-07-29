@@ -1,34 +1,38 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#region Using declarations
-
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Windows.Automation;
-using System.Windows.Automation.Peers;
-using System.Windows.Controls.Primitives;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon.Primitives;
-using Microsoft.Windows.Controls;
-#else
-    using Microsoft.Windows.Automation.Peers;
-    using Microsoft.Windows.Controls.Ribbon.Primitives;
-#endif
-using MS.Internal;
-
+// See the LICENSE file in the project root for more information.
+        
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
 #else
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    #region Using declarations
+
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.Specialized;
+    using System.Diagnostics;
+    using System.Windows;
+    using System.Windows.Automation;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
+    using System.Windows.Documents;
+    using System.Windows.Input;
+    using System.Windows.Media;
+    using System.Windows.Media.Animation;
+    using System.Windows.Threading;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon.Primitives;
+    using Microsoft.Windows.Controls;
+#else
+    using Microsoft.Windows.Automation.Peers;
+    using Microsoft.Windows.Controls.Ribbon.Primitives;
+#endif
+    using MS.Internal;
+
     #endregion
 
     /// <summary>
@@ -205,7 +209,10 @@ namespace Microsoft.Windows.Controls.Ribbon
             if (info.WidthChanged)
             {
                 RibbonGroupsPanel groupsPanel = VisualTreeHelper.GetParent(this) as RibbonGroupsPanel;
-                groupsPanel?.OnChildGroupRenderSizeChanged(this, info.PreviousSize.Width);
+                if (groupsPanel != null)
+                {
+                    groupsPanel.OnChildGroupRenderSizeChanged(this, info.PreviousSize.Width);
+                }
             }
         }
 
@@ -631,7 +638,10 @@ namespace Microsoft.Windows.Controls.Ribbon
             RibbonHelper.SetContentAsToolTip(group, group.VisualChild, group.Header, (group.IsCollapsed && !group.IsDropDownOpen));
 
             RibbonGroupAutomationPeer peer = UIElementAutomationPeer.FromElement(group) as RibbonGroupAutomationPeer;
-            peer?.RaiseExpandCollapseAutomationEvent((bool)e.OldValue, (bool)e.NewValue);
+            if (peer != null)
+            {
+                peer.RaiseExpandCollapseAutomationEvent((bool)e.OldValue, (bool)e.NewValue);
+            }
         }
 
         private static object CoerceIsDropDownOpen(DependencyObject d, object baseValue)
@@ -675,7 +685,7 @@ namespace Microsoft.Windows.Controls.Ribbon
             IsVisibleChanged += new DependencyPropertyChangedEventHandler(HandleIsVisibleChanged);
         }
 
-        private void HandleIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        void HandleIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             RibbonHelper.DelayCoerceProperty(this, IsDropDownOpenProperty);
             IsVisibleChanged -= new DependencyPropertyChangedEventHandler(HandleIsVisibleChanged);
@@ -989,7 +999,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                 SetAppropriatePresenterVisibility(GroupSizeDefinitions[_sizeDefinitionIndex] is RibbonGroupSizeDefinition ? Visibility.Visible : Visibility.Collapsed);
 
                 RibbonGroupsPanel panel = TreeHelper.FindVisualAncestor<RibbonGroupsPanel>(this);
-                panel?.InvalidateCachedMeasure();
+                if (panel != null)
+                {
+                    panel.InvalidateCachedMeasure();
+                }
             }
 
             GroupSizeUpdatePending = false;
@@ -1149,7 +1162,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                 }
             }
 
-            _templateContentControl?.Visibility = (itemsPresenterVisibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible);
+            if (_templateContentControl != null)
+            {
+                _templateContentControl.Visibility = (itemsPresenterVisibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible);
+            }
             return remeasure;
         }
 
@@ -1542,7 +1558,7 @@ namespace Microsoft.Windows.Controls.Ribbon
                 RibbonGroup = group;
             }
 
-            private RibbonGroup RibbonGroup
+            RibbonGroup RibbonGroup
             {
                 get;
                 set;

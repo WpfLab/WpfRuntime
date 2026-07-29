@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description:
 //   Implements the Proxy pattern from Design Patterns for Stream.  The intended
@@ -9,17 +10,18 @@
 
 using System;
 using System.IO;
+using System.Security;
 using System.Windows.TrustUI;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// Implements the Proxy pattern from Design Patterns for Stream.  The intended
-    /// usage is to control access to the Stream; specifically to allow one to 
-    /// replace the underlying stream.  The StreamProxy can also ensure, if
-    /// desired, that the underlying stream is readonly.
-    /// </summary>
-    internal class StreamProxy : Stream
+/// <summary>
+/// Implements the Proxy pattern from Design Patterns for Stream.  The intended
+/// usage is to control access to the Stream; specifically to allow one to 
+/// replace the underlying stream.  The StreamProxy can also ensure, if
+/// desired, that the underlying stream is readonly.
+/// </summary>
+internal class StreamProxy : Stream
 {
     #region Constructors
     //--------------------------------------------------------------------------
@@ -47,8 +49,8 @@ namespace MS.Internal.Documents.Application
     /// to read-only.</param>
     internal StreamProxy(Stream targetOfProxy, bool isTargetReadOnly)
     {
-        _proxy = targetOfProxy;
-        _isTargetReadOnly = isTargetReadOnly;
+        _proxy.Value = targetOfProxy;
+        _isTargetReadOnly.Value = isTargetReadOnly;
     }
 
     #endregion Constructors
@@ -63,7 +65,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override bool CanRead
     {
-        get { return _proxy.CanRead; }
+        get { return _proxy.Value.CanRead; }
     }
 
     /// <summary>
@@ -71,7 +73,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override bool CanSeek
     {
-        get { return _proxy.CanSeek; }
+        get { return _proxy.Value.CanSeek; }
     }
 
     /// <summary>
@@ -81,7 +83,7 @@ namespace MS.Internal.Documents.Application
     {
         get
         {
-            return _proxy.CanTimeout;
+            return _proxy.Value.CanTimeout;
         }
     }
 
@@ -90,7 +92,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override bool CanWrite
     {
-        get { return _proxy.CanWrite; }
+        get { return _proxy.Value.CanWrite; }
     }
 
     /// <summary>
@@ -98,7 +100,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override void Close()
     {
-        _proxy.Close();
+        _proxy.Value.Close();
     }
 
     /// <summary>
@@ -106,7 +108,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override void Flush()
     {
-        _proxy.Flush();
+        _proxy.Value.Flush();
     }
 
     /// <summary>
@@ -114,7 +116,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override long Length
     {
-        get { return _proxy.Length; }
+        get { return _proxy.Value.Length; }
     }
 
     /// <summary>
@@ -124,11 +126,11 @@ namespace MS.Internal.Documents.Application
     {
         get
         {
-            return _proxy.Position;
+            return _proxy.Value.Position;
         }
         set
         {
-            _proxy.Position = value;
+            _proxy.Value.Position = value;
         }
     }
 
@@ -137,7 +139,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override int Read(byte[] buffer, int offset, int count)
     {
-        return _proxy.Read(buffer, offset, count);
+        return _proxy.Value.Read(buffer, offset, count);
     }
 
     /// <summary>
@@ -147,11 +149,11 @@ namespace MS.Internal.Documents.Application
     {
         get
         {
-            return _proxy.ReadTimeout;
+            return _proxy.Value.ReadTimeout;
         }
         set
         {
-            _proxy.ReadTimeout = value;
+            _proxy.Value.ReadTimeout = value;
         }
     }
 
@@ -160,7 +162,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override long Seek(long offset, SeekOrigin origin)
     {
-        return _proxy.Seek(offset, origin);
+        return _proxy.Value.Seek(offset, origin);
     }
 
     /// <summary>
@@ -168,7 +170,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override void SetLength(long value)
     {
-        _proxy.SetLength(value);
+        _proxy.Value.SetLength(value);
     }
 
     /// <summary>
@@ -176,7 +178,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override void Write(byte[] buffer, int offset, int count)
     {
-        _proxy.Write(buffer, offset, count);
+        _proxy.Value.Write(buffer, offset, count);
     }
 
     /// <summary>
@@ -186,11 +188,11 @@ namespace MS.Internal.Documents.Application
     {
         get
         {
-            return _proxy.WriteTimeout;
+            return _proxy.Value.WriteTimeout;
         }
         set
         {
-            _proxy.WriteTimeout = value;
+            _proxy.Value.WriteTimeout = value;
         }
     }
 
@@ -208,10 +210,10 @@ namespace MS.Internal.Documents.Application
         }
         finally
         {
-            if (disposing && _proxy != null)
+            if (disposing && _proxy.Value != null)
             {
-                _proxy.Dispose();
-                _proxy = null;
+                _proxy.Value.Dispose();
+                _proxy.Value = null;
             }
         }
     }
@@ -228,7 +230,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override int GetHashCode()
     {
-        return _proxy.GetHashCode();
+        return _proxy.Value.GetHashCode();
     }
 
     /// <summary>
@@ -236,7 +238,7 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     public override bool Equals(object obj)
     {
-        return _proxy.Equals(obj);
+        return _proxy.Value.Equals(obj);
     }
 
     #endregion Object Overrides
@@ -248,12 +250,12 @@ namespace MS.Internal.Documents.Application
 
     internal Stream Target
     {
-        get { return _proxy; }
+        get { return _proxy.Value; }
 
         set {
-            if (!_isTargetReadOnly)
+            if (!_isTargetReadOnly.Value)
             {
-                _proxy = value;
+                _proxy.Value = value;
             }
             else
             {
@@ -262,15 +264,15 @@ namespace MS.Internal.Documents.Application
             }
         }
     }
-        #endregion Internal Properties
+    #endregion Internal Properties
 
-        #region Private Fields
-        //--------------------------------------------------------------------------
-        // Private Fields
-        //--------------------------------------------------------------------------
+    #region Private Fields
+    //--------------------------------------------------------------------------
+    // Private Fields
+    //--------------------------------------------------------------------------
 
-        private Stream _proxy;
-        private bool _isTargetReadOnly;
+    SecurityCriticalDataForSet<Stream> _proxy;
+    SecurityCriticalDataForSet<bool> _isTargetReadOnly;
 
     #endregion Private Fields
 }

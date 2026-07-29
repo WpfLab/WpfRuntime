@@ -1,12 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Controls;
-using System.Windows.Markup;
-using System.Windows.Shapes;
-using System.Windows.Documents.DocumentStructures;
-using Ds = System.Windows.Documents.DocumentStructures;
-using System.Collections;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -16,6 +10,21 @@ using System.Collections;
 
 namespace System.Windows.Documents
 {
+    using MS.Internal.Documents;
+    using System.Windows.Controls;     
+    using System.Windows.Media;
+    using System.Windows.Media.Imaging;
+    using System.Windows.Markup;
+    using System.Windows.Shapes;
+    using System.Windows.Documents.DocumentStructures;
+    using Ds=System.Windows.Documents.DocumentStructures;
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Text;
+
     //=====================================================================
     /// <summary>
     /// FixedTextBuilder contains heuristics to map fixed document elements
@@ -23,7 +32,7 @@ namespace System.Windows.Documents
     /// </summary>
     internal sealed class FixedDSBuilder
     {
-        private class NameHashFixedNode
+        class NameHashFixedNode
         {
             internal NameHashFixedNode(UIElement e, int i)
             {
@@ -87,7 +96,7 @@ namespace System.Windows.Documents
 
             for (int i = 0; i< _visitedArray.Count; i++ )
             {
-                if (!_visitedArray[i])
+                if (_visitedArray[i] == false)
                 {
                     AddFixedNodeInFlow(i, null);
                 }
@@ -104,7 +113,7 @@ namespace System.Windows.Documents
             if (_visitedArray[index])
             {
                 // this has already been added to the document structure
-                // Debug.Fail("An element is referenced in the document structure multiple times");
+                // Debug.Assert(false, "An element is referenced in the document structure multiple times");
                 return; // ignore this reference
             }
             FixedNode fn = (FixedNode)_fixedNodes[index];
@@ -214,7 +223,7 @@ namespace System.Windows.Documents
             if (listItem != null && listItem.Marker != null)
             {
                 NameHashFixedNode fen;
-                if (_nameHashTable.TryGetValue(listItem.Marker, out fen))
+                if (_nameHashTable.TryGetValue(listItem.Marker, out fen) == true)
                 {
                     _visitedArray[fen.index] = true;
                 }
@@ -224,7 +233,7 @@ namespace System.Windows.Documents
         private void ConstructSomElement(NamedElement ne)
         {
             NameHashFixedNode fen;
-            if (_nameHashTable.TryGetValue(ne.NameReference, out fen))
+            if (_nameHashTable.TryGetValue(ne.NameReference, out fen) == true)
             {
                 if (fen.uiElement is Glyphs || fen.uiElement is Path ||
                     fen.uiElement is Image)

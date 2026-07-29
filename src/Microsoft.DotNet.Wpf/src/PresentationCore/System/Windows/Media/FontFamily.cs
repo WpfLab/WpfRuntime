@@ -1,13 +1,36 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
+//  Contents:  FontFamily
+//
+
+using System;
+using System.Text;
 using System.IO;
-using System.Windows.Markup;
+using System.Globalization;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Markup;    // for XmlLanguage
 using System.ComponentModel;
+using System.ComponentModel.Design;
+
+using MS.Utility;
 using MS.Internal;
 using MS.Internal.FontCache;
 using MS.Internal.FontFace;
 using MS.Internal.Shaping;
+using System.Security;
+
+using SR = MS.Internal.PresentationCore.SR;
+
+// Since we disable PreSharp warnings in this file, we first need to disable warnings about unknown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Media
 {
@@ -65,10 +88,11 @@ namespace System.Windows.Media
         /// (e.g., "file:///c:/windows/fonts/#Arial").</param>
         public FontFamily(Uri baseUri, string familyName)
         {
-            ArgumentNullException.ThrowIfNull(familyName);
+            if (familyName == null)
+                throw new ArgumentNullException("familyName");
 
             if (baseUri != null && !baseUri.IsAbsoluteUri)
-                throw new ArgumentException(SR.UriNotAbsolute, nameof(baseUri));
+                throw new ArgumentException(SR.UriNotAbsolute, "baseUri");
 
             _familyIdentifier = new FontFamilyIdentifier(familyName, baseUri);
         }
@@ -187,7 +211,7 @@ namespace System.Windows.Media
         public override string ToString()
         {
             string source = _familyIdentifier.Source;
-            return source ?? string.Empty;
+            return source != null ? source : string.Empty;
         }
 
 
@@ -517,6 +541,8 @@ namespace System.Windows.Media
                 return fontFamily;
             }
             // The method returns null in case of malformed/non-existent fonts and we fall back to the next font.
+            // Therefore, we can disable PreSharp warning about empty catch bodies.
+#pragma warning disable 6502
             catch (FileFormatException)
             {
                 // malformed font file
@@ -542,7 +568,7 @@ namespace System.Windows.Media
             {
                 // canonical name points to a malformed Uri
             }
-
+#pragma warning restore 6502
             // we want to fall back to the default fallback font instead of crashing
             return null;
         }

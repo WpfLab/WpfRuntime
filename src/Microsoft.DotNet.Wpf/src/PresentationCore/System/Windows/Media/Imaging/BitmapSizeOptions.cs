@@ -1,7 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Imaging
 {
@@ -87,13 +101,12 @@ namespace System.Windows.Media.Imaging
         /// </summary>
         public static BitmapSizeOptions FromEmptyOptions()
         {
-            BitmapSizeOptions sizeOptions = new BitmapSizeOptions
-            {
-                _rotationAngle = Rotation.Rotate0,
-                _preservesAspectRatio = true,
-                _pixelHeight = 0,
-                _pixelWidth = 0
-            };
+            BitmapSizeOptions sizeOptions = new BitmapSizeOptions();
+
+            sizeOptions._rotationAngle          = Rotation.Rotate0;
+            sizeOptions._preservesAspectRatio = true;
+            sizeOptions._pixelHeight         = 0;
+            sizeOptions._pixelWidth          = 0;
 
             return sizeOptions;
         }
@@ -104,15 +117,17 @@ namespace System.Windows.Media.Imaging
         /// <param name="pixelHeight">Height of the resulting Bitmap</param>
         public static BitmapSizeOptions FromHeight(int pixelHeight)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelHeight);
-
-            BitmapSizeOptions sizeOptions = new BitmapSizeOptions
+            if (pixelHeight <= 0)
             {
-                _rotationAngle = Rotation.Rotate0,
-                _preservesAspectRatio = true,
-                _pixelHeight = pixelHeight,
-                _pixelWidth = 0
-            };
+                throw new System.ArgumentOutOfRangeException("pixelHeight", SR.ParameterMustBeGreaterThanZero);
+            }
+
+            BitmapSizeOptions sizeOptions = new BitmapSizeOptions();
+
+            sizeOptions._rotationAngle          = Rotation.Rotate0;
+            sizeOptions._preservesAspectRatio = true;
+            sizeOptions._pixelHeight         = pixelHeight;
+            sizeOptions._pixelWidth          = 0;
 
             return sizeOptions;
         }
@@ -123,15 +138,17 @@ namespace System.Windows.Media.Imaging
         /// <param name="pixelWidth">Width of the resulting Bitmap</param>
         public static BitmapSizeOptions FromWidth(int pixelWidth)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelWidth);
-
-            BitmapSizeOptions sizeOptions = new BitmapSizeOptions
+            if (pixelWidth <= 0)
             {
-                _rotationAngle = Rotation.Rotate0,
-                _preservesAspectRatio = true,
-                _pixelWidth = pixelWidth,
-                _pixelHeight = 0
-            };
+                throw new System.ArgumentOutOfRangeException("pixelWidth", SR.ParameterMustBeGreaterThanZero);
+            }
+
+            BitmapSizeOptions sizeOptions = new BitmapSizeOptions();
+
+            sizeOptions._rotationAngle          = Rotation.Rotate0;
+            sizeOptions._preservesAspectRatio = true;
+            sizeOptions._pixelWidth          = pixelWidth;
+            sizeOptions._pixelHeight         = 0;
 
             return sizeOptions;
         }
@@ -144,16 +161,22 @@ namespace System.Windows.Media.Imaging
         /// <param name="pixelHeight">Height of the resulting Bitmap</param>
         public static BitmapSizeOptions FromWidthAndHeight(int pixelWidth, int pixelHeight)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelWidth);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pixelHeight);
-
-            BitmapSizeOptions sizeOptions = new BitmapSizeOptions
+            if (pixelWidth <= 0)
             {
-                _rotationAngle = Rotation.Rotate0,
-                _preservesAspectRatio = false,
-                _pixelWidth = pixelWidth,
-                _pixelHeight = pixelHeight
-            };
+                throw new System.ArgumentOutOfRangeException("pixelWidth", SR.ParameterMustBeGreaterThanZero);
+            }
+
+            if (pixelHeight <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException("pixelHeight", SR.ParameterMustBeGreaterThanZero);
+            }
+
+            BitmapSizeOptions sizeOptions = new BitmapSizeOptions();
+
+            sizeOptions._rotationAngle          = Rotation.Rotate0;
+            sizeOptions._preservesAspectRatio = false;
+            sizeOptions._pixelWidth          = pixelWidth;
+            sizeOptions._pixelHeight         = pixelHeight;
 
             return sizeOptions;
         }
@@ -173,16 +196,15 @@ namespace System.Windows.Media.Imaging
                 case Rotation.Rotate270:
                     break;
                 default:
-                    throw new ArgumentException(SR.Image_SizeOptionsAngle, nameof(rotation));
+                    throw new ArgumentException(SR.Image_SizeOptionsAngle, "rotation");
             }
 
-            BitmapSizeOptions sizeOptions = new BitmapSizeOptions
-            {
-                _rotationAngle = rotation,
-                _preservesAspectRatio = true,
-                _pixelWidth = 0,
-                _pixelHeight = 0
-            };
+            BitmapSizeOptions sizeOptions = new BitmapSizeOptions();
+
+            sizeOptions._rotationAngle          = rotation;
+            sizeOptions._preservesAspectRatio = true;
+            sizeOptions._pixelWidth          = 0;
+            sizeOptions._pixelHeight         = 0;
 
             return sizeOptions;
         }
@@ -197,21 +219,21 @@ namespace System.Windows.Media.Imaging
         {
             if (_pixelWidth == 0 && _pixelHeight != 0)
             {
-                Debug.Assert(_preservesAspectRatio);
+                Debug.Assert(_preservesAspectRatio == true);
 
                 newWidth = (uint)((_pixelHeight * width)/height);
                 newHeight = (uint)_pixelHeight;
             }
             else if (_pixelWidth != 0 && _pixelHeight == 0)
             {
-                Debug.Assert(_preservesAspectRatio);
+                Debug.Assert(_preservesAspectRatio == true);
 
                 newWidth = (uint)_pixelWidth;
                 newHeight = (uint)((_pixelWidth * height)/width);
             }
             else if (_pixelWidth != 0 && _pixelHeight != 0)
             {
-                Debug.Assert(!_preservesAspectRatio);
+                Debug.Assert(_preservesAspectRatio == false);
 
                 newWidth = (uint)_pixelWidth;
                 newHeight = (uint)_pixelHeight;
