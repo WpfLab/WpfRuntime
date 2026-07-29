@@ -80,7 +80,7 @@ jobs:
         persist-credentials: false
 
     - name: Setup .NET SDKs
-      uses: actions/setup-dotnet@6
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
           8.0.x
