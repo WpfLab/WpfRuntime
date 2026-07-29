@@ -32,22 +32,6 @@ internal sealed class GitService
         return path ?? throw new InvalidOperationException("git.exe was not found on PATH.");
     }
 
-    public async Task<string?> GetCurrentBranchAsync(
-        string callerRepository,
-        CancellationToken cancellationToken)
-    {
-        var result = await RunAsync(
-            callerRepository,
-            isolatedHome: null,
-            cancellationToken,
-            allowFailure: true,
-            "symbolic-ref",
-            "--quiet",
-            "--short",
-            "HEAD").ConfigureAwait(false);
-        return result.ExitCode == 0 ? GetSingleLine(result) : null;
-    }
-
     public async Task<TargetRepository> ResolveTargetAsync(
         string callerRepository,
         string remoteName,
@@ -63,13 +47,7 @@ internal sealed class GitService
             throw new ArgumentException($"Invalid Git remote name: {remoteName}", nameof(remoteName));
         }
 
-        var baseBranch = requestedBaseBranch;
-        if (string.IsNullOrWhiteSpace(baseBranch))
-        {
-            baseBranch = await GetCurrentBranchAsync(callerRepository, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException(BuilderResources.DetachedHeadRequiresBase);
-        }
-
+        var baseBranch = ResolveBaseBranch(remoteName, requestedBaseBranch);
         await ValidateBranchNameAsync(callerRepository, baseBranch, cancellationToken).ConfigureAwait(false);
         var fetchUrl = GetSingleLine(await RunAsync(
             callerRepository,
@@ -113,6 +91,16 @@ internal sealed class GitService
             relayBranch,
             baseSha,
             relayBranchSha);
+    }
+
+    internal static string ResolveBaseBranch(string remoteName, string? requestedBaseBranch)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        var baseBranch = string.IsNullOrWhiteSpace(requestedBaseBranch) ? "main" : requestedBaseBranch;
+        var remotePrefix = $"{remoteName}/";
+        return baseBranch.StartsWith(remotePrefix, StringComparison.Ordinal)
+            ? baseBranch[remotePrefix.Length..]
+            : baseBranch;
     }
 
     public async Task CloneTargetAsync(
