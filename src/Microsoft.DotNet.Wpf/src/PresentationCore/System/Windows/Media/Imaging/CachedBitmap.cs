@@ -1,9 +1,30 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Runtime.InteropServices;
-using MS.Win32.PresentationCore;
+//
+//
+
+
+using System;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
+using MS.Win32.PresentationCore;
+using System.Security;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Imaging
 {
@@ -23,7 +44,10 @@ namespace System.Windows.Media.Imaging
         public CachedBitmap(BitmapSource source, BitmapCreateOptions createOptions, BitmapCacheOption cacheOption)
             : base(true) // Use base class virtuals
         {
-            ArgumentNullException.ThrowIfNull(source);
+            if (source == null)
+            {
+                throw new ArgumentNullException("source");
+            }
 
             BeginInit();
             _source = source;
@@ -37,7 +61,7 @@ namespace System.Windows.Media.Imaging
 
         /// <summary>
         /// </summary>
-        internal unsafe CachedBitmap(
+        unsafe internal CachedBitmap(
                     int pixelWidth,
                     int pixelHeight,
                     double dpiX,
@@ -62,7 +86,10 @@ namespace System.Windows.Media.Imaging
         /// </summary>
         internal CachedBitmap(BitmapSourceSafeMILHandle bitmap) : base(true)
         {
-            ArgumentNullException.ThrowIfNull(bitmap);
+            if (bitmap == null)
+            {
+                throw new ArgumentNullException("bitmap");
+            }
 
             // We're not calling CachedBitmap.Begin/EndInit because that would
             // invoke FinalizeCreation which calls CreateCachedBitmap that does
@@ -98,7 +125,7 @@ namespace System.Windows.Media.Imaging
 
         /// <summary>
         /// </summary>
-        internal unsafe CachedBitmap(
+        unsafe internal CachedBitmap(
             int pixelWidth,
             int pixelHeight,
             double dpiX,
@@ -110,10 +137,11 @@ namespace System.Windows.Media.Imaging
             )
             : base(true) // Use base class virtuals
         {
-            ArgumentNullException.ThrowIfNull(pixels);
+            if (pixels == null)
+                throw new System.ArgumentNullException ("pixels");
 
             if (pixels.Rank != 1)
-                throw new ArgumentException(SR.Collection_BadRank, nameof(pixels));
+                throw new ArgumentException(SR.Collection_BadRank, "pixels");
 
             int elementSize = -1;
 
@@ -131,8 +159,55 @@ namespace System.Windows.Media.Imaging
 
             int destBufferSize = elementSize * pixels.Length;
 
-            fixed (byte* pixelArray = &MemoryMarshal.GetArrayDataReference(pixels))
-                InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY, pixelFormat, palette, (nint)pixelArray, destBufferSize, stride);
+            if (pixels is byte[])
+            {
+                fixed(void * pixelArray = (byte[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is short[])
+            {
+                fixed(void * pixelArray = (short[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is ushort[])
+            {
+                fixed(void * pixelArray = (ushort[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is int[])
+            {
+                fixed(void * pixelArray = (int[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is uint[])
+            {
+                fixed(void * pixelArray = (uint[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is float[])
+            {
+                fixed(void * pixelArray = (float[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
+            else if (pixels is double[])
+            {
+                fixed(void * pixelArray = (double[])pixels)
+                    InitFromMemoryPtr(pixelWidth, pixelHeight, dpiX, dpiY,
+                                      pixelFormat, palette,
+                                      (IntPtr)pixelArray, destBufferSize, stride);
+            }
         }
 
         /// <summary>
@@ -340,14 +415,14 @@ namespace System.Windows.Media.Imaging
                     int stride
                     )
         {
-            if (pixelFormat.Palettized && palette == null)
+            if (pixelFormat.Palettized == true && palette == null)
                 throw new InvalidOperationException(SR.Image_IndexedPixelFormatRequiresPalette);
 
             if (pixelFormat.Format == PixelFormatEnum.Default && pixelFormat.Guid == WICPixelFormatGUIDs.WICPixelFormatDontCare)
             {
                 throw new System.ArgumentException(
                         SR.Format(SR.Effect_PixelFormat, pixelFormat),
-                        nameof(pixelFormat)
+                        "pixelFormat"
                         );
             }
 
@@ -403,9 +478,9 @@ namespace System.Windows.Media.Imaging
             UpdateCachedSettings();
         }
 
-        private BitmapSource        _source;
-        private BitmapCreateOptions _createOptions = BitmapCreateOptions.None;
-        private BitmapCacheOption   _cacheOption = BitmapCacheOption.Default;
+        BitmapSource        _source;
+        BitmapCreateOptions _createOptions = BitmapCreateOptions.None;
+        BitmapCacheOption   _cacheOption = BitmapCacheOption.Default;
     }
     #endregion // CachedBitmap
 }

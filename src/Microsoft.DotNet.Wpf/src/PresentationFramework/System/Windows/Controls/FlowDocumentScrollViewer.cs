@@ -1,9 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;                           // Object
 using System.Collections;               // IEnumerator
+using System.Collections.Generic;       // Stack<T>
 using System.Collections.ObjectModel;   // ReadOnlyCollection<T>
+using System.Security;                  // SecurityCritical
 using System.Windows.Annotations;       // AnnotationService
 using System.Windows.Automation.Peers;  // AutomationPeer
 using System.Windows.Data;              // BindingOperations
@@ -103,7 +107,10 @@ namespace System.Windows.Controls
 
             // Initialize TooBar host.
             _toolBarHost = GetTemplateChild(_toolBarHostTemplateName) as Decorator;
-            _toolBarHost?.Visibility = IsToolBarVisible ? Visibility.Visible : Visibility.Collapsed;
+            if (_toolBarHost != null)
+            {
+                _toolBarHost.Visibility = IsToolBarVisible ? Visibility.Visible : Visibility.Collapsed;
+            }
 
             // Initialize ContentHost.
             // If old ContentHost is enabled, disable it first to ensure appropriate cleanup.
@@ -526,7 +533,7 @@ namespace System.Windows.Controls
         protected virtual void OnPrintCommand()
         {
 #if !DONOTREFPRINTINGASMMETA
-            System.Windows.Xps.XpsDocumentWriter docWriter;
+            dynamic docWriter;
             System.Printing.PrintDocumentImageableArea ia = null;
             FlowDocumentPaginator paginator;
             Thickness pagePadding;
@@ -545,25 +552,26 @@ namespace System.Windows.Controls
                 if (docWriter != null && ia != null)
                 {
                     // Suspend layout on FlowDocumentView.
-                    RenderScope?.SuspendLayout();
+                    if (RenderScope != null)
+                    {
+                        RenderScope.SuspendLayout();
+                    }
 
                     // Store the current state of the document in the PrintingState
                     paginator = ((IDocumentPaginatorSource)Document).DocumentPaginator as FlowDocumentPaginator;
-                    _printingState = new FlowDocumentPrintingState
-                    {
-                        XpsDocumentWriter = docWriter,
-                        PageSize = paginator.PageSize,
-                        PagePadding = Document.PagePadding,
-                        IsSelectionEnabled = IsSelectionEnabled,
-                        ColumnWidth = Document.ColumnWidth
-                    };
+                    _printingState = new FlowDocumentPrintingState();
+                    _printingState.XpsDocumentWriter = docWriter;
+                    _printingState.PageSize = paginator.PageSize;
+                    _printingState.PagePadding = Document.PagePadding;
+                    _printingState.IsSelectionEnabled = IsSelectionEnabled;
+                    _printingState.ColumnWidth = Document.ColumnWidth;
 
                     // Since _printingState value is used to determine CanExecute state, we must invalidate that state.
                     CommandManager.InvalidateRequerySuggested();
 
                     // Register for XpsDocumentWriter events.
-                    docWriter.WritingCompleted += new WritingCompletedEventHandler(HandlePrintCompleted);
-                    docWriter.WritingCancelled += new WritingCancelledEventHandler(HandlePrintCancelled);
+                    docWriter.WritingCompleted += new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                    docWriter.WritingCancelled += new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
 
                     // Add PreviewCanExecute handler to have a chance to disable UI Commands during printing.
                     if (_contentHost != null)
@@ -608,7 +616,10 @@ namespace System.Windows.Controls
         protected virtual void OnCancelPrintCommand()
         {
 #if !DONOTREFPRINTINGASMMETA
-            _printingState?.XpsDocumentWriter.CancelAsync();
+            if (_printingState != null)
+            {
+                _printingState.XpsDocumentWriter.CancelAsync();
+            }
 #endif // DONOTREFPRINTINGASMMETA
         }
 
@@ -934,7 +945,10 @@ namespace System.Windows.Controls
         /// </summary>
         private void ApplyZoom()
         {
-            RenderScope?.LayoutTransform = new ScaleTransform(Zoom / 100, Zoom / 100);
+            if (RenderScope != null)
+            {
+                RenderScope.LayoutTransform = new ScaleTransform(Zoom / 100, Zoom / 100);
+            }
         }
 
         /// <summary>
@@ -978,11 +992,9 @@ namespace System.Windows.Controls
                 RenderScope != null &&
                 Document.StructuralCache.TextContainer.TextSelection == null)
             {
-                _textEditor = new TextEditor(Document.StructuralCache.TextContainer, this, false)
-                {
-                    IsReadOnly = !IsEditingEnabled,
-                    TextView = textView
-                };
+                _textEditor = new TextEditor(Document.StructuralCache.TextContainer, this, false);
+                _textEditor.IsReadOnly = !IsEditingEnabled;
+                _textEditor.TextView = textView;
             }
 
             //restore AnnotationsService state
@@ -1042,7 +1054,10 @@ namespace System.Windows.Controls
             if (_printingState != null)
             {
                 // Resume layout on FlowDocumentView.
-                RenderScope?.ResumeLayout();
+                if (RenderScope != null)
+                {
+                    RenderScope.ResumeLayout();
+                }
 
                 // Enable TextSelection, if it was previously enabled.
                 if (_printingState.IsSelectionEnabled)
@@ -1057,8 +1072,8 @@ namespace System.Windows.Controls
                 }
 
                 // Unregister for XpsDocumentWriter events.
-                _printingState.XpsDocumentWriter.WritingCompleted -= new WritingCompletedEventHandler(HandlePrintCompleted);
-                _printingState.XpsDocumentWriter.WritingCancelled -= new WritingCancelledEventHandler(HandlePrintCancelled);
+                _printingState.XpsDocumentWriter.WritingCompleted -= new System.Windows.Documents.Serialization.WritingCompletedEventHandler(HandlePrintCompleted);
+                _printingState.XpsDocumentWriter.WritingCancelled -= new System.Windows.Documents.Serialization.WritingCancelledEventHandler(HandlePrintCancelled);
 
                 // Restore old page metrics on FlowDocument.
                 Document.PagePadding = _printingState.PagePadding;
@@ -1095,7 +1110,10 @@ namespace System.Windows.Controls
                 // This supports navigating from baseURI#anchor to just baseURI.
                 if (args.TargetObject == document)
                 {
-                    _contentHost?.ScrollToHome();
+                    if (_contentHost != null)
+                    {
+                        _contentHost.ScrollToHome();
+                    }
                     args.Handled = true; // Mark the event as handled.
                 }
                 else if (args.TargetObject is UIElement)
@@ -1193,7 +1211,10 @@ namespace System.Windows.Controls
                     RemoveLogicalChild(oldDocument);
                 }
                 // Remove the document from the ContentHost.
-                RenderScope?.Document = null;
+                if (RenderScope != null)
+                {
+                    RenderScope.Document = null;
+                }
 
                 oldDocument.ClearValue(PathNode.HiddenParentProperty);
                 oldDocument.StructuralCache.ClearUpdateInfo(true);
@@ -1216,7 +1237,10 @@ namespace System.Windows.Controls
             if (newDocument != null)
             {
                 // Set the document on the ContentHost.
-                RenderScope?.Document = newDocument;
+                if (RenderScope != null)
+                {
+                    RenderScope.Document = newDocument;
+                }
                 // If Document should be part of FlowDocumentScrollViewer's logical tree, add it.
                 if (_documentAsLogicalChild)
                 {
@@ -1244,7 +1268,10 @@ namespace System.Windows.Controls
 
             // Document is also represented as Automation child. Need to invalidate peer to force update.
             FlowDocumentScrollViewerAutomationPeer peer = UIElementAutomationPeer.FromElement(this) as FlowDocumentScrollViewerAutomationPeer;
-            peer?.InvalidatePeer();
+            if (peer != null)
+            {
+                peer.InvalidatePeer();
+            }
         }
 
         /// <summary>
@@ -1279,11 +1306,9 @@ namespace System.Windows.Controls
         /// </summary>
         private void CreateTwoWayBinding(FrameworkElement fe, DependencyProperty dp, string propertyPath)
         {
-            Binding binding = new Binding(propertyPath)
-            {
-                Mode = BindingMode.TwoWay,
-                Source = this
-            };
+            Binding binding = new Binding(propertyPath);
+            binding.Mode = BindingMode.TwoWay;
+            binding.Source = this;
             fe.SetBinding(dp, binding);
         }
 
@@ -1444,35 +1469,59 @@ namespace System.Windows.Controls
             }
             else if (args.Command == _commandLineDown)
             {
-                viewer._contentHost?.LineDown();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.LineDown();
+                }
             }
             else if (args.Command == _commandLineUp)
             {
-                viewer._contentHost?.LineUp();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.LineUp();
+                }
             }
             else if (args.Command == _commandLineLeft)
             {
-                viewer._contentHost?.LineLeft();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.LineLeft();
+                }
             }
             else if (args.Command == _commandLineRight)
             {
-                viewer._contentHost?.LineRight();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.LineRight();
+                }
             }
             else if (args.Command == NavigationCommands.NextPage)
             {
-                viewer._contentHost?.PageDown();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.PageDown();
+                }
             }
             else if (args.Command == NavigationCommands.PreviousPage)
             {
-                viewer._contentHost?.PageUp();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.PageUp();
+                }
             }
             else if (args.Command == NavigationCommands.FirstPage)
             {
-                viewer._contentHost?.ScrollToHome();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.ScrollToHome();
+                }
             }
             else if (args.Command == NavigationCommands.LastPage)
             {
-                viewer._contentHost?.ScrollToEnd();
+                if (viewer._contentHost != null)
+                {
+                    viewer._contentHost.ScrollToEnd();
+                }
             }
             else
             {
@@ -1703,7 +1752,10 @@ namespace System.Windows.Controls
             Invariant.Assert(d != null && d is FlowDocumentScrollViewer);
             FlowDocumentScrollViewer viewer = (FlowDocumentScrollViewer)d;
 
-            viewer._toolBarHost?.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
+            if (viewer._toolBarHost != null)
+            {
+                viewer._toolBarHost.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
+            }
         }
 
         /// <summary>
@@ -1716,7 +1768,10 @@ namespace System.Windows.Controls
             if (viewer.Selection != null)
             {
                 CaretElement caretElement = viewer.Selection.CaretElement;
-                caretElement?.InvalidateVisual();
+                if (caretElement != null)
+                {
+                    caretElement.InvalidateVisual();
+                }
             }
         }
 
@@ -1737,7 +1792,7 @@ namespace System.Windows.Controls
         /// </summary>
         private FindToolBar FindToolBar
         {
-            get { return (_findToolBarHost != null) ? _findToolBarHost.Child as FindToolBar : null; }
+            get { return (_findToolBarHost != null) ? (FindToolBar)(dynamic)_findToolBarHost.Child : null; }
         }
 
         /// <summary>
@@ -1801,7 +1856,7 @@ namespace System.Windows.Controls
             }
             if (!(value is FlowDocument))
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(FlowDocument)), nameof(value));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(FlowDocument)), "value");
             }
             Document = value as FlowDocument;
         }

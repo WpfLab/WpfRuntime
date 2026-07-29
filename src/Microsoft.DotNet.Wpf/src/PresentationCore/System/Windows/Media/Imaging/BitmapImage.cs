@@ -1,10 +1,29 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+
+using System;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
 using MS.Internal.PresentationCore;
+using MS.Win32;
+using System.Security;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
+using SR=MS.Internal.PresentationCore.SR;
 using System.Windows.Markup;
 using System.Net.Cache;
 
@@ -42,7 +61,10 @@ namespace System.Windows.Media.Imaging
         public BitmapImage(Uri uriSource, RequestCachePolicy uriCachePolicy)
             : base(true) // Use base class virtuals
         {
-            ArgumentNullException.ThrowIfNull(uriSource);
+            if (uriSource == null)
+            {
+                throw new ArgumentNullException("uriSource");
+            }
 
             BeginInit();
             UriSource = uriSource;

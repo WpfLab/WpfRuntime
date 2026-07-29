@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Collections;
+// See the LICENSE file in the project root for more information.
 
 // This file was generated, please do not edit it directly.
 // 
@@ -9,6 +8,10 @@ using System.Collections;
 
 namespace MS.Internal
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+
     /// <summary>
     ///     Helper WeakHashSet class implemented using WeakHashTable
     /// </summary>
@@ -109,7 +112,7 @@ namespace MS.Internal
 
         #region Private Data
 
-        private WeakHashtable _hashTable = new WeakHashtable();
+        WeakHashtable _hashTable = new WeakHashtable();
 
         #endregion
     }

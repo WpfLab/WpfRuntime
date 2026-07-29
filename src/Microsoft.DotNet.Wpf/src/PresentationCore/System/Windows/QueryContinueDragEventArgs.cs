@@ -1,5 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+//
+// 
+// Description: QueryContinueDragEventArgs for drag-and-drop operation.
+// 
+//
+
+using System;
+using System.Diagnostics;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows
 {
@@ -30,7 +43,7 @@ namespace System.Windows
         {
             if (!DragDrop.IsValidDragDropKeyStates(dragDropKeyStates))
             {
-                Debug.Fail("Invalid dragDropKeyStates");
+                Debug.Assert(false, "Invalid dragDropKeyStates");
             }
 
             this._escapePressed = escapePressed;

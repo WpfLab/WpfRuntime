@@ -1,10 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.ComponentModel;
+using System.Windows.Threading;
+
+using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
 
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+using MS.Utility;
 using MS.Internal.KnownBoxes;
 using MS.Internal.Telemetry.PresentationFramework;
 
@@ -218,7 +228,7 @@ namespace System.Windows.Controls
                 thisScope = e.Scope;
 
                 // Step 3: Compare scopes
-                if (thisScope == focusScope && (focusDO == null || !(bool)focusDO.GetValue(KeyboardNavigation.AcceptsReturnProperty)))
+                if (thisScope == focusScope && (focusDO == null || (bool)focusDO.GetValue(KeyboardNavigation.AcceptsReturnProperty) == false))
                 {
                     isDefaulted = BooleanBoxes.TrueBox;
                 }
@@ -249,7 +259,8 @@ namespace System.Windows.Controls
             if (AutomationPeer.ListenerExists(AutomationEvents.InvokePatternOnInvoked))
             {
                 AutomationPeer peer = UIElementAutomationPeer.CreatePeerForElement(this);
-                peer?.RaiseAutomationEvent(AutomationEvents.InvokePatternOnInvoked);
+                if (peer != null)
+                    peer.RaiseAutomationEvent(AutomationEvents.InvokePatternOnInvoked);
             }
 
             // base.OnClick should be called first. 

@@ -1,14 +1,35 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+#pragma warning disable 1634, 1691 // Allow suppression of certain presharp messages
+
+using System;
 using System.IO;
 using System.IO.Packaging;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
 using System.Collections.ObjectModel;
+using System.Reflection;
+using System.Security;
+using System.Text.RegularExpressions;
 using MS.Internal;
+using MS.Internal.AppModel;
 using MS.Win32.PresentationCore;
 using Microsoft.Win32.SafeHandles;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Threading;
-using MS.Internal.PresentationCore;
+using System.Windows.Media.Imaging;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+using SR=MS.Internal.PresentationCore.SR;
 using System.Net;
 using System.Net.Cache;
 using System.Text;
@@ -57,7 +78,10 @@ namespace System.Windows.Media.Imaging
             Guid clsId = Guid.Empty;
             bool isOriginalWritable = false;
 
-            ArgumentNullException.ThrowIfNull(bitmapUri);
+            if (bitmapUri == null)
+            {
+                throw new ArgumentNullException("bitmapUri");
+            }
 
             if ((createOptions & BitmapCreateOptions.IgnoreImageCache) != 0)
             {
@@ -114,7 +138,10 @@ namespace System.Windows.Media.Imaging
             Guid clsId = Guid.Empty;
             bool isOriginalWritable = false;
 
-            ArgumentNullException.ThrowIfNull(bitmapStream);
+            if (bitmapStream == null)
+            {
+                throw new ArgumentNullException("bitmapStream");
+            }
 
             _decoderHandle = SetupDecoderFromUriOrStream(
                 null,
@@ -208,7 +235,10 @@ namespace System.Windows.Media.Imaging
             // of BitmapDecoder (such as JpegBitmapDecoder), those subclasses are constructed in
             // CreateFromUriOrStream, which also gets uriStream from SetupDecoderFromUriOrStream.
             //
-            _uriStream?.Close();
+            if (_uriStream != null)
+            {
+                _uriStream.Close();
+            }
         }
 
         /// <summary>
@@ -458,7 +488,10 @@ namespace System.Windows.Media.Imaging
             RequestCachePolicy uriCachePolicy
             )
         {
-            ArgumentNullException.ThrowIfNull(bitmapUri);
+            if (bitmapUri == null)
+            {
+                throw new ArgumentNullException("bitmapUri");
+            }
 
             return CreateFromUriOrStream(
                 null,
@@ -484,7 +517,10 @@ namespace System.Windows.Media.Imaging
             BitmapCacheOption cacheOption
             )
         {
-            ArgumentNullException.ThrowIfNull(bitmapStream);
+            if (bitmapStream == null)
+            {
+                throw new ArgumentNullException("bitmapStream");
+            }
 
             return CreateFromUriOrStream(
                 null,
@@ -1065,10 +1101,12 @@ namespace System.Windows.Media.Imaging
                     }
                     else
                     {
+                        #pragma warning disable 6518
                         // We don't have an absolute URI, so we don't necessarily know
                         // if it is a file, but we'll have to assume it is and try to
                         // create a stream from the original string.
                         bitmapStream = new System.IO.FileStream(uri.OriginalString, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        #pragma warning restore 6518
                     }
 
                     uriStream = bitmapStream;
@@ -1101,7 +1139,7 @@ namespace System.Windows.Media.Imaging
                 System.IO.FileStream filestream = stream as System.IO.FileStream;
                 try
                 {
-                    if (!filestream.IsAsync)
+                    if (filestream.IsAsync is false)
                     {
                         safeFilehandle = filestream.SafeFileHandle;
                     }
@@ -1164,10 +1202,12 @@ namespace System.Windows.Media.Imaging
             }
             catch
             {
-                bitmapStream?.Close();
+                #pragma warning disable 6500
 
                 decoderHandle = null;
                 throw;
+
+                #pragma warning restore 6500
             }
             finally
             {

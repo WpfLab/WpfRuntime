@@ -1,15 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-#region Using declarations
-
-using System.Windows.Automation.Peers;
-using System.Windows.Media;
-using System.Collections.Specialized;
-using System.Windows.Input;
-#if RIBBON_IN_FRAMEWORK
-using Microsoft.Windows.Controls;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -17,6 +9,17 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    #region Using declarations
+
+    using System;
+    using System.Windows;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Controls;
+    using System.Windows.Media;
+    using System.Collections.Specialized;
+    using System.Windows.Input;
+#if RIBBON_IN_FRAMEWORK
+    using Microsoft.Windows.Controls;
 #else
     using Microsoft.Windows.Automation.Peers;
 #endif
@@ -517,7 +520,7 @@ namespace Microsoft.Windows.Controls.Ribbon
 
         // Packed boolean information
         private BitVector32 _bits = new BitVector32(0);
-        private Image _image = null;
+        Image _image = null;
         private const string ImageTemplatePart = "PART_Image";
 
         #endregion Private Data

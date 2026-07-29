@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,8 +11,10 @@
 
 using MS.Internal;
 
+using System;
 using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
@@ -19,8 +22,6 @@ using MS.Internal.PresentationCore;
 
 namespace System.Windows.Media.Animation
 {
-
-
     /// <summary>
     /// This class is used as part of a ByteKeyFrameCollection in
     /// conjunction with a KeyFrameByteAnimation to animate a
@@ -66,7 +67,10 @@ namespace System.Windows.Media.Animation
         public SplineByteKeyFrame(Byte value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -138,7 +142,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -193,7 +200,10 @@ namespace System.Windows.Media.Animation
         public SplineColorKeyFrame(Color value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -265,7 +275,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -320,7 +333,10 @@ namespace System.Windows.Media.Animation
         public SplineDecimalKeyFrame(Decimal value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -392,7 +408,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -447,7 +466,10 @@ namespace System.Windows.Media.Animation
         public SplineDoubleKeyFrame(Double value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -519,7 +541,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -574,7 +599,10 @@ namespace System.Windows.Media.Animation
         public SplineInt16KeyFrame(Int16 value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -646,7 +674,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -701,7 +732,10 @@ namespace System.Windows.Media.Animation
         public SplineInt32KeyFrame(Int32 value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -773,7 +807,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -828,7 +865,10 @@ namespace System.Windows.Media.Animation
         public SplineInt64KeyFrame(Int64 value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -900,7 +940,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -955,7 +998,10 @@ namespace System.Windows.Media.Animation
         public SplinePointKeyFrame(Point value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1027,7 +1073,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1082,7 +1131,10 @@ namespace System.Windows.Media.Animation
         public SplinePoint3DKeyFrame(Point3D value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1154,7 +1206,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1209,7 +1264,10 @@ namespace System.Windows.Media.Animation
         public SplineQuaternionKeyFrame(Quaternion value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1281,7 +1339,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1336,7 +1397,10 @@ namespace System.Windows.Media.Animation
         public SplineRotation3DKeyFrame(Rotation3D value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1408,7 +1472,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1463,7 +1530,10 @@ namespace System.Windows.Media.Animation
         public SplineRectKeyFrame(Rect value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1535,7 +1605,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1590,7 +1663,10 @@ namespace System.Windows.Media.Animation
         public SplineSingleKeyFrame(Single value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1662,7 +1738,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1717,7 +1796,10 @@ namespace System.Windows.Media.Animation
         public SplineSizeKeyFrame(Size value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1789,7 +1871,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1844,7 +1929,10 @@ namespace System.Windows.Media.Animation
         public SplineVectorKeyFrame(Vector value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -1916,7 +2004,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
@@ -1971,7 +2062,10 @@ namespace System.Windows.Media.Animation
         public SplineVector3DKeyFrame(Vector3D value, KeyTime keyTime, KeySpline keySpline)
             : this()
         {
-            ArgumentNullException.ThrowIfNull(keySpline);
+            if (keySpline == null)
+            {
+                throw new ArgumentNullException("keySpline");
+            }
 
             Value = value;
             KeyTime = keyTime;
@@ -2043,13 +2137,14 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 SetValue(KeySplineProperty, value);
             }
         }
 
         #endregion
     }
-
-
 }

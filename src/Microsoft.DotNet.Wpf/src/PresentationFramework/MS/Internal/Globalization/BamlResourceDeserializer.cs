@@ -1,11 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Internal class that build the baml tree for localization
 
 
+using System;
 using System.IO;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Collections;
+using System.Collections.Generic;
+
+using System.Diagnostics;
+using System.Text;
 
 using System.Windows;
 using System.Windows.Markup;
@@ -301,7 +309,8 @@ namespace MS.Internal.Globalization
 
         private void PushNodeToStack(BamlTreeNode node)
         {
-            _currentParent?.AddChild(node);
+            if (_currentParent != null)
+                _currentParent.AddChild(node);
 
             _bamlTreeStack.Push(node);
             _currentParent = node;
@@ -327,7 +336,8 @@ namespace MS.Internal.Globalization
                 // pop properties from property inheritance stack as well
                 foreach (BamlTreeNode child in node.Children)
                 {
-                    if (child is BamlStartComplexPropertyNode propertyNode)
+                    BamlStartComplexPropertyNode propertyNode = child as BamlStartComplexPropertyNode;
+                    if (propertyNode != null)
                     {
                         PopPropertyFromStack(propertyNode.PropertyName);
                     }
@@ -347,7 +357,13 @@ namespace MS.Internal.Globalization
 
         private void PushPropertyToStack(string propertyName, ILocalizabilityInheritable node)
         {
-            if (!_propertyInheritanceTreeStack.TryGetValue(propertyName, out Stack<ILocalizabilityInheritable> stackForProperty))
+            Stack<ILocalizabilityInheritable> stackForProperty;
+            if (_propertyInheritanceTreeStack.ContainsKey(propertyName))
+            {
+                // get the stack
+                stackForProperty = _propertyInheritanceTreeStack[propertyName];
+            }
+            else
             {
                 stackForProperty = new Stack<ILocalizabilityInheritable>();
                 _propertyInheritanceTreeStack.Add(propertyName, stackForProperty);
@@ -366,8 +382,9 @@ namespace MS.Internal.Globalization
         // Get the Top of the stack for a certain property
         private ILocalizabilityInheritable PeekPropertyStack(string propertyName)
         {
-            if (_propertyInheritanceTreeStack.TryGetValue(propertyName, out Stack<ILocalizabilityInheritable> stackForProperty))
+            if (_propertyInheritanceTreeStack.ContainsKey(propertyName))
             {
+                Stack<ILocalizabilityInheritable> stackForProperty = _propertyInheritanceTreeStack[propertyName];
                 if (stackForProperty.Count > 0)
                 {
                     return stackForProperty.Peek();
@@ -383,10 +400,11 @@ namespace MS.Internal.Globalization
         //-----------------------------
 
         // stack for building baml trees
-        private readonly Stack<BamlTreeNode> _bamlTreeStack = new();
+        private Stack<BamlTreeNode> _bamlTreeStack = new Stack<BamlTreeNode>();
 
         // stacks for building property's localizability inheritance tree.
-        private readonly Dictionary<string, Stack<ILocalizabilityInheritable>> _propertyInheritanceTreeStack = new(8);
+        private Dictionary<string, Stack<ILocalizabilityInheritable>> _propertyInheritanceTreeStack
+            = new Dictionary<string, Stack<ILocalizabilityInheritable>>(8);
 
         private BamlTreeNode _currentParent;
         private BamlStartDocumentNode _root;

@@ -1,10 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.Text;
+using System.Security;
 using System.Runtime.InteropServices;
+using System.Runtime.ConstrainedExecution;
 using System.Windows.Ink;
+using System.Diagnostics;
+using MS.Win32;
 
 namespace MS.Win32.Recognizer
 {
@@ -85,7 +91,7 @@ namespace MS.Win32.Recognizer
             }
         }
 
-        protected override bool ReleaseHandle()
+        override protected bool ReleaseHandle()
         {
             Debug.Assert(handle != IntPtr.Zero);
             return (MS.Internal.HRESULT.Succeeded(MS.Win32.Recognizer.UnsafeNativeMethods.DestroyRecognizer(handle)));
@@ -120,7 +126,7 @@ namespace MS.Win32.Recognizer
             }
         }
   
-        protected override bool ReleaseHandle()
+        override protected bool ReleaseHandle()
         {
             //Note: It is not an error to have already called DestroyRecognizer
             //which makes _recognizerHandle.IsInvalid == true before calling

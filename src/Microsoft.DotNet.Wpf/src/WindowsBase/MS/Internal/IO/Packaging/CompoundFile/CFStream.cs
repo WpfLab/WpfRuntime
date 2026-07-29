@@ -1,18 +1,32 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //   Stream interface for manipulating data within a container stream.
+//
+//
+//
+//
+//
+//
 
+using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.IO.Packaging;
+using MS.Internal.WindowsBase;
+
+using System.Windows;
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
-    /// <summary>
-    /// Class for manipulating data within container streams
-    /// </summary>
-    internal class CFStream : Stream
+/// <summary>
+/// Class for manipulating data within container streams
+/// </summary>
+internal class CFStream : Stream
 {
     //------------------------------------------------------
     //
@@ -156,7 +170,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
                 translatedSeekOrigin = SafeNativeCompoundFileConstants.STREAM_SEEK_SET;
                 if( 0 > offset )
                 {
-                    throw new ArgumentOutOfRangeException(nameof(offset),
+                    throw new ArgumentOutOfRangeException("offset",
                         SR.SeekNegative);
                 }
                 break;
@@ -194,7 +208,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
 
         if( 0 > newLength )
         {
-            throw new ArgumentOutOfRangeException(nameof(newLength),
+            throw new ArgumentOutOfRangeException("newLength",
                 SR.StreamLengthNegative);
         }
         
@@ -340,8 +354,8 @@ namespace MS.Internal.IO.Packaging.CompoundFile
     //  Private Members
     //
     //------------------------------------------------------
-    private IStream _safeIStream;
-    private FileAccess access;
+    IStream _safeIStream;
+    FileAccess access;
 
     /// <summary>
     /// If only this stream object is held open, and the rest of the container
@@ -349,6 +363,6 @@ namespace MS.Internal.IO.Packaging.CompoundFile
     /// tree open because the CLR GC doesn't realize that our IStream has
     /// a dependency on the rest of the container object tree.
     /// </summary>
-    private StreamInfo backReference;
+    StreamInfo backReference;
 }
 }

@@ -1,9 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-using System.ComponentModel;
-using System.Globalization;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -11,7 +9,12 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    using System;
+    using System.ComponentModel;
+    using System.Globalization;
+    using MS.Internal;
 #if RIBBON_IN_FRAMEWORK
+    using Microsoft.Windows.Controls;
 #endif
 
     /// <summary>
@@ -94,8 +97,9 @@ namespace Microsoft.Windows.Controls.Ribbon
         /// </summary>
         public override bool Equals(object obj)
         {
-            if (obj is RibbonControlLength length)
+            if (obj is RibbonControlLength)
             {
+                RibbonControlLength length = (RibbonControlLength)obj;
                 return (this == length);
             }
             else

@@ -1,13 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Defines BindingWorker base class.
 //
 
+using System;
+using System.Diagnostics;
+using System.Reflection;
 using System.ComponentModel;
 
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Threading;
 
@@ -104,7 +109,7 @@ namespace MS.Internal.Data
         //
         //------------------------------------------------------
 
-        private BindingExpression _bindingExpression;
+        BindingExpression _bindingExpression;
 
         #region Uncommon Values
 
@@ -126,8 +131,7 @@ namespace MS.Internal.Data
         internal void SetValue(Feature id, object value) { _values.SetValue((int)id, value); }
         internal void SetValue(Feature id, object value, object defaultValue) { if (Object.Equals(value, defaultValue)) _values.ClearValue((int)id); else _values.SetValue((int)id, value); }
         internal void ClearValue(Feature id) { _values.ClearValue((int)id); }
-
-        private UncommonValueTable _values;
+        UncommonValueTable _values;
 
         #endregion Uncommon Values
     }

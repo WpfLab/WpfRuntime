@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Media;
+// See the LICENSE file in the project root for more information.
 
 /*++                                                            
     Description:
@@ -10,6 +9,12 @@ using System.Windows.Media;
 
 namespace System.Windows.Documents
 {
+    using System.Windows.Shapes;
+    using System.Windows.Media;
+    using System.Globalization;
+    using System.Diagnostics;
+    using System.Windows;
+
     internal sealed class FixedSOMTableRow : FixedSOMContainer
     {
         //--------------------------------------------------------------------

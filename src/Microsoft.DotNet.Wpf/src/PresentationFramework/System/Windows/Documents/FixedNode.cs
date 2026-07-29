@@ -1,8 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Globalization;
-using System.Text;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -14,6 +12,11 @@ using System.Text;
 
 namespace System.Windows.Documents
 {
+    using System;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Text;
+
     //=====================================================================
     /// <summary>
     /// FixedNode is an immutable type that represents a fast and
@@ -148,7 +151,7 @@ namespace System.Windows.Documents
 
             if (o.GetType() != typeof(FixedNode))
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, o.GetType(), typeof(FixedNode)), nameof(o));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, o.GetType(), typeof(FixedNode)), "o");
             }
 
             FixedNode fixedp = (FixedNode)o;

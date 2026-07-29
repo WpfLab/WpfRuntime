@@ -1,10 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
 
+using ReachPrintCapabilities = System.Printing.PrintCapabilities;
+using ReachPrintTicket = System.Printing.PrintTicket;
+using ReachPrintTicketScope = System.Printing.PrintTicketScope;
+using ReachValidationResult = System.Printing.ValidationResult;
 using System.Reflection;
 
 namespace System.Printing
@@ -230,14 +234,14 @@ namespace System.Printing
         public static System.Windows.Xps.XpsDocumentWriter CreateXpsDocumentWriter(string jobDescription, ref System.Printing.PrintDocumentImageableArea documentImageableArea) { throw null; }
         public static System.Windows.Xps.XpsDocumentWriter CreateXpsDocumentWriter(string jobDescription, ref System.Printing.PrintDocumentImageableArea documentImageableArea, ref System.Windows.Controls.PageRangeSelection pageRangeSelection, ref System.Windows.Controls.PageRange pageRange) { throw null; }
         public System.Printing.PrintSystemJobInfo GetJob(int jobId) { throw null; }
-        public System.Printing.PrintCapabilities GetPrintCapabilities() { throw null; }
-        public System.Printing.PrintCapabilities GetPrintCapabilities(System.Printing.PrintTicket printTicket) { throw null; }
+        public ReachPrintCapabilities GetPrintCapabilities() { throw null; }
+        public ReachPrintCapabilities GetPrintCapabilities(ReachPrintTicket printTicket) { throw null; }
         public System.IO.MemoryStream GetPrintCapabilitiesAsXml() { throw null; }
         public System.IO.MemoryStream GetPrintCapabilitiesAsXml(System.Printing.PrintTicket printTicket) { throw null; }
         public System.Printing.PrintJobInfoCollection GetPrintJobInfoCollection() { throw null; }
         protected sealed override void InternalDispose(bool disposing) { }
-        public System.Printing.ValidationResult MergeAndValidatePrintTicket(System.Printing.PrintTicket basePrintTicket, System.Printing.PrintTicket deltaPrintTicket) { throw null; }
-        public System.Printing.ValidationResult MergeAndValidatePrintTicket(System.Printing.PrintTicket basePrintTicket, System.Printing.PrintTicket deltaPrintTicket, System.Printing.PrintTicketScope scope) { throw null; }
+        public ReachValidationResult MergeAndValidatePrintTicket(ReachPrintTicket basePrintTicket, ReachPrintTicket deltaPrintTicket) { throw null; }
+        public ReachValidationResult MergeAndValidatePrintTicket(ReachPrintTicket basePrintTicket, ReachPrintTicket deltaPrintTicket, ReachPrintTicketScope scope) { throw null; }
         public virtual void Pause() { }
         public virtual void Purge() { }
         public override void Refresh() { }

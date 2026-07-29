@@ -1,7 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Windows.Input;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Ink
 {
@@ -155,7 +162,7 @@ namespace System.Windows.Ink
         {
             if ( oldProperty == null && newProperty == null )
             {
-                throw new ArgumentNullException(nameof(oldProperty));
+                throw new ArgumentNullException("oldProperty");
             }
             _oldProperty = oldProperty;
             _newProperty = newProperty;
@@ -198,8 +205,14 @@ namespace System.Windows.Ink
         /// </remarks>
         public DrawingAttributesReplacedEventArgs(DrawingAttributes newDrawingAttributes, DrawingAttributes previousDrawingAttributes)
         {
-            ArgumentNullException.ThrowIfNull(newDrawingAttributes);
-            ArgumentNullException.ThrowIfNull(previousDrawingAttributes);
+            if ( newDrawingAttributes == null )
+            {
+                throw new ArgumentNullException("newDrawingAttributes");
+            }
+            if ( previousDrawingAttributes == null )
+            {
+                throw new ArgumentNullException("previousDrawingAttributes");
+            }
             _newDrawingAttributes = newDrawingAttributes;
             _previousDrawingAttributes = previousDrawingAttributes;
         }
@@ -242,8 +255,14 @@ namespace System.Windows.Ink
         /// </remarks>
         public StylusPointsReplacedEventArgs(StylusPointCollection newStylusPoints, StylusPointCollection previousStylusPoints)
         {
-            ArgumentNullException.ThrowIfNull(newStylusPoints);
-            ArgumentNullException.ThrowIfNull(previousStylusPoints);
+            if ( newStylusPoints == null )
+            {
+                throw new ArgumentNullException("newStylusPoints");
+            }
+            if ( previousStylusPoints == null )
+            {
+                throw new ArgumentNullException("previousStylusPoints");
+            }
             _newStylusPoints = newStylusPoints;
             _previousStylusPoints = previousStylusPoints;
         }

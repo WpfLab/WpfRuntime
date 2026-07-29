@@ -1,9 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
 // Contents:  The XML Composite font parsing
+//
+//
 
+using System;
 using System.IO;
+using System.Security;
+using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -11,8 +19,13 @@ using System.Windows.Markup;
 using System.Xml;
 using System.Globalization;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using MS.Internal.TextFormatting;
+
+using System.Reflection;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.FontFace
 {
@@ -220,13 +233,12 @@ namespace MS.Internal.FontFace
         /// </summary>
         private XmlReader CreateXmlReader(Stream fileStream)
         {
-            XmlReaderSettings settings = new XmlReaderSettings
-            {
-                CloseInput = true,
-                IgnoreComments = true,
-                IgnoreWhitespace = false,
-                ProhibitDtd = true
-            };
+            XmlReaderSettings settings = new XmlReaderSettings();
+
+            settings.CloseInput = true;
+            settings.IgnoreComments = true;
+            settings.IgnoreWhitespace = false;
+            settings.ProhibitDtd = true;
 
             XmlReader baseReader = XmlReader.Create(fileStream, settings);
 

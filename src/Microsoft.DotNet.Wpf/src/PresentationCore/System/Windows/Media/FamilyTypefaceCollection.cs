@@ -1,7 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using SC = System.Collections;
+//
+//
+//
+//  Contents:  FamilyTypefaceCollection
+//
+//
+
+using System;
+using System.Globalization;
+using SC=System.Collections;
+using System.Collections.Generic;
+using MS.Internal.FontFace;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
@@ -228,13 +242,14 @@ namespace System.Windows.Media
 
         private int InsertItem(int index, FamilyTypeface item)
         {
-            ArgumentNullException.ThrowIfNull(item);
+            if (item == null)
+                throw new ArgumentNullException("item");
 
             VerifyChangeable();
 
             // Validate the index.
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, Count);
+            if (index < 0 || index > Count)
+                throw new ArgumentOutOfRangeException("index");
 
             // We can't have two items with same style, weight, stretch.
             if (FindItem(item) >= 0)
@@ -295,7 +310,8 @@ namespace System.Windows.Media
 
         private void SetItem(int index, FamilyTypeface item)
         {
-            ArgumentNullException.ThrowIfNull(item);
+            if (item == null)
+                throw new ArgumentNullException("item");
 
             VerifyChangeable();
             RangeCheck(index);
@@ -340,8 +356,8 @@ namespace System.Windows.Media
 
         private void RangeCheck(int index)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _count);
+            if (index < 0 || index >= _count)
+                throw new ArgumentOutOfRangeException("index");
         }
 
         private void VerifyChangeable()
@@ -352,7 +368,8 @@ namespace System.Windows.Media
 
         private FamilyTypeface ConvertValue(object obj)
         {
-            ArgumentNullException.ThrowIfNull(obj);
+            if (obj == null)
+                throw new ArgumentNullException("obj");
 
             FamilyTypeface familyTypeface = obj as FamilyTypeface;
             if (familyTypeface == null)
@@ -363,7 +380,8 @@ namespace System.Windows.Media
 
         private void CopyItems(Array array, int index)
         {
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+                throw new ArgumentNullException("array");
 
             if (array.Rank != 1)
                 throw new ArgumentException(SR.Collection_CopyTo_ArrayCannotBeMultidimensional);
@@ -387,9 +405,9 @@ namespace System.Windows.Media
 
         private class Enumerator : IEnumerator<FamilyTypeface>, SC.IEnumerator
         {
-            private FamilyTypefaceCollection _list;
-            private int _index;
-            private FamilyTypeface _current;
+            FamilyTypefaceCollection _list;
+            int _index;
+            FamilyTypeface _current;
 
             internal Enumerator(FamilyTypefaceCollection list)
             {

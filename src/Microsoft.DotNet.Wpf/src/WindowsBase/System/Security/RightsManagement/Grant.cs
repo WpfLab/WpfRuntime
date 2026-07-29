@@ -1,7 +1,24 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Security.RightsManagement
+//
+//
+// Description: This class represents a (ContentUser , ContentRight) pair.
+//
+//
+//
+//
+
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Globalization;
+using System.Windows;
+using MS.Internal.Security.RightsManagement;
+using SecurityHelper=MS.Internal.WindowsBase.SecurityHelper; 
+
+namespace System.Security.RightsManagement 
 {
     /// <summary>
     /// ContentGrant class represent a (ContentUser , ContentRight) pair this is 
@@ -25,7 +42,10 @@ namespace System.Security.RightsManagement
         {
             // Add validation here 
 
-            ArgumentNullException.ThrowIfNull(user);
+            if (user == null)
+            {
+                throw new ArgumentNullException("user");
+            }
 
             if ((right != ContentRight.View) && 
                 (right != ContentRight.Edit) && 
@@ -41,10 +61,13 @@ namespace System.Security.RightsManagement
                 (right != ContentRight.DocumentEdit)  &&
                 (right != ContentRight.Export))
             {
-                throw new ArgumentOutOfRangeException(nameof(right));                
+                throw new ArgumentOutOfRangeException("right");                
             }
 
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(validFrom, validUntil);
+            if (validFrom > validUntil)
+            {
+                throw new ArgumentOutOfRangeException("validFrom");                
+            }
 
             _user = user;
             _right = right;

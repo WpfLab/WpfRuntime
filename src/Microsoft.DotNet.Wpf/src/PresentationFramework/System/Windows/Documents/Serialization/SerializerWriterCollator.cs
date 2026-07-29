@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Printing;
-using System.Windows.Media;
+// See the LICENSE file in the project root for more information.
 
 #if !DONOTREFPRINTINGASMMETA
 //
@@ -12,6 +10,11 @@ using System.Windows.Media;
 //
 namespace System.Windows.Documents.Serialization
 {
+    using System;
+    using System.Printing;
+    using System.Windows.Media;
+    using System.Security;
+
     /// <summary>
     /// SerializerWriterCollator is an abstract class that is implemented by plug-in document serializers
     /// Objects of this class are instantiated by SerializerWriter.CreateVisualCellator

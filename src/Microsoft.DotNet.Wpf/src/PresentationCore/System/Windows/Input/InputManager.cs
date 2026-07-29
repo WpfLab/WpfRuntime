@@ -1,11 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Windows.Threading;
 using System.Threading;
+using System.Windows;
+using System.Security;
+using MS.Win32;
 using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+using System;
+using System.Diagnostics;
 using System.Windows.Automation;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -23,6 +33,7 @@ namespace System.Windows.Input
         /// <summary>
         ///     A routed event indicating that an input report arrived.
         /// </summary>
+        [FriendAccessAllowed]
         internal static readonly RoutedEvent InputReportEvent = GlobalEventManager.RegisterRoutedEvent("InputReport", RoutingStrategy.Bubble, typeof(InputReportEventHandler), typeof(InputManager));
 
         /// <summary>
@@ -43,6 +54,7 @@ namespace System.Windows.Input
         ///</summary>
         internal static InputManager UnsecureCurrent
         {
+            [FriendAccessAllowed]
             get
             {
                 return GetCurrentInputManagerImpl();
@@ -195,10 +207,12 @@ namespace System.Windows.Input
         /// </summary>
         internal event KeyEventHandler TranslateAccelerator
         {
+            [FriendAccessAllowed] // Used by KeyboardNavigation.cs in Framework
             add
             {
                 _translateAccelerator += value;
             }
+            [FriendAccessAllowed] // Used by KeyboardNavigation.cs in Framework
             remove
             {
                 _translateAccelerator -= value;
@@ -324,7 +338,10 @@ namespace System.Windows.Input
         ///</summary>
         public void PushMenuMode(PresentationSource menuSite)
         {
-            ArgumentNullException.ThrowIfNull(menuSite);
+            if (menuSite == null)
+            {
+                throw new ArgumentNullException("menuSite");
+            }
             menuSite.VerifyAccess();
 
             menuSite.PushMenuMode();
@@ -345,7 +362,10 @@ namespace System.Windows.Input
         ///</summary>
         public void PopMenuMode(PresentationSource menuSite)
         {
-            ArgumentNullException.ThrowIfNull(menuSite);
+            if (menuSite == null)
+            {
+                throw new ArgumentNullException("menuSite");
+            }
             menuSite.VerifyAccess();
 
             if (_menuModeCount <= 0)
@@ -482,9 +502,12 @@ namespace System.Windows.Input
         {
             // It turns out that somehow we get here after the DispatcherOperation has been dispatched and we 
             // need to no-op on that.
+            if (_hitTestInvalidatedAsyncOperation != null)
+            {
+                // Promote the pending DispatcherOperation to Input Priority
 
-            // Promote the pending DispatcherOperation to Input Priority
-            _hitTestInvalidatedAsyncOperation?.Priority = DispatcherPriority.Input;
+                _hitTestInvalidatedAsyncOperation.Priority = DispatcherPriority.Input;
+}
 
             // Stop the input timer
 
@@ -505,9 +528,12 @@ namespace System.Windows.Input
         /// </returns>
         public bool ProcessInput(InputEventArgs input)
         {
-            //             VerifyAccess();
+//             VerifyAccess();
 
-            ArgumentNullException.ThrowIfNull(input);
+            if(input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
 
             // Push a marker indicating the portion of the staging area
             // that needs to be processed.
@@ -625,8 +651,12 @@ namespace System.Windows.Input
                 _listeningElement = null;
                 _synchronizedInputEvents = null;
                 _pairedSynchronizedInputEvents = null;
-                _synchronizedInputAsyncClearOperation?.Abort();
-                _synchronizedInputAsyncClearOperation = null;
+
+                if (_synchronizedInputAsyncClearOperation != null)
+                {
+                    _synchronizedInputAsyncClearOperation.Abort();
+                    _synchronizedInputAsyncClearOperation = null;
+                }
             }
         }
 
@@ -642,9 +672,9 @@ namespace System.Windows.Input
             // PreProcessedInputEventArgs and cast it to NotifyInputEventArgs
             // or ProcessInputEventArgs because a malicious user could upcast
             // the object and call inappropriate methods.
-            NotifyInputEventArgs notifyInputEventArgs = _notifyInputEventArgs ?? new NotifyInputEventArgs();
-            ProcessInputEventArgs processInputEventArgs = _processInputEventArgs ?? new ProcessInputEventArgs();
-            PreProcessInputEventArgs preProcessInputEventArgs = _preProcessInputEventArgs ?? new PreProcessInputEventArgs();
+            NotifyInputEventArgs notifyInputEventArgs = (_notifyInputEventArgs != null) ? _notifyInputEventArgs : new NotifyInputEventArgs();
+            ProcessInputEventArgs processInputEventArgs = (_processInputEventArgs != null) ? _processInputEventArgs : new ProcessInputEventArgs();
+            PreProcessInputEventArgs preProcessInputEventArgs = (_preProcessInputEventArgs != null) ? _preProcessInputEventArgs : new PreProcessInputEventArgs();
             _notifyInputEventArgs = null;
             _processInputEventArgs = null;
             _preProcessInputEventArgs = null;
@@ -847,10 +877,8 @@ namespace System.Windows.Input
                             {
                                 InputReportEventArgs previewInputReport = (InputReportEventArgs) item.Input;
 
-                                InputReportEventArgs inputReport = new InputReportEventArgs(previewInputReport.Device, previewInputReport.Report)
-                                {
-                                    RoutedEvent = InputManager.InputReportEvent
-                                };
+                                InputReportEventArgs inputReport = new InputReportEventArgs(previewInputReport.Device, previewInputReport.Report);
+                                inputReport.RoutedEvent=InputManager.InputReportEvent;
                                 PushInput(inputReport, item);
                             }
                         }

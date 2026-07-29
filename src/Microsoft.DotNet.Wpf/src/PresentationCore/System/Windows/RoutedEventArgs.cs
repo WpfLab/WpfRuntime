@@ -1,7 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Collections.Specialized;
+using System;
+using System.Security;
+
+using SR=MS.Internal.PresentationCore.SR;
+using MS.Internal.PresentationCore;
+using System.Collections.Specialized ;
+using System.Windows.Input;
+using System.Diagnostics;
 using MS.Internal;
 
 namespace System.Windows
@@ -271,9 +279,15 @@ namespace System.Windows
         /// </param>
         protected virtual void InvokeEventHandler(Delegate genericHandler, object genericTarget)
         {
-            ArgumentNullException.ThrowIfNull(genericHandler);
+            if (genericHandler == null)
+            {
+                throw new ArgumentNullException("genericHandler");
+            }
 
-            ArgumentNullException.ThrowIfNull(genericTarget);
+            if (genericTarget == null)
+            {
+                throw new ArgumentNullException("genericTarget");
+            }
 
             if (_routedEvent == null)
             {
@@ -328,6 +342,7 @@ namespace System.Windows
 
         internal bool UserInitiated
         {
+            [FriendAccessAllowed] // Also used by Framework.
             get
             {
                 if (_flags [UserInitiatedIndex])

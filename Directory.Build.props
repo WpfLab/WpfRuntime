@@ -1,13 +1,13 @@
 <Project>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
   <PropertyGroup>
     <RepositoryName>wpf</RepositoryName>
-    <PackageProjectUrl>https://github.com/dotnet/wpf</PackageProjectUrl>
     <WindowsDesktopARM64Support>true</WindowsDesktopARM64Support>
-    <TargetFramework>net10.0</TargetFramework>
-    <TargetFrameworkVersion>10.0</TargetFrameworkVersion>
-    <BuildWithNetFrameworkHostedCompiler>true</BuildWithNetFrameworkHostedCompiler>
-    <PublishWindowsPdb>false</PublishWindowsPdb>
-    <TestRunnerName>XUnitV3</TestRunnerName>
+    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworkVersion>8.0</TargetFrameworkVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <!-- Normalize $(TestWpfArcadeSdkPath) by appending a '\' to it if one is missing -->
   <PropertyGroup Condition="'$(TestWpfArcadeSdkPath)'!=''">
@@ -26,21 +26,100 @@
     <WpfArcadeSdkTargets>$(WpfArcadeSdkPath)Sdk\Sdk.targets</WpfArcadeSdkTargets>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <AfterMicrosoftNETSdkTargets>$(MSBuildThisFileDirectory)eng\vs-workaround.targets</AfterMicrosoftNETSdkTargets>
-  </PropertyGroup>
-
-  <!-- Add net10.0 support when using an MSBuild version that doesn't include it natively -->
-  <ItemGroup Condition="!$([MSBuild]::VersionGreaterThanOrEquals($(MSBuildVersion), '18.0.0'))">
-    <SupportedNETCoreAppTargetFramework Include=".NETCoreApp,Version=v10.0"
-                                        DisplayName=".NET 10.0"
-                                        Alias="net10.0" />
-  </ItemGroup>
-
-  <Import Project="$(WpfArcadeSdkProps)"
+  <!--<Import Project="$(WpfArcadeSdkProps)"
           Condition="Exists('$(WpfArcadeSdkProps)') And Exists('$(WpfArcadeSdkTargets)')"/>
 
   <Import Sdk="Microsoft.DotNet.Arcade.Wpf.Sdk"
           Project="Sdk.props"
-          Condition="!Exists('$(WpfArcadeSdkProps)') Or !Exists('$(WpfArcadeSdkTargets)')"/>
+          Condition="!Exists('$(WpfArcadeSdkProps)') Or !Exists('$(WpfArcadeSdkTargets)')"/>-->
+
+  <PropertyGroup>
+    <!--
+      Dynamically discover the highest installed WindowsDesktop.App.Ref pack
+      instead of hardcoding version numbers.  GetDirectories returns a sorted
+      array; the last element is the highest version.  We use a SetProperty
+      target with an inline C# task to pick it robustly.
+    -->
+    <_WpfRefPackBase Condition="'$(WpfWindowsDesktopReferencePath)' == ''">$(ProgramFiles)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\</_WpfRefPackBase>
+    <_WpfRefPackTfm>net8.0</_WpfRefPackTfm>
+  </PropertyGroup>
+
+  <!--
+    Discover the highest installed WindowsDesktop.App.Ref version at evaluation
+    time using an inline task.  Runs before any project content is evaluated so
+    that $(WpfWindowsDesktopReferencePath) is available to all imports.
+  -->
+  <UsingTask TaskName="DiscoverWpfRefPack" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <BasePath ParameterType="System.String" Required="true" />
+      <Tfm ParameterType="System.String" Required="true" />
+      <Result ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        Result = "";
+        if (!Directory.Exists(BasePath))
+            return true;
+
+        // Prefer 8.0.x versions, fall back to any version
+        var dirs = Directory.GetDirectories(BasePath, "8.0.*");
+        if (dirs.Length == 0)
+            dirs = Directory.GetDirectories(BasePath);
+
+        if (dirs.Length == 0)
+            return true;
+
+        // Directory.GetDirectories returns sorted paths; pick the last (highest version)
+        var best = dirs[dirs.Length - 1];
+        var refDir = Path.Combine(best, "ref", Tfm);
+        if (Directory.Exists(refDir))
+            Result = refDir + Path.DirectorySeparatorChar;
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="DiscoverWpfRefPackPath"
+          BeforeTargets="CollectPackageReferences;Restore;ResolveAssemblyReferences;AddWindowsDesktopReferences">
+    <DiscoverWpfRefPack Condition="'$(WpfWindowsDesktopReferencePath)' == ''"
+                        BasePath="$(_WpfRefPackBase)"
+                        Tfm="$(_WpfRefPackTfm)">
+      <Output TaskParameter="Result" PropertyName="WpfWindowsDesktopReferencePath" />
+    </DiscoverWpfRefPack>
+    <Message Condition="'$(WpfWindowsDesktopReferencePath)' != ''"
+             Text="WpfWindowsDesktopReferencePath resolved to: $(WpfWindowsDesktopReferencePath)"
+             Importance="low" />
+  </Target>
+
+  <PropertyGroup>
+    <WpfSourceDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\</WpfSourceDir>
+    <WpfSharedDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\Shared\</WpfSharedDir>
+    <WpfCommonDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\Common\</WpfCommonDir>
+    <WpfCycleBreakersDir>$(MSBuildThisFileDirectory)cycle-breakers\</WpfCycleBreakersDir>
+    <WpfCodeGenDir>$(MSBuildThisFileDirectory)eng\WpfArcadeSdk\tools\</WpfCodeGenDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <WpfNativePlatform Condition="'$(Platform)' == 'AnyCPU' or '$(Platform)' == 'Any CPU'">x64</WpfNativePlatform>
+    <WpfNativePlatform Condition="'$(WpfNativePlatform)' == ''">$(Platform)</WpfNativePlatform>
+    <PerlCommand Condition="'$(PerlCommand)' == ''">perl</PerlCommand>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <VCTargetsPath Condition="'$(VCTargetsPath)' == ''">$([MSBuild]::GetVsInstallRoot())\Common7\IDE\VC\VCTargets\</VCTargetsPath>
+  </PropertyGroup>
+
+  <!-- warning MSB4011: 无法再次导入“C:\lindexi\Code\WpfReorganize_dotnetcampus\eng\Versions.props”。可能已在“C:\Users\lindexi\.nuget\packages\microsoft.dotnet.arcade.sdk\10.0.0-beta.25411.109\tools\DefaultVersions.props (15,3)”处导入过它。这很可能是生成创作错误。将忽略此后续导入。[C:\lindexi\Code\WpfReorganize_dotnetcampus\src\Microsoft.DotNet.Wpf\src\System.Xaml\System.Xaml.csproj] -->
+  <!-- <Import Project="$(MSBuildThisFileDirectory)eng\Versions.props"/> -->
+
+  <!-- 以下为生成多语言资源所需，详细请看 [dotnet 读 WPF 源代码 学习使用 Microsoft.DotNet.Arcade.Sdk 处理代码里的多语言 - lindexi - 博客园](https://www.cnblogs.com/lindexi/p/19198245 ) -->
+  <Import Project="$(MSBuildThisFileDirectory)eng\WpfArcadeSdk\SystemResources.props"/>
+
+  <PropertyGroup>
+    <DefineConstants Condition="$(TargetFramework.StartsWith('net4'))">$(DefineConstants);NETFX</DefineConstants>
+  </PropertyGroup>
 </Project>

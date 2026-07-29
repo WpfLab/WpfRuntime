@@ -1,9 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Windows;
+using MS.Internal;
 
 namespace System.Windows.Controls
 {
@@ -76,7 +80,7 @@ namespace System.Windows.Controls
             {
                 throw new ArgumentException(
                     SR.DataGridLength_Infinity,
-                    nameof(value));
+                    "value");
             }
 
             if (type != DataGridLengthUnitType.Auto &&
@@ -87,21 +91,21 @@ namespace System.Windows.Controls
             {
                 throw new ArgumentException(
                     SR.DataGridLength_InvalidType, 
-                    nameof(type));
+                    "type");
             }
 
             if (Double.IsInfinity(desiredValue))
             {
                 throw new ArgumentException(
                     SR.DataGridLength_Infinity, 
-                    nameof(desiredValue));
+                    "desiredValue");
             }
 
             if (Double.IsInfinity(displayValue))
             {
                 throw new ArgumentException(
                     SR.DataGridLength_Infinity,
-                    nameof(displayValue));
+                    "displayValue");
             }
 
             _unitValue = (type == DataGridLengthUnitType.Auto) ? AutoValue : value;
@@ -153,8 +157,9 @@ namespace System.Windows.Controls
         /// and unit type as oCompare.</returns>
         public override bool Equals(object obj)
         {
-            if (obj is DataGridLength l)
+            if (obj is DataGridLength)
             {
+                DataGridLength l = (DataGridLength)obj;
                 return this == l;
             }
             else

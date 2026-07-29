@@ -1,11 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description: Wrapper that allows ReaderWriterLockSlim to detect potential 
 //              error conditions like (i) calling into Dispose() of the lock object
 //              when it is already held, and (ii) attempts to acquire the lock after 
 //              it has been disposed.
 
+
+using System;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Threading;
@@ -257,7 +262,10 @@ namespace MS.Internal
         /// </remarks>
         private bool ExecuteWithinLockInternal(Action lockAcquire, Action lockRelease, ref object result, Delegate criticalAction, params object[] args)
         {
-            ArgumentNullException.ThrowIfNull(criticalAction);
+            if (criticalAction == null)
+            {
+                throw new ArgumentNullException(nameof(criticalAction));
+            }
 
             bool lockAcquired = false;
             DispatcherProcessingDisabled? dispatcherProcessingDisabled = null;
@@ -307,7 +315,10 @@ namespace MS.Internal
                     }
                     finally
                     {
-                        dispatcherProcessingDisabled?.Dispose();
+                        if (dispatcherProcessingDisabled != null)
+                        {
+                            dispatcherProcessingDisabled.Value.Dispose();
+                        }
                     }
                 }
             }
@@ -331,7 +342,10 @@ namespace MS.Internal
 
         protected virtual void Dispose(bool disposing)
         {
-            ObjectDisposedException.ThrowIf(_disposed, typeof(ReaderWriterLockSlimWrapper));
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(ReaderWriterLockSlimWrapper));
+            }
 
             try
             {
@@ -383,7 +397,7 @@ namespace MS.Internal
         private readonly LockRecursionPolicy _lockRecursionPolicy;
         private readonly bool _disableDispatcherProcessingWhenNoRecursion;
 
-        private bool _disposed;
+        bool _disposed;
 
         #endregion Private Fields
     }

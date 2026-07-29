@@ -1,9 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //#define TRACE
 
+using System;
+using System.Diagnostics;
+using System.Collections;
+using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+using System.Threading;
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
 using MS.Win32.Penimc;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -35,10 +48,13 @@ namespace System.Windows.Input
 
         /////////////////////////////////////////////////////////////////////
 
-        private void DisposeHelper()
+        void DisposeHelper()
         {
             // NOTE: PenThreadWorker deals with already being disposed logic.
-            _penThreadWorker?.Dispose();
+            if (_penThreadWorker != null)
+            {
+                _penThreadWorker.Dispose();
+            }
             GC.KeepAlive(this);
         }
 

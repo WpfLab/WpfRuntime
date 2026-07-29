@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Base class for all the Win32 and office Controls.
 //
@@ -35,12 +36,15 @@
 using System;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
+using System.ComponentModel;
+using System.Collections;
+using System.Runtime.InteropServices;
 
 namespace MS.Internal.AutomationProxies
 {
     // Base Class for all the Windows Control that supports navigation.
     // Implements the default behaviors
-    internal class ProxyFragment : ProxySimple, IRawElementProviderFragmentRoot
+    class ProxyFragment : ProxySimple, IRawElementProviderFragmentRoot
     {
         // ------------------------------------------------------
         //
@@ -184,7 +188,7 @@ namespace MS.Internal.AutomationProxies
         #region Internal Methods
 
         // Recursively Raise an Event for all the sub elements
-        internal override void RecursiveRaiseEvents (object idProp, AutomationPropertyChangedEventArgs e)
+        override internal void RecursiveRaiseEvents (object idProp, AutomationPropertyChangedEventArgs e)
         {
             AutomationInteropProvider.RaiseAutomationPropertyChangedEvent (this, e);
             for (ProxySimple el = GetFirstChild (); el != null; el = this.GetNextSibling (el))
@@ -204,7 +208,7 @@ namespace MS.Internal.AutomationProxies
         #region Protected Methods
 
         // This method will return the leaf element that lives in ProxyFragment at Point(x,y)
-        internal static ProxySimple DrillDownFragment(ProxyFragment fragment, int x, int y)
+        static internal ProxySimple DrillDownFragment(ProxyFragment fragment, int x, int y)
         {
             System.Diagnostics.Debug.Assert(fragment != null, "DrillDownFragment: starting point is null");
 

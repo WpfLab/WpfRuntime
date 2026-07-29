@@ -1,11 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Input.Manipulations;
+using System.Windows.Media;
+
+using MS.Internal;
 
 namespace System.Windows.Input
 {
@@ -26,7 +34,10 @@ namespace System.Windows.Input
             bool isInInertia)
             : base(manipulationDevice, timestamp)
         {
-            ArgumentNullException.ThrowIfNull(initialVelocities);
+            if (initialVelocities == null)
+            {
+                throw new ArgumentNullException("initialVelocities");
+            }
 
             RoutedEvent = Manipulation.ManipulationInertiaStartingEvent;
 
@@ -41,9 +52,15 @@ namespace System.Windows.Input
         /// </summary>
         protected override void InvokeEventHandler(Delegate genericHandler, object genericTarget)
         {
-            ArgumentNullException.ThrowIfNull(genericHandler);
+            if (genericHandler == null)
+            {
+                throw new ArgumentNullException("genericHandler");
+            }
 
-            ArgumentNullException.ThrowIfNull(genericTarget);
+            if (genericTarget == null)
+            {
+                throw new ArgumentNullException("genericTarget");
+            }
 
             if (RoutedEvent == Manipulation.ManipulationInertiaStartingEvent)
             {
@@ -191,7 +208,10 @@ namespace System.Windows.Input
         [Browsable(false)]
         public void SetInertiaParameter(InertiaParameters2D parameter)
         {
-            ArgumentNullException.ThrowIfNull(parameter);
+            if (parameter == null)
+            {
+                throw new ArgumentNullException("parameter");
+            }
 
             if (_inertiaParameters == null)
             {

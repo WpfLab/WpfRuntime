@@ -1,6 +1,10 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
+//
 // Description: 3D quaternion implementation. 
 //
 //              See spec at http://avalon/medialayer/Specifications/Avalon3D%20API%20Spec.mht 
@@ -19,8 +23,24 @@
 //        Don't mess it up!
 
 using MS.Internal;
-
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.ComponentModel.Design.Serialization;
+using System.Windows.Markup;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
 // These types are aliased to match the unamanaged names used in interop
+using BOOL = System.Boolean;
+using WORD = System.UInt16;
+using Float = System.Single;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Media3D
 {
@@ -447,7 +467,7 @@ namespace System.Windows.Media.Media3D
         /// <returns>SLERP-interpolated quaternion between the two given quaternions.</returns>
         public static Quaternion Slerp(Quaternion from, Quaternion to, double t)
         {
-            return Slerp(from, to, t, useShortestPath: true);
+            return Slerp(from, to, t, /* useShortestPath = */ true);
         }
         
         /// <summary>
@@ -571,7 +591,7 @@ namespace System.Windows.Media.Media3D
 
         #region Private Methods
             
-        private static double Max(double a, double b, double c, double d)
+        static private double Max(double a, double b, double c, double d)
         {
             if (b > a)
                 a = b;
@@ -732,10 +752,8 @@ namespace System.Windows.Media.Media3D
         private static Quaternion GetIdentity()
         {
             // This code is called only once.
-            Quaternion q = new Quaternion(0, 0, 0, 1)
-            {
-                IsDistinguishedIdentity = true
-            };
+            Quaternion q = new Quaternion(0,0,0,1);
+            q.IsDistinguishedIdentity = true;
             return q;
         }
         

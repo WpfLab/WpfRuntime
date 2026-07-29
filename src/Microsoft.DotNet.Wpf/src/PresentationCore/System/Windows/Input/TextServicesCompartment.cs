@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
@@ -7,17 +8,25 @@
 //
 //
 
+using System;
 using System.Runtime.InteropServices;
-using MS.Win32;
+using System.Windows.Threading;
 
-namespace System.Windows.Input
+using System.Security;
+using System.Diagnostics;
+using System.Collections;
+using MS.Utility;
+using MS.Win32;
+using MS.Internal;
+
+namespace System.Windows.Input 
 {
     //------------------------------------------------------
     //
     //  TextServicesCompartment class
     //
     //------------------------------------------------------
-
+ 
     internal class TextServicesCompartment
     {
         //------------------------------------------------------
@@ -29,7 +38,7 @@ namespace System.Windows.Input
         internal TextServicesCompartment(Guid guid, UnsafeNativeMethods.ITfCompartmentMgr compartmentmgr)
         {
             _guid = guid;
-            _compartmentmgr = compartmentmgr;
+            _compartmentmgr = new SecurityCriticalData<UnsafeNativeMethods.ITfCompartmentMgr>(compartmentmgr);
             _cookie = UnsafeNativeMethods.TF_INVALID_COOKIE;
         }
 
@@ -124,7 +133,7 @@ namespace System.Windows.Input
         internal UnsafeNativeMethods.ITfCompartment GetITfCompartment()
         {
             UnsafeNativeMethods.ITfCompartment itfcompartment;
-            _compartmentmgr.GetCompartment(ref _guid, out itfcompartment);
+            _compartmentmgr.Value.GetCompartment(ref _guid, out itfcompartment);
             return itfcompartment;
         }
 
@@ -206,7 +215,7 @@ namespace System.Windows.Input
                 if (compartment == null)
                     return;
 
-                compartment.SetValue(tid: 0, ref value);
+                compartment.SetValue(0 /* clientid */, ref value);
                 Marshal.ReleaseComObject(compartment);
             }
         }
@@ -227,7 +236,7 @@ namespace System.Windows.Input
                 
         #region Private Fields
 
-        private readonly UnsafeNativeMethods.ITfCompartmentMgr _compartmentmgr;
+        private readonly SecurityCriticalData<UnsafeNativeMethods.ITfCompartmentMgr> _compartmentmgr;
 
         private Guid _guid;
         private int _cookie;

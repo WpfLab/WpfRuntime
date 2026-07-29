@@ -1,5 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Diagnostics;
+using MS.Internal.PresentationCore;
+using MS.Utility;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows
 {
@@ -52,7 +59,10 @@ namespace System.Windows
             Type handlerType,
             Type ownerType)
         {
-            ArgumentNullException.ThrowIfNull(name);
+            if (name == null)
+            {
+                throw new ArgumentNullException("name"); 
+            }
 
             if (routingStrategy != RoutingStrategy.Tunnel && 
                 routingStrategy != RoutingStrategy.Bubble &&
@@ -61,9 +71,15 @@ namespace System.Windows
                 throw new System.ComponentModel.InvalidEnumArgumentException("routingStrategy", (int)routingStrategy, typeof(RoutingStrategy));
             }
 
-            ArgumentNullException.ThrowIfNull(handlerType);
+            if (handlerType == null)
+            {
+                throw new ArgumentNullException("handlerType"); 
+            }
 
-            ArgumentNullException.ThrowIfNull(ownerType);
+            if (ownerType == null)
+            {
+                throw new ArgumentNullException("ownerType"); 
+            }
 
             if (GlobalEventManager.GetRoutedEventFromName(name, ownerType, false) != null)
             {
@@ -146,11 +162,20 @@ namespace System.Windows
             Delegate handler,
             bool handledEventsToo)
         {
-            ArgumentNullException.ThrowIfNull(classType);
-
-            ArgumentNullException.ThrowIfNull(routedEvent);
-
-            ArgumentNullException.ThrowIfNull(handler);
+            if (classType == null)
+            {
+                throw new ArgumentNullException("classType"); 
+            }
+            
+            if (routedEvent == null)
+            {
+                throw new ArgumentNullException("routedEvent"); 
+            }
+            
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler"); 
+            }
 
             if (!typeof(UIElement).IsAssignableFrom(classType) &&
                 !typeof(ContentElement).IsAssignableFrom(classType) &&
@@ -213,8 +238,11 @@ namespace System.Windows
         /// <ExternalAPI/>        
         public static RoutedEvent[] GetRoutedEventsForOwner(Type ownerType)
         {
-            ArgumentNullException.ThrowIfNull(ownerType);
-
+            if (ownerType == null)
+            {
+                throw new ArgumentNullException("ownerType"); 
+            }
+            
             return GlobalEventManager.GetRoutedEventsForOwner(ownerType);
         }
 
@@ -243,12 +271,19 @@ namespace System.Windows
         /// <returns>
         ///     Matching <see cref="RoutedEvent"/>
         /// </returns>
+        [FriendAccessAllowed]
         internal static RoutedEvent GetRoutedEventFromName(string name, Type ownerType)
         {
-            ArgumentNullException.ThrowIfNull(name);
-
-            ArgumentNullException.ThrowIfNull(ownerType);
-
+            if (name == null)
+            {
+                throw new ArgumentNullException("name"); 
+            }
+            
+            if (ownerType == null)
+            {
+                throw new ArgumentNullException("ownerType"); 
+            }
+            
             return GlobalEventManager.GetRoutedEventFromName(name, ownerType, true);
         }
 

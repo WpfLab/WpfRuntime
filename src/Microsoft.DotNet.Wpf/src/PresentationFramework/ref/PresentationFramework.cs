@@ -1,6 +1,3 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 namespace Microsoft.Win32
 {
     public abstract partial class CommonDialog
@@ -974,11 +971,8 @@ namespace System.Windows
     {
         OK = 0,
         OKCancel = 1,
-        AbortRetryIgnore = 2,
         YesNoCancel = 3,
         YesNo = 4,
-        RetryCancel = 5,
-        CancelTryContinue = 6,
     }
     public enum MessageBoxImage
     {
@@ -1006,13 +1000,8 @@ namespace System.Windows
         None = 0,
         OK = 1,
         Cancel = 2,
-        Abort = 3,
-        Retry = 4,
-        Ignore = 5,
         Yes = 6,
         No = 7,
-        TryAgain = 10,
-        Continue = 11,
     }
     [System.Windows.Markup.ContentPropertyAttribute("Setters")]
     public sealed partial class MultiDataTrigger : System.Windows.TriggerBase, System.Windows.Markup.IAddChild
@@ -5117,18 +5106,6 @@ namespace System.Windows.Controls
         public override bool ShouldSerializeContent() { throw null; }
         public void StopLoading() { }
     }
-    internal partial class ColumnDefinitionCollectionConverter : System.ComponentModel.TypeConverter
-    {
-        public override bool CanConvertFrom(System.ComponentModel.ITypeDescriptorContext typeDescriptorContext, System.Type sourceType) { throw null; }
-        public override bool CanConvertTo(System.ComponentModel.ITypeDescriptorContext typeDescriptorContext, System.Type destinationType) { throw null; }
-        public override object ConvertFrom(System.ComponentModel.ITypeDescriptorContext typeDescriptorContext, System.Globalization.CultureInfo cultureInfo, object source) { throw null; }
-    }
-    internal partial class RowDefinitionCollectionConverter : System.ComponentModel.TypeConverter
-    {
-        public override bool CanConvertFrom(System.ComponentModel.ITypeDescriptorContext typeDescriptorContext, System.Type sourceType) { throw null; }
-        public override bool CanConvertTo(System.ComponentModel.ITypeDescriptorContext typeDescriptorContext, System.Type destinationType) { throw null; }
-        public override object ConvertFrom(System.ComponentModel.ITypeDescriptorContext typeDescriptorContext, System.Globalization.CultureInfo cultureInfo, object source) { throw null; }
-    }
     public partial class Grid : System.Windows.Controls.Panel, System.Windows.Markup.IAddChild
     {
         public static readonly System.Windows.DependencyProperty ColumnProperty;
@@ -5138,13 +5115,11 @@ namespace System.Windows.Controls
         public static readonly System.Windows.DependencyProperty RowSpanProperty;
         public static readonly System.Windows.DependencyProperty ShowGridLinesProperty;
         public Grid() { }
-        [System.ComponentModel.TypeConverterAttribute(typeof(System.Windows.Controls.ColumnDefinitionCollectionConverter))]
         [System.ComponentModel.DesignerSerializationVisibilityAttribute(System.ComponentModel.DesignerSerializationVisibility.Content)]
-        public System.Windows.Controls.ColumnDefinitionCollection ColumnDefinitions { get { throw null; } set { } }
+        public System.Windows.Controls.ColumnDefinitionCollection ColumnDefinitions { get { throw null; } }
         protected internal override System.Collections.IEnumerator LogicalChildren { get { throw null; } }
-        [System.ComponentModel.TypeConverterAttribute(typeof(System.Windows.Controls.RowDefinitionCollectionConverter))]
         [System.ComponentModel.DesignerSerializationVisibilityAttribute(System.ComponentModel.DesignerSerializationVisibility.Content)]
-        public System.Windows.Controls.RowDefinitionCollection RowDefinitions { get { throw null; } set { } }
+        public System.Windows.Controls.RowDefinitionCollection RowDefinitions { get { throw null; } }
         public bool ShowGridLines { get { throw null; } set { } }
         protected override int VisualChildrenCount { get { throw null; } }
         protected override System.Windows.Size ArrangeOverride(System.Windows.Size arrangeSize) { throw null; }
@@ -7764,9 +7739,9 @@ namespace System.Windows.Controls
     public partial class VirtualizingStackPanel : System.Windows.Controls.VirtualizingPanel, System.Windows.Controls.Primitives.IScrollInfo
     {
         public static readonly System.Windows.RoutedEvent CleanUpVirtualizedItemEvent;
-        public static new readonly System.Windows.DependencyProperty IsVirtualizingProperty;
+        public static readonly new System.Windows.DependencyProperty IsVirtualizingProperty;
         public static readonly System.Windows.DependencyProperty OrientationProperty;
-        public static new readonly System.Windows.DependencyProperty VirtualizationModeProperty;
+        public static readonly new System.Windows.DependencyProperty VirtualizationModeProperty;
         public VirtualizingStackPanel() { }
         protected override bool CanHierarchicallyScrollAndVirtualizeCore { get { throw null; } }
         [System.ComponentModel.DefaultValueAttribute(false)]

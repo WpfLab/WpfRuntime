@@ -1,0 +1,9 @@
+﻿<Application x:Class="WpfDemo.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:WpfDemo"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
+    </Application.Resources>
+</Application>

@@ -1,12 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: ScrollBar Proxy
 
 using System;
+using System.Collections;
+using System.Text;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
 using System.Windows;
 using MS.Win32;
 
@@ -16,7 +20,7 @@ namespace MS.Internal.AutomationProxies
     // This code works for vertical and horizontal scroll bars
     // both as part of the none client area or as a stand alone
     // scroll bar control.
-    internal class WindowsScrollBar: ProxyHwnd, IRangeValueProvider
+    class WindowsScrollBar: ProxyHwnd, IRangeValueProvider
     {
         // ------------------------------------------------------
         //
@@ -64,7 +68,11 @@ namespace MS.Internal.AutomationProxies
         private static IRawElementProviderSimple Create(IntPtr hwnd, int idChild)
         {
             // Something is wrong if idChild is not zero 
-            ArgumentOutOfRangeException.ThrowIfNotEqual(idChild, 0);
+            if (idChild != 0)
+            {
+                System.Diagnostics.Debug.Assert (idChild == 0, "Invalid Child Id, idChild != 0");
+                throw new ArgumentOutOfRangeException("idChild", idChild, SR.ShouldBeZero);
+            }
 
             return new WindowsScrollBar(hwnd, null, idChild, NativeMethods.SB_CTL);
         }
@@ -98,7 +106,10 @@ namespace MS.Internal.AutomationProxies
             {
                 // raise events for the children 
                 ProxySimple scrollBarBit = WindowsScrollBarBits.CreateFromChildId(hwnd, wtv, idChild, NativeMethods.SB_CTL);
-                scrollBarBit?.DispatchEvents(eventId, idProp, idObject, idChild);
+                if (scrollBarBit != null)
+                {
+                    scrollBarBit.DispatchEvents(eventId, idProp, idObject, idChild);
+                }
             }
         }
 
@@ -406,12 +417,12 @@ namespace MS.Internal.AutomationProxies
 
         #region Internal Methods
 
-        internal static bool HasVerticalScrollBar (IntPtr hwnd)
+        static internal bool HasVerticalScrollBar (IntPtr hwnd)
         {
             return Misc.IsBitSet(Misc.GetWindowStyle(hwnd), NativeMethods.WS_VSCROLL);
         }
 
-        internal static bool HasHorizontalScrollBar (IntPtr hwnd)
+        static internal bool HasHorizontalScrollBar (IntPtr hwnd)
         {
             return Misc.IsBitSet(Misc.GetWindowStyle(hwnd), NativeMethods.WS_HSCROLL);
         }
@@ -565,10 +576,8 @@ namespace MS.Internal.AutomationProxies
 
         private int GetScrollValue (ScrollBarInfo info)
         {
-            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo
-            {
-                fMask = NativeMethods.SIF_ALL
-            };
+            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo ();
+            si.fMask = NativeMethods.SIF_ALL;
             si.cbSize = Marshal.SizeOf (si.GetType ());
 
             if (!Misc.GetScrollInfo(_hwnd, _sbFlag, ref si))
@@ -618,10 +627,8 @@ namespace MS.Internal.AutomationProxies
                 throw new ElementNotEnabledException();
             }
 
-            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo
-            {
-                fMask = NativeMethods.SIF_ALL
-            };
+            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo ();
+            si.fMask = NativeMethods.SIF_ALL;
             si.cbSize = Marshal.SizeOf (si.GetType ());
 
             if (!Misc.GetScrollInfo(_hwnd, _sbFlag, ref si))

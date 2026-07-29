@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Glyphs element for fixed text rendering.
@@ -7,14 +8,27 @@
 // Spec: Glyphs element and GlyphRun object.htm
 //
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Windows.Threading;
+
+
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Navigation;
 using System.Windows.Markup;
 using System.ComponentModel;
-using MS.Internal.Utility;
+using System.Security;
 
-using BuildInfo = MS.Internal.PresentationFramework.BuildInfo;
+using MS.Utility;
+using MS.Internal.Navigation;
+using MS.Internal.Utility;
+using MS.Internal;
+
+using BuildInfo=MS.Internal.PresentationFramework.BuildInfo;
 
 namespace System.Windows.Documents
 {
@@ -97,7 +111,8 @@ namespace System.Windows.Documents
         {
             base.ArrangeOverride(finalSize);
 
-            _measurementGlyphRun?.ComputeInkBoundingBox();
+            if (_measurementGlyphRun != null)
+                _measurementGlyphRun.ComputeInkBoundingBox();
 
             return finalSize;
         }

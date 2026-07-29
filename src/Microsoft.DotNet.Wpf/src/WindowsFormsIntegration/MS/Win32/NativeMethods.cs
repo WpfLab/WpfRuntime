@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System;
+// See the LICENSE file in the project root for more information.
 
 //***************************************************************************
 // DO NOT adjust the visibility of anything in these files.  They are marked
@@ -10,6 +9,8 @@ using System;
 
 namespace MS.Win32
 {
+    using System;
+
     internal static class NativeMethods
     {
         public static IntPtr HWND_TOP = IntPtr.Zero;

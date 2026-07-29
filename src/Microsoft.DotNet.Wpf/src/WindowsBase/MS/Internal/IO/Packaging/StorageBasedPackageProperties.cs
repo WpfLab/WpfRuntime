@@ -1,6 +1,9 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  This class provides access to the package properties of an RM-protected OPC
 //  document. The "package properties" are a subset of the standard OLE property
@@ -20,13 +23,27 @@
 //  It is the responsibility of the application to ensure that the properties in
 //  the OLE property set streams are synchronized with the properties in the
 //  OPC package.
+//
+//
+//
+//
+//
 
+using System;
 using System.IO;
 using System.IO.Packaging;
 using System.Runtime.InteropServices;
-using System.Text;
+using System.Windows;
+using System.Security; // SecurityCritical
+using System.Text;      //For UTF-8 encoding.
+
+using MS.Internal;
+using MS.Internal.Interop;
 using MS.Internal.IO.Packaging.CompoundFile;
-using MS.Internal.WindowsBase;
+using MS.Internal.WindowsBase;  //for SecurityHelper.
+
+// Enable presharp pragma warning suppress directives.
+#pragma warning disable 1634, 1691
 
 namespace MS.Internal.IO.Packaging
 {
@@ -582,7 +599,7 @@ namespace MS.Internal.IO.Packaging
                 }
                 finally
                 {
-                    // "by design" ignored return value
+#pragma warning suppress 6031 // suppressing a "by design" ignored return value
                     SafeNativeCompoundFileMethods.SafePropVariantClear(ref vals[0]);
                 }
             }
@@ -693,7 +710,7 @@ namespace MS.Internal.IO.Packaging
                     pszVal = Marshal.StringToCoTaskMemAnsi(inputString);
                     string convertedString = Marshal.PtrToStringAnsi(pszVal);
 
-                    if (!string.Equals(inputString, convertedString, StringComparison.Ordinal))
+                    if (String.CompareOrdinal(inputString, convertedString) != 0)
                     {
                         // The string is not an ASCII string. Use UTF-8 to encode it!
                         byte[] byteArray = UTF8Encoding.UTF8.GetBytes(inputString);
@@ -730,7 +747,7 @@ namespace MS.Internal.IO.Packaging
                 {
                     throw new ArgumentException(
                                 SR.Format(SR.InvalidDocumentPropertyType, propVal.GetType().ToString()),
-                                nameof(propVal));
+                                "propVal");
                 }
 
                 //
@@ -823,7 +840,7 @@ namespace MS.Internal.IO.Packaging
                     default:
                         throw new ArgumentException(
                             SR.Format(SR.UnknownDocumentProperty, fmtid.ToString(), propId),
-                            nameof(propId)
+                            "propId"
                             );
                 }
             }
@@ -842,7 +859,7 @@ namespace MS.Internal.IO.Packaging
                     default:
                         throw new ArgumentException(
                             SR.Format(SR.UnknownDocumentProperty, fmtid.ToString(), propId),
-                            nameof(propId)
+                            "propId"
                             );
                 }
             }
@@ -850,7 +867,7 @@ namespace MS.Internal.IO.Packaging
             {
                 throw new ArgumentException(
                     SR.Format(SR.UnknownDocumentProperty, fmtid.ToString(), propId),
-                    nameof(fmtid)
+                    "fmtid"
                     );
             }
         }

@@ -1,9 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace System.Windows.Automation.Peers
@@ -39,7 +47,10 @@ namespace System.Windows.Automation.Peers
                 if (value)
                     return;
                 AutomationPeer wrapperPeer = WrapperPeer;
-                wrapperPeer?.AncestorsInvalid = false;
+                if (wrapperPeer != null)
+                {
+                    wrapperPeer.AncestorsInvalid = false;
+                }
             }
         }
 
@@ -446,7 +457,7 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected override AutomationHeadingLevel GetHeadingLevelCore()
+        override protected AutomationHeadingLevel GetHeadingLevelCore()
         {
             AutomationPeer wrapperPeer = WrapperPeer;
             AutomationHeadingLevel headingLevel = AutomationHeadingLevel.None;
@@ -893,15 +904,18 @@ namespace System.Windows.Automation.Peers
 
         #endregion IVirtualizedItemProvider
 
-        internal override bool IsDataItemAutomationPeer()
+        override internal bool IsDataItemAutomationPeer()
         {
             return true;
         }
 
-        internal override void AddToParentProxyWeakRefCache()
+        override internal void AddToParentProxyWeakRefCache()
         {
             CalendarAutomationPeer owningCalendarPeer = FrameworkElementAutomationPeer.CreatePeerForElement(OwningCalendar) as CalendarAutomationPeer;
-            owningCalendarPeer?.AddProxyToWeakRefStorage(this.ElementProxyWeakReference, this);
+            if (owningCalendarPeer != null)
+            {
+                owningCalendarPeer.AddProxyToWeakRefStorage(this.ElementProxyWeakReference, this);
+            }
         }
 
         #region Private Methods

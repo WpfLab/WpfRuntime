@@ -1,10 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 // Description: DataObject.Copying event arguments
 //
+
+using System;
 
 namespace System.Windows
 {
@@ -45,7 +48,10 @@ namespace System.Windows
         public DataObjectCopyingEventArgs(IDataObject dataObject, bool isDragDrop) //
             : base(System.Windows.DataObject.CopyingEvent, isDragDrop)
         {
-            ArgumentNullException.ThrowIfNull(dataObject);
+            if (dataObject == null)
+            {
+                throw new ArgumentNullException("dataObject");
+            }
 
             _dataObject = dataObject;
         }

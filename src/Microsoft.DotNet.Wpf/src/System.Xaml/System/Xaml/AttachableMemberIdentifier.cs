@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xaml
 {
     public class AttachableMemberIdentifier : IEquatable<AttachableMemberIdentifier>
     {
-        private readonly Type declaringType;
-        private readonly string memberName;
+        readonly Type declaringType;
+        readonly string memberName;
 
         public AttachableMemberIdentifier(Type declaringType, string memberName)
         {
@@ -43,7 +42,6 @@ namespace System.Xaml
             {
                 return right is null;
             }
-
             return left.Equals(right);
         }
 
@@ -54,7 +52,7 @@ namespace System.Xaml
 
         public bool Equals(AttachableMemberIdentifier other)
         {
-            if (other is null)
+            if (other == null)
             {
                 return false;
             }
@@ -64,19 +62,19 @@ namespace System.Xaml
 
         public override int GetHashCode()
         {
-            int a = declaringType is null ? 0 : declaringType.GetHashCode();
-            int b = memberName is null ? 0 : memberName.GetHashCode();
+            int a = declaringType == null ? 0 : declaringType.GetHashCode();
+            int b = memberName == null ? 0 : memberName.GetHashCode();
             return ((a << 5) + a) ^ b;
         }
 
         public override string ToString()
         {
-            if (declaringType is null)
+            if (declaringType == null)
             {
                 return memberName;
             }
 
-            return $"{declaringType}.{memberName}";
+            return declaringType.ToString() + "." + memberName;
         }
     }
 }

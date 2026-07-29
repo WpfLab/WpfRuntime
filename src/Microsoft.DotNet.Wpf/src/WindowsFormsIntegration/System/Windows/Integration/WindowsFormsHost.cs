@@ -1,6 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
+        
 using MS.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -20,6 +22,7 @@ using SWC = System.Windows.Controls;
 using SWF = System.Windows.Forms;
 using SWM = System.Windows.Media;
 using SWI = System.Windows.Input;
+using System.Collections.Generic;
 using System.Windows.Input;
 
 namespace System.Windows.Forms.Integration
@@ -64,7 +67,7 @@ namespace System.Windows.Forms.Integration
         /// <summary>
         /// Notifies Avalon that focus has moved within this WindowsFormsHost.
         /// </summary>
-        private void NotifyFocusWithinHost()
+        void NotifyFocusWithinHost()
         {
             DependencyObject focusScope = GetFocusScopeForElement(this);
             if (null != focusScope)
@@ -179,7 +182,10 @@ namespace System.Windows.Forms.Integration
         {
             if (newScale != _currentScale)
             {
-                Child?.Scale(new System.Drawing.SizeF((float)(newScale.X / _currentScale.X), (float)(newScale.Y / _currentScale.Y)));
+                if (Child != null)
+                {
+                    Child.Scale(new System.Drawing.SizeF((float)(newScale.X / _currentScale.X), (float)(newScale.Y / _currentScale.Y)));
+                }
             }
             Vector returnScale = newScale;
             returnScale.X = (newScale.X == 0) ? _currentScale.X : newScale.X;
@@ -284,7 +290,7 @@ namespace System.Windows.Forms.Integration
             returnSize.Height = Math.Min(returnSize.Height, finalSize.Height);
             if (HostContainerInternal.BackgroundImage != null)
             {
-                _propertyMap.OnPropertyChanged(this, nameof(Background), this.Background);
+                _propertyMap.OnPropertyChanged(this, "Background", this.Background);
             }
             return returnSize;
         }
@@ -308,6 +314,8 @@ namespace System.Windows.Forms.Integration
             }
             set
             {
+#pragma warning disable 1634, 1691
+#pragma warning disable 56526
                 Control oldChild = Child;
                 SWF.Form form = value as SWF.Form;
                 if (form != null)
@@ -334,6 +342,7 @@ namespace System.Windows.Forms.Integration
                     _priorConstraint = new Size(double.NaN, double.NaN);
                 }
                 OnChildChanged(oldChild);
+#pragma warning restore 1634, 1691, 56526
             }
         }
 
@@ -369,7 +378,7 @@ namespace System.Windows.Forms.Integration
 
         #region Rendering
 
-        private static Brush defaultBrush = SystemColors.WindowBrush;
+        static Brush defaultBrush = SystemColors.WindowBrush;
         /// <summary>
         ///     Manually searches up the parent tree to find the first FrameworkElement that
         ///     has a non-null background, and returns that Brush.
@@ -412,7 +421,7 @@ namespace System.Windows.Forms.Integration
                 if (_cachedBackbrush != parentBrush)
                 {
                     _cachedBackbrush = parentBrush;
-                    _propertyMap.OnPropertyChanged(this, nameof(Background), parentBrush);
+                    _propertyMap.OnPropertyChanged(this, "Background", parentBrush);
                 }
             }
         }
@@ -454,7 +463,7 @@ namespace System.Windows.Forms.Integration
         private DummyNativeWindow _dummyNativeWindow;
         private class DummyNativeWindow : NativeWindow, IDisposable
         {
-            private WindowsFormsHost _host;
+            WindowsFormsHost _host;
             public DummyNativeWindow(WindowsFormsHost host)
             { _host = host; }
 
@@ -478,7 +487,10 @@ namespace System.Windows.Forms.Integration
             // for 4.0 compat, create a Winforms.NativeWindow to swallow exceptions during WndProc
             if (!CoreCompatibilityPreferences.TargetsAtLeast_Desktop_V4_5)
             {
-                _dummyNativeWindow?.Dispose();
+                if (_dummyNativeWindow != null)
+                {
+                    _dummyNativeWindow.Dispose();
+                }
                 _dummyNativeWindow = new DummyNativeWindow(this);
                 _dummyNativeWindow.AssignHandle(hwndParent.Handle);
             }
@@ -502,10 +514,13 @@ namespace System.Windows.Forms.Integration
             //This line shouldn't be necessary since the list cleans itself, but it's good to be tidy.
             ApplicationInterop.ThreadWindowsFormsHostList.Remove(this);
 
-            HostContainerInternal?.Dispose();
+            if (HostContainerInternal != null)
+            {
+                HostContainerInternal.Dispose();
+            }
         }
 
-        private void ApplyAllProperties(object sender, RoutedEventArgs e)
+        void ApplyAllProperties(object sender, RoutedEventArgs e)
         {
             _propertyMap.ApplyAll();
         }
@@ -527,13 +542,19 @@ namespace System.Windows.Forms.Integration
                     {
                         try
                         {
-                            _dummyNativeWindow?.Dispose();
+                            if (_dummyNativeWindow != null)
+                            {
+                                _dummyNativeWindow.Dispose();
+                            }
                             _hostContainerInternal.Dispose();
                             this.Loaded -= new RoutedEventHandler(ApplyAllProperties);
                         }
                         finally
                         {
-                            Child?.Dispose();
+                            if (Child != null)
+                            {
+                                Child.Dispose();
+                            }
                         }
                     }
                 }
@@ -689,7 +710,10 @@ namespace System.Windows.Forms.Integration
             base.OnPropertyChanged(e);
 
             // Invoke method currently set to handle this event
-            _propertyMap?.OnPropertyChanged(this, e.Property.Name, e.NewValue);
+            if (_propertyMap != null)
+            {
+                _propertyMap.OnPropertyChanged(this, e.Property.Name, e.NewValue);
+            }
         }
 
         /// <summary>
@@ -774,7 +798,7 @@ namespace System.Windows.Forms.Integration
             {
                 if (_host == null) { return base.Cursor; }
 
-                if (!_host.PropertyMap.PropertyMappedToEmptyTranslator(nameof(Cursor)))
+                if (!_host.PropertyMap.PropertyMappedToEmptyTranslator("Cursor"))
                 { return base.Cursor; }
 
                 bool forceCursorMapped = _host.PropertyMap.PropertyMappedToEmptyTranslator("ForceCursor");
@@ -866,7 +890,7 @@ namespace System.Windows.Forms.Integration
                     tabStopOnly = true;
                     break;
                 default:
-                    Debug.Fail("Unknown FocusNavigationDirection");
+                    Debug.Assert(false, "Unknown FocusNavigationDirection");
                     break;
             }
             _focusTarget.Enabled = false;
@@ -1092,7 +1116,10 @@ namespace System.Windows.Forms.Integration
         {
             MethodInfo methodInfo = typeof(SWF.Control).GetMethod("OnParentRightToLeftChanged", BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(EventArgs) }, null);
             Debug.Assert(methodInfo != null, "Couldn't find OnParentRightToLeftChanged method!");
-            methodInfo?.Invoke(control, new object[] { EventArgs.Empty });
+            if (methodInfo != null)
+            {
+                methodInfo.Invoke(control, new object[] { EventArgs.Empty });
+            }
         }
     }
     #endregion WinFormsAdapter

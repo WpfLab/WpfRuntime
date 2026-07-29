@@ -1,7 +1,10 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
+using System;
 using System.Windows.Media;
+using System.Windows.Appearance;
+
+using MS.Internal;
+using Microsoft.Win32;
+using System.Runtime.InteropServices;
 using MS.Internal.WindowsRuntime.Windows.UI.ViewManagement;
 
 

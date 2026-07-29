@@ -1,7 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//   Specifies the serialization flags per property
+//
+//
+
+using System;
 using System.ComponentModel;
+using MS.Internal.WindowsBase;
 
 namespace System.Windows.Markup
 {
@@ -39,12 +49,12 @@ namespace System.Windows.Markup
         {
             get { return _designerSerializationOptions; }
         }
-
+        
         #endregion Properties
 
         #region Data
 
-        private DesignerSerializationOptions _designerSerializationOptions;
+        DesignerSerializationOptions _designerSerializationOptions;
 
         #endregion Data
     }

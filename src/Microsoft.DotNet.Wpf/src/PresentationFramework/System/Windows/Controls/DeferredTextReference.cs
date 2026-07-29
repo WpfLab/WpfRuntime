@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Documents;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Proxy object passed to the property system to delay load
@@ -10,6 +9,8 @@ using System.Windows.Documents;
 
 namespace System.Windows.Controls
 {
+    using System.Windows.Documents;
+
     // Proxy object passed to the property system to delay load TextProperty
     // values.
     internal class DeferredTextReference : DeferredReference
@@ -43,7 +44,10 @@ namespace System.Windows.Controls
             string s = TextRangeBase.GetTextInternal(_textContainer.Start, _textContainer.End);
 
             TextBox tb = _textContainer.Parent as TextBox;
-            tb?.OnDeferredTextReferenceResolved(this, s);
+            if (tb != null)
+            {
+                tb.OnDeferredTextReferenceResolved(this, s);
+            }
 
             return s;
         }

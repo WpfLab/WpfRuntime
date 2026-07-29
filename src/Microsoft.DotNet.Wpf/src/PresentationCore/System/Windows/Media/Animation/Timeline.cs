@@ -1,14 +1,25 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
 
 #if DEBUG
 #define TRACE
 #endif // DEBUG
 
 using MS.Internal;
+using MS.Utility;
+using System;
 using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+using System.Windows;
 using System.Windows.Markup;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Animation
 {
@@ -209,7 +220,7 @@ namespace System.Windows.Media.Animation
 
             if (newValue < 0 || newValue > 1 || double.IsNaN(newValue))
             {
-                throw new ArgumentException(SR.Timing_InvalidArgAccelAndDecel, nameof(value));
+                throw new ArgumentException(SR.Timing_InvalidArgAccelAndDecel, "value");
             }
 
             return true;
@@ -373,7 +384,7 @@ namespace System.Windows.Media.Animation
         /// <seealso cref="Timeline.DesiredFrameRateProperty" />
         public static Int32? GetDesiredFrameRate(Timeline timeline)
         {
-            ArgumentNullException.ThrowIfNull(timeline);
+            if (timeline == null) { throw new ArgumentNullException("timeline"); }
 
             return (Int32?)timeline.GetValue(DesiredFrameRateProperty);
         }
@@ -386,7 +397,7 @@ namespace System.Windows.Media.Animation
         /// <seealso cref="Timeline.DesiredFrameRateProperty" />
         public static void SetDesiredFrameRate(Timeline timeline, Int32? desiredFrameRate)
         {
-            ArgumentNullException.ThrowIfNull(timeline);
+            if (timeline == null) { throw new ArgumentNullException("timeline"); }
 
             timeline.SetValue(DesiredFrameRateProperty, desiredFrameRate);
         }
@@ -598,7 +609,7 @@ namespace System.Windows.Media.Animation
 
             if (newValue <= 0 || newValue > double.MaxValue || double.IsNaN(newValue))
             {
-                throw new ArgumentException(SR.Timing_InvalidArgFinitePositive, nameof(value));
+                throw new ArgumentException(SR.Timing_InvalidArgFinitePositive, "value");
             }
 
             return true;
@@ -680,7 +691,7 @@ namespace System.Windows.Media.Animation
         /// <returns>
         /// A Duration quantity representing the natural duration.
         /// </returns>
-        protected internal Duration GetNaturalDuration(Clock clock)
+        internal protected Duration GetNaturalDuration(Clock clock)
         {
             return GetNaturalDurationCore(clock);
         }
@@ -961,10 +972,8 @@ namespace System.Windows.Media.Animation
         /// </summary>
         internal void Dump()
         {
-            System.Text.StringBuilder builder = new System.Text.StringBuilder
-            {
-                Capacity = 1024
-            };
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            builder.Capacity = 1024;
             builder.Append("========================================\n");
             builder.Append("Timelines rooted at Timeline ");
             builder.Append(_debugIdentity);
@@ -1085,7 +1094,7 @@ namespace System.Windows.Media.Animation
                 builder.Append(", AccelerationRatio = ");
                 builder.Append(AccelerationRatio);
             }
-            if (AutoReverse)
+            if (AutoReverse != false)
             {
                 builder.Append(", AutoReverse = ");
                 builder.Append(AutoReverse);

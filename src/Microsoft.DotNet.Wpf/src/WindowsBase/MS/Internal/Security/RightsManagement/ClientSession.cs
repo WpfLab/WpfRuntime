@@ -1,15 +1,36 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  These are the internal helpers required to call into unmanaged 
 //  Promethium Rights Management SDK APIs 
+//
+//
+//
+//
 
+using System;
 using System.Collections;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Security;
 using System.Security.RightsManagement;
+using SecurityHelper = MS.Internal.WindowsBase.SecurityHelper;
 using System.Text;
-using System.Globalization;
-using Microsoft.Win32;
+using System.Globalization;                 // For CultureInfo
+// for Invariant
+using System.Windows;                       // for SR and SR
+
+using MS.Internal;
+using System.Runtime.InteropServices;
+
+using Microsoft.Win32; // for Registry and RegistryKey classes 
+
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.Security.RightsManagement
 {
@@ -129,7 +150,10 @@ namespace MS.Internal.Security.RightsManagement
                                 // Dispose call back handler 
                                 try
                                 {
-                                    _callbackHandler?.Dispose();
+                                    if (_callbackHandler != null)
+                                    {
+                                        _callbackHandler.Dispose();
+                                    }
                                 }
                                 finally
                                 {
@@ -326,7 +350,7 @@ namespace MS.Internal.Security.RightsManagement
                                     (certificateType != EnumerateLicenseFlags.RevocationListLid) &&
                                     (certificateType != EnumerateLicenseFlags.Expired))
             {
-                throw new ArgumentOutOfRangeException(nameof(certificateType));
+                throw new ArgumentOutOfRangeException("certificateType");
             }
 
             List<string> certificateIdList = new List<string>();
@@ -467,7 +491,7 @@ namespace MS.Internal.Security.RightsManagement
                 (enumerateLicenseFlags != EnumerateLicenseFlags.RevocationListLid) &&
                 (enumerateLicenseFlags != EnumerateLicenseFlags.Expired))
             {
-                throw new ArgumentOutOfRangeException(nameof(enumerateLicenseFlags));
+                throw new ArgumentOutOfRangeException("enumerateLicenseFlags");
             }
 
             int hr = 0;
@@ -639,7 +663,7 @@ namespace MS.Internal.Security.RightsManagement
 
                 foreach (string oldElement in oldList)
                 {
-                    if (string.Equals(newElement, oldElement, StringComparison.Ordinal))
+                    if (String.CompareOrdinal(newElement, oldElement) == 0)
                     {
                         matchFound = true;
                         break;
@@ -768,13 +792,12 @@ namespace MS.Internal.Security.RightsManagement
             List<RightNameExpirationInfoPair> unboundRightsList =
                         GetRightsInfoFromUseLicense(serializedUseLicense, out rightsGroupName);
 
-            BoundLicenseParams boundLicenseParams = new BoundLicenseParams
-            {
-                uVersion = 0,
-                hEnablingPrincipal = 0,
-                hSecureStore = 0,
-                wszRightsGroup = rightsGroupName
-            };
+            BoundLicenseParams boundLicenseParams = new BoundLicenseParams();
+
+            boundLicenseParams.uVersion = 0;
+            boundLicenseParams.hEnablingPrincipal = 0;
+            boundLicenseParams.hSecureStore = 0;
+            boundLicenseParams.wszRightsGroup = rightsGroupName;
 
             string contentId;
             string contentIdType;
@@ -862,7 +885,7 @@ namespace MS.Internal.Security.RightsManagement
             }
             else
             {
-                Debug.Fail("Invalid Authentication type");
+                Debug.Assert(false,"Invalid Authentication type");
                 return null;            // retail build might be ale to recover from SDK defaults                  
             }
         }
@@ -914,7 +937,8 @@ namespace MS.Internal.Security.RightsManagement
             else
             {
                 object keyValue = key.GetValue(null); // this should get the default value
-                if (keyValue is string stringValue)
+                string stringValue = keyValue as string;
+                if (stringValue != null)
                 {
                     return new Uri(stringValue);
                 }
@@ -971,17 +995,15 @@ namespace MS.Internal.Security.RightsManagement
 
             if (url != null)
             {
-                activationServer = new ActivationServerInfo
-                {
-                    PubKey = null,
-                    Url = url.AbsoluteUri,  // We are using Uri class as a basic validation mechanism. These URIs come from unmanaged 
-                                            // code libraries and go back as parameters into the unmanaged code libraries. 
-                                            // We use AbsoluteUri property as means of verifying that it is actually an absolute and 
-                                            // well formed Uri. If by any chance it happened to be a relative URI, an exception will 
-                                            // be thrown here. This will perform the necessary escaping.
+                activationServer = new ActivationServerInfo();
+                activationServer.PubKey = null;
+                activationServer.Url = url.AbsoluteUri;  // We are using Uri class as a basic validation mechanism. These URIs come from unmanaged 
+                // code libraries and go back as parameters into the unmanaged code libraries. 
+                // We use AbsoluteUri property as means of verifying that it is actually an absolute and 
+                // well formed Uri. If by any chance it happened to be a relative URI, an exception will 
+                // be thrown here. This will perform the necessary escaping.
 
-                    Version = NativeConstants.DrmCallbackVersion
-                };
+                activationServer.Version = NativeConstants.DrmCallbackVersion;
             }
 
             int hr = SafeNativeMethods.DRMActivate(
@@ -1052,7 +1074,7 @@ namespace MS.Internal.Security.RightsManagement
             return ownerLicense.ToString();
         }
 
-        private static string GetElementFromCertificateChain(
+        static private string GetElementFromCertificateChain(
             string certificateChain, int index)
         {
             Invariant.Assert(index >= 0);
@@ -1123,7 +1145,7 @@ namespace MS.Internal.Security.RightsManagement
         // in the CHK build only. So we should also preserve this method only in the CHK build.
         // Otherwise FxCop will complain: AvoidUncalledPrivateCode in the FREE built DLL.
 #if DEBUG
-        private static string GetBoundLicenseStringAttribute(
+        static private string GetBoundLicenseStringAttribute(
             SafeRightsManagementHandle queryHandle,
             string attributeType, 
             uint attributeIndex)
@@ -1160,7 +1182,7 @@ namespace MS.Internal.Security.RightsManagement
         }
 #endif
 
-        private static DateTime GetUnboundLicenseDateTimeAttribute(
+        static private DateTime GetUnboundLicenseDateTimeAttribute(
             SafeRightsManagementQueryHandle queryHandle,
             string attributeType,
             uint attributeIndex,
@@ -1197,7 +1219,7 @@ namespace MS.Internal.Security.RightsManagement
         // in the CHK build only. So we should also preserve this method only in the CHK build.
         // Otherwise FxCop will complain: AvoidUncalledPrivateCode in the FREE built DLL.
 #if DEBUG
-        private static DateTime GetBoundLicenseDateTimeAttribute(
+        static private DateTime GetBoundLicenseDateTimeAttribute(
             SafeRightsManagementHandle queryHandle,
             string attributeType,
             uint attributeIndex,
@@ -1309,7 +1331,9 @@ namespace MS.Internal.Security.RightsManagement
                         0);
 
                     // We recognise authentication type Windows everything else is assumed to be Passport 
-                    if (string.Equals(AuthenticationType.Windows.ToString(), authenticationType, StringComparison.OrdinalIgnoreCase))
+                    if (String.CompareOrdinal(
+                        AuthenticationType.Windows.ToString().ToUpper(CultureInfo.InvariantCulture),
+                        authenticationType.ToUpper(CultureInfo.InvariantCulture)) == 0)
                     {
                         return new ContentUser(name, AuthenticationType.Windows);
                     }
@@ -1447,7 +1471,7 @@ namespace MS.Internal.Security.RightsManagement
         }
 
         #region Debug
-        // We currently don’t use these two methods, but they may be useful in the future. 
+        // We currently don�t use these two methods, but they may be useful in the future. 
         // So we keep them in the debug build only, and changed them from internal methods 
         // to private methods to remove them from asmmeta files.
 #if DEBUG
@@ -1829,7 +1853,7 @@ namespace MS.Internal.Security.RightsManagement
                                                 distributionPointQueryHandle,
                                                 NativeConstants.QUERY_OBJECTTYPE,
                                                 0);
-                        if (string.Equals(addressType, distributionPointType, StringComparison.Ordinal))
+                        if (String.CompareOrdinal(addressType, distributionPointType) == 0)
                         {
                             nameAttributeValue = GetUnboundLicenseStringAttribute(
                                                 distributionPointQueryHandle,
@@ -1912,7 +1936,7 @@ namespace MS.Internal.Security.RightsManagement
 
             for (int i = 0; i < _rightEnums.Length; i++)
             {
-                if (string.Equals(_rightNames[i], rightName, StringComparison.Ordinal))
+                if (String.CompareOrdinal(_rightNames[i], rightName) == 0)
                 {
                     return _rightEnums[i];
                 }
@@ -1932,7 +1956,7 @@ namespace MS.Internal.Security.RightsManagement
                 }
             }
 
-            throw new ArgumentOutOfRangeException(nameof(right));
+            throw new ArgumentOutOfRangeException("right");
         }
 
         private List<CryptoProvider> CryptoProviderList
@@ -1952,7 +1976,9 @@ namespace MS.Internal.Security.RightsManagement
         /// </summary>
         private void CheckDisposed()
         {
-            ObjectDisposedException.ThrowIf((_hSession == null) ||(_hSession.IsInvalid), typeof(SecureEnvironment));
+            if ((_hSession == null) ||
+                (_hSession.IsInvalid))
+                throw new ObjectDisposedException("SecureEnvironment");
         }
 
         private const string _defaultUserName = @"DefaultUser@DefaultDomain.DefaultCom";     // RM default user name
@@ -1969,7 +1995,7 @@ namespace MS.Internal.Security.RightsManagement
         private SafeRightsManagementSessionHandle _hSession = null; // if this is zero, we are disposed
 
         // we preserve this so ve can remove certificates in case of temp activation             
-        private UserActivationMode _userActivationMode = UserActivationMode.Permanent;
+        UserActivationMode _userActivationMode = UserActivationMode.Permanent;
 
         private SafeRightsManagementEnvironmentHandle _envHandle = null;  // if this is null, we are disposed
 
@@ -1979,7 +2005,7 @@ namespace MS.Internal.Security.RightsManagement
 
         // the following 2 arrays are used for parsing and converting between String and Enum; 
         // therefore, the entries in the _rightEnums and the _rightNames must be in the same order. 
-        private static ContentRight[] _rightEnums = {
+        static private ContentRight[] _rightEnums = {
                                         ContentRight.View,
                                         ContentRight.Edit,
                                         ContentRight.Print,
@@ -1995,7 +2021,7 @@ namespace MS.Internal.Security.RightsManagement
                                         ContentRight.Export};
 
         // entries in this array must be in UPPERCASE, as we make such assumption during parsing                                         
-        private static string[] _rightNames = {
+        static private string[] _rightNames = {
                                         "VIEW",
                                         "EDIT",
                                         "PRINT",

@@ -10,9 +10,6 @@
 
     <system:Double x:Key="ListViewItemMinHeight">40</system:Double>
     <system:Double x:Key="ListViewItemMinWidth">88</system:Double>
-    <Thickness x:Key="ListViewItemPadding">16,0,12,0</Thickness>
-    <Thickness x:Key="ListViewItemMargin">0,0,0,2</Thickness>
-
 
 
     <Style x:Key="DefaultListViewItemStyle" TargetType="{x:Type ListViewItem}">
@@ -22,8 +19,8 @@
         <Setter Property="MinHeight" Value="{StaticResource ListViewItemMinHeight}" />
         <Setter Property="MinWidth" Value="{StaticResource ListViewItemMinWidth}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Margin" Value="{DynamicResource ListViewItemMargin}" />
-        <Setter Property="Padding" Value="{DynamicResource ListViewItemPadding}" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Padding" Value="16,0,12,0" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="OverridesDefaultStyle" Value="True" />
@@ -47,7 +44,7 @@
                             <Rectangle
                                 x:Name="ActiveRectangle"
                                 Width="3"
-                                Height="16"
+                                Height="18"
                                 Margin="0"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
@@ -69,61 +66,6 @@
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ActiveRectangle" Property="Visibility" Value="Visible" />
                             <Setter TargetName="Border" Property="Background" Value="{DynamicResource ListViewItemBackgroundPointerOver}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style x:Key="{x:Static GridView.GridViewItemContainerStyleKey}" TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
-        <Setter Property="Padding" Value="6,0,6,0" />
-        <Setter Property="MinHeight" Value="{DynamicResource GridViewItemContainerMinHeight}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ListViewItem">
-                    <Border x:Name="RootBorder" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
-                            BorderThickness="{TemplateBinding BorderThickness}" 
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding Border.CornerRadius}"
-                            SnapsToDevicePixels="True">
-                        <Grid x:Name="ContentGrid">
-                            <!-- remove the HorizontalAlignment due to HeaderRowPresenter does not have the ability to align to center or right -->
-                            <GridViewRowPresenter
-                                Margin="{TemplateBinding Padding}"
-                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                            <Rectangle
-                                x:Name="ActiveRectangle"
-                                Width="3"
-                                Height="16"
-                                Margin="0"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Fill="{DynamicResource ListViewItemPillFillBrush}"
-                                RadiusX="2"
-                                RadiusY="2"
-                                Visibility="Collapsed" />
-                        </Grid>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource ListViewItemBackgroundPointerOver}" />
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource ListViewItemBackgroundPointerOver}" />
-                            <Setter TargetName="ActiveRectangle" Property="Visibility" Value="Visible" />
-                        </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsSelected" Value="True" />
-                                <Condition Property="IsMouseOver" Value="True" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="RootBorder" Property="Background" Value="{DynamicResource ListViewItemBackgroundSelectedPointerOver}" />
-                        </MultiTrigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="RootBorder" Property="Opacity" Value="{DynamicResource ListViewItemDisabledThemeOpacity}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

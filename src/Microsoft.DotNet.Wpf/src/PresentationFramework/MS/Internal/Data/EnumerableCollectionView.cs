@@ -1,14 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Collection view over an IEnumerable.
 //
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Threading;
 using System.Windows;
 using System.Windows.Data;
 
@@ -492,7 +497,7 @@ namespace MS.Internal.Data
 
         // Load a snapshot of the contents of the IEnumerable into the
         // ObservableCollection.
-        private void LoadSnapshot(IEnumerable source)
+        void LoadSnapshot(IEnumerable source)
         {
             // force currency off the collection (gives user a chance to save dirty information)
             OnCurrentChanging();
@@ -525,7 +530,7 @@ namespace MS.Internal.Data
                 OnPropertyChanged(new PropertyChangedEventArgs(CurrentItemPropertyName));
         }
 
-        private void LoadSnapshotCore(IEnumerable source)
+        void LoadSnapshotCore(IEnumerable source)
         {
             IEnumerator ie = source.GetEnumerator();
 
@@ -549,13 +554,16 @@ namespace MS.Internal.Data
 
             // we're done with an enumerator - dispose it
             IDisposable id = ie as IDisposable;
-            id?.Dispose();
+            if (id != null)
+            {
+                id.Dispose();
+            }
         }
 
         // if the IEnumerable has changed, bring the snapshot up to date.
         // (This isn't necessary if the IEnumerable is also INotifyCollectionChanged
         // because we keep the snapshot in sync incrementally.)
-        private void EnsureSnapshot()
+        void EnsureSnapshot()
         {
             if (_pollForChanges)
             {
@@ -588,24 +596,24 @@ namespace MS.Internal.Data
             }
         }
 
-        private IDisposable IgnoreViewEvents()
+        IDisposable IgnoreViewEvents()
         {
             return new IgnoreViewEventsHelper(this);
         }
 
-        private void BeginIgnoreEvents()
+        void BeginIgnoreEvents()
         {
             ++_ignoreEventsLevel;
         }
 
-        private void EndIgnoreEvents()
+        void EndIgnoreEvents()
         {
             --_ignoreEventsLevel;
         }
 
         // forward events from the internal view to our own listeners
 
-        private void _OnPropertyChanged(object sender, PropertyChangedEventArgs args)
+        void _OnPropertyChanged(object sender, PropertyChangedEventArgs args)
         {
             if (_ignoreEventsLevel != 0)
                 return;
@@ -613,7 +621,7 @@ namespace MS.Internal.Data
             OnPropertyChanged(args);
         }
 
-        private void _OnViewChanged(object sender, NotifyCollectionChangedEventArgs args)
+        void _OnViewChanged(object sender, NotifyCollectionChangedEventArgs args)
         {
             if (_ignoreEventsLevel != 0)
                 return;
@@ -621,7 +629,7 @@ namespace MS.Internal.Data
             OnCollectionChanged(args);
         }
 
-        private void _OnCurrentChanging(object sender, CurrentChangingEventArgs args)
+        void _OnCurrentChanging(object sender, CurrentChangingEventArgs args)
         {
             if (_ignoreEventsLevel != 0)
                 return;
@@ -629,7 +637,7 @@ namespace MS.Internal.Data
             OnCurrentChanging();
         }
 
-        private void _OnCurrentChanged(object sender, EventArgs args)
+        void _OnCurrentChanged(object sender, EventArgs args)
         {
             if (_ignoreEventsLevel != 0)
                 return;
@@ -647,14 +655,14 @@ namespace MS.Internal.Data
         //
         //------------------------------------------------------
 
-        private ListCollectionView _view;
-        private ObservableCollection<object> _snapshot;
-        private IEnumerator _trackingEnumerator;
-        private int _ignoreEventsLevel;
-        private bool _pollForChanges;
-        private bool _warningHasBeenRaised;
+        ListCollectionView _view;
+        ObservableCollection<object> _snapshot;
+        IEnumerator _trackingEnumerator;
+        int _ignoreEventsLevel;
+        bool _pollForChanges;
+        bool _warningHasBeenRaised;
 
-        private class IgnoreViewEventsHelper : IDisposable
+        class IgnoreViewEventsHelper : IDisposable
         {
             public IgnoreViewEventsHelper(EnumerableCollectionView parent)
             {
@@ -664,13 +672,16 @@ namespace MS.Internal.Data
 
             public void Dispose()
             {
-                _parent?.EndIgnoreEvents();
-                _parent = null;
+                if (_parent != null)
+                {
+                    _parent.EndIgnoreEvents();
+                    _parent = null;
+                }
 
                 GC.SuppressFinalize(this);
             }
 
-            private EnumerableCollectionView _parent;
+            EnumerableCollectionView _parent;
         }
         #endregion Private Data
     }

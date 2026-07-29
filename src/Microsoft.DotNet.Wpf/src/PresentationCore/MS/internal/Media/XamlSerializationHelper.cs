@@ -1,36 +1,39 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Utilities for converting types to custom Binary format
 //
 
 using System;
-using System.IO;
+using System.IO; 
+using System.Collections; 
+using System.Globalization; // CultureInfo 
 
 #if PRESENTATION_CORE
-using MS.Internal.PresentationCore;
+using MS.Internal.PresentationCore;     // FriendAccessAllowed
 #elif PRESENTATIONFRAMEWORK
 using MS.Internal.PresentationFramework; 
-#endif
+#endif 
 
 #if PBTCOMPILER
-using System.Collections.Generic;
+using System.Collections.Generic; 
 using TypeConverterHelper = MS.Internal.Markup;
 
 namespace MS.Internal.Markup
 #else
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Media3D;
+using System.Windows; 
+using System.Windows.Media ; 
+using System.Windows.Media.Media3D; 
 using TypeConverterHelper = System.Windows.Markup;
 
 namespace MS.Internal.Media
 #endif
 {
-#if PBTCOMPILER
+#if PBTCOMPILER     
 
-
+    
     //
     // Internal class used during serialization of Point3D, or Vectors. 
     //
@@ -76,9 +79,9 @@ namespace MS.Internal.Media
             }
         }
         
-        private double _x ;
-        private double _y ;
-        private double _z ; 
+        double _x ;
+        double _y ; 
+        double _z ; 
             
     }
 
@@ -185,6 +188,9 @@ namespace MS.Internal.Media
         /// <remarks>
         /// This is called ONLY from the Parser and is not a general public method.  
         /// </remarks>
+#if !PBTCOMPILER        
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
+#endif        
         internal static bool SerializePoint3D(BinaryWriter writer, string stringValues)
         {
 #if PBTCOMPILER            
@@ -217,6 +223,9 @@ namespace MS.Internal.Media
         /// <remarks>
         /// This is called ONLY from the Parser and is not a general public method.  
         /// </remarks>
+#if !PBTCOMPILER        
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
+#endif        
         internal static bool SerializeVector3D(BinaryWriter writer, string stringValues)
         {
 #if PBTCOMPILER            
@@ -249,6 +258,9 @@ namespace MS.Internal.Media
         /// <remarks>
         /// This is called ONLY from the Parser and is not a general public method.  
         /// </remarks>
+#if !PBTCOMPILER        
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
+#endif        
         internal static bool SerializePoint(BinaryWriter writer, string stringValue)
         {
 #if PBTCOMPILER            
@@ -349,7 +361,7 @@ namespace MS.Internal.Media
         internal static double ReadScaledInteger(BinaryReader reader )
         {
             double value = (double) reader.ReadInt32(); 
-            value *= inverseScaleFactor ; 
+            value = value * inverseScaleFactor ; 
 
             return value ; 
         }

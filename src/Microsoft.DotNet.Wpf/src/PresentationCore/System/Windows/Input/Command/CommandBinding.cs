@@ -1,10 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
 
-namespace System.Windows.Input
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Markup;
+using MS.Internal; 
+using System.Security; 
+
+namespace System.Windows.Input 
 {
     /// <summary>
     /// CommandBinding - Command-EventHandlers map
@@ -52,8 +61,7 @@ namespace System.Windows.Input
         /// <param name="canExecute">Handler associated with determining if the command can execute.</param>
         public CommandBinding(ICommand command, ExecutedRoutedEventHandler executed, CanExecuteRoutedEventHandler canExecute)
         {
-            ArgumentNullException.ThrowIfNull(command);
-            _command = command;
+            _command = command ?? throw new ArgumentNullException(nameof(command));
 
             if (executed is not null)
             {
@@ -76,11 +84,7 @@ namespace System.Windows.Input
         public ICommand Command
         {
             get => _command;
-            set
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                _command = value;
-            }
+            set => _command = value ?? throw new ArgumentNullException(nameof(value));
         }
 
         #endregion

@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Runtime.InteropServices;
-using MS.Internal.PrintWin32Thunk;
+// See the LICENSE file in the project root for more information.
 
 /*++
 All rights reserved.
@@ -11,6 +9,12 @@ All rights reserved.
 
 namespace MS.Internal.Printing.Configuration
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using System.Security;
+    using MS.Internal.PrintWin32Thunk;
+
     /// <summary>
     /// Helper class to obtain printer capabilities from the WINSPOOL API
     /// </summary>
@@ -35,8 +39,11 @@ namespace MS.Internal.Printing.Configuration
 
         public void Release()
         {
-            this._devMode?.Dispose();
-            this._devMode = null;
+            if (this._devMode != null)
+            {
+                this._devMode.Dispose();
+                this._devMode = null;
+            }
         }
 
         /// <summary>
@@ -589,7 +596,7 @@ namespace MS.Internal.Printing.Configuration
 
         private DevModeFields _dmFields;
 
-        private SafeMemoryHandle _devMode;
+        SafeMemoryHandle _devMode;
 
         #endregion
     }

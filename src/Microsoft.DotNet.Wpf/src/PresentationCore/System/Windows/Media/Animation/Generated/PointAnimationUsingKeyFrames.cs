@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,11 +9,21 @@
 // Please see MilCodeGen.html for more information.
 //
 
+using MS.Internal;
 using MS.Internal.KnownBoxes;
+
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Markup;
-using System.Windows.Media.Media3D;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Media3D;   
+
+using SR=MS.Internal.PresentationCore.SR;
+
 using MS.Internal.PresentationCore;
 
 namespace System.Windows.Media.Animation
@@ -112,7 +123,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void CloneCore(Freezable sourceFreezable)
         {
-            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames)sourceFreezable;
+            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames) sourceFreezable;
             base.CloneCore(sourceFreezable);
 
             CopyCommon(sourceAnimation, /* isCurrentValueClone = */ false);
@@ -123,7 +134,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void CloneCurrentValueCore(Freezable sourceFreezable)
         {
-            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames)sourceFreezable;
+            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames) sourceFreezable;
             base.CloneCurrentValueCore(sourceFreezable);
 
             CopyCommon(sourceAnimation, /* isCurrentValueClone = */ true);
@@ -134,7 +145,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void GetAsFrozenCore(Freezable source)
         {
-            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames)source;
+            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames) source;
             base.GetAsFrozenCore(source);
 
             CopyCommon(sourceAnimation, /* isCurrentValueClone = */ false);
@@ -145,7 +156,7 @@ namespace System.Windows.Media.Animation
         /// </summary>
         protected override void GetCurrentValueAsFrozenCore(Freezable source)
         {
-            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames)source;
+            PointAnimationUsingKeyFrames sourceAnimation = (PointAnimationUsingKeyFrames) source;
             base.GetCurrentValueAsFrozenCore(source);
 
             CopyCommon(sourceAnimation, /* isCurrentValueClone = */ true);
@@ -202,7 +213,10 @@ namespace System.Windows.Media.Animation
         {
             WritePreamble();
 
-            ArgumentNullException.ThrowIfNull(child);
+            if (child == null)
+            {
+                throw new ArgumentNullException("child");
+            }
 
             AddChild(child);
 
@@ -224,7 +238,7 @@ namespace System.Windows.Media.Animation
             }
             else
             {        
-                throw new ArgumentException(SR.Animation_ChildMustBeKeyFrame, nameof(child));
+                throw new ArgumentException(SR.Animation_ChildMustBeKeyFrame, "child");
             }
         }
 
@@ -243,7 +257,10 @@ namespace System.Windows.Media.Animation
         /// null.</exception>
         void IAddChild.AddText(string childText)
         {
-            ArgumentNullException.ThrowIfNull(childText);
+            if (childText == null)
+            {
+                throw new ArgumentNullException("childText");
+            }
 
             AddText(childText);
         }
@@ -520,7 +537,10 @@ namespace System.Windows.Media.Animation
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 WritePreamble();
 
@@ -791,10 +811,8 @@ namespace System.Windows.Media.Animation
                                 hasPacedKeyTimes = true;
                             }
 
-                            KeyTimeBlock block = new KeyTimeBlock
-                            {
-                                BeginIndex = index
-                            };
+                            KeyTimeBlock block = new KeyTimeBlock();
+                            block.BeginIndex = index;
 
                             // NOTE: We don't want to go all the way up to the
                             // last frame because if it is Uniform or Paced its
@@ -814,11 +832,11 @@ namespace System.Windows.Media.Animation
                                     || type == KeyTimeType.TimeSpan)
                                 {
                                     break;
-                                }
+                                }   
                                 else if (type == KeyTimeType.Paced)
                                 {
                                     hasPacedKeyTimes = true;
-                                }
+                                }                                
                             }
 
                             Debug.Assert(index < keyFrameCount, 
@@ -984,7 +1002,7 @@ namespace System.Windows.Media.Animation
                 {
                     index++;
                 }
-            }
+            } 
             while (index < maxKeyFrameIndex);
         }
 

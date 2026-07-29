@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -7,16 +8,24 @@
 //
 //
 
+using System;
+using System.Security;
+using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 using MS.Utility;
+using MS.Internal;
 using MS.Internal.Generic;
 using MS.Internal.FontCache;
 using MS.Internal.FontFace;
 using MS.Internal.TextFormatting;
 using System.Runtime.InteropServices;
+
+using FontFace = MS.Internal.FontFace;
 
 
 namespace MS.Internal.Shaping
@@ -214,7 +223,7 @@ namespace MS.Internal.Shaping
                 typefaceIndexSpanRider.At(ichRange + ich);
                 if((int)typefaceIndexSpanRider.CurrentValue < 0)
                 {
-                    Debug.Fail("Invalid font face spans");
+                    Debug.Assert(false, "Invalid font face spans");
                     return;
                 }
 
@@ -605,7 +614,7 @@ namespace MS.Internal.Shaping
                 else if (!string.IsNullOrEmpty(targetFamilyName))
                 {
                     // The base Uri used for resolving target family names is the Uri of the composite font.
-                    Uri baseUri = canonicalFamilyReference?.LocationUri;
+                    Uri baseUri = (canonicalFamilyReference != null) ? canonicalFamilyReference.LocationUri : null;
 
                     // map to the target of the family map
                     cchAdvance = MapByFontFamilyName(

@@ -1,22 +1,34 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using MS.Internal;
-using System.Globalization;
-using System.Threading;
-using System.Collections; // ArrayList
-using System.Runtime.InteropServices;
-using System.Windows.Threading;
-using System.Windows.Input;
-using System.Windows.Controls; // ScrollChangedEventArgs
-using System.Windows.Controls.Primitives;  // CharacterCasing, TextBoxBase
-using System.Windows.Markup;
-using MS.Win32;
-using MS.Internal.Documents;
-using MS.Internal.Commands; // CommandHelpers
+#pragma warning disable 1634, 1691 // To enable presharp warning disables (#pragma suppress) below.
+//
+// Description: Text editing service for controls.
+//
 
 namespace System.Windows.Documents
 {
+    using MS.Internal;
+    using System.Globalization;
+    using System.Threading;
+    using System.ComponentModel;
+    using System.Text;
+    using System.Collections; // ArrayList
+    using System.Runtime.InteropServices;
+    using System.Security;
+    using System.Windows.Threading;
+    using System.Windows.Input;
+    using System.Windows.Controls; // ScrollChangedEventArgs
+    using System.Windows.Controls.Primitives;  // CharacterCasing, TextBoxBase
+    using System.Windows.Media;
+    using System.Windows.Markup;
+
+    using MS.Utility;
+    using MS.Win32;
+    using MS.Internal.Documents;
+    using MS.Internal.Commands; // CommandHelpers
+
     /// <summary>
     /// Text editing service for controls.
     /// </summary>
@@ -217,11 +229,17 @@ namespace System.Windows.Documents
             // We don't need this TextStore any more.
             // TextStore needs to be unregisted from Cicero so clean all reference
             // of the native resources.
-            _textstore?.OnDetach(finalizer);
-            _textstore = null;
+            if (_textstore != null)
+            {
+                _textstore.OnDetach(finalizer);
+                _textstore = null;
+            }
 
-            _weakThis?.StopListening();
-            _weakThis = null;
+            if (_weakThis != null)
+            {
+                _weakThis.StopListening();
+                _weakThis = null;
+            }
 
             if (!finalizer)
             {
@@ -276,7 +294,10 @@ namespace System.Windows.Documents
         // Forwards a spelling reform property change off to the speller.
         internal void SetSpellingReform(SpellingReform spellingReform)
         {
-            _speller?.SetSpellingReform(spellingReform);
+            if (_speller != null)
+            {
+                _speller.SetSpellingReform(spellingReform);
+            }
         }
 
         // Queries a FrameworkElement for its TextView
@@ -292,7 +313,7 @@ namespace System.Windows.Documents
         {
             TextEditor textEditor = TextEditor._GetTextEditor(frameworkElement);
 
-            return textEditor?.Selection;
+            return (textEditor == null) ? null : textEditor.Selection;
         }
 
         // Registers all text editing command handlers for a given control type
@@ -495,10 +516,8 @@ namespace System.Windows.Documents
         {
             if (_mouseSelectionState == null)
             {
-                _mouseSelectionState = new MouseSelectionState
-                {
-                    Timer = new DispatcherTimer(DispatcherPriority.Normal)
-                };
+                _mouseSelectionState = new MouseSelectionState();
+                _mouseSelectionState.Timer = new DispatcherTimer(DispatcherPriority.Normal);
                 _mouseSelectionState.Timer.Tick += new EventHandler(HandleMouseSelectionTick);
                 // 400ms is the default value for MenuShowDelay. Creating timer with smaller value may
                 // cause Dispatcher queue starvation.
@@ -1268,9 +1287,15 @@ namespace System.Windows.Documents
         /// </summary>
         internal void CompleteComposition()
         {
-            TextStore?.CompleteComposition();
+            if (TextStore != null)
+            {
+                TextStore.CompleteComposition();
+            }
 
-            ImmComposition?.CompleteComposition();
+            if (ImmComposition != null)
+            {
+                ImmComposition.CompleteComposition();
+            }
         }
 
         #endregion Class Internal Methods
@@ -1593,12 +1618,18 @@ namespace System.Windows.Documents
                 return null;
             }
 
-            _textstore?.OnLayoutUpdated();
+            if (_textstore != null)
+            {
+                _textstore.OnLayoutUpdated();
+            }
 
             // IMM32's OnLostFocus handler. Clean the composition string if it exists.
             if (_immEnabled)
             {
-                _immComposition?.OnLayoutUpdated();
+                if (_immComposition != null)
+                {
+                    _immComposition.OnLayoutUpdated();
+                }
             }
 
             return null;
@@ -1640,7 +1671,7 @@ namespace System.Windows.Documents
             This.SetSpellCheckEnabled(This.IsSpellCheckEnabled);
 
             // Finalize any active IME composition when transitioning to true.
-            if ((bool)e.NewValue && This._textstore != null)
+            if ((bool)e.NewValue == true && This._textstore != null)
             {
                 This._textstore.CompleteCompositionAsync();
             }
@@ -1676,7 +1707,10 @@ namespace System.Windows.Documents
             }
 
             // Cicero's OnGotKeyboardFocus handler. It updates the focus DIM.
-            This._textstore?.OnGotFocus();
+            if (This._textstore != null)
+            {
+                This._textstore.OnGotFocus();
+            }
 
             // IMM32's OnGotFocus handler. Ready for the composition string.
             if (_immEnabled)
@@ -1731,16 +1765,22 @@ namespace System.Windows.Documents
             This._selection.UpdateCaretAndHighlight();
 
             // Call the TextStore's OnLostfocus handler.  Finalizes the curernt composition, if any.
-            This._textstore?.OnLostFocus();
+            if (This._textstore != null)
+            {
+                This._textstore.OnLostFocus();
+            }
 
             // IMM32's OnLostFocus handler. Clean the composition string if it exists.
             if (_immEnabled)
             {
-                // Call ImmComposition OnLostFocus to clean up the event handler(SelectionChanged).
-                This._immComposition?.OnLostFocus();
+                if (This._immComposition != null)
+                {
+                    // Call ImmComposition OnLostFocus to clean up the event handler(SelectionChanged).
+                    This._immComposition.OnLostFocus();
 
-                // Set _immComposition as null not to access it until get new from the getting focus.
-                This._immComposition = null;
+                    // Set _immComposition as null not to access it until get new from the getting focus.
+                    This._immComposition = null;
+                }
             }
         }
 
@@ -1769,8 +1809,11 @@ namespace System.Windows.Documents
             TextEditorTyping._BreakTypingSequence(This);
 
             // Release column resizing adorner, and interrupt table resising process (if any)
-            This._tableColResizeInfo?.DisposeAdorner();
-            This._tableColResizeInfo = null;
+            if (This._tableColResizeInfo != null)
+            {
+                This._tableColResizeInfo.DisposeAdorner();
+                This._tableColResizeInfo = null;
+            }
 
             // Hide selection
             This._selection.UpdateCaretAndHighlight();

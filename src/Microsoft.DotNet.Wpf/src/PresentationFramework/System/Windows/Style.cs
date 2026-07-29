@@ -1,12 +1,32 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+/***************************************************************************\
+*
+*
+*  Style and templating.
+*
+*
+\***************************************************************************/
 using System.Collections;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;  // For Debug.Assert
 using System.Windows.Threading;
+using System.Threading;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Media.Animation; // For Storyboard support
 using System.Windows.Markup;
+using System.IO;
 using MS.Utility;
+using MS.Internal;
+using System;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows
 {
@@ -164,6 +184,7 @@ namespace System.Windows
                     !typeof(FrameworkContentElement).IsAssignableFrom(value) &&
                     !(DefaultTargetType == value))
                 {
+                    #pragma warning suppress 6506 // value is obviously not null
                     throw new ArgumentException(SR.Format(SR.MustBeFrameworkDerived, value.Name));
                 }
 
@@ -279,11 +300,10 @@ namespace System.Windows
 
                 if( _resources == null )
                 {
-                    _resources = new ResourceDictionary
-                    {
-                        // A Style ResourceDictionary can be accessed across threads
-                        CanBeAccessedAcrossThreads = true
-                    };
+                    _resources = new ResourceDictionary();
+
+                    // A Style ResourceDictionary can be accessed across threads
+                    _resources.CanBeAccessedAcrossThreads = true;
 
                     // If the style has been sealed prior to this the newly
                     // created ResourceDictionary also needs to be sealed
@@ -306,8 +326,11 @@ namespace System.Windows
 
                 _resources = value;
 
-                // A Style ResourceDictionary can be accessed across threads
-                _resources?.CanBeAccessedAcrossThreads = true;
+                if (_resources != null)
+                {
+                    // A Style ResourceDictionary can be accessed across threads
+                    _resources.CanBeAccessedAcrossThreads = true;
+                }
             }
         }
 
@@ -391,7 +414,7 @@ namespace System.Windows
 
             if (sb == null)
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(SetterBase)), nameof(value));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(SetterBase)), "value");
             }
 
             Setters.Add(sb);
@@ -444,13 +467,11 @@ namespace System.Windows
             else
             {
                 // Store original data
-                PropertyValue propertyValue = new PropertyValue
-                {
-                    ValueType = valueType,
-                    ChildName = StyleHelper.SelfName,
-                    Property = dp,
-                    ValueInternal = value
-                };
+                PropertyValue propertyValue = new PropertyValue();
+                propertyValue.ValueType = valueType;
+                propertyValue.ChildName = StyleHelper.SelfName;
+                propertyValue.Property = dp;
+                propertyValue.ValueInternal = value;
 
                 PropertyValues.Add(propertyValue);
             }
@@ -503,20 +524,32 @@ namespace System.Windows
             }
 
             // Seal setters
-            _setters?.Seal();
+            if (_setters != null)
+            {
+                _setters.Seal();
+            }
 
             // Seal triggers
-            _visualTriggers?.Seal();
+            if (_visualTriggers != null)
+            {
+                _visualTriggers.Seal();
+            }
 
             // Will throw InvalidOperationException if we find a loop of
             //  BasedOn references.  (A.BasedOn = B, B.BasedOn = C, C.BasedOn = A)
             CheckForCircularBasedOnReferences();
 
             // Seal BasedOn Style chain
-            _basedOn?.Seal();
+            if (_basedOn != null)
+            {
+                _basedOn.Seal();
+            }
 
             // Seal the ResourceDictionary
-            _resources?.IsReadOnly = true;
+            if (_resources != null)
+            {
+                _resources.IsReadOnly = true;
+            }
 
             //
             // Build shared tables
@@ -759,26 +792,28 @@ namespace System.Windows
                         {
                             StyleHelper.AddPropertyTriggerWithAction( trigger, ((Trigger)trigger).Property, ref this.PropertyTriggersWithActions );
                         }
-                        else if (trigger is MultiTrigger multiTrigger)
+                        else if( trigger is MultiTrigger )
                         {
-                            for (int k = 0; k < multiTrigger.Conditions.Count; k++)
+                            MultiTrigger multiTrigger = (MultiTrigger)trigger;
+                            for( int k = 0; k < multiTrigger.Conditions.Count; k++ )
                             {
                                 Condition triggerCondition = multiTrigger.Conditions[k];
 
-                                StyleHelper.AddPropertyTriggerWithAction(trigger, triggerCondition.Property, ref this.PropertyTriggersWithActions);
+                                StyleHelper.AddPropertyTriggerWithAction( trigger, triggerCondition.Property, ref this.PropertyTriggersWithActions );
                             }
                         }
-                        else if (trigger is DataTrigger)
+                        else if( trigger is DataTrigger )
                         {
-                            StyleHelper.AddDataTriggerWithAction(trigger, ((DataTrigger)trigger).Binding, ref this.DataTriggersWithActions);
+                            StyleHelper.AddDataTriggerWithAction( trigger, ((DataTrigger)trigger).Binding, ref this.DataTriggersWithActions );
                         }
-                        else if (trigger is MultiDataTrigger multiDataTrigger)
+                        else if( trigger is MultiDataTrigger )
                         {
-                            for (int k = 0; k < multiDataTrigger.Conditions.Count; k++)
+                            MultiDataTrigger multiDataTrigger = (MultiDataTrigger)trigger;
+                            for( int k = 0; k < multiDataTrigger.Conditions.Count; k++ )
                             {
                                 Condition dataCondition = multiDataTrigger.Conditions[k];
 
-                                StyleHelper.AddDataTriggerWithAction(trigger, dataCondition.Binding, ref this.DataTriggersWithActions);
+                                StyleHelper.AddDataTriggerWithAction( trigger, dataCondition.Binding, ref this.DataTriggersWithActions );
                             }
                         }
                         else

@@ -1,8 +1,24 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+#if WINDOWS_BASE
+using MS.Internal.WindowsBase;
+#elif PRESENTATION_CORE
+using MS.Internal.PresentationCore;
+#elif PRESENTATIONFRAMEWORK
+using MS.Internal.PresentationFramework;
+#elif REACHFRAMEWORK
+using MS.Internal.ReachFramework;
+#elif UIAUTOMATIONTYPES
+using MS.Internal.UIAutomationTypes;
+#else
+using MS.Internal;
+#endif
 
 using System;
 using System.Runtime.InteropServices;
+using System.Security;
 
 #if WINDOWS_BASE
 namespace MS.Internal.WindowsBase.Interop
@@ -21,7 +37,7 @@ namespace Microsoft.Internal.Interop
     /// <summary>
     /// DevDiv:1158540
     /// Adding wrapper around OSVersionHelper native code.  This is linked into PresentationNative so we just PInvoke it from there.
-    ///
+    /// 
     /// To add a new OS:
     ///     Make sure you have followed the instructions in OperatingSystemVersion.cs to get here
     ///     Add appropriate PInvoke to your new Is{OSName}OrGreater function
@@ -125,83 +141,83 @@ namespace Microsoft.Internal.Interop
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10RS5OrGreater();
+        static extern bool IsWindows10RS5OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10RS4OrGreater();
+        static extern bool IsWindows10RS4OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10RS3OrGreater();
+        static extern bool IsWindows10RS3OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10RS2OrGreater();
+        static extern bool IsWindows10RS2OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10RS1OrGreater();
+        static extern bool IsWindows10RS1OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10TH2OrGreater();
+        static extern bool IsWindows10TH2OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10TH1OrGreater();
+        static extern bool IsWindows10TH1OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows10OrGreater();
+        static extern bool IsWindows10OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows8Point1OrGreater();
+        static extern bool IsWindows8Point1OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows8OrGreater();
+        static extern bool IsWindows8OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows7SP1OrGreater();
+        static extern bool IsWindows7SP1OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindows7OrGreater();
+        static extern bool IsWindows7OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsVistaSP2OrGreater();
+        static extern bool IsWindowsVistaSP2OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsVistaSP1OrGreater();
+        static extern bool IsWindowsVistaSP1OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsVistaOrGreater();
+        static extern bool IsWindowsVistaOrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsXPSP3OrGreater();
+        static extern bool IsWindowsXPSP3OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsXPSP2OrGreater();
+        static extern bool IsWindowsXPSP2OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsXPSP1OrGreater();
+        static extern bool IsWindowsXPSP1OrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsXPOrGreater();
+        static extern bool IsWindowsXPOrGreater();
 
         [DllImport(DllImport.PresentationNative, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool IsWindowsServer();
+        static extern bool IsWindowsServer();
 
         #endregion
 
@@ -245,7 +261,7 @@ namespace Microsoft.Internal.Interop
                     return IsOsWindowsXPSP2OrGreater;
             }
 
-            throw new ArgumentException($"{osVer} is not a valid OS!", nameof(osVer));
+            throw new ArgumentException(string.Format("{0} is not a valid OS!", osVer.ToString()), "osVer");
         }
 
         internal static OperatingSystemVersion GetOsVersion()

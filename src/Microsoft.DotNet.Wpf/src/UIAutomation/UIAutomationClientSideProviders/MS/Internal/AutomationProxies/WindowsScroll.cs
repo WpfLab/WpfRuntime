@@ -1,19 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Generic implementation of the scroll pattern for
 //              controls having scroll bars.
 //
 
 using System;
+using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Provider;
 using MS.Win32;
 
 namespace MS.Internal.AutomationProxies
 {
     // Static class used to support the Scroll pattern for controls that have scroll bars. 
-    internal static class WindowScroll
+    static class WindowScroll
     {
         #region Internal Methods
 
@@ -24,7 +29,7 @@ namespace MS.Internal.AutomationProxies
         // ------------------------------------------------------
 
         // Request to scroll Horizontally and vertically by the specified amount
-        internal static void SetScrollPercent (IntPtr hwnd, double horizontalPercent, double verticalPercent, bool forceResults)
+        static internal void SetScrollPercent (IntPtr hwnd, double horizontalPercent, double verticalPercent, bool forceResults)
         {
             if (!IsScrollable(hwnd))
             {
@@ -57,7 +62,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // Request to scroll horizontally and vertically by the specified scrolling amount
-        internal static void Scroll (IntPtr hwnd, ScrollAmount HorizontalAmount, ScrollAmount VerticalAmount, bool fForceResults)
+        static internal void Scroll (IntPtr hwnd, ScrollAmount HorizontalAmount, ScrollAmount VerticalAmount, bool fForceResults)
         {
             if (!IsScrollable(hwnd))
             {
@@ -74,7 +79,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // Process the Scroll Properties
-        internal static object GetPropertyScroll (AutomationProperty idProp, IntPtr hwnd)
+        static internal object GetPropertyScroll (AutomationProperty idProp, IntPtr hwnd)
         {
             // ...handle the scroll properties...
             if (idProp == ScrollPattern.HorizontalScrollPercentProperty)
@@ -106,7 +111,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // Finds if a control can be scrolled
-        internal static bool Scrollable (IntPtr hwnd, int sbFlag)
+        static internal bool Scrollable (IntPtr hwnd, int sbFlag)
         {
             int style = Misc.GetWindowStyle(hwnd);
 
@@ -151,7 +156,7 @@ namespace MS.Internal.AutomationProxies
             return (si.nMax != si.nMin && si.nPage != si.nMax - si.nMin + 1);
         }
 
-        internal static bool HasScrollableStyle(IntPtr hwnd)
+        static internal bool HasScrollableStyle(IntPtr hwnd)
         {
             int style = Misc.GetWindowStyle(hwnd);
 
@@ -160,7 +165,7 @@ namespace MS.Internal.AutomationProxies
             string className = Misc.ProxyGetClassName(hwnd);
             if (className.StartsWith("RichEdit", StringComparison.OrdinalIgnoreCase) ||
                 className.StartsWith("WindowForms10.RichEdit", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(className, "Edit", StringComparison.OrdinalIgnoreCase))
+                string.Compare(className, "Edit", StringComparison.OrdinalIgnoreCase) == 0)
             {
                 hasScrollableStyle = Misc.IsBitSet(style, NativeMethods.ES_MULTILINE);
             }
@@ -169,7 +174,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // Finds if a control can be scrolled
-        internal static bool IsScrollable(IntPtr hwnd)
+        static internal bool IsScrollable(IntPtr hwnd)
         {
             return Scrollable(hwnd, NativeMethods.SB_HORZ) || Scrollable(hwnd, NativeMethods.SB_VERT);
         }
@@ -185,13 +190,12 @@ namespace MS.Internal.AutomationProxies
         // ------------------------------------------------------
 
         // Retrieve the scrollbar position in the [0..100]% range
-        private static double GetScrollInfo(IntPtr hwnd, int sbFlag)
+        static private double GetScrollInfo(IntPtr hwnd, int sbFlag)
         {
             // check if there is a scrollbar 
-            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo
-            {
-                fMask = NativeMethods.SIF_ALL
-            };
+            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo ();
+
+            si.fMask = NativeMethods.SIF_ALL;
             si.cbSize = Marshal.SizeOf (si.GetType ());
 
             if (Misc.GetScrollInfo(hwnd, sbFlag, ref si))
@@ -243,7 +247,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // View Size
-        private static double ScrollViewSize(IntPtr hwnd, int sbFlag)
+        static private double ScrollViewSize(IntPtr hwnd, int sbFlag)
         {
             // Get scroll range and page size
             NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo ();
@@ -264,7 +268,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // Request to scroll a control horizontally or vertically by a specified amount.
-        private static bool SetScrollPercent(IntPtr hwnd, double fScrollPos, int sbFlag, out bool forceResults)
+        static private bool SetScrollPercent(IntPtr hwnd, double fScrollPos, int sbFlag, out bool forceResults)
         {
             forceResults = false;
             // Check param
@@ -284,10 +288,8 @@ namespace MS.Internal.AutomationProxies
             }
 
             // Get Max & min                    
-            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo
-            {
-                fMask = NativeMethods.SIF_ALL
-            };
+            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo ();
+            si.fMask = NativeMethods.SIF_ALL;
             si.cbSize = Marshal.SizeOf(si.GetType ());
 
             // if no scroll bar return false
@@ -346,7 +348,7 @@ namespace MS.Internal.AutomationProxies
         }
 
         // Scroll control by a given amount
-        private static bool ScrollCursor(IntPtr hwnd, ScrollAmount amount, int sbFlag, bool fForceResults)
+        static private bool ScrollCursor(IntPtr hwnd, ScrollAmount amount, int sbFlag, bool fForceResults)
         {
             // Check Param
             if (amount == ScrollAmount.NoAmount)
@@ -360,10 +362,8 @@ namespace MS.Internal.AutomationProxies
             }
 
             // Get Max & min
-            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo
-            {
-                fMask = NativeMethods.SIF_ALL
-            };
+            NativeMethods.ScrollInfo si = new NativeMethods.ScrollInfo ();
+            si.fMask = NativeMethods.SIF_ALL;
             si.cbSize = Marshal.SizeOf (si.GetType ());
 
             // if no scroll bar return false

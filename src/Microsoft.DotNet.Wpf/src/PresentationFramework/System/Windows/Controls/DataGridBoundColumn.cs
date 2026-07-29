@@ -1,8 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace System.Windows.Controls
 {
@@ -87,7 +94,7 @@ namespace System.Windows.Controls
         /// <param name="newBinding">The new binding.</param>
         protected virtual void OnBindingChanged(BindingBase oldBinding, BindingBase newBinding)
         {
-            NotifyPropertyChanged(nameof(Binding));
+            NotifyPropertyChanged("Binding");
         }
 
         /// <summary>
@@ -204,12 +211,13 @@ namespace System.Windows.Controls
         /// <param name="propertyName"></param>
         protected internal override void RefreshCellContent(FrameworkElement element, string propertyName)
         {
-            if (element is DataGridCell cell)
+            DataGridCell cell = element as DataGridCell;
+            if (cell != null)
             {
                 bool isCellEditing = cell.IsEditing;
-                if ((string.Equals(propertyName, "Binding", StringComparison.Ordinal)) ||
-                    (string.Equals(propertyName, "ElementStyle", StringComparison.Ordinal) && !isCellEditing) ||
-                    (string.Equals(propertyName, "EditingElementStyle", StringComparison.Ordinal) && isCellEditing))
+                if ((string.Compare(propertyName, "Binding", StringComparison.Ordinal) == 0) ||
+                    (string.Compare(propertyName, "ElementStyle", StringComparison.Ordinal) == 0 && !isCellEditing) ||
+                    (string.Compare(propertyName, "EditingElementStyle", StringComparison.Ordinal) == 0 && isCellEditing))
                 {
                     cell.BuildVisualTree();
                     return;

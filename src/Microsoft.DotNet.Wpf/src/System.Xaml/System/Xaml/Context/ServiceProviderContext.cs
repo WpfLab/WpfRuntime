@@ -1,8 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Markup;
 using System.Xaml;
@@ -10,7 +11,7 @@ using MS.Internal.Xaml.Context;
 
 namespace MS.Internal.Xaml
 {
-    internal class ServiceProviderContext : ITypeDescriptorContext,  // derives from IServiceProvider
+internal class ServiceProviderContext : ITypeDescriptorContext,  // derives from IServiceProvider
                                   IServiceProvider,
                                   IXamlTypeResolver,
                                   IUriContext,
@@ -23,7 +24,7 @@ namespace MS.Internal.Xaml
                                   IDestinationTypeProvider,
                                   IXamlLineInfo
     {
-        private ObjectWriterContext _xamlContext;
+        ObjectWriterContext _xamlContext;
 
         public ServiceProviderContext(ObjectWriterContext context)
         {
@@ -133,7 +134,7 @@ namespace MS.Internal.Xaml
 
             foreach (var property in properties)
             {
-                if (property is null)
+                if (property == null)
                 {
                     // we don't allow any property to be null
                     throw new ArgumentException(SR.Format(SR.ValueInArrayIsNull, "properties"));
@@ -149,15 +150,15 @@ namespace MS.Internal.Xaml
 
             foreach (var type in types)
             {
-                if (type is null)
+                if (type == null)
                 {
                     // we don't allow any type to be null
                     throw new ArgumentException(SR.Format(SR.ValueInArrayIsNull, "types"));
                 }
             }
-
             return _xamlContext.ServiceProvider_GetFirstAmbientValue(types);
         }
+
 
         IEnumerable<AmbientPropertyValue> IAmbientProvider.GetAllAmbientValues(
                                                     IEnumerable<XamlType> ceilingTypes,
@@ -167,7 +168,7 @@ namespace MS.Internal.Xaml
 
             foreach (var property in properties)
             {
-                if (property is null)
+                if (property == null)
                 {
                     // we don't allow any property to be null
                     throw new ArgumentException(SR.Format(SR.ValueInArrayIsNull, "properties"));
@@ -183,7 +184,7 @@ namespace MS.Internal.Xaml
 
             foreach (var type in types)
             {
-                if (type is null)
+                if (type == null)
                 {
                     // we don't allow any type to be null
                     throw new ArgumentException(SR.Format(SR.ValueInArrayIsNull, "types"));
@@ -203,7 +204,7 @@ namespace MS.Internal.Xaml
 
             foreach (var property in properties)
             {
-                if (property is null)
+                if (property == null)
                 {
                     // we don't allow any property to be null
                     throw new ArgumentException(SR.Format(SR.ValueInArrayIsNull, "properties"));
@@ -285,12 +286,8 @@ namespace MS.Internal.Xaml
             {
                 return null;
             }
-
-            var token = new NameFixupToken
-            {
-                CanAssignDirectly = canAssignDirectly
-            };
-
+            var token = new NameFixupToken();
+            token.CanAssignDirectly = canAssignDirectly;
             token.NeededNames.AddRange(names);
             if (token.CanAssignDirectly && token.NeededNames.Count != 1)
             {
@@ -298,7 +295,7 @@ namespace MS.Internal.Xaml
             }
 
             // TypeConverter case (aka "Initialization")
-            if (_xamlContext.CurrentType is null)
+            if (_xamlContext.CurrentType == null)
             {
                 // If this is OBJECT Initialization
                 if (_xamlContext.ParentProperty == XamlLanguage.Initialization)
@@ -363,6 +360,7 @@ namespace MS.Internal.Xaml
             return token;
         }
 
+
         IEnumerable<KeyValuePair<string, object>> IXamlNameResolver.GetAllNamesAndValuesInScope()
         {
             return _xamlContext.GetAllNamesAndValuesInScope();
@@ -376,6 +374,7 @@ namespace MS.Internal.Xaml
             }
             remove
             {
+
                 _xamlContext.RemoveNameScopeInitializationCompleteSubscriber(value);
             }
         }

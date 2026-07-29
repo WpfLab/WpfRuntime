@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,20 +12,37 @@
 using MS.Internal;
 using MS.Internal.KnownBoxes;
 using MS.Internal.Collections;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.ComponentModel.Design.Serialization;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Windows.Media.Imaging;
 using System.Windows.Markup;
 using System.Windows.Media.Converters;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows.Media
 {
-    public sealed partial class ImageDrawing : Drawing
+    sealed partial class ImageDrawing : Drawing
     {
         //------------------------------------------------------
         //
@@ -65,10 +83,6 @@ namespace System.Windows.Media
 
         private static void ImageSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-
-
-
-
             // The first change to the default value of a mutable collection property (e.g. GeometryGroup.Children) 
             // will promote the property value from a default value to a local value. This is technically a sub-property 
             // change because the collection was changed and not a new collection set (GeometryGroup.Children.
@@ -129,7 +143,7 @@ namespace System.Windows.Media
         {
             get
             {
-                return (ImageSource)GetValue(ImageSourceProperty);
+                return (ImageSource) GetValue(ImageSourceProperty);
             }
             set
             {
@@ -144,7 +158,7 @@ namespace System.Windows.Media
         {
             get
             {
-                return (Rect)GetValue(RectProperty);
+                return (Rect) GetValue(RectProperty);
             }
             set
             {
@@ -223,7 +237,6 @@ namespace System.Windows.Media
         }
         internal override DUCE.ResourceHandle AddRefOnChannelCore(DUCE.Channel channel)
         {
-
                 if (_duceResource.CreateOrAddRefOnChannel(this, channel, System.Windows.Media.Composition.DUCE.ResourceType.TYPE_IMAGEDRAWING))
                 {
                     ImageSource vImageSource = ImageSource;
@@ -236,11 +249,9 @@ namespace System.Windows.Media
                 }
 
                 return _duceResource.GetHandle(channel);
-
-        }
+}
         internal override void ReleaseOnChannelCore(DUCE.Channel channel)
         {
-
                 Debug.Assert(_duceResource.IsOnChannel(channel));
 
                 if (_duceResource.ReleaseOnChannel(channel))
@@ -249,10 +260,8 @@ namespace System.Windows.Media
                     if (vImageSource != null) ((DUCE.IResource)vImageSource).ReleaseOnChannel(channel);
 
                     ReleaseOnChannelAnimations(channel);
-
-                }
-
-        }
+}
+}
         internal override DUCE.ResourceHandle GetHandleCore(DUCE.Channel channel)
         {
             // Note that we are in a lock here already.
@@ -336,7 +345,8 @@ namespace System.Windows.Media
             // We check our static default fields which are of type Freezable
             // to make sure that they are not mutable, otherwise we will throw
             // if these get touched by more than one thread in the lifetime
-            // of your app.
+            // of your app. 
+
 
 
             // Initializations
@@ -360,8 +370,6 @@ namespace System.Windows.Media
                                    /* isIndependentlyAnimated  = */ true,
                                    /* coerceValueCallback */ null);
         }
-
-
 
         #endregion Constructors
     }

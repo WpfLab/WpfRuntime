@@ -1,8 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Windows
+
+namespace System.Windows 
 {
+    using System;
+
     /// <summary>
     ///     This class declares that an attached property is browsable only 
     ///     for dependency objects that derive from the given type.  If more 
@@ -27,7 +31,7 @@ namespace System.Windows
         /// </summary>
         public AttachedPropertyBrowsableForTypeAttribute(Type targetType)
         {
-            ArgumentNullException.ThrowIfNull(targetType);
+            if (targetType == null) throw new ArgumentNullException("targetType");
             _targetType = targetType;
         }
         
@@ -77,8 +81,8 @@ namespace System.Windows
         /// </summary>
         public override bool Equals(object obj) 
         {
-            if (obj is not AttachedPropertyBrowsableForTypeAttribute other)
-                return false;
+            AttachedPropertyBrowsableForTypeAttribute other = obj as AttachedPropertyBrowsableForTypeAttribute;
+            if (other == null) return false;
             return _targetType == other._targetType;
         }
 
@@ -105,8 +109,8 @@ namespace System.Windows
         /// </summary>
         internal override bool IsBrowsable(DependencyObject d, DependencyProperty dp)
         {
-            ArgumentNullException.ThrowIfNull(d);
-            ArgumentNullException.ThrowIfNull(dp);
+            if (d == null) throw new ArgumentNullException("d");
+            if (dp == null) throw new ArgumentNullException("dp");
 
             // Get the dependency object type for our target type.
             // We cannot assume the user didn't do something wrong and

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,7 +10,20 @@
 //
 //
 
+using MS.Internal;
+using System;
+using System.ComponentModel;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
+using System.Windows.Media.Imaging;
 
 namespace System.Windows.Media
 {
@@ -167,7 +181,7 @@ namespace System.Windows.Media
                 if (!rectangle.IsEmpty)
                 {
                     rectangle.Offset((Vector)glyphRun.BaselineOrigin);
-                    DrawGeometry(Brushes.Black, pen: null, new RectangleGeometry(rectangle));
+                    DrawGeometry(Brushes.Black, null /* pen */, new RectangleGeometry(rectangle));
                 }
             }
         }   

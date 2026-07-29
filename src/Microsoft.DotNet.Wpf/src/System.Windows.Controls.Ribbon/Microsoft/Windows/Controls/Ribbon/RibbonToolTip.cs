@@ -1,12 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-#region Using declarations
-
-using System.Windows.Automation.Peers;
-using System.Windows.Controls.Primitives;
-using System.Windows.Media;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -14,6 +9,15 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    #region Using declarations
+
+    using System;
+    using System.Windows;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
+    using System.Windows.Input;
+    using System.Windows.Media;
 #if !RIBBON_IN_FRAMEWORK
     using Microsoft.Windows.Automation.Peers;
 #endif

@@ -1,13 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 using MS.Internal;
 using MS.Utility;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Windows.Threading;
 using System.Windows.Media.Composition;
 using System.Windows.Media.Media3D;
 
-using MS.Internal.PresentationCore;     // SR
+using MS.Internal.PresentationCore;     // SR, FriendAccessAllowed
 
 namespace System.Windows.Media.Animation
 {
@@ -210,7 +214,10 @@ namespace System.Windows.Media.Animation
                     // newly animated property will be passed across to the UCE.
                     Animatable a = d as Animatable;
 
-                    a?.RegisterForAsyncUpdateResource();
+                    if (a != null)
+                    {
+                        a.RegisterForAsyncUpdateResource();
+                    }
 
                     // If this AnimationStorage is a resource, add it to the
                     // channel now.
@@ -278,7 +285,10 @@ namespace System.Windows.Media.Animation
                     // across to the UCE.
                     Animatable a = d as Animatable;
 
-                    a?.RegisterForAsyncUpdateResource();
+                    if (a != null)
+                    {
+                        a.RegisterForAsyncUpdateResource();
+                    }
 
                     animatedPropertyMap[_dependencyProperty.GlobalIndex] = DependencyProperty.UnsetValue;
 
@@ -392,12 +402,10 @@ namespace System.Windows.Media.Animation
                     {
                         // else entry has modifiers; preserve expression but throw away
                         // coerced & animated values, since we'll be recomputing an animated value
-                        newEntry = new EffectiveValueEntry
-                        {
-                            BaseValueSourceInternal = oldEntry.BaseValueSourceInternal,
-                            PropertyIndex = oldEntry.PropertyIndex,
-                            HasExpressionMarker = oldEntry.HasExpressionMarker
-                        };
+                        newEntry = new EffectiveValueEntry();
+                        newEntry.BaseValueSourceInternal = oldEntry.BaseValueSourceInternal;
+                        newEntry.PropertyIndex = oldEntry.PropertyIndex;
+                        newEntry.HasExpressionMarker = oldEntry.HasExpressionMarker;
 
                         value = oldEntry.ModifiedValue.BaseValue;
                         if (oldEntry.IsDeferredReference)
@@ -443,8 +451,8 @@ namespace System.Windows.Media.Animation
                                 metadata,
                                 oldEntry,
                                 ref newEntry,
-                                coerceWithDeferredReference: false,
-                                coerceWithCurrentValue: false,
+                                false /* coerceWithDeferredReference */,
+                                false /* coerceWithCurrentValue */,
                                 OperationType.Unknown);
 
                         if (_hadValidationError)
@@ -579,6 +587,7 @@ namespace System.Windows.Media.Animation
             }
         }
 
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
         internal static void ApplyAnimationClocks(
             DependencyObject d,
             DependencyProperty dp,
@@ -685,6 +694,7 @@ namespace System.Windows.Media.Animation
         /// <param name="animationClocks"></param>
         /// <param name="handoffBehavior"></param>
         /// <param name="propertyTriggerLayerIndex"></param>
+        [FriendAccessAllowed]
         internal static void ApplyAnimationClocksToLayer(
             DependencyObject d,
             DependencyProperty dp,
@@ -1016,6 +1026,7 @@ namespace System.Windows.Media.Animation
             }
         }
 
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
         internal static bool IsPropertyAnimatable(
             DependencyObject d,
             DependencyProperty dp)
@@ -1044,6 +1055,7 @@ namespace System.Windows.Media.Animation
                 || (animation.TargetPropertyType == typeof(Object));
         }
 
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
         internal static bool IsAnimationClockValid(
             DependencyProperty dp,
             AnimationClock animation)

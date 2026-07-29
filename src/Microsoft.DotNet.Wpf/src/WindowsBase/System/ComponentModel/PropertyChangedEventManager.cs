@@ -1,13 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description: Manager for the PropertyChanged event in the "weak event listener"
 //              pattern.  See WeakEventTable.cs for an overview.
+//
 
-using System.Collections;
-using System.Collections.Specialized;
-using System.Windows;
-using MS.Internal;
+using System;
+using System.Collections;       // ICollection
+using System.Collections.Generic; // List<T>
+using System.Collections.Specialized;   // HybridDictionary
+using System.ComponentModel;    // INotifyPropertyChanged
+using System.Diagnostics;       // Debug
+using System.Reflection;        // MethodInfo
+using System.Windows;           // WeakEventManager
+using MS.Internal;              // BaseAppContextSwitches
+using MS.Internal.WindowsBase;  // SR
 
 namespace System.ComponentModel
 {
@@ -39,8 +49,10 @@ namespace System.ComponentModel
         /// </summary>
         public static void AddListener(INotifyPropertyChanged source, IWeakEventListener listener, string propertyName)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            ArgumentNullException.ThrowIfNull(listener);
+            if (source == null)
+                throw new ArgumentNullException("source");
+            if (listener == null)
+                throw new ArgumentNullException("listener");
 
             CurrentManager.PrivateAddListener(source, listener, propertyName);
         }
@@ -54,7 +66,8 @@ namespace System.ComponentModel
             if (source == null)
                 throw new ArgumentNullException("source");
             */
-            ArgumentNullException.ThrowIfNull(listener);
+            if (listener == null)
+                throw new ArgumentNullException("listener");
 
             CurrentManager.PrivateRemoveListener(source, listener, propertyName);
         }
@@ -64,7 +77,8 @@ namespace System.ComponentModel
         /// </summary>
         public static void AddHandler(INotifyPropertyChanged source, EventHandler<PropertyChangedEventArgs> handler, string propertyName)
         {
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+                throw new ArgumentNullException("handler");
 
             CurrentManager.PrivateAddHandler(source, handler, propertyName);
         }
@@ -74,7 +88,8 @@ namespace System.ComponentModel
         /// </summary>
         public static void RemoveHandler(INotifyPropertyChanged source, EventHandler<PropertyChangedEventArgs> handler, string propertyName)
         {
-            ArgumentNullException.ThrowIfNull(handler);
+            if (handler == null)
+                throw new ArgumentNullException("handler");
 
             CurrentManager.PrivateRemoveHandler(source, handler, propertyName);
         }
@@ -380,7 +395,7 @@ namespace System.ComponentModel
                 if (dict == null)
                 {
                     // no entry in the hashtable - add a new one
-                    dict = new HybridDictionary(caseInsensitive: true);
+                    dict = new HybridDictionary(true /* case insensitive */);
 
                     this[source] = dict;
 
@@ -589,7 +604,10 @@ namespace System.ComponentModel
                     if (_proposedAllListenersList == list)
                     {
                         HybridDictionary dict = (HybridDictionary)this[sender];
-                        dict?[AllListenersKey] = list;
+                        if (dict != null)
+                        {
+                            dict[AllListenersKey] = list;
+                        }
 
                         _proposedAllListenersList = null;
                     }
@@ -608,9 +626,9 @@ namespace System.ComponentModel
 
         #endregion Private Methods
 
-        private ListenerList _proposedAllListenersList;
-        private List<String> _toRemove = new List<String>();
-        private static readonly string AllListenersKey = "<All Listeners>"; // not a legal property name
+        ListenerList _proposedAllListenersList;
+        List<String> _toRemove = new List<String>();
+        static readonly string AllListenersKey = "<All Listeners>"; // not a legal property name
     }
 }
 

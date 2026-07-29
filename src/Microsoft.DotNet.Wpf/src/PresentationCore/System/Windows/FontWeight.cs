@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
@@ -7,9 +8,13 @@
 //
 
 
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
 
-namespace System.Windows
+using SR=MS.Internal.PresentationCore.SR;
+
+namespace System.Windows 
 {
     /// <summary>
     /// FontWeight structure describes the degree of blackness or thickness of strokes of characters in a font.
@@ -36,8 +41,8 @@ namespace System.Windows
         // Important note: when changing this method signature please make sure to update FontWeightConverter accordingly.
         public static FontWeight FromOpenTypeWeight(int weightValue)
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(weightValue, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(weightValue, 999);
+            if (weightValue < 1 || weightValue > 999)
+                throw new ArgumentOutOfRangeException("weightValue", SR.Format(SR.ParameterMustBeBetween, 1, 999));
             return new FontWeight(weightValue);
         }
 

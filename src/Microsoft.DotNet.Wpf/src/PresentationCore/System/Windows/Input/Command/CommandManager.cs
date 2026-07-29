@@ -1,11 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Security;
+using System.Threading;
+using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
+using MS.Internal;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -45,8 +57,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to attach.</param>
         public static void AddPreviewExecutedHandler(UIElement element, ExecutedRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.AddHandler(PreviewExecutedEvent, handler);
         }
@@ -58,8 +76,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to remove.</param>
         public static void RemovePreviewExecutedHandler(UIElement element, ExecutedRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.RemoveHandler(PreviewExecutedEvent, handler);
         }
@@ -80,8 +104,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to attach.</param>
         public static void AddExecutedHandler(UIElement element, ExecutedRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.AddHandler(ExecutedEvent, handler);
         }
@@ -93,8 +123,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to remove.</param>
         public static void RemoveExecutedHandler(UIElement element, ExecutedRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.RemoveHandler(ExecutedEvent, handler);
         }
@@ -115,8 +151,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to attach.</param>
         public static void AddPreviewCanExecuteHandler(UIElement element, CanExecuteRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.AddHandler(PreviewCanExecuteEvent, handler);
         }
@@ -128,8 +170,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to remove.</param>
         public static void RemovePreviewCanExecuteHandler(UIElement element, CanExecuteRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.RemoveHandler(PreviewCanExecuteEvent, handler);
         }
@@ -150,8 +198,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to attach.</param>
         public static void AddCanExecuteHandler(UIElement element, CanExecuteRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.AddHandler(CanExecuteEvent, handler);
         }
@@ -163,8 +217,14 @@ namespace System.Windows.Input
         /// <param name="handler">The handler to remove.</param>
         public static void RemoveCanExecuteHandler(UIElement element, CanExecuteRoutedEventHandler handler)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(handler);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler");
+            }
 
             element.RemoveHandler(CanExecuteEvent, handler);
         }
@@ -180,8 +240,14 @@ namespace System.Windows.Input
         /// <param name="inputBinding">InputBinding to register</param>
         public static void RegisterClassInputBinding(Type type, InputBinding inputBinding)
         {
-            ArgumentNullException.ThrowIfNull(type);
-            ArgumentNullException.ThrowIfNull(inputBinding);
+            if (type == null)
+            {
+                throw new ArgumentNullException("type");
+            }
+            if (inputBinding == null)
+            {
+                throw new ArgumentNullException("inputBinding");
+            }
 
             lock (_classInputBindings.SyncRoot)
             {
@@ -209,8 +275,14 @@ namespace System.Windows.Input
         /// <param name="commandBinding">CommandBinding to register</param>
         public static void RegisterClassCommandBinding(Type type, CommandBinding commandBinding)
         {
-            ArgumentNullException.ThrowIfNull(type);
-            ArgumentNullException.ThrowIfNull(commandBinding);
+            if (type == null)
+            {
+                throw new ArgumentNullException("type");
+            }
+            if (commandBinding == null)
+            {
+                throw new ArgumentNullException("commandBinding");
+            }
 
             lock (_classCommandBindings.SyncRoot)
             {
@@ -400,7 +472,7 @@ namespace System.Windows.Input
                 {
                     if (routedCommand.CriticalCanExecute(parameter,
                                                     target,
-                                                    trusted: inputEventArgs.UserInitiated,
+                                                    inputEventArgs.UserInitiated /*trusted*/,
                                                     out continueRouting))
                     {
                         // If the command can be executed, we never continue to route the
@@ -505,20 +577,16 @@ namespace System.Windows.Input
         {
             if ((sender != null) && (e != null) && (e.Command != null))
             {
-                CanExecuteRoutedEventArgs canExecuteArgs = new CanExecuteRoutedEventArgs(e.Command, parameter: null)
-                {
-                    RoutedEvent = CommandManager.CanExecuteEvent,
-                    Source = sender
-                };
+                CanExecuteRoutedEventArgs canExecuteArgs = new CanExecuteRoutedEventArgs(e.Command, null /* parameter */);
+                canExecuteArgs.RoutedEvent = CommandManager.CanExecuteEvent;
+                canExecuteArgs.Source = sender;
                 OnCanExecute(sender, canExecuteArgs);
 
                 if (canExecuteArgs.CanExecute)
                 {
-                    ExecutedRoutedEventArgs executedArgs = new ExecutedRoutedEventArgs(e.Command, parameter: null)
-                    {
-                        RoutedEvent = CommandManager.ExecutedEvent,
-                        Source = sender
-                    };
+                    ExecutedRoutedEventArgs executedArgs = new ExecutedRoutedEventArgs(e.Command, null /* parameter */);
+                    executedArgs.RoutedEvent = CommandManager.ExecutedEvent;
+                    executedArgs.Source = sender;
                     OnExecuted(sender, executedArgs);
 
                     if (executedArgs.Handled)

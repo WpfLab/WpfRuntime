@@ -1,11 +1,29 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+using System;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 using MS.Internal;
 using MS.Win32.PresentationCore;
+using System.Security;
+using System.Diagnostics;
+using System.Windows.Media;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using SR=MS.Internal.PresentationCore.SR;
+using MS.Internal.PresentationCore;                        // SecurityHelper
 using System.Threading;
 
 namespace System.Windows.Media.Imaging
@@ -74,7 +92,7 @@ namespace System.Windows.Media.Imaging
             if (pixelFormat.Format == PixelFormatEnum.Extended)
             {
                 // We don't support third-party pixel formats yet.
-                throw new ArgumentException(SR.Effect_PixelFormat, nameof(pixelFormat));
+                throw new ArgumentException(SR.Effect_PixelFormat, "pixelFormat");
             }
 
             if (pixelWidth < 0)
@@ -163,7 +181,7 @@ namespace System.Windows.Media.Imaging
             //
             // Sanitize the dirty rect.
             //
-            dirtyRect.ValidateForDirtyRect(nameof(dirtyRect), _pixelWidth, _pixelHeight);
+            dirtyRect.ValidateForDirtyRect("dirtyRect", _pixelWidth, _pixelHeight);
             if (dirtyRect.HasArea)
             {
                 MILSwDoubleBufferedBitmap.AddDirtyRect(
@@ -227,7 +245,7 @@ namespace System.Windows.Media.Imaging
             TimeSpan timeoutSpan;
             if (timeout == Duration.Automatic)
             {
-                throw new ArgumentOutOfRangeException(nameof(timeout));
+                throw new ArgumentOutOfRangeException("timeout");
             }
             else if (timeout == Duration.Forever)
             {
@@ -280,7 +298,7 @@ namespace System.Windows.Media.Imaging
                         ref lockBufferStride
                         ));
                     Invariant.Assert(lockBufferStride <= Int32.MaxValue);
-                    _backBufferStride = (int)lockBufferStride;
+                    _backBufferStride.Value = (int)lockBufferStride;
                 }
 
                 // If we were subscribed to the CommittingBatch event, unsubscribe
@@ -352,11 +370,11 @@ namespace System.Windows.Media.Imaging
 
             WritePixelsImpl(sourceRect,
                             sourceBuffer,
-                            (uint)sourceBufferSize,
+                            sourceBufferSize,
                             sourceBufferStride, 
                             destinationX,
                             destinationY,
-                            backwardsCompat: false);
+                            /*backwardsCompat*/ false);
         }
         
         /// <summary>
@@ -380,11 +398,14 @@ namespace System.Windows.Media.Imaging
         {
             WritePreamble();
 
+            int elementSize;
+            int sourceBufferSize;
+            Type elementType;
             ValidateArrayAndGetInfo(sourceBuffer,
-                                    backwardsCompat: false,
-                                    out _,
-                                    out uint sourceBufferSize,
-                                    out Type elementType);
+                                    /*backwardsCompat*/ false,
+                                    out elementSize,
+                                    out sourceBufferSize,
+                                    out elementType);
 
             // We accept arrays of arbitrary value types - but not reference types.
             if (elementType == null || !elementType.IsValueType)
@@ -393,16 +414,24 @@ namespace System.Windows.Media.Imaging
             }
 
             // Get the address of the data in the array by pinning it.
-            unsafe
+            GCHandle arrayHandle = GCHandle.Alloc(sourceBuffer, GCHandleType.Pinned);
+            try
             {
-                fixed (byte* buffer = &MemoryMarshal.GetArrayDataReference(sourceBuffer))
+                unsafe
+                {
+                    IntPtr buffer = arrayHandle.AddrOfPinnedObject();
                     WritePixelsImpl(sourceRect,
-                                    (nint)buffer,
+                                    buffer,
                                     sourceBufferSize,
                                     sourceBufferStride,
                                     destinationX,
                                     destinationY,
-                                    backwardsCompat: false);
+                                    /*backwardsCompat*/ false);
+                }
+            }
+            finally
+            {
+                arrayHandle.Free();
             }
         }
 
@@ -422,8 +451,15 @@ namespace System.Windows.Media.Imaging
         {
             WritePreamble();
 
-            ArgumentOutOfRangeException.ThrowIfZero(bufferSize);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stride);
+            if (bufferSize < 1)
+            {
+                throw new ArgumentOutOfRangeException("bufferSize", SR.Format(SR.ParameterCannotBeLessThan, 1));
+            }
+
+            if (stride < 1)
+            {
+                throw new ArgumentOutOfRangeException("stride", SR.Format(SR.ParameterCannotBeLessThan, 1));
+            }
 
             if (sourceRect.IsEmpty || sourceRect.Width <= 0 || sourceRect.Height <= 0)
             {
@@ -445,11 +481,11 @@ namespace System.Windows.Media.Imaging
 
             WritePixelsImpl(sourceRect, 
                             buffer,
-                            (uint)bufferSize,
+                            bufferSize,
                             stride,
                             destinationX,
                             destinationY,
-                            backwardsCompat: true);
+                            /*backwardsCompat*/ true);
         }
 
         /// <summary>
@@ -473,14 +509,24 @@ namespace System.Windows.Media.Imaging
                 return;
             }
 
+            int elementSize;
+            int sourceBufferSize;
+            Type elementType;
             ValidateArrayAndGetInfo(pixels,
-                                    backwardsCompat: true,
-                                    out int elementSize,
-                                    out uint sourceBufferSize, 
-                                    out Type elementType);
+                                    /*backwardsCompat*/ true,
+                                    out elementSize,
+                                    out sourceBufferSize, 
+                                    out elementType);
 
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stride);
-            ArgumentOutOfRangeException.ThrowIfNegative(offset);
+            if (stride < 1)
+            {
+                throw new ArgumentOutOfRangeException("stride", SR.Format(SR.ParameterCannotBeLessThan, 1));
+            }
+
+            if (offset < 0)
+            {
+                throw new ArgumentOutOfRangeException("offset", SR.Format(SR.ParameterCannotBeLessThan, 0));
+            }
 
             // We accept arrays of arbitrary value types - but not reference types.
             if (elementType == null || !elementType.IsValueType)
@@ -490,7 +536,7 @@ namespace System.Windows.Media.Imaging
             
             checked
             {
-                uint offsetInBytes = (uint)offset * (uint)elementSize;
+                int offsetInBytes = checked(offset * elementSize);
                 if (offsetInBytes >= sourceBufferSize)
                 {
                     // Backwards compat:
@@ -517,25 +563,28 @@ namespace System.Windows.Media.Imaging
                 sourceRect.Y = 0;
 
                 // Get the address of the data in the array by pinning it.
-                unsafe
+                GCHandle arrayHandle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+                try
                 {
-                    fixed (byte* buffer = &MemoryMarshal.GetArrayDataReference(pixels))
-                    {
-                        nint adjustedBuffer;
-                        checked
-                        {
-                            adjustedBuffer = new IntPtr(((long)buffer) + (long)offsetInBytes);
-                            sourceBufferSize -= offsetInBytes;
-                        }
+                    IntPtr buffer = arrayHandle.AddrOfPinnedObject();
 
-                        WritePixelsImpl(sourceRect,
-                                        adjustedBuffer,
-                                        sourceBufferSize,
-                                        stride,
-                                        destinationX,
-                                        destinationY,
-                                        backwardsCompat: true);
+                    checked
+                    {
+                        buffer = new IntPtr(((long) buffer) + (long) offsetInBytes);
+                        sourceBufferSize -= offsetInBytes;
                     }
+
+                    WritePixelsImpl(sourceRect,
+                                    buffer,
+                                    sourceBufferSize,
+                                    stride,
+                                    destinationX,
+                                    destinationY,
+                                    /*backwardsCompat*/ true);
+                }
+                finally
+                {
+                    arrayHandle.Free();
                 }
             }
         }
@@ -700,7 +749,10 @@ namespace System.Windows.Media.Imaging
             BitmapSource source
             )
         {
-            ArgumentNullException.ThrowIfNull(source);
+            if (source == null)
+            {
+                throw new ArgumentNullException("source");
+            }
 
             if (source.PixelWidth < 0)
             {
@@ -742,17 +794,12 @@ namespace System.Windows.Media.Imaging
 
                 Lock();
 
-                try
-                {
-                    Int32Rect rcFull = new Int32Rect(0, 0, _pixelWidth, _pixelHeight);
-                    uint bufferSize = checked((uint)_backBufferStride * (uint)source.PixelHeight);
-                    source.CriticalCopyPixels(rcFull, _backBuffer, bufferSize, _backBufferStride);
-                    AddDirtyRect(rcFull);
-                }
-                finally
-                {
-                    Unlock();
-                }
+                Int32Rect rcFull = new Int32Rect(0, 0, _pixelWidth, _pixelHeight);
+                int bufferSize = checked(_backBufferStride.Value * source.PixelHeight);
+                source.CriticalCopyPixels(rcFull, _backBuffer, bufferSize, _backBufferStride.Value);
+                AddDirtyRect(rcFull);
+
+                Unlock();
             }
 
             EndInit();
@@ -786,7 +833,7 @@ namespace System.Windows.Media.Imaging
         private void WritePixelsImpl(
             Int32Rect sourceRect,
             IntPtr    sourceBuffer,
-            uint      sourceBufferSize,
+            int       sourceBufferSize,
             int       sourceBufferStride,
             int       destinationX,
             int       destinationY,
@@ -796,28 +843,100 @@ namespace System.Windows.Media.Imaging
             //
             // Sanitize the source rect and assure it will fit within the back buffer.
             //
-            Debug.Assert(!(backwardsCompat && (sourceRect.X < 0 || sourceRect.Y < 0 || sourceRect.Width < 0 || sourceRect.Height < 0)));
-            ArgumentOutOfRangeException.ThrowIfNegative(sourceRect.X, nameof(sourceRect));
-            ArgumentOutOfRangeException.ThrowIfNegative(sourceRect.Y, nameof(sourceRect));
-            ArgumentOutOfRangeException.ThrowIfNegative(sourceRect.Width, nameof(sourceRect));
-            ArgumentOutOfRangeException.ThrowIfNegative(sourceRect.Height, nameof(sourceRect));
+            if (sourceRect.X < 0)
+            {
+                Debug.Assert(!backwardsCompat);
+                throw new ArgumentOutOfRangeException("sourceRect", SR.ParameterCannotBeNegative);
+            }
 
-            if (!backwardsCompat)
+            if (sourceRect.Y < 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(sourceRect.Width, _pixelWidth, nameof(sourceRect));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(sourceRect.Height, _pixelHeight, nameof(sourceRect));
-                ArgumentOutOfRangeException.ThrowIfNegative(destinationX);
-                ArgumentOutOfRangeException.ThrowIfNegative(destinationY);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(destinationX, _pixelWidth - sourceRect.Width);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(destinationY, _pixelHeight - sourceRect.Height);
+                Debug.Assert(!backwardsCompat);
+                throw new ArgumentOutOfRangeException("sourceRect", SR.ParameterCannotBeNegative);
             }
-            else if(sourceRect.Width > _pixelWidth || sourceRect.Height > _pixelHeight || destinationX > _pixelWidth - sourceRect.Width || destinationY > _pixelHeight - sourceRect.Height)
+
+            if (sourceRect.Width < 0)
             {
-                HRESULT.Check(MS.Win32.NativeMethods.E_INVALIDARG);
+                Debug.Assert(!backwardsCompat);
+                throw new ArgumentOutOfRangeException("sourceRect", SR.Format(SR.ParameterMustBeBetween, 0, _pixelWidth));
             }
-            else if (destinationX < 0 || destinationY < 0)
+
+            if (sourceRect.Width > _pixelWidth)
             {
-                HRESULT.Check((int)WinCodecErrors.WINCODEC_ERR_VALUEOVERFLOW);
+                if (backwardsCompat)
+                {
+                    HRESULT.Check(MS.Win32.NativeMethods.E_INVALIDARG);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("sourceRect", SR.Format(SR.ParameterMustBeBetween, 0, _pixelWidth));
+                }
+            }
+
+            if (sourceRect.Height < 0)
+            {
+                Debug.Assert(!backwardsCompat);
+                throw new ArgumentOutOfRangeException("sourceRect", SR.Format(SR.ParameterMustBeBetween, 0, _pixelHeight));
+            }
+
+            if (sourceRect.Height > _pixelHeight)
+            {
+                if (backwardsCompat)
+                {
+                    HRESULT.Check(MS.Win32.NativeMethods.E_INVALIDARG);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("sourceRect", SR.Format(SR.ParameterMustBeBetween, 0, _pixelHeight));
+                }
+            }
+
+            if (destinationX < 0)
+            {
+                if (backwardsCompat)
+                {
+                    HRESULT.Check((int)WinCodecErrors.WINCODEC_ERR_VALUEOVERFLOW);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("sourceRect", SR.ParameterCannotBeNegative);
+                }
+            }
+        
+            if (destinationX > _pixelWidth - sourceRect.Width)
+            {
+                if (backwardsCompat)
+                {
+                    HRESULT.Check(MS.Win32.NativeMethods.E_INVALIDARG);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("destinationX", SR.Format(SR.ParameterMustBeBetween, 0, _pixelWidth - sourceRect.Width));
+                }
+            }
+
+            if (destinationY < 0)
+            {
+                if (backwardsCompat)
+                {
+                    HRESULT.Check((int)WinCodecErrors.WINCODEC_ERR_VALUEOVERFLOW);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("destinationY", SR.Format(SR.ParameterMustBeBetween, 0, _pixelHeight - sourceRect.Height));
+                }
+            }
+
+            if (destinationY > _pixelHeight - sourceRect.Height)
+            {
+                if (backwardsCompat)
+                {
+                    HRESULT.Check(MS.Win32.NativeMethods.E_INVALIDARG);
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException("destinationY", SR.Format(SR.ParameterMustBeBetween, 0, _pixelHeight - sourceRect.Height));
+                }
             }
 
             //
@@ -833,8 +952,11 @@ namespace System.Windows.Media.Imaging
                 throw new ArgumentNullException(backwardsCompat ? "buffer" : "sourceBuffer");
             }
 
-            Debug.Assert(!(backwardsCompat && sourceBufferStride < 1));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sourceBufferStride);
+            if (sourceBufferStride < 1)
+            {
+                Debug.Assert(!backwardsCompat);
+                throw new ArgumentOutOfRangeException("sourceBufferStride", SR.Format(SR.ParameterCannotBeLessThan, 1));
+            }
 
             if (sourceRect.Width == 0 || sourceRect.Height == 0)
             {
@@ -848,7 +970,7 @@ namespace System.Windows.Media.Imaging
             {
                 uint finalRowWidthInBits = (uint)((sourceRect.X + sourceRect.Width) * _format.InternalBitsPerPixel);
                 uint finalRowWidthInBytes = ((finalRowWidthInBits + 7) / 8);
-                uint requiredBufferSize = ((uint)(sourceRect.Y + sourceRect.Height - 1) * (uint)sourceBufferStride) + finalRowWidthInBytes;
+                uint requiredBufferSize = (uint)((sourceRect.Y + sourceRect.Height - 1) * sourceBufferStride) + finalRowWidthInBytes;
                 if (sourceBufferSize < requiredBufferSize)
                 {
                     if (backwardsCompat)
@@ -857,7 +979,7 @@ namespace System.Windows.Media.Imaging
                     }
                     else
                     {
-                        throw new ArgumentException(SR.Image_InsufficientBufferSize, nameof(sourceBufferSize));
+                        throw new ArgumentException(SR.Image_InsufficientBufferSize, "sourceBufferSize");
                     }
                 }
 
@@ -879,38 +1001,31 @@ namespace System.Windows.Media.Imaging
                 //
                 unsafe
                 {
-                    uint destOffset = ((uint)destinationY * (uint)_backBufferStride) + destXbyteOffset;
+                    uint destOffset = (uint)(destinationY * _backBufferStride.Value) + destXbyteOffset;
                     byte* pDest = (byte*)_backBuffer.ToPointer();
                     pDest += destOffset;
                     uint outputBufferSize = _backBufferSize - destOffset;
 
                     byte* pSource = (byte*)sourceBuffer.ToPointer();
                     pSource += firstPixelByteOffet;
-                    uint inputBufferSize = sourceBufferSize - firstPixelByteOffet;
+                    uint inputBufferSize = (uint)sourceBufferSize - firstPixelByteOffet;
 
                     Lock();
 
-                    try
-                    {
-                        MILUtilities.MILCopyPixelBuffer(
-                            pDest,
-                            outputBufferSize,
-                            (uint) _backBufferStride,
-                            destBufferBitOffset,
-                            pSource,
-                            inputBufferSize,
-                            (uint) sourceBufferStride,
-                            sourceBufferBitOffset,
-                            (uint) sourceRect.Height,
-                            copyWidthInBits);
-                        AddDirtyRect(destinationRect);
-                    }
-                    finally
-                    {
-                        // MILUtilities.MILCopyPixelBuffer may throw ArgumentException (e.g. for invalid stride)
-                        // See https://github.com/dotnet/wpf/issues/8134
-                        Unlock();
-                    }
+                    MILUtilities.MILCopyPixelBuffer(
+                        pDest,
+                        outputBufferSize,
+                        (uint) _backBufferStride.Value,
+                        destBufferBitOffset,
+                        pSource,
+                        inputBufferSize,
+                        (uint) sourceBufferStride,
+                        sourceBufferBitOffset,
+                        (uint) sourceRect.Height,
+                        copyWidthInBits);
+
+                    AddDirtyRect(destinationRect);
+                    Unlock();
                 }
             }
 
@@ -1034,11 +1149,11 @@ namespace System.Windows.Media.Imaging
         /// <param name="sourceBufferSize">
         ///     On output, will contain the size of the array.
         /// </param>
-        private static void ValidateArrayAndGetInfo(Array sourceBuffer,
-                                                    bool backwardsCompat,
-                                                    out int elementSize,
-                                                    out uint sourceBufferSize,
-                                                    out Type elementType)
+        private void ValidateArrayAndGetInfo(Array sourceBuffer,
+                                                       bool backwardsCompat,
+                                                       out int elementSize,
+                                                       out int sourceBufferSize,
+                                                       out Type elementType)
         {
             //
             // Assure that a valid pixels Array was provided.
@@ -1050,8 +1165,7 @@ namespace System.Windows.Media.Imaging
 
             if (sourceBuffer.Rank == 1)
             {
-                int firstDimLength = sourceBuffer.GetLength(0);
-                if (firstDimLength == 0)
+                if (sourceBuffer.GetLength(0) <= 0)
                 {
                     if (backwardsCompat)
                     {
@@ -1061,7 +1175,7 @@ namespace System.Windows.Media.Imaging
                     }
                     else
                     {
-                        throw new ArgumentException(SR.Image_InsufficientBuffer, nameof(sourceBuffer));
+                        throw new ArgumentException(SR.Image_InsufficientBuffer, "sourceBuffer");
                     }
                 }
                 else
@@ -1070,16 +1184,14 @@ namespace System.Windows.Media.Imaging
                     {
                         object exemplar = sourceBuffer.GetValue(0);
                         elementSize = Marshal.SizeOf(exemplar);
-                        sourceBufferSize = (uint)firstDimLength * (uint)elementSize;
+                        sourceBufferSize = sourceBuffer.GetLength(0) * elementSize;
                         elementType = exemplar.GetType();
                     }
                 }
 }
             else if (sourceBuffer.Rank == 2)
             {
-                int firstDimLength = sourceBuffer.GetLength(0);
-                int secondDimLength = sourceBuffer.GetLength(1);
-                if (firstDimLength == 0 || secondDimLength == 0)
+                if (sourceBuffer.GetLength(0) <= 0 || sourceBuffer.GetLength(1) <= 0)
                 {
                     if (backwardsCompat)
                     {
@@ -1089,16 +1201,16 @@ namespace System.Windows.Media.Imaging
                     }
                     else
                     {
-                        throw new ArgumentException(SR.Image_InsufficientBuffer, nameof(sourceBuffer));
+                        throw new ArgumentException(SR.Image_InsufficientBuffer, "sourceBuffer");
                     }
                 }
                 else
                 {
                     checked
                     {
-                        object exemplar = sourceBuffer.GetValue(0, 0);
+                        object exemplar = sourceBuffer.GetValue(0,0);
                         elementSize = Marshal.SizeOf(exemplar);
-                        sourceBufferSize = ((uint)firstDimLength * (uint)secondDimLength) * (uint)elementSize;
+                        sourceBufferSize = sourceBuffer.GetLength(0) * sourceBuffer.GetLength(1) * elementSize;
                         elementType = exemplar.GetType();
                     }
                 }
@@ -1227,7 +1339,8 @@ namespace System.Windows.Media.Imaging
                     channel.SendCommand(
                         (byte*)&command,
                         sizeof(DUCE.MILCMD_DOUBLEBUFFEREDBITMAP),
-                        sendInSeparateBatch: false);
+                        false /* sendInSeparateBatch */
+                        );
                 }
             }
         }
@@ -1370,11 +1483,11 @@ namespace System.Windows.Media.Imaging
             {
                 ReadPreamble();
 
-                return _backBufferStride;
+                return _backBufferStride.Value;
             }
         }
 
-        private int _backBufferStride;
+        private SecurityCriticalDataForSet<int> _backBufferStride;
 
         #endregion // Properties
 

@@ -1,14 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Annotations.Storage;
 using System.Windows.Documents;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using MS.Internal;
 using MS.Internal.Annotations;
 using MS.Internal.Annotations.Anchoring;
@@ -291,16 +297,12 @@ namespace System.Windows.Annotations
             // causes the page to be disposed
             Size tempSize = page.Size;
 
-            AdornerDecorator decorator = new AdornerDecorator
-            {
-                FlowDirection = _flowDirection
-            };
-            DocumentPageView dpv = new DocumentPageView
-            {
-                UseAsynchronousGetPage = false,
-                DocumentPaginator = _originalPaginator,
-                PageNumber = pageNumber
-            };
+            AdornerDecorator decorator = new AdornerDecorator();
+            decorator.FlowDirection = _flowDirection;
+            DocumentPageView dpv = new DocumentPageView();
+            dpv.UseAsynchronousGetPage = false;
+            dpv.DocumentPaginator = _originalPaginator;
+            dpv.PageNumber = pageNumber;
             decorator.Child = dpv;
 
             // Arrange the first time to get the DPV setup right
@@ -450,7 +452,7 @@ namespace System.Windows.Annotations
                     }
                     else
                     {
-                        return new HostedElements(ReadOnlyCollection<TextSegment>.Empty);
+                        return new HostedElements(new ReadOnlyCollection<TextSegment>(new List<TextSegment>(0)));
                     }
                 }
             }
@@ -466,7 +468,7 @@ namespace System.Windows.Annotations
                 }
                 else
                 {
-                    return ReadOnlyCollection<Rect>.Empty;
+                    return new ReadOnlyCollection<Rect>(new List<Rect>(0));
                 }
             }
 
@@ -491,7 +493,10 @@ namespace System.Windows.Annotations
             /// </summary>
             public void OnChildDesiredSizeChanged(UIElement child)
             {
-                _basePage?.OnChildDesiredSizeChanged(child);
+                if (_basePage != null)
+                {
+                    _basePage.OnChildDesiredSizeChanged(child);
+                }
             }
 
 

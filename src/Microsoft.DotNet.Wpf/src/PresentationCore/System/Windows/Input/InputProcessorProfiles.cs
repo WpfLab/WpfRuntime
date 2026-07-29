@@ -1,32 +1,64 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
 //
 // Description: Creates ITfInputProcessorProfiles instances.
 //
+//
 
+using System;
 using System.Runtime.InteropServices;
-using System.Globalization;
 using System.Threading;
+using System.Security;
 using MS.Win32;
+using MS.Internal;
+using System.Diagnostics;
+using System.Globalization;
+using System.Collections;
 
 namespace System.Windows.Input
 {
+    //------------------------------------------------------
+    //
+    //  InputProcessorProfiles class
+    //
+    //------------------------------------------------------
+
     /// <summary>
-    /// The <see cref="InputProcessorProfiles"/> class is always associated with hwndInputLanguage class.
+    /// The InputProcessorProfiles class is always associated with 
+    /// hwndInputLanguage class.
     /// </summary>
-    internal sealed class InputProcessorProfiles
+    internal class InputProcessorProfiles
     {
+        //------------------------------------------------------
+        //
+        //  Constructors
+        //
+        //------------------------------------------------------
+
         /// <summary>
         /// InputProcessorProfiles Constructor;
         /// </summary>
+        /// Critical - as this sets the value for _ipp.
+        /// Safe - as this just initializes it to null.
         internal InputProcessorProfiles()
         {
             // _ipp is a ValueType, hence no need for new.
-            _ipp = null;
+            _ipp.Value = null;
             _cookie = UnsafeNativeMethods.TF_INVALID_COOKIE;
         }
 
+        //------------------------------------------------------
+        //
+        //  Internal Methods
+        //
+        //------------------------------------------------------
+ 
+        #region Internal Methods
+ 
         /// <summary>
         /// Initialize an interface and notify sink.
         /// </summary>
@@ -34,11 +66,11 @@ namespace System.Windows.Input
         {
             Debug.Assert(Thread.CurrentThread.GetApartmentState() == ApartmentState.STA, "Initialize called on MTA thread!");
 
-            Debug.Assert(_ipp == null, "Initialize called twice");
+            Debug.Assert(_ipp.Value == null, "Initialize called twice");
 
-            _ipp = InputProcessorProfilesLoader.Load();
+            _ipp.Value = InputProcessorProfilesLoader.Load();
 
-            if (_ipp == null)
+            if (_ipp.Value == null)
             {
                 return false;
             }
@@ -52,12 +84,20 @@ namespace System.Windows.Input
         /// </summary>
         internal void Uninitialize()
         {
-            Debug.Assert(_ipp != null, "Uninitialize called without initializing");
+            Debug.Assert(_ipp.Value != null, "Uninitialize called without initializing");
 
-            UnadviseNotifySink();
-            Marshal.ReleaseComObject(_ipp);
-            _ipp = null;
+            UnadviseNotifySink();            
+            Marshal.ReleaseComObject(_ipp.Value);
+            _ipp.Value = null;
         }
+
+        #endregion Internal Methods
+
+        //------------------------------------------------------
+        //
+        //  Internal Properties
+        //
+        //------------------------------------------------------
 
         /// <summary>
         /// Get the current input language of the current thread.
@@ -66,9 +106,9 @@ namespace System.Windows.Input
         {
             set
             {
-                if (_ipp != null)
+                if (_ipp.Value != null)
                 {
-                    if (_ipp.ChangeCurrentLanguage(value) != 0)
+                    if (_ipp.Value.ChangeCurrentLanguage(value) != 0)
                     {
                         //
                         // Under WinXP or W2K3, ITfInputProcessorProfiles::ChangeCurrentLanguage() fails
@@ -77,7 +117,7 @@ namespace System.Windows.Input
                         IntPtr[] hklList = null;
 
                         int count = (int)SafeNativeMethods.GetKeyboardLayoutList(0, null);
-                        if (count > 1)
+                        if (count > 1) 
                         {
                             hklList = new IntPtr[count];
 
@@ -88,7 +128,7 @@ namespace System.Windows.Input
                             {
                                 if (value == (short)hklList[i])
                                 {
-                                    SafeNativeMethods.ActivateKeyboardLayout(new HandleRef(this, hklList[i]), 0);
+                                    SafeNativeMethods.ActivateKeyboardLayout(new HandleRef(this,hklList[i]), 0);
                                     break;
                                 }
                             }
@@ -99,29 +139,45 @@ namespace System.Windows.Input
         }
 
         /// <summary>
-        /// Get the list of the input languages that are available in the current thread.
+        /// Get the list of the input languages that are available in the
+        /// current thread.
         /// </summary>
-        internal unsafe CultureInfo[] InputLanguageList
+        internal ArrayList InputLanguageList
         {
-            get
-            {
-                // ITfInputProcessorProfiles::GetLanguageList returns the pointer that was allocated by CoTaskMemAlloc().
-                _ipp.GetLanguageList(out nint ptrLanguageIDs, out int nCount);
+             get
+             {
+                 int nCount;
+                 IntPtr langids;
 
-                ReadOnlySpan<short> languageIDs = new((void*)ptrLanguageIDs, nCount);
-                CultureInfo[] langArray = new CultureInfo[nCount];
+                 // ITfInputProcessorProfiles::GetLanguageList returns the pointer that was allocated by
+                 // CoTaskMemAlloc().
+                 _ipp.Value.GetLanguageList(out langids, out nCount);
 
-                // Create CultureInfo from each ID and store it
-                for (int i = 0; i < langArray.Length; i++)
-                    langArray[i] = new CultureInfo(languageIDs[i]);
+                 ArrayList arrayLang = new ArrayList();
 
-                // Call CoTaskMemFree().
-                Marshal.FreeCoTaskMem(ptrLanguageIDs);
+                 int sizeOfShort = Marshal.SizeOf(typeof(short));
 
-                return langArray;
-            }
+                 for (int i = 0; i < nCount; i++)
+                 {
+                     // Unmarshal each langid from short array.
+                     short langid = Marshal.PtrToStructure<short>((IntPtr)((Int64)langids + sizeOfShort * i));
+                     arrayLang.Add(new CultureInfo(langid));
+                 }
+
+                 // Call CoTaskMemFree().
+                 Marshal.FreeCoTaskMem(langids);
+
+                 return arrayLang;
+             }
         }
 
+
+        //------------------------------------------------------
+        //
+        //  Private Methods
+        //
+        //------------------------------------------------------
+        
         /// <summary>
         /// This advices the input language notify sink to
         /// ITfInputProcessorProfile.
@@ -130,7 +186,7 @@ namespace System.Windows.Input
         {
             Debug.Assert(_cookie == UnsafeNativeMethods.TF_INVALID_COOKIE, "Cookie is already set.");
 
-            UnsafeNativeMethods.ITfSource source = _ipp as UnsafeNativeMethods.ITfSource;
+            UnsafeNativeMethods.ITfSource source = _ipp.Value as UnsafeNativeMethods.ITfSource;
 
             // workaround because I can't pass a ref to a readonly constant
             Guid guid = UnsafeNativeMethods.IID_ITfLanguageProfileNotifySink;
@@ -145,21 +201,23 @@ namespace System.Windows.Input
         {
             Debug.Assert(_cookie != UnsafeNativeMethods.TF_INVALID_COOKIE, "Cookie is not set.");
 
-            UnsafeNativeMethods.ITfSource source = _ipp as UnsafeNativeMethods.ITfSource;
+            UnsafeNativeMethods.ITfSource source = _ipp.Value as UnsafeNativeMethods.ITfSource;
 
             source.UnadviseSink(_cookie);
 
             _cookie = UnsafeNativeMethods.TF_INVALID_COOKIE;
         }
 
-        /// <summary>
-        /// The reference to <see cref="UnsafeNativeMethods.ITfInputProcessorProfiles"/>.
-        /// </summary>
-        private UnsafeNativeMethods.ITfInputProcessorProfiles _ipp;
+        //------------------------------------------------------
+        //
+        //  Private Fields
+        //
+        //------------------------------------------------------
+                
+        // The reference to ITfInputProcessorProfile.
+        private SecurityCriticalDataForSet<UnsafeNativeMethods.ITfInputProcessorProfiles> _ipp;
 
-        /// <summary>
-        /// The cookie for the advised sink.
-        /// </summary>
+        // The cookie for the advised sink.
         private int _cookie;
     }
 }

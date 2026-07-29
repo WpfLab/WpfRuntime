@@ -1,13 +1,36 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//
+//
+
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Threading;
 using System.Windows.Threading;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Automation.Provider;
 using System.Windows.Media.Composition;
+using System.Runtime.InteropServices;
+using System.Security;
 using MS.Internal;
+using MS.Win32;
 using MS.Utility;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
+    /// <summary>
+    ///
+    /// </summary>
     public abstract class CompositionTarget : DispatcherObject, IDisposable, ICompositionTarget
     {
         //
@@ -71,9 +94,9 @@ namespace System.Windows.Media
         /// </summary>
         internal virtual void ReleaseUCEResources(DUCE.Channel channel, DUCE.Channel outOfBandChannel)
         {
-            if (_rootVisual != null)
+            if (_rootVisual.Value != null)
             {
-                ((DUCE.IResource)(_rootVisual)).ReleaseOnChannel(channel);
+                ((DUCE.IResource)(_rootVisual.Value)).ReleaseOnChannel(channel);
             }
 
             //
@@ -151,13 +174,13 @@ namespace System.Windows.Media
             get
             {
                 VerifyAPIReadOnly();
-                return (_rootVisual);
+                return (_rootVisual.Value);
             }
 
             set
             {
                 VerifyAPIReadWrite();
-                if (_rootVisual != value)
+                if (_rootVisual.Value != value)
                 {
                     SetRootVisual(value);
 
@@ -221,14 +244,14 @@ namespace System.Windows.Media
             // render if one has not already been scheduled.
             //
 
-            if (_rootVisual != null)
+            if (_rootVisual.Value != null)
             {
                 //
                 // When replacing the root visual, we need to re-realize all
                 // content in the new tree
                 //
                 Visual.PropagateFlags(
-                    _rootVisual,
+                    _rootVisual.Value,
                     VisualFlags.IsSubtreeDirtyForPrecompute,
                     VisualProxyFlags.IsSubtreeDirtyForRender
                     );
@@ -274,7 +297,7 @@ namespace System.Windows.Media
             _frameRateTimer.Begin();
 #endif
 
-            if (_rootVisual != null)
+            if (_rootVisual.Value != null)
             {
                 bool etwTracingEnabled = false;
 
@@ -288,7 +311,7 @@ namespace System.Windows.Media
                 _precomputeRateTimer.Begin();
 #endif
                 // precompute is channel agnostic
-                _rootVisual.Precompute();
+                _rootVisual.Value.Precompute();
 
 #if MEDIA_PERFORMANCE_COUNTERS
                 _precomputeRateTimer.End();
@@ -393,7 +416,7 @@ namespace System.Windows.Media
         {
             MediaContext mctx = MediaContext.From(Dispatcher);
 
-            Invariant.Assert(_rootVisual!=null);
+            Invariant.Assert(_rootVisual.Value!=null);
 
             // 1) Check if we have a cached render context.
             // 2) Initialize the render context.
@@ -431,7 +454,7 @@ namespace System.Windows.Media
 
             if (mctx.IsConnected)
             {
-               _rootVisual.Render(rc, 0);
+               _rootVisual.Value.Render(rc, 0);
             }
 
             // ------------------------------------------------------------------------------------
@@ -463,22 +486,22 @@ namespace System.Windows.Media
 
             DUCE.ChannelSet channelSet = MediaContext.From(Dispatcher).GetChannels();
             DUCE.Channel channel = channelSet.Channel;
-            if (_rootVisual != null && _contentRoot.IsOnChannel(channel))
+            if (_rootVisual.Value != null && _contentRoot.IsOnChannel(channel))
             {
                 ClearRootNode(channel);
 
-                ((DUCE.IResource)_rootVisual).ReleaseOnChannel(channel);
+                ((DUCE.IResource)_rootVisual.Value).ReleaseOnChannel(channel);
 
-                _rootVisual.IsRootElement = false;
+                _rootVisual.Value.IsRootElement = false;
             }
 
-            _rootVisual = visual;
+            _rootVisual.Value = visual;
 
-            if (_rootVisual != null)
+            if (_rootVisual.Value != null)
             {
-                _rootVisual.IsRootElement = true;
+                _rootVisual.Value.IsRootElement = true;
 
-                _rootVisual.SetFlagsOnAllChannels(
+                _rootVisual.Value.SetFlagsOnAllChannels(
                     true,
                     VisualProxyFlags.IsSubtreeDirtyForRender);
             }
@@ -509,7 +532,10 @@ namespace System.Windows.Media
         internal void VerifyAPIReadOnly()
         {
             VerifyAccess();
-            ObjectDisposedException.ThrowIf(_isDisposed, typeof(CompositionTarget));
+            if (_isDisposed)
+            {
+                throw new System.ObjectDisposedException("CompositionTarget");
+            }
         }
 
         /// <summary>
@@ -518,7 +544,10 @@ namespace System.Windows.Media
         internal void VerifyAPIReadWrite()
         {
             VerifyAccess();
-            ObjectDisposedException.ThrowIf(_isDisposed, typeof(CompositionTarget));
+            if (_isDisposed)
+            {
+                throw new System.ObjectDisposedException("CompositionTarget");
+            }
 
             MediaContext.From(Dispatcher).VerifyWriteAccess();
         }
@@ -534,7 +563,7 @@ namespace System.Windows.Media
         #region Private Fields
 
         private bool _isDisposed;
-        private Visual _rootVisual;
+        private SecurityCriticalDataForSet<Visual> _rootVisual;
         private RenderContext _cachedRenderContext;
         private Matrix _worldTransform = Matrix.Identity;
 

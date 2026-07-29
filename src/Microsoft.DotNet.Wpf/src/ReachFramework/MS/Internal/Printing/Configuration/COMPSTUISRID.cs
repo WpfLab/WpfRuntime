@@ -1,7 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Text;
+// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -13,6 +12,10 @@ using System.Text;
 
 namespace MS.Internal.Printing.Configuration
 {
+    using System;
+    using System.Security;
+    using System.Text;
+
     /// <summary>
     /// Resource manager for string resources in compstui.dll
     /// </summary>
@@ -28,7 +31,7 @@ namespace MS.Internal.Printing.Configuration
                     return null;
                 }
 
-                throw new ArgumentOutOfRangeException(nameof(srid), srid, string.Empty);
+                throw new ArgumentOutOfRangeException("srid", srid, string.Empty);
             }
 
             SafeModuleHandle handle = EnsureModuleHandle();
@@ -60,9 +63,12 @@ namespace MS.Internal.Printing.Configuration
 
         public void Release()
         {
-            SafeModuleHandle handle = this._compstuiHandle;
-            this._compstuiHandle?.Dispose();
-            this._compstuiHandle = null;
+            SafeModuleHandle handle = this._compstuiHandle;            
+            if (this._compstuiHandle != null)
+            {
+                this._compstuiHandle.Dispose();
+                this._compstuiHandle = null;
+            }
         }
 
         private SafeModuleHandle EnsureModuleHandle()

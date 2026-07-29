@@ -1,8 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.ObjectModel;
+using System.Security;
+using MS.Internal;
 using MS.Win32.Penimc;
+using System.Windows.Media;
 
 namespace System.Windows.Input
 {
@@ -30,7 +35,7 @@ namespace System.Windows.Input
     /// </summary>
     internal class TabletDeviceInfo
     {
-        public IPimcTablet3 PimcTablet;
+        public SecurityCriticalDataClass<IPimcTablet3> PimcTablet;
         public int Id;
         public string Name;
         public string PlugAndPlayId;
@@ -45,6 +50,6 @@ namespace System.Windows.Input
         /// The GIT key for a WISP tablet COM object.
         /// </summary>
         public UInt32 WispTabletKey {  get;  set; }
-    }
+    }    
 }
 

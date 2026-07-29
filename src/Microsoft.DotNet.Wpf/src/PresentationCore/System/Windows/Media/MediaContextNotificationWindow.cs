@@ -1,16 +1,34 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //      A wrapper for a top-level hidden window that is used to process
 //      messages broadcasted to top-level windows only (such as DWM's
 //      WM_DWMCOMPOSITIONCHANGED). If the WPF application doesn't have
 //      a top-level window (as it is the case for XBAP applications),
 //      such messages would have been ignored.
+//
 
+using System;
+using System.Windows.Threading;
+
+using System.Collections;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
+using Microsoft.Win32;
+using MS.Internal;
+using MS.Internal.PresentationCore;
 using MS.Internal.Interop;
 using MS.Win32;
+using System.Security;
+
+using SR=MS.Internal.PresentationCore.SR;
+using DllImport=MS.Internal.PresentationCore.DllImport;
 
 namespace System.Windows.Media
 {
@@ -53,8 +71,8 @@ namespace System.Windows.Media
 
             _hwndNotificationHook = new HwndWrapperHook(MessageFilter);
 
-            _hwndNotification = hwndNotification;
-            _hwndNotification.AddHook(_hwndNotificationHook);
+            _hwndNotification = new SecurityCriticalDataClass<HwndWrapper>(hwndNotification);
+            _hwndNotification.Value.AddHook(_hwndNotificationHook);
 
             _isDisposed = false;
 
@@ -72,7 +90,7 @@ namespace System.Windows.Media
             //
 
             ChangeWindowMessageFilter(s_dwmRedirectionEnvironmentChanged, 1 /* MSGFLT_ADD */);
-            MS.Internal.HRESULT.Check(MilContent_AttachToHwnd(_hwndNotification.Handle));
+            MS.Internal.HRESULT.Check(MilContent_AttachToHwnd(_hwndNotification.Value.Handle));
         }
 
         public void Dispose()
@@ -82,9 +100,9 @@ namespace System.Windows.Media
                 //
                 // If DWM is not running, this call will result in NoOp.
                 //
-                MS.Internal.HRESULT.Check(MilContent_DetachFromHwnd(_hwndNotification.Handle));
+                MS.Internal.HRESULT.Check(MilContent_DetachFromHwnd(_hwndNotification.Value.Handle));
 
-                _hwndNotification.Dispose();
+                _hwndNotification.Value.Dispose();
 
                 _hwndNotificationHook = null;
                 _hwndNotification = null;
@@ -116,9 +134,12 @@ namespace System.Windows.Media
         /// </param>
         internal void SetAsChannelNotificationWindow()
         {
-            ObjectDisposedException.ThrowIf(_isDisposed, typeof(MediaContextNotificationWindow));
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException("MediaContextNotificationWindow");
+            }
 
-            _ownerMediaContext.Channel.SetNotificationWindow(_hwndNotification.Handle, s_channelNotifyMessage);
+            _ownerMediaContext.Channel.SetNotificationWindow(_hwndNotification.Value.Handle, s_channelNotifyMessage);
         }
 
         /// <summary>
@@ -126,7 +147,10 @@ namespace System.Windows.Media
         /// </summary>
         private IntPtr MessageFilter(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            ObjectDisposedException.ThrowIf(_isDisposed, typeof(MediaContextNotificationWindow));
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException("MediaContextNotificationWindow");
+            }
 
             WindowMessage message = (WindowMessage)msg;
             Debug.Assert(_ownerMediaContext != null);
@@ -140,7 +164,7 @@ namespace System.Windows.Media
                 // We're going to attempt to attach to DWM every time the desktop composition
                 // state changes to ensure that we properly handle DWM crashing/restarting/etc.
                 //
-                MS.Internal.HRESULT.Check(MilContent_AttachToHwnd(_hwndNotification.Handle));
+                MS.Internal.HRESULT.Check(MilContent_AttachToHwnd(_hwndNotification.Value.Handle));
             }
             else if (message == s_channelNotifyMessage)
             {
@@ -215,7 +239,7 @@ namespace System.Windows.Media
         private MediaContext _ownerMediaContext;
 
         // A top-level hidden window.
-        private HwndWrapper _hwndNotification;
+        private SecurityCriticalDataClass<HwndWrapper> _hwndNotification;
 
         // The message filter hook for the top-level hidden window.
         private HwndWrapperHook _hwndNotificationHook;

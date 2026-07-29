@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //---------------------------------------------------------------------------
 //
@@ -15,9 +16,15 @@
 //
 //---------------------------------------------------------------------------
 
+using System;
+using System.Windows;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal
 {
@@ -172,8 +179,11 @@ namespace MS.Internal
             char[]  characterArray
             )
         {
-            ArgumentNullException.ThrowIfNull(characterArray);
-
+            if (characterArray == null) 
+            {
+                throw new ArgumentNullException("characterArray");
+            }
+            
             _characterArray = characterArray;
         }
 
@@ -215,7 +225,7 @@ namespace MS.Internal
         /// Get fixed address of the character buffer and Pin if necessary.
         /// Note: This call should only be used when we know that we are not pinning 
         /// memory for a long time so as not to fragment the heap.
-        public override unsafe IntPtr PinAndGetCharacterPointer(int offset, out GCHandle gcHandle)
+        public unsafe override IntPtr PinAndGetCharacterPointer(int offset, out GCHandle gcHandle)
         {
             gcHandle = GCHandle.Alloc(_characterArray, GCHandleType.Pinned);
             return new IntPtr(((char*)gcHandle.AddrOfPinnedObject().ToPointer()) + offset);
@@ -271,8 +281,11 @@ namespace MS.Internal
             string  characterString
             )
         {
-            ArgumentNullException.ThrowIfNull(characterString);
-
+            if (characterString == null)
+            {
+                throw new ArgumentNullException("characterString");
+            }
+            
             _string = characterString;
         }
 
@@ -314,7 +327,7 @@ namespace MS.Internal
         /// Get fixed address of the character buffer and Pin if necessary.
         /// Note: This call should only be used when we know that we are not pinning 
         /// memory for a long time so as not to fragment the heap.
-        public override unsafe IntPtr PinAndGetCharacterPointer(int offset, out GCHandle gcHandle)
+        public unsafe override IntPtr PinAndGetCharacterPointer(int offset, out GCHandle gcHandle)
         {
             gcHandle = GCHandle.Alloc(_string, GCHandleType.Pinned);
             return new IntPtr(((char*)gcHandle.AddrOfPinnedObject().ToPointer()) + offset);
@@ -377,11 +390,14 @@ namespace MS.Internal
         {
             if (characterString == null)
             {
-                throw new ArgumentNullException(nameof(characterString));
+                throw new ArgumentNullException("characterString");
             }
 
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
-
+            if (length <= 0)
+            {
+                throw new ArgumentOutOfRangeException("length", SR.ParameterValueMustBeGreaterThanZero);
+            }
+            
             _unsafeString = characterString;
             _length = length;
         }
@@ -393,9 +409,8 @@ namespace MS.Internal
         public override char this[int characterOffset]
         {
             get {
-                ArgumentOutOfRangeException.ThrowIfNegative(characterOffset);
-                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(characterOffset, _length);
-
+                if (characterOffset >= _length || characterOffset < 0)
+                    throw new ArgumentOutOfRangeException("characterOffset", SR.Format(SR.ParameterMustBeBetween,0,_length));
                 return _unsafeString[characterOffset];
             }
             set { throw new NotSupportedException(); }
@@ -450,11 +465,15 @@ namespace MS.Internal
             )
         {
 
-            ArgumentOutOfRangeException.ThrowIfNegative(characterOffset);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(characterOffset, _length);
+            if (characterOffset >= _length || characterOffset < 0)
+            {
+                throw new ArgumentOutOfRangeException("characterOffset", SR.Format(SR.ParameterMustBeBetween,0,_length));
+            }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(characterLength);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(characterLength, _length - characterOffset);
+            if (characterLength < 0 || characterOffset + characterLength > _length)
+            {
+                throw new ArgumentOutOfRangeException("characterLength", SR.Format(SR.ParameterMustBeBetween,0, _length - characterOffset));
+            }
 
             stringBuilder.Append(new string(_unsafeString, characterOffset, characterLength));
         }

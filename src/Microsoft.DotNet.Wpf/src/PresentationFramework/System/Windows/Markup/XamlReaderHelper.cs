@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -13,14 +14,26 @@
 
 using System;
 using System.Xml;
+using System.Xml.Serialization;
+using System.IO;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Globalization;
 using MS.Utility;
 using System.Collections.Specialized;
+using Microsoft.Win32;
+using System.Runtime.InteropServices;
+using MS.Internal;
+
+// Disabling 1634 and 1691:
+// In order to avoid generating warnings about unknown message numbers and
+// unknown pragmas when compiling C# source code with the C# compiler,
+// you need to disable warnings 1634 and 1691. (Presharp Documentation)
+#pragma warning disable 1634, 1691
 
 #if !PBTCOMPILER
 
@@ -132,10 +145,8 @@ namespace System.Windows.Markup
 
             // push a rootLevel stack
             // For now always use InlineBlock.
-            TextFlowStackData textFlowStackData = new TextFlowStackData
-            {
-                StripLeadingSpaces = true
-            };
+            TextFlowStackData textFlowStackData = new TextFlowStackData();
+            textFlowStackData.StripLeadingSpaces = true;
 
             TextFlowStack.Push(textFlowStackData);
 
@@ -307,8 +318,11 @@ namespace System.Windows.Markup
         /// </summary>
         internal void Close()
         {
-            _xmlReader?.Close();
-            _xmlReader = null;
+            if (_xmlReader != null)
+            {
+                _xmlReader.Close();
+                _xmlReader = null;
+            }
         }
 
         /// <summary>
@@ -452,7 +466,7 @@ namespace System.Windows.Markup
         /// though the token reader doesn't need to callout to the parser, do so anyway so the
         /// compiler won't die.
         /// </summary>
-        private bool GetElementType(
+        bool GetElementType(
                 bool extensionFirst,  // True if we check for localName+Extension first
                 string localName,
                 string namespaceURI,
@@ -518,7 +532,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write a document node.
         /// </summary>
-        private void WriteDocumentStart()
+        void WriteDocumentStart()
         {
             AddNodeToCollection(new XamlDocumentStartNode(LineNumber, LinePosition, 0));
         }
@@ -526,7 +540,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write an EndDocument node.
         /// </summary>
-        private void WriteDocumentEnd()
+        void WriteDocumentEnd()
         {
             AddNodeToCollection(new XamlDocumentEndNode(LineNumber, LinePosition, XmlReader.Depth));
         }
@@ -534,7 +548,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write a Unknown xaml node start record
         /// </summary>
-        private void WriteUnknownTagStart(
+        void WriteUnknownTagStart(
             string namespaceUri,
             string tagName,
             int depth)
@@ -546,7 +560,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write a Unknown xaml attribute record
         /// </summary>
-        private void WriteUnknownAttribute(
+        void WriteUnknownAttribute(
             string namespaceUri,
             string attributeName,
             string attributeValue,
@@ -592,7 +606,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write a Unknown xaml node end record
         /// </summary>
-        private void WriteUnknownTagEnd()
+        void WriteUnknownTagEnd()
         {
             // We pass on the local name and namespace uri because it is used to distinguish
             // between x:Array end tag and Set.Value end tags
@@ -604,7 +618,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write a Start Element node, which can be any type of object
         /// </summary>
-        private void WriteElementStart(
+        void WriteElementStart(
             string assemblyName,
             string typeFullName,
             int depth,
@@ -679,7 +693,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// write out a text node.
         /// </summary>
-        private void WriteText(
+        void WriteText(
             string value,
             Type converterType,
             int depth)
@@ -695,7 +709,7 @@ namespace System.Windows.Markup
         /// to the next tag in the file.  To get accurate positioning information, use
         /// the passed in lineNumber and linePosition rather than the XmlReader's current location.
         /// </remarks>
-        private void WritePropertyComplexStart(
+        void WritePropertyComplexStart(
             int depth,
             int lineNumber,
             int linePosition,
@@ -714,7 +728,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out the End of a PropertyComplex node
         /// </summary>
-        private void WritePropertyComplexEnd()
+        void WritePropertyComplexEnd()
         {
             AddNodeToCollection(new
                 XamlPropertyComplexEndNode(LineNumber, LinePosition, XmlReader.Depth));
@@ -734,7 +748,7 @@ namespace System.Windows.Markup
 
         }
 
-        private void WriteNameProperty(
+        void WriteNameProperty(
             string propertyName,            // String name of the property in xaml markup
             object propertyMember,          // DependencyProperty, PropertyInfo or MethodInfo for static setter
             string assemblyName,            // Assembly of the type where the property is declared
@@ -750,7 +764,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out a property that is represented as an attribute on a tag.
         /// </summary>
-        private void WriteProperty(
+        void WriteProperty(
             string propertyName,            // String name of the property in xaml markup
             object propertyMember,          // DependencyProperty, PropertyInfo or MethodInfo for static setter
             string assemblyName,            // Assembly of the type where the property is declared
@@ -767,7 +781,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out a property whose value is a simple MarkupExtension.
         /// </summary>
-        private void WritePropertyWithExtension(
+        void WritePropertyWithExtension(
             string propertyName,            // String name of the property in xaml markup
             object propertyMember,          // DependencyProperty, PropertyInfo or MethodInfo for static setter
             string assemblyName,            // Assembly of the type where the property is declared
@@ -826,7 +840,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out a property that is represented as an attribute on a tag.
         /// </summary>
-        private void WritePropertyWithType(
+        void WritePropertyWithType(
             string propertyName,            // String name of the property in xaml markup
             object propertyMember,          // DependencyProperty, PropertyInfo or MethodInfo for static setter
             string assemblyName,            // Assembly where type of the CLR property is defined
@@ -848,7 +862,7 @@ namespace System.Windows.Markup
         /// Write out a property that is represented as a complex property as if it were
         /// a regular attribute.
         /// </summary>
-        private void WriteComplexAsSimpleProperty(
+        void WriteComplexAsSimpleProperty(
             string propertyName,            // String name of the property in xaml markup
             string propertyNamespaceUri,    // Namespace corresponding to the property name
             object propertyMember,          // DependencyProperty, PropertyInfo or MethodInfo for static setter
@@ -877,7 +891,7 @@ namespace System.Windows.Markup
                 assemblyName, declaringTypeFullName, propertyName, value, usage, true));
         }
 
-        private void WriteContentProperty(
+        void WriteContentProperty(
             int depth,
             int lineNumber,
             int linePosition,
@@ -910,7 +924,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out a NamespacePrefix node.
         /// </summary>
-        private void WriteNamespacePrefix(string prefix, string namespaceUri)
+        void WriteNamespacePrefix(string prefix, string namespaceUri)
         {
             AddNodeToCollection(new XamlXmlnsPropertyNode(LineNumber, LinePosition, XmlReader.Depth,
                         prefix, namespaceUri));
@@ -919,7 +933,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out mapping instruction
         /// </summary>
-        private void WritePI(string xmlnsValue, string clrnsValue, string assyValue)
+        void WritePI(string xmlnsValue, string clrnsValue, string assyValue)
         {
             AddNodeToCollection(new XamlPIMappingNode(LineNumber, LinePosition, XmlReader.Depth,
                 xmlnsValue, clrnsValue, assyValue));
@@ -928,7 +942,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out a ClrEvent Node
         /// </summary>
-        private void WriteClrEvent(string eventName, MemberInfo eventMember, string value)
+        void WriteClrEvent(string eventName, MemberInfo eventMember, string value)
         {
             CheckDuplicateProperty(CurrentProperties, eventName, eventMember);
             AddNodeToCollection(new XamlClrEventNode(LineNumber, LinePosition, XmlReader.Depth,
@@ -938,7 +952,7 @@ namespace System.Windows.Markup
         /// <summary>
         ///  Write out an Array start Property Node
         /// </summary>
-        private void WritePropertyArrayStart(
+        void WritePropertyArrayStart(
             int depth,
             object propertyMember,              // DependencyProperty, MethodInfo or PropertyInfo
             string declaringAssemblyName,   // Assembly of declaring type or owner of the CLR property
@@ -953,7 +967,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an End Array Property node
         /// </summary>
-        private void WritePropertyArrayEnd()
+        void WritePropertyArrayEnd()
         {
             AddNodeToCollection(
                 new XamlPropertyArrayEndNode(LineNumber, LinePosition, XmlReader.Depth));
@@ -962,7 +976,7 @@ namespace System.Windows.Markup
         /// <summary>
         ///  Write out a start IList Property Node
         /// </summary>
-        private void WritePropertyIListStart(
+        void WritePropertyIListStart(
                 int depth,
                 object propertyMember,              // DependencyProperty, MethodInfo or PropertyInfo
                 string declaringAssemblyName,   // Assembly of declaring type or owner of the CLR property
@@ -978,7 +992,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an End IList Property node
         /// </summary>
-        private void WritePropertyIListEnd()
+        void WritePropertyIListEnd()
         {
             AddNodeToCollection(
                 new XamlPropertyIListEndNode(LineNumber, LinePosition, XmlReader.Depth));
@@ -987,7 +1001,7 @@ namespace System.Windows.Markup
         /// <summary>
         ///  Write out a start IDictionary Property Node
         /// </summary>
-        private void WritePropertyIDictionaryStart(
+        void WritePropertyIDictionaryStart(
                 int depth,
                 object propertyMember,              // DependencyProperty, MethodInfo or PropertyInfo
                 string declaringAssemblyName,   // Assembly of declaring type or owner of the CLR property
@@ -1003,7 +1017,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an End IDictionary roperty node
         /// </summary>
-        private void WritePropertyIDictionaryEnd()
+        void WritePropertyIDictionaryEnd()
         {
             AddNodeToCollection(
                 new XamlPropertyIDictionaryEndNode(LineNumber, LinePosition, XmlReader.Depth));
@@ -1012,7 +1026,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an EndAttributes Node.
         /// </summary>
-        private void WriteEndAttributes(int depth, bool compact)
+        void WriteEndAttributes(int depth, bool compact)
         {
             AddNodeToCollection(new XamlEndAttributesNode(LineNumber, LinePosition, depth, compact));
         }
@@ -1020,7 +1034,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out a DefTag.
         /// </summary>
-        private void WriteDefTag(string defTagName)
+        void WriteDefTag(string defTagName)
         {
             //!!!Review. This passes out the XmlReader for the compiler to process the
             // def tags. Should package these into records for validation and so
@@ -1034,7 +1048,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an attirbute in the definition namespace
         /// </summary>
-        private void WriteDefAttribute(string name, string value)
+        void WriteDefAttribute(string name, string value)
         {
             WriteDefAttribute(name, value, BamlAttributeUsage.Default);
         }
@@ -1042,7 +1056,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an attribute in the definition namespace
         /// </summary>
-        private void WriteDefAttribute(string name, string value, BamlAttributeUsage bamlAttributeUsage)
+        void WriteDefAttribute(string name, string value, BamlAttributeUsage bamlAttributeUsage)
         {
             AddNodeToCollection(new XamlDefAttributeNode(LineNumber, LinePosition, XmlReader.Depth,
                     name, value, bamlAttributeUsage));
@@ -1051,7 +1065,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Write out an attribute in the PresentationOptions namespace
         /// </summary>
-        private void WritePresentationOptionsAttribute(string name, string value)
+        void WritePresentationOptionsAttribute(string name, string value)
         {
             AddNodeToCollection(new XamlPresentationOptionsAttributeNode(LineNumber, LinePosition, XmlReader.Depth,
                     name, value));
@@ -1061,7 +1075,7 @@ namespace System.Windows.Markup
         /// Write out a key attirbute in the definition namespace whose value is a Type
         /// object.  This is a common case for x:Key="{x:Type SomeType}"
         /// </summary>
-        private void WriteDefKeyWithType(
+        void WriteDefKeyWithType(
             string valueTypeFullName,
             string valueAssemblyName,
             Type valueElementType)
@@ -1074,7 +1088,7 @@ namespace System.Windows.Markup
         /// Check if this property is a duplicate of one that has already been
         /// parsed for the parent DependencyObject.  If so, throw an error
         /// </summary>
-        private void CheckDuplicateProperty(
+        void CheckDuplicateProperty(
             HybridDictionary properties,
             string propertyName,
             object propertyMember)
@@ -1197,7 +1211,7 @@ namespace System.Windows.Markup
         ///  been read </param>
         /// <returns>true if this is the start of an object declaration or false
         /// if only text was found</returns>
-        private bool DetermineIfPropertyComplex(
+        bool  DetermineIfPropertyComplex(
                 bool      isEmptyElement,
             out string    textValue,
             out bool      endTagReached)
@@ -1325,7 +1339,7 @@ namespace System.Windows.Markup
         ///  Helper function for  use to find out the whitespace trimming
         ///  associated with a Type.
         /// </summary>
-        private bool GetTrimSurroundingWhitespace(Type type)
+        bool GetTrimSurroundingWhitespace(Type type)
         {
             // use the XamlTypeMapper cache.
             return XamlTypeMapper.GetCachedTrimSurroundingWhitespace(type);
@@ -1341,32 +1355,32 @@ namespace System.Windows.Markup
         /// Wraps the message with the current lineNumber and Postion
         /// then throws a XamlParseException.
         /// </summary>
-        private void ThrowException(string id)
+        void ThrowException(string id)
         {
             string message = SR.GetResourceString(id);
             ThrowExceptionWithLine(message);
         }
 
 
-        private void ThrowException(string id, string parameter)
+        void ThrowException(string id, string parameter)
         {
             string message = SR.Format(SR.GetResourceString(id), parameter);
             ThrowExceptionWithLine(message);
         }
 
-        private void ThrowException(string id, string parameter1, string parameter2)
+        void ThrowException(string id, string parameter1, string parameter2)
         {
             string message = SR.Format(SR.GetResourceString(id), parameter1, parameter2);
             ThrowExceptionWithLine(message);
         }
 
-        private void ThrowException(string id, string parameter1, string parameter2, string parameter3)
+        void ThrowException(string id, string parameter1, string parameter2, string parameter3)
         {
             string message = SR.Format(SR.GetResourceString(id), parameter1, parameter2, parameter3);
             ThrowExceptionWithLine(message);
         }
 
-        private void RethrowAsParseException(
+        void RethrowAsParseException(
             string keyString,
             int lineNumber,
             int linePosition,
@@ -1400,7 +1414,7 @@ namespace System.Windows.Markup
             throw parseException;
         }
 
-        private void ThrowExceptionWithLine(string message)
+        void ThrowExceptionWithLine(string message)
         {
             message += " ";
             message += SR.Format(SR.ParserLineAndOffset,
@@ -1421,7 +1435,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// A delegate to validate the type is valid for the current context.
         /// </summary>
-        private delegate bool ContentValidator(Type type);
+        delegate bool ContentValidator(Type type);
 
         // Determines Element and Attribute context information.
         // !!Review  - original idea was to have different tags handled different based
@@ -1432,7 +1446,7 @@ namespace System.Windows.Markup
         /// Nested class for StackData for each ElementContext that the Tokenizer
         /// encounters.
         /// </summary>
-        private class ElementContextStackData
+        class ElementContextStackData
         {
             /// <summary>
             /// ContextType
@@ -1459,7 +1473,8 @@ namespace System.Windows.Markup
             {
                 get
                 {
-                    if (_contextData is not DictionaryContextData dcd)
+                    DictionaryContextData dcd = _contextData as DictionaryContextData;
+                    if (dcd == null)
                     {
                         return _contextData as Type;
                     }
@@ -1615,27 +1630,27 @@ namespace System.Windows.Markup
                 }
             }
 
-            private bool _needToWriteEndElement = false;
-            private bool _firstChildRead = false;
-            private ParsingContent _contentParsingState = ParsingContent.Before;
-            private bool _isContentPropertyACollection = false;
-            private bool _isCollectionChecked = false;
-            private bool _isEmptyElement = false;
-            private bool _isWhitespaceCollectionAttributeKnown = false;
-            private bool _isWhitespaceCollectionAttributePresent = false;
-            private PropertyInfo _contentPropertyInfo;
-            private string _contentPropertyName;
-            private ElementContextType _contextType;
-            private string _namespaceUri;
-            private Object _contextData;
-            private string _childTag;
-            private Type _childPropertyType;
-            private HybridDictionary _complexProperties;
+            bool _needToWriteEndElement = false;
+            bool _firstChildRead = false;
+            ParsingContent _contentParsingState = ParsingContent.Before;
+            bool _isContentPropertyACollection = false;
+            bool _isCollectionChecked = false;
+            bool _isEmptyElement = false;
+            bool _isWhitespaceCollectionAttributeKnown = false;
+            bool _isWhitespaceCollectionAttributePresent = false;
+            PropertyInfo _contentPropertyInfo;
+            string _contentPropertyName;
+            ElementContextType _contextType;
+            string _namespaceUri;
+            Object _contextData;
+            string _childTag;
+            Type _childPropertyType;
+            HybridDictionary _complexProperties;
         }
 
         // Nested class to hold information about an unknown start tag.  This information
         // is needed when the matchinig unknown end tag is written out.
-        private class UnknownData
+        class UnknownData
         {
             public UnknownData(
                 string localName,
@@ -1867,7 +1882,7 @@ namespace System.Windows.Markup
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        private static string GetContentPropertyName(Type type)
+        static string GetContentPropertyName(Type type)
         {
             short id = BamlMapTable.GetKnownTypeIdFromType(type);
             string contentProperty = null;
@@ -1928,7 +1943,7 @@ namespace System.Windows.Markup
         /// Called by ReadXAML when an Element node is encountered
         /// </summary>
         /// <returns>true if parsing should continue</returns>
-        private bool ReadElementNode()
+        bool ReadElementNode()
         {
             // element can be of the following types
             //  - Standard DependencyObjects to put in the Tree
@@ -1942,10 +1957,8 @@ namespace System.Windows.Markup
 
             // Put an item on the context stack for this element.  The ContextType
             // may be modified by the call to CompileBamlTag.
-            ElementContextStackData elementContextStackData = new ElementContextStackData
-            {
-                IsEmptyElement = isEmptyElement
-            };
+            ElementContextStackData elementContextStackData = new ElementContextStackData();
+            elementContextStackData.IsEmptyElement = isEmptyElement;
 
             // If we have a parent stack, this context is the same as the parent
             // by default.
@@ -1957,10 +1970,8 @@ namespace System.Windows.Markup
             {
                 if(ShouldImplyContentProperty())
                 {
-                    ElementContextStackData CpaStackData = new ElementContextStackData
-                    {
-                        ContextType = ElementContextType.Default
-                    };
+                    ElementContextStackData CpaStackData = new ElementContextStackData();
+                    CpaStackData.ContextType = ElementContextType.Default;
                     ElementContextStack.Push(CpaStackData);
                     ParserContext.PushScope();
 
@@ -1992,7 +2003,7 @@ namespace System.Windows.Markup
                 if (!endTagHasBeenRead)
                 {
                     CompileBamlTag(XmlNodeType.EndElement, ref endTagHasBeenRead);
-                    Debug.Assert(!endTagHasBeenRead, "Read past end tag on end tag");
+                    Debug.Assert(false == endTagHasBeenRead, "Read past end tag on end tag");
                 }
 
                 // Empty Complex Properties of type Dictionary should be popped now as
@@ -2045,7 +2056,7 @@ namespace System.Windows.Markup
         /// Helper function called by ReadXAML as the default for NodeTypes.
         /// </summary>
         /// <returns>false if parse should be stopped</returns>
-        private bool ReadGenericXmlNode()
+        bool ReadGenericXmlNode()
         {
             // for any other nodes just call the appropriate context.
             // make sure stack has anything because may encounter nodes before hit first Element
@@ -2063,7 +2074,7 @@ namespace System.Windows.Markup
             {
 
                 CompileBamlTag(XmlReader.NodeType, ref endTagHasBeenRead);
-                Debug.Assert(!endTagHasBeenRead);
+                Debug.Assert(false == endTagHasBeenRead);
 
                 // If we're in the context of an IDictionary or complex property, we
                 // have to keep reading until we get to an element in case there is an
@@ -2496,7 +2507,7 @@ namespace System.Windows.Markup
             public bool TokenEquals(string value)
             {
                 int len = _current - _start;
-                return len == value.Length && string.CompareOrdinal(value, 0, _text, _start, len) == 0;
+                return len == value.Length && String.CompareOrdinal(value, 0, _text, _start, len) == 0;
             }
 
             public int Start { get { return _start; } }
@@ -2508,7 +2519,7 @@ namespace System.Windows.Markup
             private const char Number = '1';
             private const char Letter = 'a';
 
-            private static readonly char[] CharCodes;
+            static readonly char[] CharCodes;
 
             static MappingScanner()
             {
@@ -2556,10 +2567,10 @@ namespace System.Windows.Markup
         /// </summary>
         private class MappingParser
         {
-            private MappingScanner _scanner;
-            private string _namespace;
-            private string _assembly;
-            private char _token;
+            MappingScanner _scanner;
+            string _namespace;
+            string _assembly;
+            char _token;
 
             public MappingParser(string mapping, int offset)
             {
@@ -2727,11 +2738,8 @@ namespace System.Windows.Markup
                 // if the prefix was "" then
                 // 1) normal properties resolve to the parent Tag namespace.
                 // 2) Attached properties resolve to the "" default namespace.
-#if !NETFX
-                if (!name.Contains('.'))
-#else
-                if (!name.Contains("."))
-#endif
+                int dotIndex = name.IndexOf('.');
+                if (-1 == dotIndex)
                     attribNamespaceURI = parentURI;
                 else
                     attribNamespaceURI = XmlReader.LookupNamespace("");
@@ -2907,7 +2915,7 @@ namespace System.Windows.Markup
                             case AttributeContext.Unknown:
                                 WriteUnknownAttribute(attribNamespaceURI, attribLocalName,
                                                       attribValue, depth, parentTypeNamespace,
-                                                      unknownTagName ?? parentType.Name,
+                                                      unknownTagName == null ? parentType.Name : unknownTagName,
                                                       dynamicObject, resolvedProperties);
                                 break;
 
@@ -3123,7 +3131,8 @@ namespace System.Windows.Markup
                     ThrowException(nameof(SR.ParserNoDictionaryName));
                 }
 
-                if (ParentContext.ContextData is DictionaryContextData dictionaryData)
+                DictionaryContextData dictionaryData = ParentContext.ContextData as DictionaryContextData;
+                if (dictionaryData != null)
                 {
                     object key;
                     // Note that not all keys can be resolved at compile time.  For those that fail,
@@ -3196,8 +3205,9 @@ namespace System.Windows.Markup
                     propertyCanWrite = !((DependencyProperty)dynamicObject).ReadOnly;
                 }
 #endif
-                else if (dynamicObject is MethodInfo methodInfo)
+                else if (dynamicObject is MethodInfo)
                 {
+                    MethodInfo methodInfo = (MethodInfo)dynamicObject;
                     if (methodInfo.GetParameters().Length == 1)
                     {
                         methodInfo = methodInfo.DeclaringType.GetMethod(
@@ -3699,7 +3709,7 @@ namespace System.Windows.Markup
                                             Debug.Assert(typeAndSerializer == null ||
                                                          typeAndSerializer.SerializerType == null ||
                                                          propertyType == typeAndSerializer.ObjectType);
-                                            serializerType = typeAndSerializer?.SerializerType;
+                                            serializerType = typeAndSerializer != null ? typeAndSerializer.SerializerType : null;
 
                                             CompileComplexProperty(dynamicObject, propertyType, serializerType,
                                                     depth, assemblyName, typeFullName, dynamicObjectName,
@@ -3948,12 +3958,13 @@ namespace System.Windows.Markup
             // BamlRecordReader has secondary protection against nested property
             //  records, but the error message less friendly to users. ("'Property'
             //  record unexpected in BAML stream.")
-            if (ElementContextStack.ParentContext is ElementContextStackData parentTag)
+            ElementContextStackData parentTag = ElementContextStack.ParentContext as ElementContextStackData;
+            if( parentTag != null )
             {
-                if (parentTag.ContextType == ElementContextType.PropertyComplex ||
+                if ( parentTag.ContextType == ElementContextType.PropertyComplex ||
                      parentTag.ContextType == ElementContextType.PropertyArray ||
                      parentTag.ContextType == ElementContextType.PropertyIList ||
-                     parentTag.ContextType == ElementContextType.PropertyIDictionary)
+                     parentTag.ContextType == ElementContextType.PropertyIDictionary )
                 {
                     ThrowException(nameof(SR.ParserNestedComplexProp), complexPropName);
                 }
@@ -4410,7 +4421,8 @@ namespace System.Windows.Markup
                 }
             }
 
-            ParentContext?.FirstChildRead = true;  // may already be true
+            if (ParentContext != null)
+                ParentContext.FirstChildRead = true;  // may already be true
 
             WriteElementStart(assemblyName, typeFullName, depth,
                           currentObjectType, serializerType, false /*isInjected*/);
@@ -4560,10 +4572,8 @@ namespace System.Windows.Markup
             Type propertyBaseType = null;
 
             // Push a frame for GetPropertyComplex()
-            ElementContextStackData elementContextStackData = new ElementContextStackData
-            {
-                ContextType = ElementContextType.Default
-            };
+            ElementContextStackData elementContextStackData = new ElementContextStackData();
+            elementContextStackData.ContextType = ElementContextType.Default;
             ElementContextStack.Push(elementContextStackData);
 
             bool resolved = GetPropertyComplex(elementType.Name, contentPropertyName, namespaceUri,
@@ -5141,7 +5151,7 @@ namespace System.Windows.Markup
             }
         }
 
-        private bool IsAttributePresentationOptionsFreeze(string attributeLocalName, string attributeNamespaceUri)
+        bool IsAttributePresentationOptionsFreeze(string attributeLocalName, string attributeNamespaceUri)
         {
             // Is this the 'Freeze' attribute in the PresentationOptions namespace?
             return (attributeLocalName == PresentationOptionsFreeze) &&
@@ -5183,7 +5193,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// States of the Parser loop
         /// </summary>
-        private enum ParserState
+        enum ParserState
         {
             Uninitialized,   // initial state.
             ReadingFirstTag, // reading the first tag.
@@ -5193,7 +5203,7 @@ namespace System.Windows.Markup
 
 
         // state properties for the main Parser Loop so it can be started and stopped.
-        private ParserState ParseLoopState
+        ParserState ParseLoopState
         {
             get { return _parseLoopState; }
             set { _parseLoopState = value; }
@@ -5207,7 +5217,7 @@ namespace System.Windows.Markup
         ///  node it passed in text.
         /// </summary>
         /// <returns>True if more data</returns>
-        private bool IsMoreData()
+        bool IsMoreData()
         {
             bool result = true;
 
@@ -5255,22 +5265,25 @@ namespace System.Windows.Markup
         /// <summary>
         /// sets normilization
         /// </summary>
-        private bool Normalization
+        bool Normalization
         {
             set
             {
+
                 Debug.Assert(null != XmlReader, "XmlReader is not yet set");
                 //check if it's a XmlCompatibilityReader first
-                if (XmlReader is XmlCompatibilityReader xmlCompatReader)
+                XmlCompatibilityReader xmlCompatReader = XmlReader as XmlCompatibilityReader;
+                if (null != xmlCompatReader)
                 {
                     xmlCompatReader.Normalization = true;
                 }
                 else
                 {
                     //now check for XmlTextReader
+                    XmlTextReader xmlTextReader = XmlReader as XmlTextReader;
 
                     // review, what if not the XmlTextReader.
-                    if (XmlReader is XmlTextReader xmlTextReader)
+                    if (null != xmlTextReader)
                     {
                         xmlTextReader.Normalization = true;
                     }
@@ -5305,7 +5318,7 @@ namespace System.Windows.Markup
                 }
                 else
                 {
-                    Debug.Fail("XmlReader doesn't support LineNumber");
+                    Debug.Assert(false, "XmlReader doesn't support LineNumber");
                     return 0;
                 }
             }
@@ -5336,7 +5349,7 @@ namespace System.Windows.Markup
                 }
                 else
                 {
-                    Debug.Fail("XmlReader doesn't support LinePosition");
+                    Debug.Assert(false, "XmlReader doesn't support LinePosition");
                     return 0;
                 }
             }
@@ -5412,30 +5425,30 @@ namespace System.Windows.Markup
             // valid to be null
             // we keep the textNode until we know how to handle the end of
             // line whitespace.
-            private XamlTextNode _textNode;
+            XamlTextNode _textNode;
 
             // true if should strip the leading space from the next textRun.
             // Value is initially set to True.
             // If this value is True all of the leading Whitepace is removed from
             // the current Node. else the leading whitespace is collapsed into a single whitespace.
             // review if should cal StripAllLeadingSpace.
-            private bool _stripLeadingSpaces;
+            bool _stripLeadingSpaces;
 
-            private bool _xmlSpaceIsPreserve;
+            bool _xmlSpaceIsPreserve;
 
             // count of how many inline tags we are deep increment/decrement for each inline tag
             // on a ProcessBeginTag/ProcessEndTag of type Inline.
-            private int _inlineCount;
+            int _inlineCount;
 
             // Set to indicate an ignorable element like a comment was encountered while
             // processing a section of text content.
-            private bool _EncounteredIgnorableTag;
+            bool _EncounteredIgnorableTag;
         }
 
         // returns true if the current character is a whiteSpace character
         // \t\r\n\f
         // resuse CSSChar definitions
-        internal static bool IsWhiteSpace(char c)
+        static internal bool IsWhiteSpace(char c)
         {
             if (c == CSSChar.Tab || c == CSSChar.Return
                 || c == CSSChar.NewLine || c == CSSChar.FormFeed
@@ -5452,7 +5465,7 @@ namespace System.Windows.Markup
         // or endIndex if no whitespace.
         // caller should pass in an endIndex which is one greater
         // than the characters they want to check.
-        private int SkipWhitespace(string text, int startIndex, int endIndex)
+        int SkipWhitespace(string text, int startIndex, int endIndex)
         {
             int index = startIndex;
 
@@ -5471,7 +5484,7 @@ namespace System.Windows.Markup
         }
 
         // Return true if the passed string is only whitespace
-        internal static bool IsWhitespace(string text)
+        static internal bool IsWhitespace(string text)
         {
             for (int i = 0; i < text.Length; i++)
             {
@@ -5486,7 +5499,7 @@ namespace System.Windows.Markup
 
         // given a string and the current index into it, calculates the unicode scalar value of
         // the char previous (isPrevious=true) or next (isPrevious=false) to it.
-        private static int GetAdjacentUnicodeScalarValue(string s, int currentPos, bool isPrevious)
+        static int GetAdjacentUnicodeScalarValue(string s, int currentPos, bool isPrevious)
         {
             Debug.Assert(currentPos > 0 && currentPos < s.Length - 1);
             int unicodeScalarValue = 0;
@@ -5525,7 +5538,7 @@ namespace System.Windows.Markup
 
         // given a unicode scalar value, determines if it falls in the range
         // of an east asian code point
-        private static bool IsEastAsianCodePoint(int unicodeScalarValue)
+        static bool IsEastAsianCodePoint(int unicodeScalarValue)
         {
             if ((unicodeScalarValue >= 0xFF00 && unicodeScalarValue <= 0xFFEF)   || // Halfwidth and Fullwidth forms
                 (unicodeScalarValue >= 0xF900 && unicodeScalarValue <= 0xFAFF)   || // CJK Compatibility
@@ -5553,7 +5566,7 @@ namespace System.Windows.Markup
         }
 
         // collapses text, review if can use existing stringBuilder.
-        private string CollapseText(
+        string CollapseText(
                 string text,
                 bool stripAllLeadingSpaces,
                 bool stripAllRightWhitespace,
@@ -6356,10 +6369,10 @@ namespace System.Windows.Markup
             private int _typeConverterCandidateIndex = 0;
             private string _typeConverterTextWrittenAndNotProcessed = null;
 
-            private ArrayList _xamlNodes = new ArrayList(10); // array of Nodes for Read to return.
-            private int _nodeIndex = 0; //index of next Node in the _xamlNodes buffer to return.
-            private int _insertionIndex = -1; // index of the node where the insertion was marked to begin.
-            private int _currentInsertionIndex = -1; // index of the node where the next insertion should happen.
+            ArrayList _xamlNodes = new ArrayList(10); // array of Nodes for Read to return.
+            int _nodeIndex = 0; //index of next Node in the _xamlNodes buffer to return.
+            int _insertionIndex = -1; // index of the node where the insertion was marked to begin.
+            int _currentInsertionIndex = -1; // index of the node where the next insertion should happen.
         }
 
 
@@ -6371,7 +6384,7 @@ namespace System.Windows.Markup
         /// based on the Text. if no text its value is set
         /// to whatever the textFlow was set to previously.
         /// </summary>
-        private bool CollapseAndAddTextNode(TextFlowStackData textFlowData, bool stripAllRightWhitespace)
+        bool CollapseAndAddTextNode(TextFlowStackData textFlowData, bool stripAllRightWhitespace)
         {
 
             bool addedText = false;
@@ -6406,12 +6419,12 @@ namespace System.Windows.Markup
         /// <summary>
         /// Called whenever items should be added to the nodes collections.
         /// </summary>
-        private void AddNodeToCollection(XamlNode xamlNode)
+        void AddNodeToCollection(XamlNode xamlNode)
         {
             AddNodeToCollection(xamlNode, false, false);
         }
 
-        private void AddNodeToCollection(XamlNode xamlNode, bool insert, bool insertAtStart)
+        void AddNodeToCollection(XamlNode xamlNode, bool insert, bool insertAtStart)
         {
 
             bool addNodeToBuffer = true; // set to false if need to do TextProcessing.
@@ -6651,7 +6664,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// TextFlowHelper parser is using to handle whitespace.
         /// </summary>
-        private XamlNodeCollectionProcessor TokenReaderNodeCollection
+        XamlNodeCollectionProcessor TokenReaderNodeCollection
         {
             get { return _xamlNodeCollectionProcessor; }
         }
@@ -6659,7 +6672,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Name of the class that holds the xml: attribute DPs (e.g. xml:Lang)
         /// </summary>
-        private string XmlAttributesFullName
+        string XmlAttributesFullName
         {
             get { return "System.Windows.Markup.XmlAttributeProperties"; }
         }
@@ -6667,7 +6680,7 @@ namespace System.Windows.Markup
         /// <summary>
         ///  CurrentContext for the node processing
         /// </summary>
-        private ElementContextStackData CurrentContext
+        ElementContextStackData CurrentContext
         {
             get { return (ElementContextStackData)ElementContextStack.CurrentContext; }
         }
@@ -6675,7 +6688,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Complex properties belonging to the ParentContext for the node we are processing
         /// </summary>
-        private HybridDictionary CurrentProperties
+        HybridDictionary CurrentProperties
         {
             get
             {
@@ -6687,7 +6700,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Complex properties belonging to the ParentContext for the node we are processing
         /// </summary>
-        private HybridDictionary ParentProperties
+        HybridDictionary ParentProperties
         {
             get
             {
@@ -6699,7 +6712,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// ParentContext for the node we are processing
         /// </summary>
-        private ElementContextStackData ParentContext
+        ElementContextStackData ParentContext
         {
             get { return (ElementContextStackData)ElementContextStack.ParentContext; }
         }
@@ -6707,7 +6720,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// ElementContext stack
         /// </summary>
-        private ParserStack ElementContextStack
+        ParserStack ElementContextStack
         {
             get { return _elementContextStack; }
         }
@@ -6716,7 +6729,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// Current Parsercontext for the node being processed
         /// </summary>
-        private ParserContext ParserContext
+        ParserContext ParserContext
         {
             get { return _parserContext; }
         }
@@ -6724,7 +6737,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// GrandParentContext for the node we are processing
         /// </summary>
-        private ElementContextStackData GrandParentContext
+        ElementContextStackData GrandParentContext
         {
             get { return (ElementContextStackData)ElementContextStack.GrandParentContext; }
         }
@@ -6735,7 +6748,7 @@ namespace System.Windows.Markup
         /// Review!! should be able to get rid of this if break
         /// out resolution logic
         /// </summary>
-        private XamlTypeMapper XamlTypeMapper
+        XamlTypeMapper XamlTypeMapper
         {
             get { return _parserContext.XamlTypeMapper; }
         }
@@ -6755,7 +6768,7 @@ namespace System.Windows.Markup
         /// <summary>
         /// TextFlowStack for the TextFlows associated with the parse
         /// </summary>
-        private Stack TextFlowStack
+        Stack TextFlowStack
         {
             get { return _textFlowStack; }
         }
@@ -6799,39 +6812,39 @@ namespace System.Windows.Markup
         private const string XmlnsDeclaration = "xmlns";
 
         // XmlReader being used for the parse
-        private XmlReader _xmlReader;
+        XmlReader _xmlReader;
 
         // LineInfo interface associated with the XmlReader
-        private IXmlLineInfo _xmlLineInfo;
+        IXmlLineInfo _xmlLineInfo;
 
         // Reference to XamlParser to call for Cached Lookups
-        private XamlParser _xamlParser;
+        XamlParser _xamlParser;
 
         // Context stack for each Element
-        private ParserStack _elementContextStack = new ParserStack();
+        ParserStack _elementContextStack = new ParserStack();
 
         // State of the parser
-        private ParserState _parseLoopState;
+        ParserState _parseLoopState;
 
         // ParserContext for current node
-        private ParserContext _parserContext;
+        ParserContext _parserContext;
 
         // Collection of Nodes that are ready to be handed out
-        private XamlNodeCollectionProcessor _xamlNodeCollectionProcessor;
+        XamlNodeCollectionProcessor _xamlNodeCollectionProcessor;
 
         // A markup-subclassed Type defined in one scope. If used in another scope, names under an
         // element instance of this type will not be allowed.
-        private Type _definitionScopeType;
+        Type _definitionScopeType;
 
         // Stack for holding onto the textFlow
-        private Stack _textFlowStack;
+        Stack _textFlowStack;
 
         // The parser used for expanding MarkupExtension syntax into a sequence of
         // XamlNodes.  This is shared between XamlReaderHelper and BamlWriter.
-        private MarkupExtensionParser _extensionParser;
+        MarkupExtensionParser _extensionParser;
 
         // True if we should keep on reading the xaml stream after processing the current token
-        private bool _readAnotherToken = false;
+        bool _readAnotherToken = false;
 
         // True if we are within the context of an Xml Data Island, e.g. XmlDataProvider
         protected int _xmlDataIslandDepth = -1;
@@ -6844,8 +6857,8 @@ namespace System.Windows.Markup
     [DebuggerDisplay("{Fullname}")]
     internal class XamlPropertyFullName
     {
-        private Type _ownerType;
-        private string _name;
+        Type   _ownerType;
+        string _name;
 
         public XamlPropertyFullName(Type ownerType, string name)
         {

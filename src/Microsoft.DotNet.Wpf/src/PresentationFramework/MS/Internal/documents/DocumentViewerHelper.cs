@@ -1,16 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Defines various helper methods used by document viewews.
 //
 
+using System;                           // EventHandler
 using System.Windows;                   // Visibility
 using System.Windows.Controls;          // Border
 using System.Windows.Controls.Primitives;   // PlacementMode
 using System.Windows.Input;             // KeyboardNavigation
 using System.Windows.Documents;         // ITextRange
 using System.Windows.Media;             // VisualTreeHelper
+using System.Security;                  // SecurityCritical, SecurityTreatAsSafe
 using System.Globalization;             // CultureInfo
 using System.Windows.Markup;            // XmlLanguage
 using System.Windows.Interop;           // HwndSource
@@ -42,13 +45,13 @@ namespace MS.Internal.Documents
             {
                 // Create FindToolBar and attach it to the host.
                 FindToolBar findToolBar = new FindToolBar();
-                findToolBarHost.Child = findToolBar;
+                findToolBarHost.Child = (UIElement)(dynamic)findToolBar;
                 findToolBarHost.Visibility = Visibility.Visible;
                 KeyboardNavigation.SetTabNavigation(findToolBarHost, KeyboardNavigationMode.Continue);
                 FocusManager.SetIsFocusScope(findToolBarHost, true);
 
                 // Initialize FindToolBar
-                findToolBar.SetResourceReference(Control.StyleProperty, FindToolBarStyleKey);
+                ((dynamic)findToolBar).SetResourceReference(Control.StyleProperty, FindToolBarStyleKey);
                 findToolBar.FindClicked += handlerFindClicked;
                 findToolBar.DocumentLoaded = true;
                 findToolBar.GoToTextBox();
@@ -56,7 +59,7 @@ namespace MS.Internal.Documents
             else
             {
                 // Reset FindToolBar state to its initial state.
-                FindToolBar findToolBar = findToolBarHost.Child as FindToolBar;
+                FindToolBar findToolBar = (FindToolBar)(dynamic)findToolBarHost.Child;
                 findToolBar.FindClicked -= handlerFindClicked;
                 findToolBar.DocumentLoaded = false;
 
@@ -279,8 +282,8 @@ namespace MS.Internal.Documents
                         SR.DocumentViewerSearchDownCompleteLabel;
             messageString = String.Format(System.Globalization.CultureInfo.CurrentCulture, messageString, findToolBar.SearchText);
 
-            HwndSource hwndSource = PresentationSource.CriticalFromVisual(findToolBar) as HwndSource;
-            IntPtr hwnd = (hwndSource != null) ? hwndSource.Handle : IntPtr.Zero;
+            HwndSource hwndSource = PresentationSource.CriticalFromVisual((DependencyObject)(dynamic)findToolBar) as HwndSource;
+            IntPtr hwnd = (hwndSource != null) ? hwndSource.CriticalHandle : IntPtr.Zero;
 
             PresentationFramework.SecurityHelper.ShowMessageBoxHelper(
                 hwnd,
@@ -482,7 +485,7 @@ namespace MS.Internal.Documents
     internal class FlowDocumentPrintingState
     {
 #if !DONOTREFPRINTINGASMMETA
-        internal System.Windows.Xps.XpsDocumentWriter XpsDocumentWriter;
+        internal dynamic XpsDocumentWriter;
 #endif //DONOTREFPRINTINGASMMETA
         internal Size PageSize;
         internal Thickness PagePadding;

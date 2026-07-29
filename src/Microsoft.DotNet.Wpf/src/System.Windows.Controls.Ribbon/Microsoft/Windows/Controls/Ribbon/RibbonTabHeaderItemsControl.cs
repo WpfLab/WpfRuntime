@@ -1,12 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Automation.Peers;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Threading;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon.Primitives;
+// See the LICENSE file in the project root for more information.  
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -14,6 +8,15 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    using System;
+    using System.Windows;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
+    using System.Windows.Input;
+    using System.Windows.Threading;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon.Primitives;
 #else
     using Microsoft.Windows.Automation.Peers;
     using Microsoft.Windows.Controls.Ribbon.Primitives;
@@ -104,7 +107,10 @@ namespace Microsoft.Windows.Controls.Ribbon
         {
             base.PrepareContainerForItemOverride(element, item);
             RibbonTabHeader header = element as RibbonTabHeader;
-            header?.PrepareRibbonTabHeader();
+            if (header != null)
+            {
+                header.PrepareRibbonTabHeader();
+            }
         }
 
         /// <summary>

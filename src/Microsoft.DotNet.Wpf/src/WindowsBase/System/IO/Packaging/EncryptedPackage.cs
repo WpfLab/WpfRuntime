@@ -1,11 +1,30 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//  This class represents an OLE compound file that contains an encrypted package.
+//
+//
+//
+//
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Packaging;
 using System.Runtime.InteropServices;
 using System.Security.RightsManagement;
-using MS.Internal;
+using System.Windows;
+using System.Collections;
+using System.Collections.Generic;
+
+using MS.Internal;                  // Invariant.Assert
 using MS.Internal.IO.Packaging;
-using MS.Internal.IO.Packaging.CompoundFile;
+using MS.Internal.IO.Packaging.CompoundFile;    // RightsManagementEncryptionTransform
+using MS.Internal.WindowsBase;
 
 namespace System.IO.Packaging
 {
@@ -44,7 +63,8 @@ namespace System.IO.Packaging
             CryptoProvider cryptoProvider
             )
         {
-            ArgumentNullException.ThrowIfNull(envelopeFileName);
+            if (envelopeFileName == null)
+                throw new ArgumentNullException("envelopeFileName");
 
             ThrowIfRMEncryptionInfoInvalid(publishLicense, cryptoProvider);
 
@@ -81,7 +101,8 @@ namespace System.IO.Packaging
             CryptoProvider cryptoProvider
             )
         {
-            ArgumentNullException.ThrowIfNull(envelopeStream);
+            if (envelopeStream == null)
+                throw new ArgumentNullException("envelopeStream");
 
             ThrowIfRMEncryptionInfoInvalid(publishLicense, cryptoProvider);
 
@@ -127,8 +148,11 @@ namespace System.IO.Packaging
             CryptoProvider cryptoProvider
             )
         {
-            ArgumentNullException.ThrowIfNull(envelopeFileName);
-            ArgumentNullException.ThrowIfNull(packageStream);
+            if (envelopeFileName == null)
+                throw new ArgumentNullException("envelopeFileName");
+
+            if (packageStream == null)
+                throw new ArgumentNullException("packageStream");
 
             ThrowIfRMEncryptionInfoInvalid(publishLicense, cryptoProvider);
 
@@ -170,8 +194,11 @@ namespace System.IO.Packaging
             CryptoProvider cryptoProvider
             )
         {
-            ArgumentNullException.ThrowIfNull(envelopeStream);
-            ArgumentNullException.ThrowIfNull(packageStream);
+            if (envelopeStream == null)
+                throw new ArgumentNullException("envelopeStream");
+
+            if (packageStream == null)
+                throw new ArgumentNullException("packageStream");
 
             ThrowIfRMEncryptionInfoInvalid(publishLicense, cryptoProvider);
 
@@ -212,7 +239,8 @@ namespace System.IO.Packaging
             FileShare sharing
             )
         {
-            ArgumentNullException.ThrowIfNull(envelopeFileName);
+            if (envelopeFileName == null)
+                throw new ArgumentNullException("envelopeFileName");
 
             _root = StorageRoot.Open(
                                     envelopeFileName,
@@ -236,7 +264,8 @@ namespace System.IO.Packaging
             Stream envelopeStream
             )
         {
-            ArgumentNullException.ThrowIfNull(envelopeStream);
+            if (envelopeStream == null)
+                throw new ArgumentNullException("envelopeStream");
 
             _root = StorageRoot.CreateOnStream(envelopeStream, _defaultFileModeForOpen);
 
@@ -465,7 +494,8 @@ namespace System.IO.Packaging
         {
             bool retval = false;
 
-            ArgumentNullException.ThrowIfNull(fileName);
+            if (fileName == null)
+                throw new ArgumentNullException("fileName");
 
             StorageRoot root = null;
 
@@ -490,14 +520,18 @@ namespace System.IO.Packaging
             }
             catch (IOException ex)
             {
-                if (ex.InnerException is COMException comException && comException.ErrorCode == STG_E_FILEALREADYEXISTS)
+                COMException comException = ex.InnerException as COMException;
+                if (comException != null && comException.ErrorCode == STG_E_FILEALREADYEXISTS)
                     return false;
 
                 throw;  // Any other kind of IOException is a real error.
             }
             finally
             {
-                root?.Close();
+                if (root != null)
+                {
+                    root.Close();
+                }
             }
 
             return retval;
@@ -518,7 +552,8 @@ namespace System.IO.Packaging
             Stream stream
             )
         {
-            ArgumentNullException.ThrowIfNull(stream);
+            if (stream == null)
+                throw new ArgumentNullException("stream");
 
             bool retval = false;
             StorageRoot root = null;
@@ -543,14 +578,18 @@ namespace System.IO.Packaging
             }
             catch (IOException ex)
             {
-                if (ex.InnerException is COMException comException && comException.ErrorCode == STG_E_FILEALREADYEXISTS)
+                COMException comException = ex.InnerException as COMException;
+                if (comException != null && comException.ErrorCode == STG_E_FILEALREADYEXISTS)
                     return false;
 
                 throw;  // Any other kind of IOException is a real error.
             }
             finally
             {
-                root?.Close();
+                if (root != null)
+                {
+                    root.Close();
+                }
             }
 
             return retval;
@@ -567,9 +606,15 @@ namespace System.IO.Packaging
             // Since _package is only initialized when the client calls GetPackage, it might
             // not be set when the client calls Flush, so we have to check.
             //
-            _package?.Flush();
+            if (_package != null)
+            {
+                _package.Flush();
+            }
 
-            _packageStream?.Flush();
+            if (_packageStream != null)
+            {
+                _packageStream.Flush();
+            }
 
             Invariant.Assert(_root != null, "The envelope cannot be null");
 
@@ -890,8 +935,10 @@ namespace System.IO.Packaging
 
             foreach (IDataTransform dataTransform in transforms)
             {
-                if (dataTransform.TransformIdentifier is string id &&
-                    string.Equals(id, RightsManagementEncryptionTransform.ClassTransformIdentifier, StringComparison.OrdinalIgnoreCase))
+                string id = dataTransform.TransformIdentifier as string;
+                if (id != null &&
+                        String.CompareOrdinal(id.ToUpperInvariant(),
+                            RightsManagementEncryptionTransform.ClassTransformIdentifier.ToUpperInvariant()) == 0)
                 {
                     // Do not allow more than one RM Transform
                     if (rmet != null)
@@ -1002,7 +1049,10 @@ namespace System.IO.Packaging
                         // might have opened the compound file just to look at the properties, and
                         // never even opened the package.
                         //
-                        _package?.Close();
+                        if (_package != null)
+                        {
+                            _package.Close();
+                        }
                     }
                     finally
                     {
@@ -1010,7 +1060,10 @@ namespace System.IO.Packaging
 
                         try
                         {
-                            _packageStream?.Close();
+                            if (_packageStream != null)
+                            {
+                                _packageStream.Close();
+                            }
                         }
                         finally
                         {
@@ -1018,7 +1071,10 @@ namespace System.IO.Packaging
 
                             try
                             {
-                                _packageProperties?.Dispose();
+                                if (_packageProperties != null)
+                                {
+                                    _packageProperties.Dispose();
+                                }
                             }
                             finally
                             {
@@ -1026,7 +1082,10 @@ namespace System.IO.Packaging
 
                                 try
                                 {
-                                    _root?.Close();
+                                    if (_root != null)
+                                    {
+                                        _root.Close();
+                                    }
                                 }
                                 finally
                                 {
@@ -1098,8 +1157,8 @@ namespace System.IO.Packaging
                 //copy the stream
 
                 PackagingUtilities.CopyStream(packageStream, _packageStream,
-                                                bytesToCopy: Int64.MaxValue,
-                                                bufferSize: 4096);
+                                                Int64.MaxValue, /*bytes to copy*/
+                                                4096 /*buffer size */);
                 _package = Package.Open(_packageStream, FileMode.Open, this.FileOpenAccess);
             }
             else
@@ -1117,9 +1176,12 @@ namespace System.IO.Packaging
             PublishLicense publishLicense,
             CryptoProvider cryptoProvider)
         {
-            ArgumentNullException.ThrowIfNull(publishLicense);
-            ArgumentNullException.ThrowIfNull(cryptoProvider);
-        }
+            if (publishLicense == null)
+                throw new ArgumentNullException("publishLicense");
+
+            if (cryptoProvider == null)
+                throw new ArgumentNullException("cryptoProvider");
+}
 
         #endregion Private Methods
 

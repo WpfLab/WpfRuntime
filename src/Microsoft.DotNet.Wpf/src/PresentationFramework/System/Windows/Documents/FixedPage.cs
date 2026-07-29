@@ -1,19 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Collections;
-using System.ComponentModel;
-using System.Windows.Controls;
-using System.Windows.Documents.DocumentStructures;
-using System.Windows.Input;
-using System.Windows.Markup;
-using System.Windows.Media;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using MS.Internal.Documents;
-using MS.Internal.Utility;
-
-using BuildInfo = MS.Internal.PresentationFramework.BuildInfo;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -23,6 +10,28 @@ using BuildInfo = MS.Internal.PresentationFramework.BuildInfo;
 
 namespace System.Windows.Documents
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.IO.Packaging;
+    using System.Text;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Documents.DocumentStructures;
+    using System.Windows.Input;
+    using System.Windows.Markup;
+    using System.Windows.Media;
+    using System.Windows.Navigation;
+    using System.Windows.Shapes;
+    using MS.Internal;
+    using MS.Internal.Documents;
+    using MS.Internal.Utility;
+
+    using BuildInfo = MS.Internal.PresentationFramework.BuildInfo;
+
     //=====================================================================
     /// <summary>
     /// FixedPage is the container element for a metafile that represents
@@ -47,10 +56,8 @@ namespace System.Windows.Documents
         #region Constructors
         static FixedPage()
         {
-            FrameworkPropertyMetadata metadata = new FrameworkPropertyMetadata(FlowDirection.LeftToRight, FrameworkPropertyMetadataOptions.AffectsParentArrange)
-            {
-                CoerceValueCallback = new CoerceValueCallback(CoerceFlowDirection)
-            };
+            FrameworkPropertyMetadata metadata = new FrameworkPropertyMetadata(FlowDirection.LeftToRight, FrameworkPropertyMetadataOptions.AffectsParentArrange);
+            metadata.CoerceValueCallback = new CoerceValueCallback(CoerceFlowDirection);
             FlowDirectionProperty.OverrideMetadata(typeof(FixedPage), metadata);
             // This puts the origin always at the top left of the page and prevents mirroring unless this is overridden.
         }
@@ -106,7 +113,7 @@ namespace System.Windows.Documents
                     _drawDebugVisual++;
                 }
 
-                _drawDebugVisual %= (int)DrawDebugVisual.LastOne;
+                _drawDebugVisual = _drawDebugVisual % (int)DrawDebugVisual.LastOne;
 
                 if (_drawDebugVisual < 0)
                 {
@@ -184,7 +191,7 @@ namespace System.Windows.Documents
 
             if (uie == null)
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(UIElement)), nameof(value));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(UIElement)), "value");
             }
 
             Children.Add(uie);
@@ -621,7 +628,7 @@ namespace System.Windows.Documents
                 // not tell betweeen myFile.xaml and myFile.xaml#
                 //
                 Uri workuri = inputUri;
-                if (!inputUri.IsAbsoluteUri)
+                if (inputUri.IsAbsoluteUri == false)
                 {
                     // this is a relative uri, and Fragement() doesn't work with relative uris.  The base uri is completley irrelevant
                     // here and will never affect the returned fragment, but the method requires something to be there.  Therefore,
@@ -641,7 +648,7 @@ namespace System.Windows.Documents
                     inputUri = new Uri(inputUriStringWithoutFragment, UriKind.RelativeOrAbsolute);
 
                     //Only Check for the startpart uri if the hyperlink is relative, else it's not part of the package
-                    if (!inputUri.IsAbsoluteUri)
+                    if (inputUri.IsAbsoluteUri == false)
                     {
                         String startPartUriString = GetStartPartUriString(dpo);
                         if (startPartUriString != null)
@@ -704,7 +711,7 @@ namespace System.Windows.Documents
         {
             if (_uiElementCollection == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+                throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
             }
             return _uiElementCollection[index];
         }
@@ -1154,7 +1161,7 @@ namespace System.Windows.Documents
             _fixedPage = page;
         }
 
-        protected override void OnRender(DrawingContext dc)
+        override protected void OnRender(DrawingContext dc)
         {
             if (_fixedPage.DrawDebugVisualSelection == (int) DrawDebugVisual.None)
             {

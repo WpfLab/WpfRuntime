@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,8 +10,12 @@
 // 
 //
 
+using System;
+using System.Collections.Generic;
+using System.Windows.Input;
 using System.ComponentModel;
 using System.Globalization;
+using System.ComponentModel.Design.Serialization;
 
 
 namespace System.Windows.Input
@@ -98,14 +103,12 @@ namespace System.Windows.Input
                     
                 if (!stringSource.Equals(String.Empty))
                 {
-                    nameValue = Enum.Parse<InputScopeNameValue>(stringSource);
+                    nameValue = (InputScopeNameValue)Enum.Parse(typeof(InputScopeNameValue), stringSource);
                 }
             }
-
-            inputScopeName = new InputScopeName
-            {
-                NameValue = nameValue
-            };
+            
+            inputScopeName = new InputScopeName();
+            inputScopeName.NameValue = nameValue;
             return inputScopeName;    
         }
 
@@ -135,7 +138,7 @@ namespace System.Windows.Input
             {
                 if (destinationType == typeof(string))
                 {
-                    return Enum.GetName(inputScopeName.NameValue);
+                    return Enum.GetName(typeof(InputScopeNameValue), inputScopeName.NameValue);
                 }
             }
             return base.ConvertTo(context, culture, value, destinationType);

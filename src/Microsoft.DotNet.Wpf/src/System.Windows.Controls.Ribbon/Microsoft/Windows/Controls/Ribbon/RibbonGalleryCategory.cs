@@ -1,20 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-
-#region Using declarations
-
-using System.Collections;
-using System.Collections.Specialized;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Windows.Automation;
-using System.Windows.Automation.Peers;
-#if RIBBON_IN_FRAMEWORK
-using System.Windows.Controls.Ribbon.Primitives;
-using Microsoft.Windows.Controls;
+// See the LICENSE file in the project root for more information.
+        
 
 #if RIBBON_IN_FRAMEWORK
 namespace System.Windows.Controls.Ribbon
@@ -22,6 +9,25 @@ namespace System.Windows.Controls.Ribbon
 namespace Microsoft.Windows.Controls.Ribbon
 #endif
 {
+    #region Using declarations
+
+    using System;
+    using System.Windows;
+    using System.Collections;
+    using System.Collections.Specialized;
+    using System.Collections.ObjectModel;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
+    using System.Windows.Data;
+    using System.Windows.Input;
+    using System.Windows.Media;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Windows.Automation;
+    using System.Windows.Automation.Peers;
+#if RIBBON_IN_FRAMEWORK
+    using System.Windows.Controls.Ribbon.Primitives;
+    using Microsoft.Windows.Controls;
 #else
     using Microsoft.Windows.Automation.Peers;
     using Microsoft.Windows.Controls.Ribbon.Primitives;
@@ -220,7 +226,10 @@ namespace Microsoft.Windows.Controls.Ribbon
             if (e.Property == MinColumnCountProperty || e.Property == MaxColumnCountProperty || e.Property == IsSharedColumnSizeScopeProperty || e.Property == ColumnsStretchToFillProperty)
             {
                 RibbonGallery gallery = galleryCategory.RibbonGallery;
-                gallery?.InvalidateMeasureOnAllCategoriesPanel();
+                if (gallery != null)
+                {
+                    gallery.InvalidateMeasureOnAllCategoriesPanel();
+                }
             }
         }
         internal void NotifyPropertyChanged(DependencyPropertyChangedEventArgs e)
@@ -584,7 +593,10 @@ namespace Microsoft.Windows.Controls.Ribbon
                     break;
 
                 case NotifyCollectionChangedAction.Add:
-                    RibbonGallery?.IsMaxColumnWidthValid = false;
+                    if (RibbonGallery != null)
+                    {
+                        RibbonGallery.IsMaxColumnWidthValid = false;
+                    }
                     break;
                 case NotifyCollectionChangedAction.Move:
                     break;

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,10 +9,17 @@
 //
 //
 
+using System.Security;
 using System.Collections;
 using System.Globalization;
+using System.Windows.Threading;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 using MS.Win32;
+using MS.Utility;
 
 namespace System.Windows.Input
 {
@@ -20,7 +28,7 @@ namespace System.Windows.Input
     //  InputLanguageSource class
     //
     //------------------------------------------------------
-
+ 
     /// <summary>
     /// This is an internal. The source for input languages.
     /// </summary>
@@ -82,8 +90,11 @@ namespace System.Windows.Input
         /// </summary>
         public void Uninitialize()
         {
-            _ipp?.Uninitialize();
-            _ipp = null;
+            if (_ipp != null)
+            {
+                _ipp.Uninitialize();
+                _ipp = null;
+            }
         }
 
         #endregion Public Methods
@@ -119,8 +130,11 @@ namespace System.Windows.Input
                 EnsureInputProcessorProfile();
 
                 if (_ipp == null)
-                    return new CultureInfo[1] { CurrentInputLanguage };
-
+                {
+                    ArrayList al = new ArrayList();
+                    al.Add(CurrentInputLanguage);
+                    return al;
+                }
                 return _ipp.InputLanguageList;
              }
         }
@@ -218,7 +232,11 @@ namespace System.Windows.Input
             set
             {
                 EnsureInputProcessorProfile();
-                _ipp?.CurrentInputLanguage = value;
+
+                if (_ipp != null)
+                {
+                    _ipp.CurrentInputLanguage = value;
+                }
             }
         }
 
@@ -237,10 +255,10 @@ namespace System.Windows.Input
         private int _dispatcherThreadId;
 
         // the connected input language manager.
-        private InputLanguageManager _inputlanguagemanager;
+        InputLanguageManager _inputlanguagemanager;
 
         // the reference to ITfInputProcessorProfile.
-        private InputProcessorProfiles _ipp;
+        InputProcessorProfiles _ipp;
 
         #endregion Private Fields
     }

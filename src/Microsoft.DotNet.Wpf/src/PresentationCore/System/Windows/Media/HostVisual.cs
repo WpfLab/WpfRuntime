@@ -1,13 +1,30 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Windows.Threading;
-using System.Windows.Media.Composition;
-using System.Collections;
-using System.Threading;
+//
+//
+// Description:
+//     Host visual.
+//
 
 namespace System.Windows.Media
 {
+    using System;
+    using System.Windows.Threading;
+    using System.Windows.Media;
+    using System.Windows.Media.Composition;
+    using System.Diagnostics;
+    using System.Collections;
+    using System.Collections.Generic;
+    using MS.Internal;
+    using System.Resources;
+    using System.Runtime.InteropServices;
+    using MS.Win32;
+    using System.Threading;
+
+    using SR=MS.Internal.PresentationCore.SR;
+
     /// <summary>
     /// Host visual.
     /// </summary>
@@ -115,7 +132,7 @@ namespace System.Windows.Media
                 {
                     DisconnectHostedVisual(
                         channel,
-                        removeChannelFromCollection: true);
+                        /* removeChannelFromCollection */ true);
                 }
             }
 
@@ -366,7 +383,7 @@ namespace System.Windows.Media
             {
                 DisconnectHostedVisual(
                     (DUCE.Channel)ide.Key,
-                    removeChannelFromCollection: false);
+                    /* removeChannelFromCollection */ false);
             }
 
             _connectedChannels.Clear();

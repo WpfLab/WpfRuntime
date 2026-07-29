@@ -1,5 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using MS.Utility;
+using System;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Ink;
+using MS.Internal.Ink.InkSerializedFormat;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.Ink.InkSerializedFormat
 {
@@ -73,7 +89,10 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <param name="testDelDel"></param>
         internal byte FindPacketAlgoByte(int[] input, bool testDelDel)
         {
-            ArgumentNullException.ThrowIfNull(input);
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
 
             // Check for the input item count
             if (0 == input.Length)
@@ -361,7 +380,10 @@ namespace MS.Internal.Ink.InkSerializedFormat
             {
                 throw new ArgumentNullException(StrokeCollectionSerializer.ISFDebugMessage("input or compressed data was null in Compress"));
             }
-            ArgumentOutOfRangeException.ThrowIfNegative(bitCount);
+            if (bitCount < 0)
+            {
+                throw new ArgumentOutOfRangeException("bitCount");
+            }
 
             if (bitCount == 0)
             {
@@ -409,8 +431,14 @@ namespace MS.Internal.Ink.InkSerializedFormat
             {
                 throw new ArgumentNullException(StrokeCollectionSerializer.ISFDebugMessage("reader or compressedData was null in compress"));
             }
-            ArgumentOutOfRangeException.ThrowIfNegative(bitCount);
-            ArgumentOutOfRangeException.ThrowIfNegative(unitsToEncode);
+            if (bitCount < 0)
+            {
+                throw new ArgumentOutOfRangeException("bitCount");
+            }
+            if (unitsToEncode < 0)
+            {
+                throw new ArgumentOutOfRangeException("unitsToEncode");
+            }
 
             if (bitCount == 0)
             {
@@ -492,12 +520,27 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <param name="outputBufferIndex">the index of the output buffer to write to</param>
         internal uint Uncompress(int bitCount, byte[] input, int inputIndex, DeltaDelta dtxf, int[] outputBuffer, int outputBufferIndex)
         {
-            ArgumentNullException.ThrowIfNull(input);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(inputIndex, input.Length);
-            ArgumentNullException.ThrowIfNull(outputBuffer);
-            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(outputBufferIndex, outputBuffer.Length);
+            if (null == input)
+            {
+                throw new ArgumentNullException("input");
+            }
+            if (inputIndex >= input.Length)
+            {
+                throw new ArgumentOutOfRangeException("inputIndex");
+            }
+            if (null == outputBuffer)
+            {
+                throw new ArgumentNullException("outputBuffer");
+            }
+            if (outputBufferIndex >= outputBuffer.Length)
+            {
+                throw new ArgumentOutOfRangeException("outputBufferIndex");
+            }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(bitCount);
+            if (bitCount < 0)
+            {
+                throw new ArgumentOutOfRangeException("bitCount");
+            }
 
             // Adjust bit count if 0 passed in
             if (bitCount == 0)
@@ -568,9 +611,18 @@ namespace MS.Internal.Ink.InkSerializedFormat
         /// <returns>Uncompressed byte[]</returns>
         internal byte[] Uncompress(int bitCount, BitStreamReader reader, GorillaEncodingType encodingType, int unitsToDecode)
         {
-            ArgumentNullException.ThrowIfNull(reader);
-            ArgumentOutOfRangeException.ThrowIfNegative(bitCount);
-            ArgumentOutOfRangeException.ThrowIfNegative(unitsToDecode);
+            if (null == reader)
+            {
+                throw new ArgumentNullException("reader");
+            }
+            if (bitCount < 0)
+            {
+                throw new ArgumentOutOfRangeException("bitCount");
+            }
+            if (unitsToDecode < 0)
+            {
+                throw new ArgumentOutOfRangeException("unitsToDecode");
+            }
 
             int bitsToWrite = 0;
 

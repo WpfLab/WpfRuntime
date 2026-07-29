@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,12 +10,18 @@
 //
 
 
+using System;
+using System.Diagnostics;
+using System.Windows.Threading;
 using System.Text;
 using System.Globalization;
 
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
+using MS.Internal;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.TextFormatting
 {
@@ -124,7 +131,7 @@ namespace MS.Internal.TextFormatting
             }
             else
             {
-                Debug.Fail("Invalid marker style");
+                Debug.Assert(false, "Invalid marker style");
             }
 
             if(symbolString != null)

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -11,8 +12,15 @@ Abstract:
 
 --*/
 
+using System;
+using System.Xml;
 using System.IO;
+using System.Collections;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Globalization;
+
+using System.Printing;
 using MS.Internal.Printing.Configuration;
 
 namespace System.Printing
@@ -355,7 +363,7 @@ namespace System.Printing
                     (value < PrintSchema.CollationEnumMin ||
                      value > PrintSchema.CollationEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<Collation>(
@@ -400,7 +408,7 @@ namespace System.Printing
                 {
                     if (value <= 0)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                       PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
 
@@ -445,7 +453,7 @@ namespace System.Printing
                     (value < PrintSchema.DeviceFontSubstitutionEnumMin ||
                      value > PrintSchema.DeviceFontSubstitutionEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<DeviceFontSubstitution>(
@@ -489,7 +497,7 @@ namespace System.Printing
                     (value < PrintSchema.DuplexingEnumMin ||
                      value > PrintSchema.DuplexingEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<Duplexing>(
@@ -559,7 +567,7 @@ namespace System.Printing
                     (value < PrintSchema.InputBinEnumMin ||
                     value > PrintSchema.InputBinEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 // always set the job-scope input bin setting to increase portability
@@ -611,7 +619,7 @@ namespace System.Printing
                     (value < PrintSchema.OutputColorEnumMin ||
                      value > PrintSchema.OutputColorEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<OutputColor>(
@@ -655,7 +663,7 @@ namespace System.Printing
                     (value < PrintSchema.OutputQualityEnumMin ||
                      value > PrintSchema.OutputQualityEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<OutputQuality>(
@@ -699,7 +707,7 @@ namespace System.Printing
                     (value < PrintSchema.PageBorderlessEnumMin ||
                      value > PrintSchema.PageBorderlessEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<PageBorderless>(
@@ -784,7 +792,7 @@ namespace System.Printing
                     if ((value.PageMediaSizeName == null) &&
                         (value.Width == null || value.Height == null))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value));
+                        throw new ArgumentOutOfRangeException("value");
                     }
 
                     // if size name is specified, it needs to be valid name
@@ -798,13 +806,13 @@ namespace System.Printing
                     // if width or height value is specified, it needs to be positive
                     if ((value.Width != null) && (value.Width <= 0))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                   PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
 
                     if ((value.Height != null) && (value.Height <= 0))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                   PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
                 }
@@ -854,7 +862,7 @@ namespace System.Printing
                     (value < PrintSchema.PageMediaTypeEnumMin ||
                      value > PrintSchema.PageMediaTypeEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<PageMediaType>(
@@ -898,7 +906,7 @@ namespace System.Printing
                     (value < PrintSchema.PageOrderEnumMin ||
                      value > PrintSchema.PageOrderEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<PageOrder>(
@@ -942,7 +950,7 @@ namespace System.Printing
                     (value < PrintSchema.PageOrientationEnumMin ||
                      value > PrintSchema.PageOrientationEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<PageOrientation>(
@@ -1026,7 +1034,7 @@ namespace System.Printing
                     if ((value.QualitativeResolution == null) &&
                         (value.X == null || value.Y == null))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value));
+                        throw new ArgumentOutOfRangeException("value");
                     }
 
                     // If quality lable is specified, it needs to be valid value
@@ -1034,19 +1042,19 @@ namespace System.Printing
                         (value.QualitativeResolution < PrintSchema.PageQualitativeResolutionEnumMin ||
                          value.QualitativeResolution > PrintSchema.PageQualitativeResolutionEnumMax))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value));
+                        throw new ArgumentOutOfRangeException("value");
                     }
 
                     // If specified, resolution X and Y values must be positive
                     if ((value.X != null) && (value.X <= 0))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                       PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
 
                     if ((value.Y != null) && (value.Y <= 0))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                       PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
                 }
@@ -1103,7 +1111,7 @@ namespace System.Printing
                 {
                     if (value <= 0)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                       PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
 
@@ -1150,7 +1158,7 @@ namespace System.Printing
                 {
                     if (value <= 0)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(value),
+                        throw new ArgumentOutOfRangeException("value",
                                       PTUtility.GetTextFromResource("ArgumentException.PositiveValue"));
                     }
 
@@ -1196,7 +1204,7 @@ namespace System.Printing
                     (value < PrintSchema.PagesPerSheetDirectionEnumMin ||
                      value > PrintSchema.PagesPerSheetDirectionEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<PagesPerSheetDirection>(
@@ -1240,7 +1248,7 @@ namespace System.Printing
                     (value < PrintSchema.PhotoPrintingIntentEnumMin ||
                      value > PrintSchema.PhotoPrintingIntentEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<PhotoPrintingIntent>(
@@ -1284,7 +1292,7 @@ namespace System.Printing
                     (value < PrintSchema.StaplingEnumMin ||
                      value > PrintSchema.StaplingEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<Stapling>(
@@ -1328,7 +1336,7 @@ namespace System.Printing
                     (value < PrintSchema.TrueTypeFontModeEnumMin ||
                      value > PrintSchema.TrueTypeFontModeEnumMax))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    throw new ArgumentOutOfRangeException("value");
                 }
 
                 AddSetterEnumValueToCache<TrueTypeFontMode>(
@@ -1372,6 +1380,7 @@ namespace System.Printing
         /// <summary>
         /// Gets a boolean to indicate whether or not public setting in the PrinTicket has been changed by the client.
         /// </summary>
+        [MS.Internal.ReachFramework.FriendAccessAllowed]
         internal bool IsSettingChanged
         {
             get

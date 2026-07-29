@@ -1,15 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
 using System.IO;
 using System.IO.Packaging;
+using System.Security;
+using System.Security.RightsManagement;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// Extends StreamDocument with EncryptedPackageEnvelope for use by RightsController.
-    /// </summary>
-    internal class RightsDocument : StreamDocument<StreamProxy>
+/// <summary>
+/// Extends StreamDocument with EncryptedPackageEnvelope for use by RightsController.
+/// </summary>
+internal class RightsDocument : StreamDocument<StreamProxy>
 {
     #region Constructors
     //--------------------------------------------------------------------------
@@ -73,9 +75,9 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     internal EncryptedPackageEnvelope DestinationPackage
     {
-        get { return _destination; }
+        get { return _destination.Value; }
 
-        set { _destination = value; }
+        set { _destination.Value = value; }
     }
 
     /// <summary>
@@ -84,9 +86,9 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     internal EncryptedPackageEnvelope SourcePackage
     {
-        get { return _source; }
+        get { return _source.Value; }
 
-        set { _source = value; }
+        set { _source.Value = value; }
     }
 
     /// <summary>
@@ -95,9 +97,9 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     internal EncryptedPackageEnvelope WorkspacePackage
     {
-        get { return _workspace; }
+        get { return _workspace.Value; }
 
-        set { _workspace = value; }
+        set { _workspace.Value = value; }
     }
     #endregion Internal Properties
 
@@ -141,13 +143,19 @@ namespace MS.Internal.Documents.Application
                 {
                     try
                     {
-                        WorkspacePackage?.Close();
-                        WorkspacePackage = null;
+                        if (WorkspacePackage != null)
+                        {
+                            WorkspacePackage.Close();
+                            WorkspacePackage = null;
+                        }
                     }
                     finally
                     {
-                        SourcePackage?.Close();
-                        SourcePackage = null;
+                        if (SourcePackage != null)
+                        {
+                            SourcePackage.Close();
+                            SourcePackage = null;
+                        }
                     }
                 }
             }
@@ -164,11 +172,11 @@ namespace MS.Internal.Documents.Application
     // Private Fields
     //--------------------------------------------------------------------------
 
-    private EncryptedPackageEnvelope _source;
+    private SecurityCriticalDataForSet<EncryptedPackageEnvelope> _source;
 
-    private EncryptedPackageEnvelope _workspace;
+    private SecurityCriticalDataForSet<EncryptedPackageEnvelope> _workspace;
 
-    private EncryptedPackageEnvelope _destination;
+    private SecurityCriticalDataForSet<EncryptedPackageEnvelope> _destination;
     #endregion Private Fields
 }
 }

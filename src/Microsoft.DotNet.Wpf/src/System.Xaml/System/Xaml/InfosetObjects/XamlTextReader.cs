@@ -111,7 +111,7 @@ namespace System.Xaml
             _endOfStreamNode = new InternalNode(InternalNodeType.EndOfStream);
 
             _context = (XamlParserContext)XamlContext.CreateContext(UsageMode.Parser, schemaContext,
-                                                            _mergedSettings.LocalAssembly, ignoreCanConvert: false);
+                                                            _mergedSettings.LocalAssembly, false /*ignoreCanConvert*/);
 
             XamlScanner xamlScanner = new XamlScanner(_context, myXmlReader, _mergedSettings);
             XamlPullParser parser = new XamlPullParser(_context, xamlScanner, _mergedSettings);

@@ -1,7 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Windows;
 using System.Windows.Controls;
+
+using MS.Internal;
+using MS.Win32;
 
 namespace System.Windows.Automation.Peers
 {
@@ -13,17 +19,17 @@ namespace System.Windows.Automation.Peers
             : base(owner)
         { }
 
-        protected override ItemAutomationPeer CreateItemAutomationPeer(object item)
+        override protected ItemAutomationPeer CreateItemAutomationPeer(object item)
         {
             return new ItemsControlItemAutomationPeer(item, this);
         }
 
-        protected override string GetClassNameCore()
+        override protected string GetClassNameCore()
         {
             return "ItemsControl";
         }
 
-        protected override AutomationControlType GetAutomationControlTypeCore()
+        override protected AutomationControlType GetAutomationControlTypeCore()
         {
             return AutomationControlType.List;
         }

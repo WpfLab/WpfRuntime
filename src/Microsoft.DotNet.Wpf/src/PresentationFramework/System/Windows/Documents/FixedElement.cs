@@ -1,13 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal.Documents;
-using System.Windows.Automation;
-using System.Windows.Controls;
-using System.Windows.Markup;    // for XmlLanguage
-using System.Windows.Navigation;
-using System.Globalization;
-using System.Text;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -16,6 +9,22 @@ using System.Text;
 
 namespace System.Windows.Documents
 {
+    using MS.Internal.Documents;
+    using System.Windows;
+    using System.Windows.Automation;
+    using System.Windows.Controls;
+    using System.Windows.Shapes;
+    using System.Windows.Markup;    // for XmlLanguage
+    using System.Windows.Media;
+    using System.Windows.Navigation;
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Text;
+    using System.Security;
+
     /// <summary>
     /// FixedElement represents a flow element/object in the Fixed Document.
     /// Its children collection is used for DependencyProperty evaluation.
@@ -214,10 +223,8 @@ namespace System.Windows.Documents
             object o = im;
             if (_type == ElementType.InlineUIContainer)
             {
-                InlineUIContainer c = new InlineUIContainer
-                {
-                    Child = im
-                };
+                InlineUIContainer c = new InlineUIContainer();
+                c.Child = im;
                 o = c;
             }
             return o;
@@ -244,10 +251,8 @@ namespace System.Windows.Documents
                     root = new Paragraph();
                     break;
                 case ElementType.Hyperlink:
-                    Hyperlink link = new Hyperlink
-                    {
-                        NavigateUri = GetValue(NavigateUriProperty) as Uri
-                    };
+                    Hyperlink link = new Hyperlink();
+                    link.NavigateUri = GetValue(NavigateUriProperty) as Uri;
                     link.RequestNavigate += new RequestNavigateEventHandler(ClickHyperlink);
                     AutomationProperties.SetHelpText(link, (String)this.GetValue(HelpTextProperty));
                     AutomationProperties.SetName(link, (String)this.GetValue(NameProperty));
@@ -294,10 +299,8 @@ namespace System.Windows.Documents
             Uri source = _object as Uri;
             if (source != null)
             {
-                image = new Image
-                {
-                    Source = new System.Windows.Media.Imaging.BitmapImage(source)
-                };
+                image = new Image();
+                image.Source = new System.Windows.Media.Imaging.BitmapImage(source);
                 image.Width = image.Source.Width;
                 image.Height = image.Source.Height;
 

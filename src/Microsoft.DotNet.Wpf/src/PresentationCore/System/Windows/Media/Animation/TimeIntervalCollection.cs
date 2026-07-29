@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //                                             
 
@@ -86,6 +87,11 @@
 #define TRACE
 #endif // DEBUG
 
+using System;
+using System.Collections;
+using System.Diagnostics;
+using MS.Internal;
+
 namespace System.Windows.Media.Animation
 {
     /// <summary>
@@ -136,7 +142,7 @@ namespace System.Windows.Media.Animation
             _nodeTime[0] = point;
             _nodeIsPoint[0] = true;
             _nodeIsInterval[0] = false;
-            Debug.Assert(!_nodeIsInterval[0]);
+            Debug.Assert(_nodeIsInterval[0] == false);
 
             _count = 1;
         }
@@ -313,7 +319,7 @@ namespace System.Windows.Media.Animation
         /// <summary>
         /// Creates a collection containing a single time point
         /// </summary>
-        internal static TimeIntervalCollection CreatePoint(TimeSpan time)
+        static internal TimeIntervalCollection CreatePoint(TimeSpan time)
         {
             return new TimeIntervalCollection(time);
         }
@@ -321,7 +327,7 @@ namespace System.Windows.Media.Animation
         /// <summary>
         /// Creates a collection containing a closed-open time interval [from, to)
         /// </summary>
-        internal static TimeIntervalCollection CreateClosedOpenInterval(TimeSpan from, TimeSpan to)
+        static internal TimeIntervalCollection CreateClosedOpenInterval(TimeSpan from, TimeSpan to)
         {
             return new TimeIntervalCollection(from, true, to, false);
         }
@@ -329,7 +335,7 @@ namespace System.Windows.Media.Animation
         /// <summary>
         /// Creates a collection containing an open-closed time interval (from, to]
         /// </summary>
-        internal static TimeIntervalCollection CreateOpenClosedInterval(TimeSpan from, TimeSpan to)
+        static internal TimeIntervalCollection CreateOpenClosedInterval(TimeSpan from, TimeSpan to)
         {
             return new TimeIntervalCollection(from, false, to, true);
         }
@@ -337,7 +343,7 @@ namespace System.Windows.Media.Animation
         /// <summary>
         /// Creates a collection containing a closed time interval [from, infinity)
         /// </summary>
-        internal static TimeIntervalCollection CreateInfiniteClosedInterval(TimeSpan from)
+        static internal TimeIntervalCollection CreateInfiniteClosedInterval(TimeSpan from)
         {
             return new TimeIntervalCollection(from, true);
         }
@@ -345,7 +351,7 @@ namespace System.Windows.Media.Animation
         /// <summary>
         /// Creates an empty collection
         /// </summary>
-        internal static TimeIntervalCollection Empty
+        static internal TimeIntervalCollection Empty
         {
             get
             {
@@ -356,7 +362,7 @@ namespace System.Windows.Media.Animation
         /// <summary>
         /// Creates a collection with the null point
         /// </summary>
-        internal static TimeIntervalCollection CreateNullPoint()
+        static internal TimeIntervalCollection CreateNullPoint()
         {
             return new TimeIntervalCollection(true);
         }
@@ -676,7 +682,7 @@ namespace System.Windows.Media.Animation
         }
 
         // Make sure the indexers are starting next to each other
-        private static void IntersectsHelperPrepareIndexers(ref TimeIntervalCollection tic1, ref TimeIntervalCollection tic2)
+        static private void IntersectsHelperPrepareIndexers(ref TimeIntervalCollection tic1, ref TimeIntervalCollection tic2)
         {
             Debug.Assert(!tic1.IsEmptyOfRealPoints);  // We shouldn't reach here if either TIC is empty
             Debug.Assert(!tic2.IsEmptyOfRealPoints);
@@ -705,7 +711,7 @@ namespace System.Windows.Media.Animation
 
         // Returns true if we know at this point whether an intersection is possible between tic1 and tic2
         // The fact of whether an intersection was found is stored in the ref parameter intersectionFound
-        private static bool IntersectsHelperUnequalCase(ref TimeIntervalCollection tic1, ref TimeIntervalCollection tic2, ref bool intersectionFound)
+        static private bool IntersectsHelperUnequalCase(ref TimeIntervalCollection tic1, ref TimeIntervalCollection tic2, ref bool intersectionFound)
         {
             Debug.Assert(!intersectionFound);  // If an intersection was already found, we should not reach this far
 
@@ -754,7 +760,7 @@ namespace System.Windows.Media.Animation
 
         // Returns true if we know at this point whether an intersection is possible between tic1 and tic2
         // The fact of whether an intersection was found is stored in the ref parameter intersectionFound
-        private static bool IntersectsHelperEqualCase(ref TimeIntervalCollection tic1, ref TimeIntervalCollection tic2, ref bool intersectionFound)
+        static private bool IntersectsHelperEqualCase(ref TimeIntervalCollection tic1, ref TimeIntervalCollection tic2, ref bool intersectionFound)
         {
             // If the nodes match exactly, check if the points are both included, or if the intervals are both included
             if ((tic1.CurrentNodeIsPoint && tic2.CurrentNodeIsPoint) ||
@@ -1053,7 +1059,7 @@ namespace System.Windows.Media.Animation
                     if (isAutoReversed)
                     {
                         long doublePeriod = periodInTicks << 1;  // Fast multiply by 2
-                        outputInTicks %= doublePeriod;
+                        outputInTicks = outputInTicks % doublePeriod;
 
                         if (outputInTicks > periodInTicks)
                         {
@@ -1062,7 +1068,7 @@ namespace System.Windows.Media.Animation
                     }
                     else
                     {
-                        outputInTicks %= periodInTicks;
+                        outputInTicks = outputInTicks % periodInTicks;
                         if (outputInTicks == 0)
                         {
                             outputInTicks = periodInTicks;  // If we are at the end, stick to the max value

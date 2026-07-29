@@ -1,11 +1,31 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:  Crypto provider class which is a wrapper around unmanaged DRM SDK Bound License handle
+//   provides ability to Encryt/Decrypt protected content, and enumerate granted rights. 
+//
+//
+//
+//
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Security;
+using System.Windows;
 using System.Collections.ObjectModel;
-using MS.Internal.Security.RightsManagement;
-using MS.Internal;
+using MS.Internal.Security.RightsManagement; 
+using MS.Internal;        
+using SecurityHelper=MS.Internal.WindowsBase.SecurityHelper; 
 
-namespace System.Security.RightsManagement
+using MS.Internal.WindowsBase;
+
+namespace System.Security.RightsManagement 
 {
     /// <summary>
     /// CryptoProvider class is built as a result of UseLicense.Bind call. This class represents a successful RightsManagement 
@@ -51,11 +71,14 @@ namespace System.Security.RightsManagement
         public byte[] Encrypt(byte[] clearText)
         {
             CheckDisposed();
-
-            ArgumentNullException.ThrowIfNull(clearText);
+            
+            if (clearText == null)
+            {
+                throw new ArgumentNullException("clearText");
+            }
 
             // validation of the proper size of the clearText is done by the unmanaged libraries 
-
+            
             if (!CanEncrypt)
             {
                 throw new RightsManagementException(RightsManagementFailureCode.EncryptionNotPermitted);
@@ -107,11 +130,14 @@ namespace System.Security.RightsManagement
         public byte[] Decrypt(byte[] cryptoText)
         {
             CheckDisposed();
-
-            ArgumentNullException.ThrowIfNull(cryptoText);
+        
+            if (cryptoText == null)
+            {
+                throw new ArgumentNullException("cryptoText");
+            }
 
             // validation of the proper size of the cryptoText is done by the unmanaged libraries 
-
+            
             if (!CanDecrypt)
             {
                 throw new RightsManagementException(RightsManagementFailureCode.RightNotGranted);

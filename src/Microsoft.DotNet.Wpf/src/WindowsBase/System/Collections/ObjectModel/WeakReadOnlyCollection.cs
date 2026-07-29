@@ -1,5 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 
 
 // This is basically copied from ReadOnlyCollection<T>, with just enough modification
@@ -16,19 +18,29 @@
 
 namespace System.Collections.ObjectModel
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Windows;
+    using MS.Internal.WindowsBase;      // [FriendAccessAllowed]
+
     [Serializable]
     [System.Runtime.InteropServices.ComVisible(false)]
     //[DebuggerTypeProxy(typeof(Mscorlib_CollectionDebugView<>))]
     [DebuggerDisplay("Count = {Count}")]
+    [FriendAccessAllowed]
     internal class WeakReadOnlyCollection<T>: IList<T>, IList
     {
         //IList<T> list;
-        private IList<WeakReference> list;
+        IList<WeakReference> list;
         [NonSerialized]
         private Object _syncRoot;
 
         public WeakReadOnlyCollection(IList<WeakReference> list) {  // assumption: the WRs in list refer to T's
-            ArgumentNullException.ThrowIfNull(list);
+            if (list == null) {
+                throw new ArgumentNullException(nameof(list));
+            }
             this.list = list;
         }
 
@@ -120,12 +132,11 @@ namespace System.Collections.ObjectModel
         object ICollection.SyncRoot {
             get {
                 if( _syncRoot == null) {
-                    if (list is ICollection c)
-                    {
+                    ICollection c = list as ICollection;
+                    if( c != null) {
                         _syncRoot = c.SyncRoot;
                     }
-                    else
-                    {
+                    else {
                         System.Threading.Interlocked.CompareExchange<Object>(ref _syncRoot, new Object(), null);
                     }
                 }
@@ -134,7 +145,10 @@ namespace System.Collections.ObjectModel
         }
 
         void ICollection.CopyTo(Array array, int index) {
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null) {
+                //ThrowHelper.ThrowArgumentNullException(ExceptionArgument.array);
+                throw new ArgumentNullException(nameof(array));
+            }
 
             if (array.Rank != 1) {
                 //ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_RankMultiDimNotSupported);
@@ -157,12 +171,11 @@ namespace System.Collections.ObjectModel
             }
 
             IList<T> dlist = CreateDereferencedList();
-            if (array is T[] items)
-            {
+            T[] items = array as T[];
+            if (items != null) {
                 dlist.CopyTo(items, index);
             }
-            else
-            {
+            else {
                 //
                 // Catch the obvious case assignment will fail.
                 // We can found all possible problems by doing the check though.
@@ -171,8 +184,7 @@ namespace System.Collections.ObjectModel
                 //
                 Type targetType = array.GetType().GetElementType();
                 Type sourceType = typeof(T);
-                if (!(targetType.IsAssignableFrom(sourceType) || sourceType.IsAssignableFrom(targetType)))
-                {
+                if(!(targetType.IsAssignableFrom(sourceType) || sourceType.IsAssignableFrom(targetType))) {
                     //ThrowHelper.ThrowArgumentException(ExceptionResource.Argument_InvalidArrayType);
                     throw new ArgumentException(SR.Argument_InvalidArrayType);
                 }
@@ -181,22 +193,19 @@ namespace System.Collections.ObjectModel
                 // We can't cast array of value type to object[], so we don't support
                 // widening of primitive types here.
                 //
-                if (array is not object[] objects)
-                {
+                object[] objects = array as object[];
+                if( objects == null) {
                     //ThrowHelper.ThrowArgumentException(ExceptionResource.Argument_InvalidArrayType);
                     throw new ArgumentException(SR.Argument_InvalidArrayType);
                 }
 
                 int count = dlist.Count;
-                try
-                {
-                    for (int i = 0; i < count; i++)
-                    {
+                try {
+                    for (int i = 0; i < count; i++) {
                         objects[index++] = dlist[i];
                     }
                 }
-                catch (ArrayTypeMismatchException)
-                {
+                catch(ArrayTypeMismatchException) {
                     //ThrowHelper.ThrowArgumentException(ExceptionResource.Argument_InvalidArrayType);
                     throw new ArgumentException(SR.Argument_InvalidArrayType);
                 }
@@ -266,7 +275,7 @@ namespace System.Collections.ObjectModel
             throw new NotSupportedException(SR.NotSupported_ReadOnlyCollection);
         }
 
-        private IList<T> CreateDereferencedList()
+        IList<T> CreateDereferencedList()
         {
             int n = list.Count;
             List<T> newList = new List<T>(n);
@@ -292,7 +301,8 @@ namespace System.Collections.ObjectModel
 
             public T Current {
                 get {
-                    if (ie.Current is WeakReference wr)
+                    WeakReference wr = ie.Current as WeakReference;
+                    if (wr != null)
                         return (T)wr.Target;
                     else
                         return default(T);

@@ -1,12 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 //              Created it.
 
+using System;
 using System.ComponentModel;
+using System.Windows.Threading;
+using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Diagnostics;
+using System.Collections;
+using MS.Internal;
+using System.Resources;
+using System.Runtime.InteropServices;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media
 {
@@ -138,7 +148,7 @@ namespace System.Windows.Media
         /// <summary>
         /// Re-exposes the Visual base class's corresponding VisualTreeHelper implementation as public method.
         /// </summary>
-        public new HitTestResult HitTest(Point point)
+        new public HitTestResult HitTest(Point point)
         {
             return base.HitTest(point);
         }
@@ -146,7 +156,7 @@ namespace System.Windows.Media
         /// <summary>
         /// Re-exposes the Visual base class's corresponding VisualTreeHelper implementation as public method.
         /// </summary>
-        public new void HitTest(HitTestFilterCallback filterCallback, HitTestResultCallback resultCallback, HitTestParameters hitTestParameters)
+        new public void HitTest(HitTestFilterCallback filterCallback, HitTestResultCallback resultCallback, HitTestParameters hitTestParameters)
         {
             base.HitTest(filterCallback, resultCallback, hitTestParameters);
         }

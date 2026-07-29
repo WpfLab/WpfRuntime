@@ -1,17 +1,37 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 
+using System;
+using System.Windows.Threading;
+using System.Diagnostics;
+using System.Collections;
+using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.IO;
+using System.Runtime.InteropServices;
+
+using MS.Internal;
+using MS.Win32;
+using Microsoft.Win32.SafeHandles;
+
+using System.Windows;
+using System.Windows.Media.Media3D;
+using System.Windows.Media.Animation;
+
+using MS.Internal.PresentationCore;
 
 namespace System.Windows.Media
 {
     /// <summary>
     ///
     /// </summary>
+    [FriendAccessAllowed]   // used by System.Printing.dll
     internal class GlyphsSerializer
     {
         #region public methods
@@ -21,7 +41,10 @@ namespace System.Windows.Media
         /// <param name="glyphRun"></param>
         public GlyphsSerializer(GlyphRun glyphRun)
         {
-            ArgumentNullException.ThrowIfNull(glyphRun);
+            if (glyphRun == null)
+            {
+                throw new ArgumentNullException("glyphRun");
+            }
 
             _glyphTypeface = glyphRun.GlyphTypeface;
             _milToEm = EmScaleFactor / glyphRun.FontRenderingEmSize;

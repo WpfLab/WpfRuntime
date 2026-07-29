@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -10,14 +11,15 @@
 *
 \***************************************************************************/
 using System.ComponentModel;            // DefaultValueAttribute
+using System.Diagnostics;               // Debug.Assert
 
 namespace System.Windows.Media.Animation
 {
-    /// <summary>
-    /// SeekStoryboard will call seek on its Storyboard reference when
-    ///  it is triggered.
-    /// </summary>
-    public sealed class SeekStoryboard : ControllableStoryboardAction
+/// <summary>
+/// SeekStoryboard will call seek on its Storyboard reference when
+///  it is triggered.
+/// </summary>
+public sealed class SeekStoryboard : ControllableStoryboardAction
 {
     /// <summary>
     ///     A time offset to use for this action.  If it is never explicitly
@@ -101,7 +103,7 @@ namespace System.Windows.Media.Animation
         }
     }
 
-        private TimeSpan       _offset = TimeSpan.Zero;
-        private TimeSeekOrigin _origin = TimeSeekOrigin.BeginTime;
+    TimeSpan       _offset = TimeSpan.Zero;
+    TimeSeekOrigin _origin = TimeSeekOrigin.BeginTime;
 }
 }

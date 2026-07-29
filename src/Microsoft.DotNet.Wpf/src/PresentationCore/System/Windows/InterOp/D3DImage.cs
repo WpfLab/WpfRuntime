@@ -1,18 +1,31 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
 // Description: D3DImage class
 //                  An ImageSource that displays a user created D3D surface
+//
 
 using MS.Internal;
 using MS.Internal.KnownBoxes;
+using MS.Internal.PresentationCore;
 using MS.Win32.PresentationCore;
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Composition;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Security;
 using System.Threading;
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Interop
 {
@@ -54,10 +67,17 @@ namespace System.Windows.Interop
         /// </summary>
         public D3DImage(double dpiX, double dpiY)
         {
+            
+            if (dpiX < 0)
+            {
+                throw new ArgumentOutOfRangeException("dpiX", SR.ParameterMustBeGreaterThanZero);
+            }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(dpiX);
-            ArgumentOutOfRangeException.ThrowIfNegative(dpiY);
-
+            if (dpiY < 0)
+            {
+                throw new ArgumentOutOfRangeException("dpiY", SR.ParameterMustBeGreaterThanZero);
+            }
+   
             _canWriteEvent = new ManualResetEvent(true);
             _availableCallback = Callback;
             _sendPresentDelegate = SendPresent;
@@ -132,7 +152,7 @@ namespace System.Windows.Interop
             // In case the user passed in something like "(D3DResourceType)-1"
             if (backBufferType != D3DResourceType.IDirect3DSurface9)
             {
-                throw new ArgumentOutOfRangeException(nameof(backBufferType));
+                throw new ArgumentOutOfRangeException("backBufferType");
             }
 
             // Early-out if the current back buffer equals the new one. If the front buffer
@@ -234,7 +254,7 @@ namespace System.Windows.Interop
 
             if (timeout == Duration.Automatic)
             {
-                throw new ArgumentOutOfRangeException(nameof(timeout));
+                throw new ArgumentOutOfRangeException("timeout");
             }
 
             return LockImpl(timeout);
@@ -298,7 +318,7 @@ namespace System.Windows.Interop
                 throw new InvalidOperationException(SR.D3DImage_MustHaveBackBuffer);
             }
 
-            dirtyRect.ValidateForDirtyRect(nameof(dirtyRect), PixelWidth, PixelHeight);
+            dirtyRect.ValidateForDirtyRect("dirtyRect", PixelWidth, PixelHeight);
             if (dirtyRect.HasArea)
             {
                 // Unmanaged code will make sure that the rect is well-formed
@@ -716,7 +736,8 @@ namespace System.Windows.Interop
                 channel.SendCommand(
                     (byte*)&data,
                     sizeof(DUCE.MILCMD_D3DIMAGE_PRESENT),
-                    sendInSeparateBatch: true);
+                    true /* sendInSeparateBatch */
+                    );
             }
 
             _isDirty = false;
@@ -733,10 +754,14 @@ namespace System.Windows.Interop
         /// </summary>
         private object SetIsFrontBufferAvailable(object isAvailableVersionPair)
         {
-            (bool isFrontBufferAvailable, uint version) = (Tuple<bool, uint>)isAvailableVersionPair;
+            Pair pair = (Pair)isAvailableVersionPair;
+            uint version = (uint)pair.Second;
 
-            if (_version == version)
+            if (version == _version)
+            {
+                bool isFrontBufferAvailable = (bool)pair.First;
                 SetValue(IsFrontBufferAvailablePropertyKey, isFrontBufferAvailable);
+            }
 
             // ...just because DispatcherOperationCallback requires returning an object
             return null;
@@ -753,9 +778,11 @@ namespace System.Windows.Interop
         // NOTE: Called from the render thread!We must execute the reaction on the UI thread.
         private void Callback(bool isFrontBufferAvailable, uint version)
         {
-            Tuple<bool, uint> parameters = new(isFrontBufferAvailable, version);
-
-            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new DispatcherOperationCallback(SetIsFrontBufferAvailable), parameters);
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Normal,
+                new DispatcherOperationCallback(SetIsFrontBufferAvailable),
+                new Pair(BooleanBoxes.Box(isFrontBufferAvailable), version)
+                );
         }
 
         internal override void UpdateResource(DUCE.Channel channel, bool skipOnChannelCheck)
@@ -803,7 +830,8 @@ namespace System.Windows.Interop
                     channel.SendCommand(
                         (byte*)&data,
                         sizeof(DUCE.MILCMD_D3DIMAGE),
-                        sendInSeparateBatch: false);
+                        false /* sendInSeparateBatch */
+                        );
                 }
 
                 // Presents only happen on the async channel so don't let RTB flip this bit
@@ -821,7 +849,7 @@ namespace System.Windows.Interop
             {
                 AddRefOnChannelAnimations(channel);
 
-                UpdateResource(channel, skipOnChannelCheck: true /* We already know that we're on channel */ );
+                UpdateResource(channel, true /* skip "on channel" check - we already know that we're on channel */ );
                 
                 // If we are being put onto the asynchronous compositor channel in
                 // a dirty state, we need to subscribe to the commit batch event.

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 using System.ComponentModel;
@@ -199,7 +200,7 @@ namespace System.Windows.Input.Manipulations
                     ref this.translationBehavior,
                     value,
                     OnTranslationBehaviorChanged,
-                    nameof(TranslationBehavior));
+                    "TranslationBehavior");
             }
         }
 
@@ -222,7 +223,7 @@ namespace System.Windows.Input.Manipulations
                     ref this.rotationBehavior,
                     value,
                     OnRotationBehaviorChanged,
-                    nameof(RotationBehavior));
+                    "RotationBehavior");
             }
         }
 
@@ -238,7 +239,7 @@ namespace System.Windows.Input.Manipulations
                     ref this.expansionBehavior,
                     value,
                     OnExpansionBehaviorChanged,
-                    nameof(ExpansionBehavior));
+                    "ExpansionBehavior");
             }
         }
 
@@ -325,21 +326,24 @@ namespace System.Windows.Input.Manipulations
         [EditorBrowsable(EditorBrowsableState.Never)]
         public void SetParameters(InertiaParameters2D parameters)
         {
-            ArgumentNullException.ThrowIfNull(parameters);
+            Validations.CheckNotNull(parameters, "parameters");
 
-            if (parameters is InertiaTranslationBehavior2D translationParameters)
+            InertiaTranslationBehavior2D translationParameters = parameters as InertiaTranslationBehavior2D;
+            if (translationParameters != null)
             {
                 TranslationBehavior = translationParameters;
                 return;
             }
 
-            if (parameters is InertiaRotationBehavior2D rotationParameters)
+            InertiaRotationBehavior2D rotationParameters = parameters as InertiaRotationBehavior2D;
+            if (rotationParameters != null)
             {
                 RotationBehavior = rotationParameters;
                 return;
             }
 
-            if (parameters is InertiaExpansionBehavior2D expansionParameters)
+            InertiaExpansionBehavior2D expansionParameters = parameters as InertiaExpansionBehavior2D;
+            if (expansionParameters != null)
             {
                 ExpansionBehavior = expansionParameters;
                 return;
@@ -980,9 +984,18 @@ namespace System.Windows.Input.Manipulations
             {
                 case ProcessorState.NotInitialized:
                     // Check our various inertia behaviors to make sure they're in valid states
-                    this.translationBehavior?.CheckValid();
-                    this.expansionBehavior?.CheckValid();
-                    this.rotationBehavior?.CheckValid();
+                    if (this.translationBehavior != null)
+                    {
+                        this.translationBehavior.CheckValid();
+                    }
+                    if (this.expansionBehavior != null)
+                    {
+                        this.expansionBehavior.CheckValid();
+                    }
+                    if (this.rotationBehavior != null)
+                    {
+                        this.rotationBehavior.CheckValid();
+                    }
 
                     // verify if initialTimestamp is initialized and set it to the current timestamp if not
                     if (this.previousTimestamp != this.initialTimestamp)
@@ -1015,7 +1028,7 @@ namespace System.Windows.Input.Manipulations
             {
                 // throw an exception,
                 // make sure that the outer method has parameter named "timestamp"
-                throw Exceptions.InvalidTimestamp(nameof(timestamp), timestamp);
+                throw Exceptions.InvalidTimestamp("timestamp", timestamp);
             }
 
             bool result = ExtrapolateAndRaiseEvents(timestamp, forceCompleted);
@@ -1258,7 +1271,7 @@ namespace System.Windows.Input.Manipulations
                 double result = InitialVelocity - Deceleration * elapsedTimeSinceInitialTimestamp;
 
                 // convert to milliseconds
-                result *= timestampTicksPerMillisecond;
+                result = result * timestampTicksPerMillisecond;
                 Debug.Assert(Validations.IsFinite((float)result));
                 return (float)result;
             }

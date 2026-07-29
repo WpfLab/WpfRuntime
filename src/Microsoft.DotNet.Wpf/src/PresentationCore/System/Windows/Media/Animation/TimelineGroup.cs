@@ -1,8 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+
 
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows.Markup;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Animation
 {
@@ -82,7 +89,7 @@ namespace System.Windows.Media.Animation
         /// Creates a new ClockGroup using this TimelineGroup.
         /// </summary>
         /// <returns>A new ClockGroup.</returns>
-        public new ClockGroup CreateClock()
+        new public ClockGroup CreateClock()
         {
             return (ClockGroup)base.CreateClock();
         }
@@ -105,7 +112,10 @@ namespace System.Windows.Media.Animation
         {
             WritePreamble();
 
-            ArgumentNullException.ThrowIfNull(child);
+            if (child == null)
+            {
+                throw new ArgumentNullException(nameof(child));
+            }
 
             AddChild(child);
 
@@ -167,7 +177,10 @@ namespace System.Windows.Media.Animation
         {
             WritePreamble();
 
-            ArgumentNullException.ThrowIfNull(childText);
+            if (childText == null)
+            {
+                throw new ArgumentNullException(nameof(childText));
+            }
 
             AddText(childText);
 

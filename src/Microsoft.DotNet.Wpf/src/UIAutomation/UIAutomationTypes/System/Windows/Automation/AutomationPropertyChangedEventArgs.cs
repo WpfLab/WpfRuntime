@@ -1,9 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: PropertyChanged event args class
 
-namespace System.Windows.Automation
+using System;
+using System.Windows.Automation;
+
+namespace System.Windows.Automation 
 {
     /// <summary>
     /// Delegate to handle Automation Property change events

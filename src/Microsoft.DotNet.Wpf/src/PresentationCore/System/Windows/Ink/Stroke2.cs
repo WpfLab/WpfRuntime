@@ -1,13 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //#define DEBUG_RENDERING_FEEDBACK
 
+using MS.Utility;
+using System;
 using System.ComponentModel;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using MS.Internal;
 using MS.Internal.Ink;
+
+using SR=MS.Internal.PresentationCore.SR;
+using MS.Internal.PresentationCore;
 
 // Primary root namespace for TabletPC/Ink/Handwriting/Recognition in .NET
 
@@ -48,7 +58,10 @@ namespace System.Windows.Ink
         /// <param name="context"></param>
         public void Draw(DrawingContext context)
         {
-            ArgumentNullException.ThrowIfNull(context);
+            if (null == context)
+            {
+                throw new System.ArgumentNullException("context");
+            }
 
             //our code never calls this public API so we can assume that opacity
             //has not been set up
@@ -66,9 +79,15 @@ namespace System.Windows.Ink
         /// <param name="drawingAttributes"></param>
         public void Draw(DrawingContext drawingContext, DrawingAttributes drawingAttributes)
         {
-            ArgumentNullException.ThrowIfNull(drawingContext);
+            if (null == drawingContext)
+            {
+                throw new System.ArgumentNullException("context");
+            }
 
-            ArgumentNullException.ThrowIfNull(drawingAttributes);
+            if (null == drawingAttributes)
+            {
+                throw new System.ArgumentNullException("drawingAttributes");
+            }
 
             //             context.VerifyAccess();
 
@@ -113,7 +132,10 @@ namespace System.Windows.Ink
         public StrokeCollection GetClipResult(IEnumerable<Point> lassoPoints)
         {
             // Check the input parameters
-            ArgumentNullException.ThrowIfNull(lassoPoints);
+            if (lassoPoints == null)
+            {
+                throw new System.ArgumentNullException("lassoPoints");
+            }
 
             if (IEnumerablePointHelper.GetCount(lassoPoints) == 0)
             {
@@ -144,7 +166,10 @@ namespace System.Windows.Ink
         public StrokeCollection GetEraseResult(IEnumerable<Point> lassoPoints)
         {
             // Check the input parameters
-            ArgumentNullException.ThrowIfNull(lassoPoints);
+            if (lassoPoints == null)
+            {
+                throw new System.ArgumentNullException("lassoPoints");
+            }
 
             if (IEnumerablePointHelper.GetCount(lassoPoints) == 0)
             {
@@ -165,8 +190,14 @@ namespace System.Windows.Ink
         public StrokeCollection GetEraseResult(IEnumerable<Point> eraserPath, StylusShape eraserShape)
         {
             // Check the input parameters
-            ArgumentNullException.ThrowIfNull(eraserShape);
-            ArgumentNullException.ThrowIfNull(eraserPath);
+            if (eraserShape == null)
+            {
+                throw new System.ArgumentNullException("eraserShape");
+            }
+            if (eraserPath == null)
+            {
+                throw new System.ArgumentNullException("eraserPath");
+            }
 
             return this.Erase(this.EraseTest(eraserPath, eraserShape));
         }
@@ -192,7 +223,7 @@ namespace System.Windows.Ink
         {
             if (Double.IsNaN(diameter) || diameter < DrawingAttributes.MinWidth || diameter > DrawingAttributes.MaxWidth)
             {
-                throw new ArgumentOutOfRangeException(nameof(diameter), SR.InvalidDiameter);
+                throw new ArgumentOutOfRangeException("diameter", SR.InvalidDiameter);
             }
             return HitTest(new Point[]{point}, new EllipseStylusShape(diameter, diameter, TapHitRotation));
         }
@@ -207,7 +238,7 @@ namespace System.Windows.Ink
         {
             if ((percentageWithinBounds < 0) || (percentageWithinBounds > 100))
             {
-                throw new System.ArgumentOutOfRangeException(nameof(percentageWithinBounds));
+                throw new System.ArgumentOutOfRangeException("percentageWithinBounds");
             }
 
             if (percentageWithinBounds == 0)
@@ -225,7 +256,7 @@ namespace System.Windows.Ink
 
                 for (int i = 0; i < stylusPoints.Count; i++)
                 {
-                    if (bounds.Contains((Point)stylusPoints[i]))
+                    if (true == bounds.Contains((Point)stylusPoints[i]))
                     {
                         target -= strokeInfo.GetPointWeight(i);
                         if (DoubleUtil.LessThanOrClose(target, 0d))
@@ -239,8 +270,11 @@ namespace System.Windows.Ink
             }
             finally
             {
-                //detach from event handlers, or else we leak.
-                strokeInfo?.Detach();
+                if (strokeInfo != null)
+                {
+                    //detach from event handlers, or else we leak.
+                    strokeInfo.Detach();
+                }
             }
         }
 
@@ -252,11 +286,14 @@ namespace System.Windows.Ink
         /// <returns></returns>
         public bool HitTest(IEnumerable<Point> lassoPoints, int percentageWithinLasso)
         {
-            ArgumentNullException.ThrowIfNull(lassoPoints);
+            if (lassoPoints == null)
+            {
+                throw new System.ArgumentNullException("lassoPoints");
+            }
 
             if ((percentageWithinLasso < 0) || (percentageWithinLasso > 100))
             {
-                throw new System.ArgumentOutOfRangeException(nameof(percentageWithinLasso));
+                throw new System.ArgumentOutOfRangeException("percentageWithinLasso");
             }
 
             if (percentageWithinLasso == 0)
@@ -278,7 +315,7 @@ namespace System.Windows.Ink
 
                 for (int i = 0; i < stylusPoints.Count; i++)
                 {
-                    if (lasso.Contains((Point)stylusPoints[i]))
+                    if (true == lasso.Contains((Point)stylusPoints[i]))
                     {
                         target -= strokeInfo.GetPointWeight(i);
                         if (DoubleUtil.LessThan(target, 0f))
@@ -292,8 +329,11 @@ namespace System.Windows.Ink
             }
             finally
             {
-                //detach from event handlers, or else we leak.
-                strokeInfo?.Detach();
+                if (strokeInfo != null)
+                {
+                    //detach from event handlers, or else we leak.
+                    strokeInfo.Detach();
+                }
             }
 }
 
@@ -306,8 +346,14 @@ namespace System.Windows.Ink
         public bool HitTest(IEnumerable<Point> path, StylusShape stylusShape)
         {
             // Check the input parameters
-            ArgumentNullException.ThrowIfNull(path);
-            ArgumentNullException.ThrowIfNull(stylusShape);
+            if (path == null)
+            {
+                throw new System.ArgumentNullException("path");
+            }
+            if (stylusShape == null)
+            {
+                throw new System.ArgumentNullException("stylusShape");
+            }
 
             if (IEnumerablePointHelper.GetCount(path) == 0)
             {
@@ -362,11 +408,17 @@ namespace System.Windows.Ink
         /// <param name="drawingAttributes">DrawingAttributes to draw with</param>
         protected virtual void DrawCore(DrawingContext drawingContext, DrawingAttributes drawingAttributes)
         {
-            ArgumentNullException.ThrowIfNull(drawingContext);
+            if (null == drawingContext)
+            {
+                throw new System.ArgumentNullException("drawingContext");
+            }
 
-            ArgumentNullException.ThrowIfNull(drawingAttributes);
+            if (null == drawingAttributes)
+            {
+                throw new System.ArgumentNullException("drawingAttributes");
+            }
 
-            if (_drawAsHollow)
+            if (_drawAsHollow == true)
             {
                 // Draw as hollow. Our profiler result shows that the two-pass-rendering approach is about 5 times
                 // faster that using GetOutlinePathGeometry.
@@ -444,13 +496,16 @@ namespace System.Windows.Ink
         /// <returns></returns>
         public Geometry GetGeometry(DrawingAttributes drawingAttributes)
         {
-            ArgumentNullException.ThrowIfNull(drawingAttributes);
+            if (drawingAttributes == null)
+            {
+                throw new ArgumentNullException("drawingAttributes");
+            }
 
             bool geometricallyEqual = DrawingAttributes.GeometricallyEqual(drawingAttributes, this.DrawingAttributes);
 
-            // need to recalculate the PathGeometry if the DA passed in is "geometrically" different from
+            // need to recalculate the PathGemetry if the DA passed in is "geometrically" different from
             // this DA, or if the cached PathGeometry is dirty.
-            if (!geometricallyEqual || (geometricallyEqual && null == _cachedGeometry))
+            if (false == geometricallyEqual || (true == geometricallyEqual && null == _cachedGeometry))
             {
                 //Recalculate _pathGeometry;
                 StrokeNodeIterator iterator = StrokeNodeIterator.GetIterator(this, drawingAttributes);
@@ -467,7 +522,7 @@ namespace System.Windows.Ink
 
                 // return the calculated value directly. We cannot cache the result since the DA passed in
                 // is "geometrically" different from this.DrawingAttributes.
-                if (!geometricallyEqual)
+                if (false == geometricallyEqual)
                 {
                     return geometry;
                 }
@@ -493,9 +548,10 @@ namespace System.Windows.Ink
         /// so we can assume the correct opacity has already been pushed on dc. The flag drawAsHollow is set
         /// to true when this function is called from Renderer and this.IsSelected == true.
         /// </summary>
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
         internal void DrawInternal(DrawingContext dc, DrawingAttributes DrawingAttributes, bool drawAsHollow)
         {
-            if (drawAsHollow)
+            if (drawAsHollow == true)
             {
                 // The Stroke.DrawCore may be overriden in the 3rd party code.
                 // The out-side code could throw exception. We use try/finally block to protect our status.
@@ -512,7 +568,7 @@ namespace System.Windows.Ink
             else
             {
                 // IsSelected can be true or false, but _drawAsHollow must be false
-                System.Diagnostics.Debug.Assert(!_drawAsHollow);
+                System.Diagnostics.Debug.Assert(false == _drawAsHollow);
                 this.DrawCore(dc, DrawingAttributes);
             }
         }
@@ -521,6 +577,7 @@ namespace System.Windows.Ink
         /// <summary>
         /// Used by Inkcanvas to draw selected stroke as hollow.
         /// </summary>
+        [FriendAccessAllowed] // Built into Core, also used by Framework.
         internal bool IsSelected
         {
             get { return _isSelected; }
@@ -550,7 +607,7 @@ namespace System.Windows.Ink
         /// </summary>
         internal void SetBounds(Rect newBounds)
         {
-            System.Diagnostics.Debug.Assert(!newBounds.IsEmpty);
+            System.Diagnostics.Debug.Assert(newBounds.IsEmpty == false);
             _cachedBounds = newBounds;
         }
 

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -8,9 +9,22 @@
 
 
 
+using System;
+using System.Diagnostics;
+using System.ComponentModel;
+using System.ComponentModel.Design;
+using System.Collections;
+using System.Collections.Generic;
 using System.Windows.Input;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Interop;
+using System.Windows.Navigation;
+using System.Windows.Media;
+using System.Windows.Ink;
 
 namespace MS.Internal.Ink
 {
@@ -372,7 +386,7 @@ namespace MS.Internal.Ink
         /// </summary>
         private void InitializeCapture()
         {
-            Debug.Assert(!EditingCoordinator.UserIsEditing, "Unexpect UserIsEditng state." );
+            Debug.Assert(EditingCoordinator.UserIsEditing == false, "Unexpect UserIsEditng state." );
             EditingCoordinator.UserIsEditing = true;
             InkCanvas.SelectionAdorner.CaptureMouse();
         }

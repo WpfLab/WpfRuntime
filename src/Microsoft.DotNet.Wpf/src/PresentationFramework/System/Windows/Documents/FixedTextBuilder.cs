@@ -1,19 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal.Documents;
-using System.Windows.Controls;      // UIElementCollection
-using System.Windows.Media;
-using System.Windows.Automation;
-using System.Windows.Documents.DocumentStructures;
-using System.Collections;
-using System.Globalization;
-using System.Text;
-using System.IO;
-using System.Xml;
-using Path = System.Windows.Shapes.Path;
-
-using MS.Utility;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -23,6 +10,26 @@ using MS.Utility;
 
 namespace System.Windows.Documents
 {
+    using MS.Internal.Documents;
+    using System.Windows.Controls;      // UIElementCollection
+    using System.Windows.Media;
+    using System.Windows.Media.Imaging;
+    using System.Windows.Markup;
+    using System.Windows.Shapes;       // Glyphs
+    using System.Windows.Automation;
+    using System.Windows.Documents.DocumentStructures;
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.Text;
+    using System.IO;
+    using System.Xml;
+    using Path=System.Windows.Shapes.Path;
+
+    using MS.Utility;
+
     //=====================================================================
     /// <summary>
     /// FixedTextBuilder contains heuristics to map fixed document elements
@@ -773,7 +780,7 @@ namespace System.Windows.Documents
         //      2. level1Index
         //      3. pathPrefix.
         //
-        private FixedNode _NewFixedNode(int pageIndex, int nestingLevel, int level1Index, int[] pathPrefix, int childIndex)
+        FixedNode _NewFixedNode(int pageIndex, int nestingLevel, int level1Index, int[] pathPrefix, int childIndex)
         {
             if (nestingLevel == 1)
             {
@@ -851,7 +858,10 @@ namespace System.Windows.Documents
                     GeneralTransform transform = glyph2.TransformToVisual(glyph1);
                     Point prevPt = LTR1 ? box1.TopRight : box1.TopLeft;
                     Point currentPt = LTR2 ? box2.TopLeft : box2.TopRight;
-                    transform?.TryTransform(currentPt, out currentPt);
+                    if (transform != null)
+                    {
+                        transform.TryTransform(currentPt, out currentPt);
+                    }
 
                     if (IsSameLine(currentPt.Y - prevPt.Y, box1.Height, box2.Height))
                     {
@@ -1503,8 +1513,9 @@ namespace System.Windows.Documents
                         _fixedNodes.Add(element.FixedNode);
                     }
                 }
-                else if (element is FixedSOMImage image)
+                else if (element is FixedSOMImage)
                 {
+                    FixedSOMImage image = (FixedSOMImage)element;
                     _FinishTextRun(true);
                     _SetHyperlink(navUri, image.FixedNode, shadowHyperlink);
 
@@ -1669,11 +1680,9 @@ namespace System.Windows.Documents
 
                     if (textRunLength != 0)
                     {
-                        FlowNode flowNodeRun = new FlowNode(_NewScopeId(), FlowNodeType.Run, textRunLength)
-                        {
-                            // Add list of text runs to flow node
-                            FixedSOMElements = _textRuns.ToArray()
-                        };
+                        FlowNode flowNodeRun = new FlowNode(_NewScopeId(), FlowNodeType.Run, textRunLength);
+                        // Add list of text runs to flow node
+                        flowNodeRun.FixedSOMElements = _textRuns.ToArray();
 
                         int offset = 0;
 

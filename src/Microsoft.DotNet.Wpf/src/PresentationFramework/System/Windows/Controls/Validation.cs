@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -8,14 +9,22 @@
 // See specs at Validation.mht
 //
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
 
 using MS.Internal.Controls;
+using MS.Internal.Data;
 using MS.Internal.KnownBoxes;
+using MS.Utility;
 
 namespace System.Windows.Controls
 {
@@ -248,7 +257,10 @@ namespace System.Windows.Controls
             DependencyObject oldSite = (DependencyObject)e.OldValue;
             DependencyObject newSite = (DependencyObject)e.NewValue;
 
-            oldSite?.ClearValue(ValidationAdornerSiteForProperty);
+            if (oldSite != null)
+            {
+                oldSite.ClearValue(ValidationAdornerSiteForProperty);
+            }
 
             if (newSite != null)
             {
@@ -311,7 +323,10 @@ namespace System.Windows.Controls
             DependencyObject oldSiteFor = (DependencyObject)e.OldValue;
             DependencyObject newSiteFor = (DependencyObject)e.NewValue;
 
-            oldSiteFor?.ClearValue(ValidationAdornerSiteProperty);
+            if (oldSiteFor != null)
+            {
+                oldSiteFor.ClearValue(ValidationAdornerSiteProperty);
+            }
 
             if (newSiteFor != null)
             {
@@ -571,7 +586,7 @@ namespace System.Windows.Controls
             }
         }
 
-        private static void OnValidationError(DependencyObject source, ValidationError validationError, ValidationErrorEventAction action)
+        static void OnValidationError(DependencyObject source, ValidationError validationError, ValidationErrorEventAction action)
         {
             ValidationErrorEventArgs args = new ValidationErrorEventArgs(validationError, action);
 

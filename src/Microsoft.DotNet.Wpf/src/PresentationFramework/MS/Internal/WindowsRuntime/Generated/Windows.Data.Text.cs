@@ -1,6 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using WinRT;
 using WinRT.Interop;
@@ -11,9 +19,9 @@ using WinRT.Interop;
 
 namespace MS.Internal.WindowsRuntime
 {
-    namespace Windows.Data.Text
-    {
-        [global::WinRT.WindowsRuntimeType]
+namespace Windows.Data.Text
+{
+    [global::WinRT.WindowsRuntimeType]
     
     internal enum AlternateNormalizationFormat : int
     {
@@ -415,8 +423,8 @@ namespace MS.Internal.WindowsRuntime
 }
 
 namespace ABI.Windows.Data.Text
-    {
-        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+{
+    [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
     internal struct AlternateWordForm
     {
         public static IObjectReference CreateMarshaler(global::MS.Internal.WindowsRuntime.Windows.Data.Text.AlternateWordForm obj) => obj is null ? null : MarshalInspectable.CreateMarshaler(obj).As<IAlternateWordForm.Vftbl>();

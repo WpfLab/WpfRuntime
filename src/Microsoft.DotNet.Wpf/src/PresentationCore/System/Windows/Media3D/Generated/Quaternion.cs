@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,23 +11,37 @@
 
 using MS.Internal;
 using MS.Internal.Collections;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Markup;
 using System.Windows.Media.Media3D.Converters;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
+using System.Windows.Media.Imaging;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows.Media.Media3D
 {
-
     [Serializable]
     [TypeConverter(typeof(QuaternionConverter))]
     [ValueSerializer(typeof(QuaternionValueSerializer))] // Used by MarkupWriter
-    public partial struct Quaternion : IFormattable
+    partial struct Quaternion : IFormattable
     {
         //------------------------------------------------------
         //
@@ -50,7 +65,7 @@ namespace System.Windows.Media.Media3D
         /// </returns>
         /// <param name='quaternion1'>The first Quaternion to compare</param>
         /// <param name='quaternion2'>The second Quaternion to compare</param>
-        public static bool operator ==(Quaternion quaternion1, Quaternion quaternion2)
+        public static bool operator == (Quaternion quaternion1, Quaternion quaternion2)
         {
             if (quaternion1.IsDistinguishedIdentity || quaternion2.IsDistinguishedIdentity)
             {
@@ -76,7 +91,7 @@ namespace System.Windows.Media.Media3D
         /// </returns>
         /// <param name='quaternion1'>The first Quaternion to compare</param>
         /// <param name='quaternion2'>The second Quaternion to compare</param>
-        public static bool operator !=(Quaternion quaternion1, Quaternion quaternion2)
+        public static bool operator != (Quaternion quaternion1, Quaternion quaternion2)
         {
             return !(quaternion1 == quaternion2);
         }
@@ -92,7 +107,7 @@ namespace System.Windows.Media.Media3D
         /// </returns>
         /// <param name='quaternion1'>The first Quaternion to compare</param>
         /// <param name='quaternion2'>The second Quaternion to compare</param>
-        public static bool Equals(Quaternion quaternion1, Quaternion quaternion2)
+        public static bool Equals (Quaternion quaternion1, Quaternion quaternion2)
         {
             if (quaternion1.IsDistinguishedIdentity || quaternion2.IsDistinguishedIdentity)
             {
@@ -268,7 +283,6 @@ namespace System.Windows.Media.Media3D
         /// </returns>
         public override string ToString()
         {
-
             // Delegate to the internal method which implements all ToString calls.
             return ConvertToString(null /* format string */, null /* format provider */);
         }
@@ -282,7 +296,6 @@ namespace System.Windows.Media.Media3D
         /// </returns>
         public string ToString(IFormatProvider provider)
         {
-
             // Delegate to the internal method which implements all ToString calls.
             return ConvertToString(null /* format string */, provider);
         }
@@ -298,7 +311,6 @@ namespace System.Windows.Media.Media3D
         /// </returns>
         string IFormattable.ToString(string format, IFormatProvider provider)
         {
-
             // Delegate to the internal method which implements all ToString calls.
             return ConvertToString(format, provider);
         }
@@ -329,8 +341,6 @@ namespace System.Windows.Media.Media3D
                                  _z,
                                  _w);
         }
-
-
 
         #endregion Internal Properties
 

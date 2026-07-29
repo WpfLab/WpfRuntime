@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Defines BindingBase object, common base class for Binding,
@@ -8,8 +9,10 @@
 // See spec at Data Binding.mht
 //
 
+using System;
 using System.Collections.ObjectModel;   // Collection<T>
 using System.ComponentModel;    // [DefaultValue]
+using System.Diagnostics;       // Debug.Assert
 using System.Globalization;     // CultureInfo
 using System.Windows.Markup;    // MarkupExtension
 using System.Windows.Controls;  // ValidationRule
@@ -489,8 +492,8 @@ namespace System.Windows.Data
         //
         //------------------------------------------------------
 
-        private BindingFlags    _flags = BindingFlags.Default;
-        private bool            _isSealed;
+        BindingFlags    _flags = BindingFlags.Default;
+        bool            _isSealed;
 
         #endregion Private Fields
 
@@ -532,8 +535,7 @@ namespace System.Windows.Data
         internal void      SetValue(Feature id, object value, object defaultValue) { if (Object.Equals(value, defaultValue)) _values.ClearValue((int)id); else _values.SetValue((int)id, value); }
         internal void      ClearValue(Feature id) { _values.ClearValue((int)id); }
         internal void      CopyValue(Feature id, BindingBase clone) { if (HasValue(id)) { clone.SetValue(id, GetValue(id, null)); } }
-
-        private UncommonValueTable  _values;
+        UncommonValueTable  _values;
 
         #endregion Uncommon Values
     }

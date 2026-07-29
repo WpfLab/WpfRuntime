@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: ItemsPresenter object - site of the panel for layout of groups or items.
@@ -7,8 +8,12 @@
 // Specs:       Data Styling.mht
 //
 
+using System;
+using System.Collections;
+using System.Diagnostics;
 using System.Windows.Media;
 using MS.Internal;
+using MS.Internal.Data;                 // WeakRefKey
 
 namespace System.Windows.Controls
 {
@@ -199,7 +204,7 @@ namespace System.Windows.Controls
         //------------------------------------------------------
 
         // initialize (called during measure, from ApplyTemplate)
-        private void AttachToOwner()
+        void AttachToOwner()
         {
             DependencyObject templatedParent = this.TemplatedParent;
             ItemsControl owner = templatedParent as ItemsControl;
@@ -219,7 +224,7 @@ namespace System.Windows.Controls
                 if (parentIP != null)
                     owner = parentIP.Owner;
 
-                generator = parentGI?.Generator;
+                generator = (parentGI != null) ? parentGI.Generator : null;
             }
 
             _owner = owner;
@@ -227,7 +232,7 @@ namespace System.Windows.Controls
 
             // create the panel, based either on ItemsControl.ItemsPanel or GroupStyle.Panel
             ItemsPanelTemplate template = null;
-            GroupStyle groupStyle = _generator?.GroupStyle;
+            GroupStyle groupStyle = (_generator != null) ? _generator.GroupStyle : null;
             if (groupStyle != null)
             {
                 // If GroupStyle.Panel is set then we dont honor ItemsControl.IsVirtualizing
@@ -248,12 +253,12 @@ namespace System.Windows.Controls
             else
             {
                 // Its a leaf-level ItemsPresenter, therefore pick ItemsControl.ItemsPanel
-                template = _owner?.ItemsPanel;
+                template = (_owner != null) ? _owner.ItemsPanel : null;
             }
             Template = template;
         }
 
-        private void UseGenerator(ItemContainerGenerator generator)
+        void UseGenerator(ItemContainerGenerator generator)
         {
             if (generator == _generator)
                 return;
@@ -284,7 +289,10 @@ namespace System.Windows.Controls
                 // If our logical parent is a ScrollViewer then the visual parent is a ScrollContentPresenter.
                 ScrollContentPresenter scp = VisualTreeHelper.GetParent(this) as ScrollContentPresenter;
 
-                scp?.HookupScrollingComponents();
+                if (scp != null)
+                {
+                    scp.HookupScrollingComponents();
+                }
             }
         }
 
@@ -330,9 +338,9 @@ namespace System.Windows.Controls
         //
         //------------------------------------------------------
 
-        private ItemsControl _owner;
-        private ItemContainerGenerator _generator;
-        private ItemsPanelTemplate _templateCache;
+        ItemsControl _owner;
+        ItemContainerGenerator _generator;
+        ItemsPanelTemplate _templateCache;
     }
 }
 

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: ObservableCollection that updates by differencing against
@@ -28,10 +29,13 @@
     flexibility of the previous paragraph comes into play.
 \***************************************************************************/
 
+using System;
 using System.Collections;               // IEnumerable
+using System.Collections.Generic;       // IList<T>
 using System.Collections.ObjectModel;   // ObservableCollection
 using System.Collections.Specialized;   // INotifyCollectionChanged
 using System.ComponentModel;            // PropertyChangedEventArgs
+using MS.Internal;                      // Invariant.Assert
 
 namespace MS.Internal.Data
 {
@@ -74,7 +78,7 @@ namespace MS.Internal.Data
                             change = Change.Remove;
                             index1 = index;
                             target = list[index];
-                            index += 2;
+                            index = index + 2;
                         }
                         else
                         {
@@ -111,7 +115,7 @@ namespace MS.Internal.Data
                                 change = Change.Reset;
                             }
 
-                            index += 2;
+                            index = index + 2;
                         }
                         else
                         {
@@ -217,7 +221,7 @@ namespace MS.Internal.Data
             }
         }
 
-        private void LoadItems(IEnumerable enumerable)
+        void LoadItems(IEnumerable enumerable)
         {
             foreach (object o in enumerable)
             {
@@ -226,7 +230,7 @@ namespace MS.Internal.Data
         }
 
         // reload the list from the given enumerable, raising required events
-        private void Reload(IEnumerable enumerable)
+        void Reload(IEnumerable enumerable)
         {
             Items.Clear();
             LoadItems(enumerable);
@@ -236,8 +240,8 @@ namespace MS.Internal.Data
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
-        private enum Change { None, Add, Remove, Move, Replace, Reset }
+        enum Change { None, Add, Remove, Move, Replace, Reset }
 
-        private static object Unset = new Object();
+        static object Unset = new Object();
     }
 }

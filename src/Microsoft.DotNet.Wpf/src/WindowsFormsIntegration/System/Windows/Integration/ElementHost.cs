@@ -1,6 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
+        
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Design.Serialization;
 using System.Diagnostics;
@@ -11,6 +13,7 @@ using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Security;
 using MS.Win32;
 using MS.Internal;
 using System.Runtime.Versioning;
@@ -21,6 +24,7 @@ using SWF = System.Windows.Forms;
 
 using SW = System.Windows;
 using SWC = System.Windows.Controls;
+using SWM = System.Windows.Media;
 using SWMI = System.Windows.Media.Imaging;
 using SWI = System.Windows.Input;
 using SWT = System.Windows.Threading;
@@ -184,9 +188,10 @@ namespace System.Windows.Forms.Integration
             set
             {
                 UIElement oldValue = Child;
-
+#pragma warning disable 1634, 1691
+#pragma warning disable 56526
                 _child = value;
-
+#pragma warning restore 1634, 1691, 56526
                 HostContainerInternal.Children.Clear();
                 if (_child != null)
                 {
@@ -328,17 +333,17 @@ namespace System.Windows.Forms.Integration
             UpdateBackground();
         }
 
-        private void CallUpdateBackground(object sender, EventArgs e)
+        void CallUpdateBackground(object sender, EventArgs e)
         {
             UpdateBackground();
         }
 
-        private void UpdateBackground()
+        void UpdateBackground()
         {
             OnPropertyChanged("BackgroundImage", BackgroundImage); //Update the background
         }
 
-        private void childFrameworkElement_SizeChanged(object sender, SizeChangedEventArgs e)
+        void childFrameworkElement_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (AutoSize)
             {
@@ -426,7 +431,7 @@ namespace System.Windows.Forms.Integration
         /// </summary>
         protected override void Select(bool directed, bool forward)
         {
-            if (directed)
+            if (directed == true)
             {
                 SWI.TraversalRequest request = new SWI.TraversalRequest(forward
                                                         ? SWI.FocusNavigationDirection.First
@@ -437,7 +442,10 @@ namespace System.Windows.Forms.Integration
             }
             else
             {
-                Child?.Focus();
+                if (Child != null)
+                {
+                    Child.Focus();
+                }
             }
 
             base.Select(directed, forward);
@@ -457,7 +465,9 @@ namespace System.Windows.Forms.Integration
             SWI.ModifierKeys modifiers = Convert.ToSystemWindowsInputModifierKeys(keyData);
 
             // Let the AvalonAdapter know that ElementHost is currently processing a TabKey
-            _hostContainerInternal?.ProcessingTabKeyFromElementHost = (keyData & SWF.Keys.Tab) == SWF.Keys.Tab;
+            if (_hostContainerInternal != null) {
+                _hostContainerInternal.ProcessingTabKeyFromElementHost = (keyData & SWF.Keys.Tab) == SWF.Keys.Tab;
+            }
 
             bool result = (_hwndSource as IKeyboardInputSink).TranslateAccelerator(ref msg2, modifiers);
 
@@ -563,19 +573,15 @@ namespace System.Windows.Forms.Integration
                 }
                 SWF.CreateParams cp = this.CreateParams;
 
-                HwndSourceParameters HWSParam = new HwndSourceParameters(this.Text, cp.Width, cp.Height)
-                {
-                    WindowClassStyle = cp.ClassStyle,
-                    WindowStyle = cp.Style,
-                    ExtendedWindowStyle = cp.ExStyle,
-                    ParentWindow = Handle,
-                    HwndSourceHook = HwndSourceHook
-                };
+                HwndSourceParameters HWSParam = new HwndSourceParameters(this.Text, cp.Width, cp.Height);
+                HWSParam.WindowClassStyle = cp.ClassStyle;
+                HWSParam.WindowStyle = cp.Style;
+                HWSParam.ExtendedWindowStyle = cp.ExStyle;
+                HWSParam.ParentWindow = Handle;
+                HWSParam.HwndSourceHook = HwndSourceHook;
 
-                _hwndSource = new HwndSource(HWSParam)
-                {
-                    RootVisual = _decorator
-                };
+                _hwndSource = new HwndSource(HWSParam);
+                _hwndSource.RootVisual = _decorator;
                 //For keyboarding: Set the IKeyboardInputSite so that keyboard interop works...
                 (_hwndSource as IKeyboardInputSink).KeyboardInputSite = (HostContainerInternal as IKeyboardInputSite);
             });
@@ -826,8 +832,11 @@ namespace System.Windows.Forms.Integration
             {
                 try
                 {
-                    _hostContainerInternal?.Dispose();
-                    _hostContainerInternal = null;
+                    if (_hostContainerInternal != null)
+                    {
+                        _hostContainerInternal.Dispose();
+                        _hostContainerInternal = null;
+                    }
                 }
                 finally
                 {
@@ -843,7 +852,10 @@ namespace System.Windows.Forms.Integration
                         SWI.InputManager.Current.PostProcessInput -= InputManager_PostProcessInput;
 
                         IDisposable disposableChild = Child as IDisposable;
-                        disposableChild?.Dispose();
+                        if (disposableChild != null)
+                        {
+                            disposableChild.Dispose();
+                        }
                     }
                 }
             }
@@ -955,7 +967,7 @@ namespace System.Windows.Forms.Integration
 
         private void OnPropertyChangedAutoSize(object sender, System.EventArgs e)
         {
-            OnPropertyChanged(nameof(AutoSize), this.AutoSize);
+            OnPropertyChanged("AutoSize", this.AutoSize);
         }
         private void OnPropertyChangedPadding(object sender, System.EventArgs e)
         {
@@ -1018,7 +1030,10 @@ namespace System.Windows.Forms.Integration
         /// <param name="value">the new value of the property</param>
         public virtual void OnPropertyChanged(string propertyName, object value)
         {
-            PropertyMap?.OnPropertyChanged(this, propertyName, value);
+            if (PropertyMap != null)
+            {
+                PropertyMap.OnPropertyChanged(this, propertyName, value);
+            }
         }
 
         /// <summary>
@@ -1597,7 +1612,7 @@ namespace System.Windows.Forms.Integration
                     case System.Windows.Input.FocusNavigationDirection.Last:
                         break;
                     default:
-                        Debug.Fail("Unknown FocusNavigationDirection");
+                        Debug.Assert(false, "Unknown FocusNavigationDirection");
                         break;
                 }
             }

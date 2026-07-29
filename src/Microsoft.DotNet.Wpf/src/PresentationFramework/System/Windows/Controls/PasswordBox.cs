@@ -1,17 +1,32 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// Description: The stock password control.
+//
+
+using System.Diagnostics;
+using System.Collections;
 using System.ComponentModel;
+using System.Globalization;
 using System.Security;
+using System.Text;
 using System.Windows.Media;
+using System.Windows.Data;
 using System.Windows.Documents;
+using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Input;
 using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 using MS.Internal;
 using MS.Internal.KnownBoxes;
 using MS.Internal.Telemetry.PresentationFramework;
 using System.Windows.Controls.Primitives;
+
+#pragma warning disable 1634, 1691  // suppressing PreSharp warnings
 
 namespace System.Windows.Controls
 {
@@ -178,6 +193,7 @@ namespace System.Windows.Controls
 
                 using (SecureString securePassword = new SecureString())
                 {
+                    #pragma warning suppress 6506 // value is set to String.Empty if it was null.
                     for (int i = 0; i < value.Length; i++)
                     {
                         securePassword.AppendChar(value[i]);
@@ -890,7 +906,10 @@ namespace System.Windows.Controls
             PasswordBox passwordBox = (PasswordBox)d;
 
             // Force a layout refresh to display the new char.
-            passwordBox._renderScope?.InvalidateMeasure();
+            if (passwordBox._renderScope != null)
+            {
+                passwordBox._renderScope.InvalidateMeasure();
+            }
         }
 
         /// <summary>
@@ -933,8 +952,9 @@ namespace System.Windows.Controls
 
             // Add renderScope as a child of ContentHostTemplateName
             _renderScope = renderScope;
-            if (_passwordBoxContentHost is ScrollViewer scrollViewer)
+            if (_passwordBoxContentHost is ScrollViewer)
             {
+                ScrollViewer scrollViewer = (ScrollViewer)_passwordBoxContentHost;
                 if (scrollViewer.Content != null)
                 {
                     throw new NotSupportedException(SR.TextBoxScrollViewerMarkedAsTextBoxContentMustHaveNoContent);
@@ -944,8 +964,9 @@ namespace System.Windows.Controls
                     scrollViewer.Content = _renderScope;
                 }
             }
-            else if (_passwordBoxContentHost is Decorator decorator)
+            else if (_passwordBoxContentHost is Decorator)
             {
+                Decorator decorator = (Decorator)_passwordBoxContentHost;
                 if (decorator.Child != null)
                 {
                     throw new NotSupportedException(SR.TextBoxDecoratorMarkedAsTextBoxContentMustHaveNoContent);
@@ -1021,7 +1042,10 @@ namespace System.Windows.Controls
             _textEditor.TextView = textview;
             this.TextContainer.TextView = textview;
 
-            this.ScrollViewer?.CanContentScroll = true;
+            if (this.ScrollViewer != null)
+            {
+                this.ScrollViewer.CanContentScroll = true;
+            }
         }
 
         // Uninitializes a render scope and clears this control's reference.
@@ -1038,7 +1062,10 @@ namespace System.Windows.Controls
         {
             Select(0, 0);
 
-            this.ScrollViewer?.ScrollToHome();
+            if (this.ScrollViewer != null)
+            {
+                this.ScrollViewer.ScrollToHome();
+            }
         }
 
         /// <summary>
@@ -1147,7 +1174,10 @@ namespace System.Windows.Controls
             }
 
             // Set border properties
-            _border?.Style = null;
+            if (_border != null)
+            {
+                _border.Style = null;
+            }
         }
 
         /// <summary>
@@ -1155,7 +1185,10 @@ namespace System.Windows.Controls
         /// </summary>
         private void DetachFromVisualTree()
         {
-            _textEditor?.Selection.DetachFromVisualTree();
+            if (_textEditor != null)
+            {
+                _textEditor.Selection.DetachFromVisualTree();
+            }
 
             // Invalidate our cached copy of scroll viewer.
             _scrollViewer = null;

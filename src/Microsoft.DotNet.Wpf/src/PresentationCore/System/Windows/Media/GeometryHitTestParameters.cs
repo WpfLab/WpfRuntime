@@ -1,11 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 
+using System;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
+using System.Security;
+
+using System.Collections;
+using System.Diagnostics;
 using MS.Internal;
 
-namespace System.Windows.Media
+namespace System.Windows.Media 
 {
     /// <summary>
     /// This is the class for specifying parameters hit testing with a geometry.
@@ -33,8 +42,11 @@ namespace System.Windows.Media
             //  5.  _bounds is the transformed bounds of the _hitGeometryInternal (outer space).
             //  6.  _matrixStack is an empty stack.            
 
-            ArgumentNullException.ThrowIfNull(geometry);
-
+            if (geometry == null)
+            {                
+                throw new ArgumentNullException("geometry");
+            }
+            
             // Convert the Geometry to an equivilent PathGeometry up front to prevent
             // conversion on every call to DoesContainWithDetail.  If the geometry is
             // animate this also has the side effect of eliminating animation interplay.

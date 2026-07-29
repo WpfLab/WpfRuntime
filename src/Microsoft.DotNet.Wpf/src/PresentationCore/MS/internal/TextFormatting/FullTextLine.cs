@@ -1,13 +1,29 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
 //  Contents:  Complex implementation of TextLine
+//
+//
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
+using System.Security;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
+using MS.Internal;
+using MS.Internal.Shaping;
+
+using SR = MS.Internal.PresentationCore.SR;
+
 
 namespace MS.Internal.TextFormatting
 {
@@ -33,8 +49,8 @@ namespace MS.Internal.TextFormatting
             private int                                 _depthQueryMax;                 // maximum depth of reversals used in querying
             private int                                 _paragraphWidth;                // paragraph width
             private int                                 _textMinWidthAtTrailing;        // smallest text width excluding trailing whitespaces
-            private IntPtr                              _ploline;                       // actual LS line
-            private IntPtr                              _ploc;                          // actual LS context
+            private SecurityCriticalDataForSet<IntPtr>  _ploline;                       // actual LS line
+            private SecurityCriticalDataForSet<IntPtr>  _ploc;                          // actual LS context
             private Overhang                            _overhang;                      // overhang metrics
             private StatusFlags                         _statusFlags;                   // status flags of the line
 
@@ -140,11 +156,11 @@ namespace MS.Internal.TextFormatting
             /// </summary>
             private void DisposeInternal(bool finalizing)
             {
-                if (_ploline != System.IntPtr.Zero)
+                if (_ploline.Value != System.IntPtr.Zero)
                 {
-                    UnsafeNativeMethods.LoDisposeLine(_ploline, finalizing);
+                    UnsafeNativeMethods.LoDisposeLine(_ploline.Value, finalizing);
 
-                    _ploline = System.IntPtr.Zero;
+                    _ploline.Value = System.IntPtr.Zero;
                     GC.KeepAlive(this);
                 }
             }
@@ -160,11 +176,9 @@ namespace MS.Internal.TextFormatting
                 {
                     _statusFlags |= StatusFlags.IsJustified;
                 }
-                _metrics = new TextMetrics
-                {
-                    _pixelsPerDip = pixelsPerDip
-                };
-                _ploline = IntPtr.Zero;
+                _metrics = new TextMetrics();
+                _metrics._pixelsPerDip = pixelsPerDip;
+                _ploline = new SecurityCriticalDataForSet<IntPtr>(IntPtr.Zero);
             }
 
 
@@ -286,7 +300,7 @@ namespace MS.Internal.TextFormatting
                     }
                 }
 
-                _ploline = ploline;
+                _ploline.Value = ploline;
 
                 // get the exception in context before it is released
                 Exception callbackException = context.CallbackException;
@@ -532,7 +546,10 @@ namespace MS.Internal.TextFormatting
                 InvertAxes          inversion
                 )
             {
-                ArgumentNullException.ThrowIfNull(drawingContext);
+                if (drawingContext == null)
+                {
+                    throw new ArgumentNullException("drawingContext");
+                }
 
                 if ((_statusFlags & StatusFlags.IsDisposed) != 0)
                 {
@@ -578,7 +595,7 @@ namespace MS.Internal.TextFormatting
             {
                 Rect boundingBox = Rect.Empty;
 
-                if (_ploline != System.IntPtr.Zero)
+                if (_ploline.Value != System.IntPtr.Zero)
                 {
                     TextFormatterContext context;
                     LsErr lserr = LsErr.None;
@@ -589,7 +606,7 @@ namespace MS.Internal.TextFormatting
                     {
                         context = _metrics._formatter.AcquireContext(
                             drawingState,
-                            _ploc
+                            _ploc.Value
                             );
 
                         // set the collector and send the line to LS to draw
@@ -600,7 +617,7 @@ namespace MS.Internal.TextFormatting
                         LSPOINT lsRefOrigin = new LSPOINT(0, _metrics._baselineOffset);
 
                         lserr = UnsafeNativeMethods.LoDisplayLine(
-                            _ploline,
+                            _ploline.Value,
                             ref lsRefOrigin,
                             1,      // 0 - opaque, 1 - transparent
                             ref rect
@@ -708,7 +725,7 @@ namespace MS.Internal.TextFormatting
                 }
 
                 if (collapsingPropertiesList == null || collapsingPropertiesList.Length == 0)
-                    throw new ArgumentNullException(nameof(collapsingPropertiesList));
+                    throw new ArgumentNullException("collapsingPropertiesList");
 
                 TextCollapsingProperties collapsingProp = collapsingPropertiesList[0];
                 double constraintWidth = collapsingProp.Width;
@@ -850,7 +867,7 @@ namespace MS.Internal.TextFormatting
                 // assuming the first cp of the line
                 CharacterHit characterHit = new CharacterHit(_cpFirst, 0);
 
-                if(_ploline == IntPtr.Zero)
+                if(_ploline.Value == IntPtr.Zero)
                 {
                     // Returning the first cp for the empty line
                     return characterHit;
@@ -985,7 +1002,7 @@ namespace MS.Internal.TextFormatting
             {
                 int hitTestDistance = 0;
 
-                if (_ploline == IntPtr.Zero)
+                if (_ploline.Value == IntPtr.Zero)
                 {
                     // Returning start of the line for empty line
                     return hitTestDistance;
@@ -1133,7 +1150,7 @@ namespace MS.Internal.TextFormatting
 
                 TextFormatterImp.VerifyCaretCharacterHit(characterHit, _cpFirst, _metrics._cchLength);
 
-                if (_ploline == System.IntPtr.Zero)
+                if (_ploline.Value == System.IntPtr.Zero)
                 {
                     return characterHit;
                 }
@@ -1226,7 +1243,7 @@ namespace MS.Internal.TextFormatting
 
                 TextFormatterImp.VerifyCaretCharacterHit(characterHit, _cpFirst, _metrics._cchLength);
 
-                if (_ploline == IntPtr.Zero)
+                if (_ploline.Value == IntPtr.Zero)
                 {
                     return characterHit;
                 }
@@ -1484,9 +1501,12 @@ namespace MS.Internal.TextFormatting
                     throw new ObjectDisposedException(SR.TextLineHasBeenDisposed);
                 }
 
-                ArgumentOutOfRangeException.ThrowIfZero(textLength);
+                if(textLength == 0)
+                {
+                    throw new ArgumentOutOfRangeException("textLength", SR.ParameterMustBeGreaterThanZero);
+                }
 
-                if (textLength < 0)
+                if(textLength < 0)
                 {
                     firstTextSourceCharacterIndex += textLength;
                     textLength = -textLength;
@@ -1503,7 +1523,7 @@ namespace MS.Internal.TextFormatting
                     textLength = (_cpFirst + _metrics._cchLength - firstTextSourceCharacterIndex);
                 }
 
-                if (_ploline == IntPtr.Zero)
+                if (_ploline.Value == IntPtr.Zero)
                 {
                     return CreateDegenerateBounds();
                 }
@@ -2115,11 +2135,11 @@ namespace MS.Internal.TextFormatting
 
                 IEnumerable<IndexedGlyphRun> result = null;
 
-                if (_ploline != System.IntPtr.Zero)
+                if (_ploline.Value != System.IntPtr.Zero)
                 {
                     TextFormatterContext context = _metrics._formatter.AcquireContext(
                         new DrawingState(null, new Point(0, 0), null, this),
-                        _ploc
+                        _ploc.Value
                         );
 
                     //
@@ -2129,7 +2149,7 @@ namespace MS.Internal.TextFormatting
 
                     LSPOINT point = new LSPOINT(0, 0);
                     lserr = UnsafeNativeMethods.LoEnumLine(
-                        _ploline,   // line
+                        _ploline.Value,   // line
                         false,      // reverse enumeration
                         false,      // geometry needed
                         ref point   // starting point
@@ -2438,7 +2458,7 @@ namespace MS.Internal.TextFormatting
                 out LsTextCell      lsTextCell
                 )
             {
-                Debug.Assert(_ploline != IntPtr.Zero);
+                Debug.Assert(_ploline.Value != IntPtr.Zero);
 
                 LsErr lserr = LsErr.None;
                 lsTextCell = new LsTextCell();
@@ -2448,7 +2468,7 @@ namespace MS.Internal.TextFormatting
                     {
                         LSPOINT pt = new LSPOINT((int)ptQuery.X, (int)ptQuery.Y);
                         lserr = UnsafeNativeMethods.LoQueryLinePointPcp(
-                            _ploline,
+                            _ploline.Value,
                             ref pt,
                             subLineInfo.Length,
                             (System.IntPtr)plsqsubl,
@@ -2491,7 +2511,7 @@ namespace MS.Internal.TextFormatting
                 out LsTextCell      lsTextCell
                 )
             {
-                Debug.Assert(_ploline != IntPtr.Zero);
+                Debug.Assert(_ploline.Value != IntPtr.Zero);
 
                 LsErr lserr = LsErr.None;
 
@@ -2505,7 +2525,7 @@ namespace MS.Internal.TextFormatting
                     fixed(LsQSubInfo* plsqsubl = subLineInfo)
                     {
                         lserr = UnsafeNativeMethods.LoQueryLineCpPpoint(
-                            _ploline,
+                            _ploline.Value,
                             lscpValidQuery,
                             subLineInfo.Length,
                             (System.IntPtr)plsqsubl,

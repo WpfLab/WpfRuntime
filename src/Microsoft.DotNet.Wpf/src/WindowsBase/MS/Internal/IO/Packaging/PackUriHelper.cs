@@ -1,11 +1,27 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  This is a helper class for pack:// Uris. This is a part of the 
 //  Metro Packaging Layer
+//
+//
+//
+//
 
+// Allow use of presharp warning numbers [6506] unknown to the compiler
+#pragma warning disable 1634, 1691
+
+using System;
 using System.IO;                        // for Path class
+using System.Security;
+using System.Diagnostics;
+using System.Windows;                   // For Exception strings - SR
+using System.Collections.Generic;       // For IEqualityComparer<>
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.IO.Packaging
 {
@@ -44,7 +60,7 @@ namespace MS.Internal.IO.Packaging
         internal static bool IsPackUri(Uri uri)
         {
             return uri != null && 
-                string.Equals(uri.Scheme, System.IO.Packaging.PackUriHelper.UriSchemePack, StringComparison.OrdinalIgnoreCase);
+                string.Compare(uri.Scheme, System.IO.Packaging.PackUriHelper.UriSchemePack, StringComparison.OrdinalIgnoreCase) == 0;
         }
 
         /// <summary>
@@ -132,7 +148,7 @@ namespace MS.Internal.IO.Packaging
             partUriString = String.Empty;
 
             if (partUri == null)
-                return new ArgumentNullException(nameof(partUri));
+                return new ArgumentNullException("partUri");
 
             Exception argumentException = null;
 
@@ -179,7 +195,7 @@ namespace MS.Internal.IO.Packaging
             //to verify the uri correctly.
             //We perform the comparison in a case-insensitive manner, as at this point,
             //only escaped hex digits (A-F) might vary in casing.
-            if (!string.Equals(partUri.OriginalString, wellFormedPartName, StringComparison.OrdinalIgnoreCase))
+            if (String.CompareOrdinal(partUri.OriginalString.ToUpperInvariant(), wellFormedPartName.ToUpperInvariant()) != 0)
                 return new ArgumentException(SR.InvalidPartUri);
 
             //if we get here, the partUri is valid and so we return null, as there is no exception.
@@ -322,7 +338,7 @@ namespace MS.Internal.IO.Packaging
             #region Internal Constructors
 
             internal ValidatedPartUri(string partUriString)
-                : this(partUriString, isNormalized: false, computeIsRelationship: true, false /*dummy value as we will compute it later*/)
+                : this(partUriString, false /*isNormalized*/, true /*computeIsRelationship*/, false /*dummy value as we will compute it later*/)
             {               
             }
                        
@@ -331,7 +347,7 @@ namespace MS.Internal.IO.Packaging
             //This will optimize the code and we will not have to parse the Uri to find out
             //if it is a relationship part uri
             internal ValidatedPartUri(string partUriString, bool isRelationshipUri)
-                : this(partUriString, isNormalized: false, computeIsRelationship: false, isRelationshipUri)
+                : this(partUriString, false /*isNormalized*/, false /*computeIsRelationship*/, isRelationshipUri)
             {                
             }
 
@@ -481,7 +497,7 @@ namespace MS.Internal.IO.Packaging
                 // of .rels.  The folder must also be the last "folder".
                 // Comparing using the normalized string to reduce the number of ToUpperInvariant operations
                 // required for case-insensitive comparison
-                string[] segments = NormalizedPartUriString.Split(ForwardSlashSeparator); //new Uri(_defaultUri, this).Segments; //partUri.Segments cannot be called on a relative Uri;
+                string[] segments = NormalizedPartUriString.Split(_forwardSlashSeparator); //new Uri(_defaultUri, this).Segments; //partUri.Segments cannot be called on a relative Uri;
 
                 // String.Split, will always return an empty string as the
                 // first member in the array as the string starts with a "/"
@@ -489,7 +505,7 @@ namespace MS.Internal.IO.Packaging
                 Debug.Assert(segments.Length > 0 && segments[0] == String.Empty);
 
                 //If the extension was not equal to .rels, we would have exited early.
-                Debug.Assert(string.Equals((Path.GetExtension(segments[segments.Length - 1])), _relationshipPartUpperCaseExtension, StringComparison.Ordinal));
+                Debug.Assert(String.CompareOrdinal((Path.GetExtension(segments[segments.Length - 1])), _relationshipPartUpperCaseExtension) == 0);
 
                 // must be at least two segments and the last one must end with .RELs
                 // and the length of the segment should be greater than just the extension.
@@ -497,17 +513,17 @@ namespace MS.Internal.IO.Packaging
                     (segments[segments.Length - 1].Length > _relationshipPartExtensionName.Length))
                 {
                     // look for "_RELS" segment which must be second last segment
-                    result = string.Equals(segments[segments.Length - 2], _relationshipPartUpperCaseSegmentName, StringComparison.Ordinal);
+                    result = (String.CompareOrdinal(segments[segments.Length - 2], _relationshipPartUpperCaseSegmentName) == 0);
                 }
 
                 // In addition we need to make sure that the relationship is not created by taking another relationship
                 // as the source of this uri. So XXX/_rels/_rels/YYY.rels.rels would be invalid.
-                if (segments.Length > 3 && result)
+                if (segments.Length > 3 && result == true)
                 {
                     if ((segments[segments.Length - 1]).EndsWith(_relsrelsUpperCaseExtension, StringComparison.Ordinal))
                     {
                         // look for "_rels" segment in the third last segment
-                        if(string.Equals(segments[segments.Length - 3], _relationshipPartUpperCaseSegmentName, StringComparison.Ordinal))
+                        if(String.CompareOrdinal(segments[segments.Length - 3], _relationshipPartUpperCaseSegmentName) == 0)
                             throw new ArgumentException(SR.NotAValidRelationshipPartUri);
                     }
                 }
@@ -535,8 +551,8 @@ namespace MS.Internal.IO.Packaging
                     return this;
                 else
                     return new ValidatedPartUri(_normalizedPartUriString, 
-                                                isNormalized: true, 
-                                                computeIsRelationship: false, 
+                                                true /*isNormalized*/, 
+                                                false /*computeIsRelationship*/, 
                                                 IsRelationshipPartUri);
             }
 
@@ -571,11 +587,11 @@ namespace MS.Internal.IO.Packaging
             //need to use the private constructor to initialize this particular partUri as we need this in the 
             //IsRelationshipPartUri, that is called from the constructor.
             private static readonly Uri   _containerRelationshipNormalizedPartUri = new ValidatedPartUri("/_RELS/.RELS", 
-                                                                                                         isNormalized: true,
-                                                                                                         computeIsRelationship: false,
-                                                                                                         isRelationshipPartUri: true);
+                                                                                                         true /*isnormalized*/, 
+                                                                                                         false /*computeIsRelationship*/,
+                                                                                                         true /*IsRelationship*/);
 
-            private static ReadOnlySpan<char> ForwardSlashSeparator => ['/'];
+            private static readonly char[] _forwardSlashSeparator = { '/' };
 
             #endregion Private Methods
             

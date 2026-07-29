@@ -1,17 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
-using MS.Internal.Documents;
-using System.Windows.Input; // KeyboardNavigation
-using System.ComponentModel; // DefaultValue
-using System.Windows.Controls.Primitives; // TextBoxBase
-using System.Windows.Documents; // TextEditor
-using System.Windows.Automation.Peers; // AutomationPattern
-using System.Windows.Markup; // IAddChild
-using System.Collections; // IEnumerator
-using MS.Internal.Controls; // EmptyEnumerator
-using MS.Internal.Telemetry.PresentationFramework;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: The stock rich text editing control.
@@ -19,6 +8,22 @@ using MS.Internal.Telemetry.PresentationFramework;
 
 namespace System.Windows.Controls
 {
+    using MS.Internal;
+    using MS.Internal.Documents;
+    using System.Windows.Threading;
+    using System.Windows.Input; // KeyboardNavigation
+    using System.ComponentModel; // DefaultValue
+    using System.Windows.Controls.Primitives; // TextBoxBase
+    using System.Windows.Documents; // TextEditor
+    using System.Windows.Automation.Peers; // AutomationPattern
+    using System.Windows.Media; // GlyphRun
+    using System.Windows.Markup; // IAddChild
+    using System.Collections; // IEnumerator
+    using System.Collections.ObjectModel; // ReadOnlyCollection
+    using MS.Internal.Automation;     // For TextAdaptor
+    using MS.Internal.Controls; // EmptyEnumerator
+    using MS.Internal.Telemetry.PresentationFramework;
+
     /// <summary>
     /// RichTextBox control
     /// </summary>
@@ -150,7 +155,7 @@ namespace System.Windows.Controls
 
             if (!(value is FlowDocument))
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(FlowDocument)), nameof(value));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(FlowDocument)), "value");
             }
 
             if (!_implicitDocument)
@@ -313,10 +318,8 @@ namespace System.Windows.Controls
         // Allocates the initial render scope for this control.
         internal override FrameworkElement CreateRenderScope()
         {
-            FlowDocumentView renderScope = new FlowDocumentView
-            {
-                Document = this.Document
-            };
+            FlowDocumentView renderScope = new FlowDocumentView();
+            renderScope.Document = this.Document;
 
             // Set a margin so that the BiDi Or Italic caret has room to render at the edges of content.
             // Otherwise, anti-aliasing or italic causes the caret to be partially clipped.
@@ -573,7 +576,7 @@ namespace System.Windows.Controls
                 ArgumentNullException.ThrowIfNull(value);
                 if (!Selection.Start.IsInSameDocument(value))
                 {
-                    throw new ArgumentException(SR.RichTextBox_PointerNotInSameDocument, nameof(value));
+                    throw new ArgumentException(SR.RichTextBox_PointerNotInSameDocument, "value");
                 }
                 Selection.SetCaretToPosition(value, value.LogicalDirection, /*allowStopAtLineEnd:*/true, /*allowStopNearSpace:*/false);
             }
@@ -762,7 +765,10 @@ namespace System.Windows.Controls
             }
 
             // Make sure that the TextWrapping property is set correctly
-            this.Document?.TextWrapping = TextWrapping.Wrap;
+            if (this.Document != null)
+            {
+                this.Document.TextWrapping = TextWrapping.Wrap;
+            }
 
             // The Document does not have explicit PageWidth set OR Wrap/WrapWithOverflow is requested.
             // The RenderScope must occupy as much space as its content required (no wrapping)
@@ -796,7 +802,10 @@ namespace System.Windows.Controls
         {
             RichTextBox richTextBox = (RichTextBox)d;
 
-            richTextBox.Document?.CoerceValue(IsEnabledProperty);
+            if (richTextBox.Document != null)
+            {
+                richTextBox.Document.CoerceValue(IsEnabledProperty);
+            }
         }
 
         #endregion Private Methods

@@ -1,11 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
+        
 using System.Windows.Shapes;
 using System.Windows.Controls;
+using System.Diagnostics;
+using System.Threading;
 
 using System.Windows;
 using System.Windows.Media;
+using MS.Internal;
 
 using System;
 
@@ -18,7 +22,7 @@ namespace Microsoft.Windows.Themes
     ///   
     /// </summary>
     /// <ExternalAPI/>
-
+    
     // This is functionally equivalent to the following visual tree:
     //
     //   <Grid>
@@ -127,7 +131,7 @@ namespace Microsoft.Windows.Themes
     //           Grid.Bottom ="0.75"
     //       >
     //   </Grid>
-
+    
     public sealed class ButtonChrome : Decorator
     {
 
@@ -316,16 +320,18 @@ namespace Microsoft.Windows.Themes
         /// <param name="finalSize">Size the ContentPresenter will assume.</param>
         protected override Size ArrangeOverride(Size finalSize)
         {
-            Rect childArrangeRect = new Rect
-            {
-                Width = Math.Max(0d, finalSize.Width - sideThickness2),
-                Height = Math.Max(0d, finalSize.Height - sideThickness2)
-            };
+            Rect childArrangeRect = new Rect();
+
+            childArrangeRect.Width = Math.Max(0d, finalSize.Width - sideThickness2);
+            childArrangeRect.Height = Math.Max(0d, finalSize.Height - sideThickness2);
             childArrangeRect.X = (finalSize.Width - childArrangeRect.Width) * 0.5;
             childArrangeRect.Y = (finalSize.Height - childArrangeRect.Height) * 0.5;
 
             UIElement child = Child;
-            child?.Arrange(childArrangeRect);
+            if (child != null)
+            {
+                child.Arrange(childArrangeRect);
+            }
 
             return finalSize;
         }
@@ -560,11 +566,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonOuterHighlight == null)
                         {
-                            LinearGradientBrush brush = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0, 0),
-                                EndPoint = new Point(0.4, 1)
-                            };
+                            LinearGradientBrush brush = new LinearGradientBrush();
+                            brush.StartPoint = new Point(0,0);
+                            brush.EndPoint = new Point(0.4,1);
 
                             brush.GradientStops.Add(new GradientStop(Color.FromArgb(0x20,0x00,0x00,0x00), 0));
                             brush.GradientStops.Add(new GradientStop(Color.FromArgb(0x00,0xFF,0xFF,0xFF), 0.5));
@@ -602,11 +606,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonDefaultedInnerHighlight == null)
                         {
-                            LinearGradientBrush brush = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0.5, 0),
-                                EndPoint = new Point(0.5, 1)
-                            };
+                            LinearGradientBrush brush = new LinearGradientBrush();
+                            brush.StartPoint = new Point(0.5, 0);
+                            brush.EndPoint = new Point(0.5, 1);
 
                             brush.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xCE, 0xE7, 0xFF), 0));
                             brush.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xBC, 0xD4, 0xF6), 0.3));
@@ -636,11 +638,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonHoverInnerHighlight == null)
                         {
-                            LinearGradientBrush brush = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0.5, 0),
-                                EndPoint = new Point(0.5, 1)
-                            };
+                            LinearGradientBrush brush = new LinearGradientBrush();
+                            brush.StartPoint = new Point(0.5, 0);
+                            brush.EndPoint = new Point(0.5, 1);
 
                             brush.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xFF, 0xF0, 0xCF), 0));
                             brush.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xFC, 0xD2, 0x79), 0.03));
@@ -691,11 +691,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonBottomShade == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0.5, 0),
-                                EndPoint = new Point(0.5, 1)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(0.5,0);
+                            temp.EndPoint = new Point(0.5,1);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x00,0xFF,0xFF,0xFF), 0.5));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x35,0x59,0x2F,0x00), 1));
@@ -719,11 +717,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonPressedBottomShade == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0.5, 0),
-                                EndPoint = new Point(0.5, 1)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(0.5, 0);
+                            temp.EndPoint = new Point(0.5, 1);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF), 0.6));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 1));
@@ -760,11 +756,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonRightShade == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0, 0.5),
-                                EndPoint = new Point(1, 0.5)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(0, 0.5);
+                            temp.EndPoint = new Point(1, 0.5);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x00,0xFF,0xFF,0xFF), 0.5));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF,0xFF,0xFF,0xFF), 1));
@@ -800,11 +794,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonPressedTopShade == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0.5, 1),
-                                EndPoint = new Point(0.5, 0)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(0.5, 1);
+                            temp.EndPoint = new Point(0.5, 0);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF,0x97,0x8B,0x72), 1));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x00,0xFF,0xFF,0xFF), 0.6));
@@ -840,11 +832,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonLeftShade == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(1, 0.5),
-                                EndPoint = new Point(0, 0.5)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(1, 0.5);
+                            temp.EndPoint = new Point(0, 0.5);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF,0xFF,0xFF,0xFF), 1));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x00,0xFF,0xFF,0xFF), 0.5));
@@ -868,11 +858,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonPressedLeftShade == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(1, 0.5),
-                                EndPoint = new Point(0, 0.5)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(1, 0.5);
+                            temp.EndPoint = new Point(0, 0.5);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF,0xAA,0x9D,0x87), 1));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0x00,0xFF,0xFF,0xFF), 0.6));
@@ -919,11 +907,9 @@ namespace Microsoft.Windows.Themes
                     {
                         if (_commonPressedFill == null)
                         {
-                            LinearGradientBrush temp = new LinearGradientBrush
-                            {
-                                StartPoint = new Point(0.5, 1),
-                                EndPoint = new Point(0.5, 0)
-                            };
+                            LinearGradientBrush temp = new LinearGradientBrush();
+                            temp.StartPoint = new Point(0.5, 1);
+                            temp.EndPoint = new Point(0.5, 0);
 
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF), 0));
                             temp.GradientStops.Add(new GradientStop(Color.FromArgb(0xFF, 0xE3, 0xEB, 0xF3), 0.5));

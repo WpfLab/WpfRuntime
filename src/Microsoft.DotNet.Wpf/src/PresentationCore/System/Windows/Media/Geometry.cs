@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -7,14 +8,26 @@
 //
 //
 
+using System;
 using MS.Internal;
 using MS.Win32.PresentationCore;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
+using System.Reflection;
+using System.Collections;
+using System.Globalization;
+using System.Security;
+using System.Windows.Media;
 using System.Windows.Media.Composition;
+using System.Windows;
+using System.Text.RegularExpressions;
 using System.Windows.Media.Animation;
 using System.Runtime.InteropServices;
+using System.Windows.Markup;
+using SR=MS.Internal.PresentationCore.SR;
 
-namespace System.Windows.Media
+namespace System.Windows.Media 
 {
     #region Geometry
     /// <summary>
@@ -135,7 +148,7 @@ namespace System.Windows.Media
                 matrix,
                 tolerance,
                 type,
-                skipHollows: true);
+                true); /* skip hollows */
         }
         
         /// <summary>
@@ -148,7 +161,7 @@ namespace System.Windows.Media
         }
 
 
-        internal static unsafe Rect GetBoundsHelper(
+        internal unsafe static Rect GetBoundsHelper(
             Pen pen, 
             Matrix *pWorldMatrix, 
             Point* pPoints, 
@@ -397,7 +410,10 @@ namespace System.Windows.Media
                 double[] dashArray = null;
 
                 // If we have a pen, populate the CMD struct
-                pen?.GetBasicPenData(&penData, out dashArray);
+                if (pen != null)
+                {
+                    pen.GetBasicPenData(&penData, out dashArray);
+                }
 
                 fixed (byte* pbPathData = pathData.SerializedData)
                 {
@@ -447,7 +463,10 @@ namespace System.Windows.Media
             MIL_PEN_DATA penData;
             double[] dashArray = null;
 
-            pen?.GetBasicPenData(&penData, out dashArray);
+            if (pen != null)
+            {
+                pen.GetBasicPenData(&penData, out dashArray);
+            }
 
             fixed (double *dashArrayFixed = dashArray)
             {
@@ -659,7 +678,10 @@ namespace System.Windows.Media
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(pen);
+            if (pen == null)
+            {
+                throw new System.ArgumentNullException("pen");
+            }
 
             if (IsObviouslyEmpty())
             {
@@ -678,62 +700,65 @@ namespace System.Windows.Media
             unsafe
             {
                 MIL_PEN_DATA penData;
+                double[] dashArray = null;
 
-                pen.GetBasicPenData(&penData, out double[] dashArray);
+                pen.GetBasicPenData(&penData, out dashArray);
 
-                fixed (byte* pbPathData = pathData.SerializedData)
+                fixed (byte *pbPathData = pathData.SerializedData)
                 {
                     Debug.Assert(pbPathData != (byte*)0);
 
                     FillRule fillRule = FillRule.Nonzero;
-                    PathGeometry.FigureList list = new();
 
-                    int hr; //If we don't have dashArray, we call without it (its optional)
-                    if (dashArray is null)
+                    PathGeometry.FigureList list = new PathGeometry.FigureList();
+
+                    // The handle to the pDashArray, if we have one.
+                    // Since the dash array is optional, we may not need to Free it.
+                    GCHandle handle = new GCHandle();
+
+                    // Pin the pDashArray, if we have one.
+                    if (dashArray != null)
                     {
-                        hr = UnsafeNativeMethods.MilCoreApi.MilUtility_PathGeometryWiden(&penData,
-                                                                                         null,
-                                                                                         &pathData.Matrix,
-                                                                                         pathData.FillRule,
-                                                                                         pbPathData,
-                                                                                         pathData.Size,
-                                                                                         tolerance,
-                                                                                         type == ToleranceType.Relative,
-                                                                                         new PathGeometry.AddFigureToListDelegate(list.AddFigureToList),
-                                                                                         out fillRule);
+                        handle = GCHandle.Alloc(dashArray, GCHandleType.Pinned);
                     }
-                    else // Pin the dashArray and use it, if we have one.
+
+                    try
                     {
-                        fixed (double* ptrDashArray = dashArray)
+                        int hr = UnsafeNativeMethods.MilCoreApi.MilUtility_PathGeometryWiden(
+                            &penData,
+                            (dashArray == null) ? null : (double*)handle.AddrOfPinnedObject(),
+                            &pathData.Matrix,
+                            pathData.FillRule,
+                            pbPathData,
+                            pathData.Size,
+                            tolerance,
+                            type == ToleranceType.Relative,
+                            new PathGeometry.AddFigureToListDelegate(list.AddFigureToList),
+                            out fillRule);
+
+                        if (hr == (int)MILErrors.WGXERR_BADNUMBER)
                         {
-                            hr = UnsafeNativeMethods.MilCoreApi.MilUtility_PathGeometryWiden(&penData,
-                                                                                             ptrDashArray,
-                                                                                             &pathData.Matrix,
-                                                                                             pathData.FillRule,
-                                                                                             pbPathData,
-                                                                                             pathData.Size,
-                                                                                             tolerance,
-                                                                                             type == ToleranceType.Relative,
-                                                                                             new PathGeometry.AddFigureToListDelegate(list.AddFigureToList),
-                                                                                             out fillRule);
+                            // When we encounter NaNs in the renderer, we absorb the error and draw
+                            // nothing. To be consistent, we return an empty geometry.
+                            resultGeometry = new PathGeometry();
+                        }
+                        else
+                        {
+                            HRESULT.Check(hr);
+
+                            resultGeometry = new PathGeometry(list.Figures, fillRule, null);
                         }
                     }
-
-                    if (hr == (int)MILErrors.WGXERR_BADNUMBER)
+                    finally
                     {
-                        // When we encounter NaNs in the renderer, we absorb the error and draw
-                        // nothing. To be consistent, we return an empty geometry.
-                        resultGeometry = new PathGeometry();
+                        if (handle.IsAllocated)
+                        {
+                            handle.Free();
+                        }
                     }
-                    else
-                    {
-                        HRESULT.Check(hr);
+}
 
-                        resultGeometry = new PathGeometry(list.Figures, fillRule, null);
-                    }
-
-                    return resultGeometry;
-                }
+                return resultGeometry;
             }
         }
 
@@ -984,11 +1009,9 @@ namespace System.Windows.Media
 
         private static PathGeometryData MakeEmptyPathGeometryData()
         {
-            PathGeometryData data = new PathGeometryData
-            {
-                FillRule = FillRule.EvenOdd,
-                Matrix = CompositionResourceManager.MatrixToMilMatrix3x2D(Matrix.Identity)
-            };
+            PathGeometryData data = new PathGeometryData();
+            data.FillRule = FillRule.EvenOdd;
+            data.Matrix = CompositionResourceManager.MatrixToMilMatrix3x2D(Matrix.Identity);
 
             unsafe
             {

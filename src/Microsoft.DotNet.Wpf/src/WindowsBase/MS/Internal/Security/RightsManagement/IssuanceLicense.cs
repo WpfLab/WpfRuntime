@@ -1,11 +1,29 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
-//   This class wraps the issuance license publishing services
+//   This class wraps the issuance license publishing serveces 
+//
+//
+//
+//
 
+
+using System;
 using System.Text;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Security;
 using System.Security.RightsManagement;
+using SecurityHelper = MS.Internal.WindowsBase.SecurityHelper;
+using System.Globalization;             // For CultureInfo
+using MS.Internal;                      // for Invariant
+using System.Windows;
 
 namespace MS.Internal.Security.RightsManagement
 {
@@ -193,7 +211,7 @@ namespace MS.Internal.Security.RightsManagement
             }
         }
 
-        public override string ToString()
+        override public string ToString()
         {
             uint issuanceLicenseTemplateLength = 0;
             StringBuilder issuanceLicenseTemplate = null;
@@ -493,7 +511,7 @@ namespace MS.Internal.Security.RightsManagement
             return userHandle;
         }
 
-        private static Nullable<ContentRight> GetRightFromHandle(SafeRightsManagementPubHandle rightHandle,
+        static private Nullable<ContentRight> GetRightFromHandle(SafeRightsManagementPubHandle rightHandle,
                                                         out DateTime validFrom,
                                                         out DateTime validUntil)
         {
@@ -524,7 +542,7 @@ namespace MS.Internal.Security.RightsManagement
             return ClientSession.GetRightFromString(rightName.ToString());
         }
 
-        private static ContentUser GetUserFromHandle(SafeRightsManagementPubHandle userHandle)
+        static private ContentUser GetUserFromHandle(SafeRightsManagementPubHandle userHandle)
         {
             uint userNameLength = 0;
             StringBuilder userName = null;
@@ -576,7 +594,7 @@ namespace MS.Internal.Security.RightsManagement
             string userIdTypeStr = null;
             if (userIdType != null)
             {
-                userIdTypeStr = userIdType.ToString();
+                userIdTypeStr = userIdType.ToString().ToUpperInvariant();
             }
 
             string userIdStr = null;
@@ -586,15 +604,15 @@ namespace MS.Internal.Security.RightsManagement
             }
 
             // based on the UserTypeId build appropriate instance of User class 
-            if (string.Equals(userIdTypeStr, AuthenticationType.Windows.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (String.CompareOrdinal(userIdTypeStr, AuthenticationType.Windows.ToString().ToUpperInvariant()) == 0)
             {
                 return new ContentUser(userNameStr, AuthenticationType.Windows);
             }
-            else if (string.Equals(userIdTypeStr, AuthenticationType.Passport.ToString(), StringComparison.OrdinalIgnoreCase))
+            else if (String.CompareOrdinal(userIdTypeStr, AuthenticationType.Passport.ToString().ToUpperInvariant()) == 0)
             {
                 return new ContentUser(userNameStr, AuthenticationType.Passport);
             }
-            else if (string.Equals(userIdTypeStr, AuthenticationType.Internal.ToString(), StringComparison.OrdinalIgnoreCase))
+            else if (String.CompareOrdinal(userIdTypeStr, AuthenticationType.Internal.ToString().ToUpperInvariant()) == 0)
             {
                 // internal anyone user 
                 if (ContentUser.CompareToAnyone(userIdStr))
@@ -606,7 +624,7 @@ namespace MS.Internal.Security.RightsManagement
                     return ContentUser.OwnerUser;
                 }
             }
-            else if (string.Equals(userIdTypeStr, UnspecifiedAuthenticationType, StringComparison.OrdinalIgnoreCase))
+            else if (String.CompareOrdinal(userIdTypeStr, UnspecifiedAuthenticationType.ToUpperInvariant()) == 0)
             {
                 return new ContentUser(userNameStr, AuthenticationType.WindowsPassport);
             }
@@ -693,8 +711,8 @@ namespace MS.Internal.Security.RightsManagement
             checked { localeId = (int)locId; }
 
             // now we can build a ContentUser
-            return new LocalizedNameDescriptionPair(name?.ToString(),
-                                                                          description?.ToString());
+            return new LocalizedNameDescriptionPair(name == null ? null : name.ToString(),
+                                                                          description == null ? null : description.ToString());
         }
 
         private Nullable<KeyValuePair<string, string>> GetApplicationSpecificData(int index)
@@ -751,8 +769,8 @@ namespace MS.Internal.Security.RightsManagement
             Errors.ThrowOnErrorCode(hr);
 
             // build strings from the StringBuilder  instances 
-            string name = tempName?.ToString();
-            string value = tempValue?.ToString();
+            string name = (tempName == null) ? null : tempName.ToString();
+            string value = (tempValue == null) ? null : tempValue.ToString();
 
             KeyValuePair<string, string> result = new KeyValuePair<string, string>(name, value);
 
@@ -819,11 +837,14 @@ namespace MS.Internal.Security.RightsManagement
                                                                         out officialFlagTemp);
             Errors.ThrowOnErrorCode(hr);
 
-            // As a result of calling DRMGetIssuanceLicenseInfo twice,
-            // we are getting 2 handles. We are going to dispose the first one 
-            // and preserve the second one.
-            ownerHandleTemp?.Dispose();
-            ownerHandleTemp = null;
+            if (ownerHandleTemp != null)
+            {
+                // As a result of calling DRMGetIssuanceLicenseInfo twice,
+                // we are getting 2 handles. We are going to dispose the first one 
+                // and preserve the second one.
+                ownerHandleTemp.Dispose();
+                ownerHandleTemp = null;
+            }
 
             StringBuilder distributionPointNameTemp = null;
             // allocate memory as necessary, it seems that Unmanaged libraries really do not like
@@ -991,15 +1012,14 @@ namespace MS.Internal.Security.RightsManagement
                                 publicKeyTemp);
             Errors.ThrowOnErrorCode(hr);
 
-            RevocationPoint resultRevocationPoint = new RevocationPoint
-            {
-                Id = idTemp?.ToString(),
-                IdType = idTypeTemp?.ToString(),
-                Url = (urlTemp == null) ? null : new Uri(urlTemp.ToString()),
-                Name = nameTemp?.ToString(),
-                PublicKey = publicKeyTemp?.ToString(),
-                Frequency = frequency
-            };
+            RevocationPoint resultRevocationPoint = new RevocationPoint();
+
+            resultRevocationPoint.Id = (idTemp == null) ? null : idTemp.ToString();
+            resultRevocationPoint.IdType = (idTypeTemp == null) ? null : idTypeTemp.ToString();
+            resultRevocationPoint.Url = (urlTemp == null) ? null : new Uri(urlTemp.ToString());
+            resultRevocationPoint.Name = (nameTemp == null) ? null : nameTemp.ToString();
+            resultRevocationPoint.PublicKey = (publicKeyTemp == null) ? null : publicKeyTemp.ToString();
+            resultRevocationPoint.Frequency = frequency;
 
             return resultRevocationPoint;
         }

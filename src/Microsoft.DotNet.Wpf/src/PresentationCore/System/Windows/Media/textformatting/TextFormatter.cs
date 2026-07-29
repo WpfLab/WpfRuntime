@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,7 +12,9 @@
 //
 
 
+using System;
 using System.Windows.Threading;
+using System.Collections.Generic;
 
 using MS.Internal;
 using MS.Internal.TextFormatting;
@@ -38,7 +41,7 @@ namespace System.Windows.Media.TextFormatting
         /// Client to create a new instance of TextFormatter
         /// </summary>
         /// <returns>New instance of TextFormatter</returns>
-        public static TextFormatter Create(TextFormattingMode textFormattingMode)
+        static public TextFormatter Create(TextFormattingMode textFormattingMode)
         {
             if ((int)textFormattingMode < 0 || (int)textFormattingMode > 1)
             {
@@ -53,7 +56,7 @@ namespace System.Windows.Media.TextFormatting
         /// Client to create a new instance of TextFormatter
         /// </summary>
         /// <returns>New instance of TextFormatter</returns>
-        public static TextFormatter Create()
+        static public TextFormatter Create()
         {
             // create a new instance of TextFormatter which allows the use of multiple contexts.
             return new TextFormatterImp();
@@ -68,7 +71,8 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
         static public TextFormatter CreateFromContext(TextFormatterContext soleContext)
 #else
-        internal static TextFormatter CreateFromContext(TextFormatterContext soleContext)
+        [FriendAccessAllowed]   // used by Framework
+        static internal TextFormatter CreateFromContext(TextFormatterContext soleContext)
 #endif
         {
             // create a new instance of TextFormatter for the specified context.
@@ -84,7 +88,8 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
         static public TextFormatter CreateFromContext(TextFormatterContext soleContext, TextFormattingMode textFormattingMode)
 #else
-        internal static TextFormatter CreateFromContext(TextFormatterContext soleContext, TextFormattingMode textFormattingMode)
+        [FriendAccessAllowed]   // used by Framework
+        static internal TextFormatter CreateFromContext(TextFormatterContext soleContext, TextFormattingMode textFormattingMode)
 #endif
         {
             // create a new instance of TextFormatter for the specified context.
@@ -101,7 +106,8 @@ namespace System.Windows.Media.TextFormatting
         /// through friend assembly mechanics to quickly reuse the default TextFormatter retained in the current
         /// dispatcher of the running thread. 
         /// </remarks>
-        internal static TextFormatter FromCurrentDispatcher()
+        [FriendAccessAllowed]   // used by Framework
+        static internal TextFormatter FromCurrentDispatcher()
         {
             return FromCurrentDispatcher(TextFormattingMode.Ideal);
         }
@@ -114,7 +120,8 @@ namespace System.Windows.Media.TextFormatting
         /// through friend assembly mechanics to quickly reuse the default TextFormatter retained in the current
         /// dispatcher of the running thread. 
         /// </remarks>
-        internal static TextFormatter FromCurrentDispatcher(TextFormattingMode textFormattingMode)
+        [FriendAccessAllowed]   // used by Framework
+        static internal TextFormatter FromCurrentDispatcher(TextFormattingMode textFormattingMode)
         {
             Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
 
@@ -222,6 +229,7 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
         public abstract TextLine RecreateLine(
 #else
+        [FriendAccessAllowed]   // used by Framework
         internal abstract TextLine RecreateLine(
 #endif
             TextSource                  textSource,
@@ -250,6 +258,7 @@ namespace System.Windows.Media.TextFormatting
 #if OPTIMALBREAK_API
         public abstract TextParagraphCache CreateParagraphCache(
 #else
+        [FriendAccessAllowed]   // used by Framework
         internal abstract TextParagraphCache CreateParagraphCache(
 #endif
             TextSource                  textSource,

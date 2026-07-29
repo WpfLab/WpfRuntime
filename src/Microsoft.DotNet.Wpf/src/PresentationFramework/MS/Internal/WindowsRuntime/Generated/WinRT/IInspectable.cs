@@ -1,7 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+// See the LICENSE file in the project root for more information.
+using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 using WinRT.Interop;
 
 namespace WinRT
@@ -62,7 +65,7 @@ namespace WinRT
                 return 0;
             }
 
-            private static unsafe int Do_Abi_GetRuntimeClassName(IntPtr pThis, out IntPtr className)
+            private unsafe static int Do_Abi_GetRuntimeClassName(IntPtr pThis, out IntPtr className)
             {
                 className = default;
                 try

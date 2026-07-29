@@ -1,5 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Collections;
+using System.Windows.Media;
 
 namespace System.Windows.Input
 {
@@ -22,7 +27,10 @@ namespace System.Windows.Input
         /// </param>
         public StylusEventArgs(StylusDevice stylus, int timestamp) : base(stylus, timestamp)
         {
-            ArgumentNullException.ThrowIfNull(stylus);
+            if( stylus == null )
+            {
+                throw new System.ArgumentNullException("stylus");
+            }
         }
 
         /////////////////////////////////////////////////////////////////////
@@ -131,6 +139,6 @@ namespace System.Windows.Input
 
         /////////////////////////////////////////////////////////////////////
 
-        private RawStylusInputReport    _inputReport;
+        RawStylusInputReport    _inputReport;
     }
 }

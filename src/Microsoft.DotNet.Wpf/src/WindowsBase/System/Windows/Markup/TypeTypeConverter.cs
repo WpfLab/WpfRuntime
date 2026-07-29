@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.ComponentModel;
 
 #if PBTCOMPILER
@@ -16,14 +18,19 @@ namespace System.Windows.Markup
     {
 #if !PBTCOMPILER
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-            => sourceType == typeof(string);
+        {
+            return sourceType == typeof(string);
+        }
 
         public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value)
         {
-            if (context != null && value is string typeName)
+            string typeName = value as string;
+
+            if (null != context && typeName != null)
             {
                 IXamlTypeResolver xamlTypeResolver = (IXamlTypeResolver)context.GetService(typeof(IXamlTypeResolver));
-                if (xamlTypeResolver != null)
+
+                if (null != xamlTypeResolver)
                 {
                     return xamlTypeResolver.Resolve(typeName);
                 }

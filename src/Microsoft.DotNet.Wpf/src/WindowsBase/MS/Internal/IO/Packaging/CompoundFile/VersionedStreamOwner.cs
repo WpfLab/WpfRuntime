@@ -1,12 +1,24 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //   This class provides file versioning support for streams provided by 
 //   IDataTransform implementations and any client code that needs
 //   to store a FormatVersion at the beginning of a stream.
+//
+//
+//
+//
 
-using System.IO;
+using System;
+using System.IO;                                // for Stream
+using System.Windows;                           // ExceptionStringTable
+using System.Globalization;                     // for CultureInfo
+using System.Diagnostics;                       // for Debug.Assert
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
@@ -93,7 +105,8 @@ namespace MS.Internal.IO.Packaging.CompoundFile
         /// </summary>
         public override void SetLength(long newLength)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(newLength);
+            if (newLength < 0)
+                throw new ArgumentOutOfRangeException("newLength");
 
             WriteAttempt();
             checked { BaseStream.SetLength(newLength + _dataOffset); }
@@ -395,7 +408,9 @@ namespace MS.Internal.IO.Packaging.CompoundFile
                 // Ensure that the feature name is as expected.
                 //
                 // NOTE: We preserve case, but do case-insensitive comparison.
-                if (!string.Equals(_fileVersion.FeatureIdentifier, _codeVersion.FeatureIdentifier, StringComparison.OrdinalIgnoreCase))
+                if (String.CompareOrdinal(
+                                _fileVersion.FeatureIdentifier.ToUpper(CultureInfo.InvariantCulture),
+                                _codeVersion.FeatureIdentifier.ToUpper(CultureInfo.InvariantCulture)) != 0)
                 {
                     throw new FileFormatException(
                                     SR.Format(

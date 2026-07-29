@@ -1,10 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Threading;
-using System.Windows.Documents;
-using System.Windows.Controls.Primitives;
-using System.Collections;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Speller properties for TextBoxBase.
@@ -12,6 +8,14 @@ using System.Collections;
 
 namespace System.Windows.Controls
 {
+    using System.Threading;
+    using System.Windows.Documents;
+    using System.Windows.Controls.Primitives;
+    using System.ComponentModel;
+    using System.Collections.Generic;
+    using System.Collections;
+    using System.Windows.Markup;
+
     /// <summary>
     /// Speller properties for TextBoxBase.    
     /// </summary>
@@ -214,7 +218,10 @@ namespace System.Windows.Controls
             {
                 TextEditor textEditor = TextEditor._GetTextEditor(textBoxBase);
 
-                textEditor?.SetSpellingReform((SpellingReform)e.NewValue);
+                if (textEditor != null)
+                {
+                    textEditor.SetSpellingReform((SpellingReform)e.NewValue);
+                }
             }
         }
 

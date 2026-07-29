@@ -1,5 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
+using MS.Win32;
 
 namespace System.Windows
 {
@@ -44,21 +51,39 @@ namespace System.Windows
                                       IInputElement element,
                                       IInputElement oldParent)
         {
-            _oldSource = oldSource;
-            _newSource = newSource;
+            _oldSource = new SecurityCriticalData<PresentationSource>(oldSource);
+            _newSource = new SecurityCriticalData<PresentationSource>(newSource);
             _element = element;
             _oldParent = oldParent;
         }
-
+        
         /// <summary>
         ///     The old source that this handler is being notified about.
         /// </summary>
-        public PresentationSource OldSource => _oldSource;
+        /// <remarks>
+        ///     Callers must have UIPermission(UIPermissionWindow.AllWindows) to call this API.
+        /// </remarks>
+        public PresentationSource OldSource
+        {
+            get 
+            {
+                return _oldSource.Value;
+            }
+        }
 
         /// <summary>
         ///     The new source that this handler is being notified about.
         /// </summary>
-        public PresentationSource NewSource => _newSource;
+        /// <remarks>
+        ///     Callers must have UIPermission(UIPermissionWindow.AllWindows) to call this API.
+        /// </remarks>
+        public PresentationSource NewSource
+        {
+            get 
+            {
+                return _newSource.Value;
+            }
+        }
 
         /// <summary>
         ///     The element whose parent changed causing the source to change.
@@ -92,9 +117,9 @@ namespace System.Windows
             SourceChangedEventHandler handler = (SourceChangedEventHandler) genericHandler;
             handler(genericTarget, this);
         }
+        private SecurityCriticalData<PresentationSource> _oldSource;
 
-        private readonly PresentationSource _oldSource;
-        private readonly PresentationSource _newSource;
+        private SecurityCriticalData<PresentationSource> _newSource;
         private IInputElement _element;
         private IInputElement _oldParent;
     }

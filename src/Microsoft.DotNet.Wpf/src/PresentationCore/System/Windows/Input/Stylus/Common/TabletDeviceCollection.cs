@@ -1,7 +1,11 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 
 using System.Collections;
+using System.Collections.Generic;
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -29,7 +33,8 @@ namespace System.Windows.Input
         {
             get
             {
-                ObjectDisposedException.ThrowIf(TabletDevices == null, typeof(TabletDeviceCollection));
+                if (TabletDevices == null)
+                    throw new ObjectDisposedException(nameof(TabletDeviceCollection));
 
                 return TabletDevices.Count;
             }
@@ -70,7 +75,7 @@ namespace System.Windows.Input
             get
             {
                 if (index >= Count || index < 0)
-                    throw new ArgumentException(SR.Format(SR.Stylus_IndexOutOfRange, index.ToString(System.Globalization.CultureInfo.InvariantCulture)), nameof(index));
+                    throw new ArgumentException(SR.Format(SR.Stylus_IndexOutOfRange, index.ToString(System.Globalization.CultureInfo.InvariantCulture)), "index");
 
                 return TabletDevices[index];
             }

@@ -1,9 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Xaml-Rtf Converter.
 //
+
+using System.IO;
+using System.Text;
 
 namespace System.Windows.Documents
 {
@@ -95,10 +99,8 @@ namespace System.Windows.Documents
             {
                 // Create RtfToXamlReader instance for converting the content 
                 // from rtf to xaml and set ForceParagraph
-                RtfToXamlReader rtfToXamlReader = new RtfToXamlReader(rtfContent)
-                {
-                    ForceParagraph = ForceParagraph
-                };
+                RtfToXamlReader rtfToXamlReader = new RtfToXamlReader(rtfContent);
+                rtfToXamlReader.ForceParagraph = ForceParagraph;
 
                 // Set WpfPayload package that contained the image for the specified Xaml
                 if (WpfPayload != null)

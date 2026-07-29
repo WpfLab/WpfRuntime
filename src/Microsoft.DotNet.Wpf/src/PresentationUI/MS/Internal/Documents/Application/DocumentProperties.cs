@@ -1,19 +1,26 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: This is a wrapper for DocumentPropertiesDialog, which caches the values which
 //              are displayed in the Dialog, and controls security access.
 
+using MS.Internal.PresentationUI;           // For CriticalDataForSet
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.IO.Packaging;                  // For Package
+using System.Security;                      // For CriticalData
+using System.Windows.TrustUI;               // For string resources
+using System.Windows.Xps.Packaging;         // For XpsDocument
 
 namespace MS.Internal.Documents.Application
 {
     /// <summary>
     /// Singleton wrapper class for the DocumentPropertiesDialog.
     /// </summary>
+    [FriendAccessAllowed]
     internal sealed class DocumentProperties
     {
         //------------------------------------------------------
@@ -31,7 +38,7 @@ namespace MS.Internal.Documents.Application
         {
             ArgumentNullException.ThrowIfNull(uri);
 
-            _uri = uri;
+            _uri = new SecurityCriticalData<Uri>(uri);
         }
         #endregion Constructors
 
@@ -93,11 +100,10 @@ namespace MS.Internal.Documents.Application
         {
             get
             {
-                if (_filename is null && _uri is not null)
+                if (_filename == null && _uri.Value != null)
                 {
-                    _filename = Path.GetFileName(_uri.LocalPath);
+                    _filename = Path.GetFileName(_uri.Value.LocalPath);
                 }
-
                 return _filename;
             }
         }
@@ -314,7 +320,10 @@ namespace MS.Internal.Documents.Application
             DocumentPropertiesDialog dialog = null;
             dialog = new DocumentPropertiesDialog();
             dialog.ShowDialog();
-            dialog?.Dispose();
+            if (dialog != null)
+            {
+                dialog.Dispose();
+            }
         }
         #endregion Internal Methods
 
@@ -330,16 +339,16 @@ namespace MS.Internal.Documents.Application
         private void AcquireData()
         {
             // Ensure URI exists.
-            if (_uri is null)
+            if (_uri.Value == null)
             {
                 return;
             }
 
             // Determine if the URI represents a file
-            if (_uri.IsFile)
+            if (_uri.Value.IsFile)
             {
                 // Determine the full path and assert for file permission
-                string filePath = _uri.LocalPath;
+                string filePath = _uri.Value.LocalPath;
 
                 // Get the FileInfo for the current file
                 FileInfo fileInfo = new FileInfo(filePath);
@@ -395,7 +404,7 @@ namespace MS.Internal.Documents.Application
         //------------------------------------------------------
         #region Private Fields
         private static DocumentProperties       _current = null;
-        private Uri _uri;
+        private SecurityCriticalData<Uri> _uri;
 
         /// <summary>
         /// The properties in the XpsPackage (OPC).

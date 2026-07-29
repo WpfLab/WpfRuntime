@@ -1,8 +1,10 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //                                             
 
+using System;
 using System.Windows.Media.Animation;
 
 namespace MS.Internal
@@ -29,7 +31,7 @@ namespace MS.Internal
         /// <returns>
         /// True if valid, false otherwise.
         /// </returns>
-        internal static bool IsValidTimeSeekOrigin(TimeSeekOrigin value)
+        static internal bool IsValidTimeSeekOrigin(TimeSeekOrigin value)
         {
             return (0 <= value && (int)value <= _maxTimeSeekOrigin);
         }
@@ -43,7 +45,7 @@ namespace MS.Internal
         /// <returns>
         /// True if valid, false otherwise.
         /// </returns>
-        internal static bool IsValidPathAnimationSource(PathAnimationSource value)
+        static internal bool IsValidPathAnimationSource(PathAnimationSource value)
         {
             return (0 <= value && (byte)value <= _maxPathAnimationSource);
         }

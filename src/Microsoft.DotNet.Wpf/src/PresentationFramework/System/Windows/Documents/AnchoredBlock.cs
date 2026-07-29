@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // 
 // Description: AnchoredBlock element. 
@@ -12,6 +13,7 @@
 using System.ComponentModel;        // TypeConverter
 using System.Windows.Media;         // Brush
 using System.Windows.Markup; // ContentProperty
+using MS.Internal;
 
 namespace System.Windows.Documents
 {
@@ -44,11 +46,17 @@ namespace System.Windows.Documents
         /// </param>
         protected AnchoredBlock(Block block, TextPointer insertionPosition)
         {
-            insertionPosition?.TextContainer.BeginChange();
+            if (insertionPosition != null)
+            {
+                insertionPosition.TextContainer.BeginChange();
+            }
             try
             {
-                // This will throw InvalidOperationException if schema validity is violated.
-                insertionPosition?.InsertInline(this);
+                if (insertionPosition != null)
+                {
+                    // This will throw InvalidOperationException if schema validity is violated.
+                    insertionPosition.InsertInline(this);
+                }
 
                 if (block != null)
                 {
@@ -57,7 +65,10 @@ namespace System.Windows.Documents
             }
             finally
             {
-                insertionPosition?.TextContainer.EndChange();
+                if (insertionPosition != null)
+                {
+                    insertionPosition.TextContainer.EndChange();
+                }
             }
         }
 

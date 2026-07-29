@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,9 +9,15 @@
 //              is used specifically for AnnotationResources.
 //
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Annotations;
+using System.Windows.Data;
 
 namespace MS.Internal.Annotations
 {
@@ -103,7 +110,7 @@ namespace MS.Internal.Annotations
         #region Private Methods
 
         // fire an event for each item removed from the collection
-        private void OnCollectionCleared(IEnumerable<AnnotationResource> list)
+        void OnCollectionCleared(IEnumerable<AnnotationResource> list)
         {
             foreach (object item in list)
             {

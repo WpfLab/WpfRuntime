@@ -1,9 +1,10 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Security;
 using System.Xaml.MS.Impl;
 
 namespace System.Xaml.Schema
@@ -12,6 +13,7 @@ namespace System.Xaml.Schema
     {
         private static XamlMemberInvoker s_Directive;
         private static XamlMemberInvoker s_Unknown;
+        private static object[] s_emptyObjectArray = Array.Empty<object>();
 
         private XamlMember _member;
         private NullableReference<MethodInfo> _shouldSerializeMethod;
@@ -29,11 +31,10 @@ namespace System.Xaml.Schema
         {
             get
             {
-                if (s_Unknown is null)
+                if (s_Unknown == null)
                 {
                     s_Unknown = new XamlMemberInvoker();
                 }
-
                 return s_Unknown;
             }
         }
@@ -52,7 +53,7 @@ namespace System.Xaml.Schema
         {
             ArgumentNullException.ThrowIfNull(instance);
             ThrowIfUnknown();
-            if (UnderlyingGetter is null)
+            if (UnderlyingGetter == null)
             {
                 throw new NotSupportedException(SR.Format(SR.CantGetWriteonlyProperty, _member));
             }
@@ -63,7 +64,7 @@ namespace System.Xaml.Schema
             }
             else
             {
-                return UnderlyingGetter.Invoke(instance, Array.Empty<object>());
+                return UnderlyingGetter.Invoke(instance, s_emptyObjectArray);
             }
         }
 
@@ -71,7 +72,7 @@ namespace System.Xaml.Schema
         {
             ArgumentNullException.ThrowIfNull(instance);
             ThrowIfUnknown();
-            if (UnderlyingSetter is null)
+            if (UnderlyingSetter == null)
             {
                 throw new NotSupportedException(SR.Format(SR.CantSetReadonlyProperty, _member));
             }
@@ -90,11 +91,10 @@ namespace System.Xaml.Schema
         {
             get
             {
-                if (s_Directive is null)
+                if (s_Directive == null)
                 {
                     s_Directive = new DirectiveMemberInvoker();
                 }
-
                 return s_Directive;
             }
         }
@@ -123,13 +123,12 @@ namespace System.Xaml.Schema
                     flags |= BindingFlags.Instance;
                     args = Type.EmptyTypes;
                 }
-
                 _shouldSerializeMethod.Value = declaringType.GetMethod(methodName, flags, null, args, null);
             }
 
             // Invoke the method if we found one
             MethodInfo shouldSerializeMethod = _shouldSerializeMethod.Value;
-            if (shouldSerializeMethod is not null)
+            if (shouldSerializeMethod != null)
             {
                 bool result;
                 if (_member.IsAttachable)
@@ -143,13 +142,26 @@ namespace System.Xaml.Schema
 
                 return result ? ShouldSerializeResult.True : ShouldSerializeResult.False;
             }
-
             return ShouldSerializeResult.Default;
         }
 
+        // vvvvv---- Unused members.  Servicing policy is to retain these anyway.  -----vvvvv
+        [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Retained per servicing policy.")]
+        private static bool IsSystemXamlNonPublic(
+            ref ThreeValuedBool methodIsSystemXamlNonPublic, MethodInfo method)
+        {
+            if (methodIsSystemXamlNonPublic == ThreeValuedBool.NotSet)
+            {
+                bool result = SafeReflectionInvoker.IsSystemXamlNonPublic(method);
+                methodIsSystemXamlNonPublic = result ? ThreeValuedBool.True : ThreeValuedBool.False;
+            }
+            return methodIsSystemXamlNonPublic == ThreeValuedBool.True;
+        }
+        // ^^^^^----- End of unused members.  -----^^^^^
+
         private bool IsUnknown
         {
-            get { return _member is null || _member.UnderlyingMember is null; }
+            get { return _member == null || _member.UnderlyingMember == null; }
         }
 
         private void ThrowIfUnknown()

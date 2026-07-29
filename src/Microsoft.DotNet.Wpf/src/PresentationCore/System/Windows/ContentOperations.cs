@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 namespace System.Windows
@@ -14,8 +15,11 @@ namespace System.Windows
         /// </summary>
         public static DependencyObject GetParent(ContentElement reference)
         {
-            ArgumentNullException.ThrowIfNull(reference);
-
+            if(reference == null)
+            {
+                throw new ArgumentNullException("reference");
+            }
+            
             return reference._parent;
         }
 
@@ -31,7 +35,10 @@ namespace System.Windows
         /// </remarks>
         public static void SetParent(ContentElement reference, DependencyObject parent)
         {
-            ArgumentNullException.ThrowIfNull(reference);
+            if(reference == null)
+            {
+                throw new ArgumentNullException("reference");
+            }
 
             DependencyObject oldParent = reference._parent;
             reference._parent = parent;

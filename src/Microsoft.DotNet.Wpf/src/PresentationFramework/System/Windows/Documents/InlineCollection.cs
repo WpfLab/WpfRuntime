@@ -1,9 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Markup; // ContentWrapper
-using System.Windows.Controls; // TextBlock
-using System.Collections;
+// See the LICENSE file in the project root for more information.
 
 // 
 // Description: Collection of Inline elements
@@ -11,6 +8,11 @@ using System.Collections;
 
 namespace System.Windows.Documents
 {
+    using MS.Internal; // Invariant
+    using System.Windows.Markup; // ContentWrapper
+    using System.Windows.Controls; // TextBlock
+    using System.Collections;
+
     /// <summary>
     /// Collection of Inline elements - elements allowed as children
     /// of Paragraph, Span and TextBlock elements.
@@ -188,11 +190,12 @@ namespace System.Windows.Documents
             ArgumentNullException.ThrowIfNull(text);
 
             // Special case for TextBlock - to keep its simple content in simple state
-            if (this.Parent is TextBlock textBlock)
+            if (this.Parent is TextBlock)
             {
+                TextBlock textBlock = (TextBlock)this.Parent;
                 if (!textBlock.HasComplexContent)
                 {
-                    textBlock.Text += text;
+                    textBlock.Text = textBlock.Text + text;
                     return 0; // There's always one implicit Run with simple content, at index 0.
                 }
             }

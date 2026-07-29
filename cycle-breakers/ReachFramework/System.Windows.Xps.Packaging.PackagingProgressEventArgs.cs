@@ -1,0 +1,22 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+// ------------------------------------------------------------------------------
+// Changes to this file must follow the http://aka.ms/api-review process.
+// ------------------------------------------------------------------------------
+
+namespace System.Windows.Xps.Packaging
+{
+    public partial class PackagingProgressEventArgs
+    {
+        public PackagingProgressEventArgs(PackagingAction action, int numberCompleted)
+        {
+            Action = action;
+            NumberCompleted = numberCompleted;
+        }
+
+        public PackagingAction Action { get; }
+
+        public int NumberCompleted { get; }
+    }
+}

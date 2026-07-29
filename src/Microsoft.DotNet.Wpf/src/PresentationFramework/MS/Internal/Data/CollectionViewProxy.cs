@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // See spec at CollectionView.mht
@@ -8,7 +9,9 @@
 //              doesn't already have it.
 //
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -168,7 +171,10 @@ namespace MS.Internal.Data
         public override void Refresh()
         {
             IndexedEnumerable indexer = (IndexedEnumerable)Interlocked.Exchange(ref _indexer, null);
-            indexer?.Invalidate();
+            if (indexer != null)
+            {
+                indexer.Invalidate();
+            }
 
             ProxiedView.Refresh();
         }
@@ -799,7 +805,7 @@ namespace MS.Internal.Data
             get
             {
                 ICollectionViewLiveShaping cvls = ProxiedView as ICollectionViewLiveShaping;
-                return cvls?.IsLiveSorting;
+                return (cvls != null) ? cvls.IsLiveSorting : null;
             }
             set
             {
@@ -822,7 +828,7 @@ namespace MS.Internal.Data
             get
             {
                 ICollectionViewLiveShaping cvls = ProxiedView as ICollectionViewLiveShaping;
-                return cvls?.IsLiveFiltering;
+                return (cvls != null) ? cvls.IsLiveFiltering : null;
             }
             set
             {
@@ -845,7 +851,7 @@ namespace MS.Internal.Data
             get
             {
                 ICollectionViewLiveShaping cvls = ProxiedView as ICollectionViewLiveShaping;
-                return cvls?.IsLiveGrouping;
+                return (cvls != null) ? cvls.IsLiveGrouping : null;
             }
             set
             {
@@ -1017,19 +1023,19 @@ namespace MS.Internal.Data
 
         #region Private Methods
 
-        private void _OnPropertyChanged(object sender, PropertyChangedEventArgs args)
+        void _OnPropertyChanged(object sender, PropertyChangedEventArgs args)
         {
             OnPropertyChanged(args);
         }
 
-        private void _OnViewChanged(object sender, NotifyCollectionChangedEventArgs args)
+        void _OnViewChanged(object sender, NotifyCollectionChangedEventArgs args)
         {
             //             VerifyAccess();    // will throw an exception if caller is not in correct UiContext
 
             OnCollectionChanged(args);
         }
 
-        private void _OnCurrentChanging(object sender, CurrentChangingEventArgs args)
+        void _OnCurrentChanging(object sender, CurrentChangingEventArgs args)
         {
             //             VerifyAccess();    // will throw an exception if caller is not in correct UiContext
 
@@ -1037,7 +1043,7 @@ namespace MS.Internal.Data
                 PrivateCurrentChanging(this, args);
         }
 
-        private void _OnCurrentChanged(object sender, EventArgs args)
+        void _OnCurrentChanged(object sender, EventArgs args)
         {
             //             VerifyAccess();    // will throw an exception if caller is not in correct UiContext
 
@@ -1067,15 +1073,16 @@ namespace MS.Internal.Data
         //
         //------------------------------------------------------
 
-        private ICollectionView _view;
-        private IndexedEnumerable _indexer;
+        ICollectionView _view;
 
-        private event CurrentChangingEventHandler PrivateCurrentChanging;
-        private event EventHandler PrivateCurrentChanged;
+        IndexedEnumerable _indexer;
 
-        private ObservableCollection<string> _liveSortingProperties;    // dummy collection
-        private ObservableCollection<string> _liveFilteringProperties;  // dummy collection
-        private ObservableCollection<string> _liveGroupingProperties;   // dummy collection
+        event CurrentChangingEventHandler PrivateCurrentChanging;
+        event EventHandler PrivateCurrentChanged;
+
+        ObservableCollection<string> _liveSortingProperties;    // dummy collection
+        ObservableCollection<string> _liveFilteringProperties;  // dummy collection
+        ObservableCollection<string> _liveGroupingProperties;   // dummy collection
     }
 }
 

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -8,13 +9,24 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.IO;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Microsoft.Build.Tasks;
 using System.Xml;
+using System.Xml.XPath;
+using Microsoft.Build.Tasks.Windows;
+using System.Collections;
 
 using MS.Utility;
 using MS.Internal.Tasks;
+
+// Since we disable PreSharp warnings in this file, PreSharp warning is unknown to C# compiler.
+// We first need to disable warnings about unknown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
+
 
 namespace Microsoft.Build.Tasks.Windows
 {
@@ -60,7 +72,7 @@ namespace Microsoft.Build.Tasks.Windows
             bool successful = true;
             TaskHelper.DisplayLogo(Log, nameof(UpdateManifestForBrowserApplication));
 
-            if (!HostInBrowser)
+            if (HostInBrowser != true)
             {
                 // HostInBrowser is not true, don't modify the manifest.
                 // Stop here.
@@ -84,8 +96,11 @@ namespace Microsoft.Build.Tasks.Windows
                 }
                 finally
                 {
-                    // Close the manifest reader
-                    manifestReader?.Close();
+                    if (manifestReader != null)
+                    {
+                        // Close the manifest reader
+                        manifestReader.Close();
+                    }
                 }
 
                 // NOTE:
@@ -108,22 +123,24 @@ namespace Microsoft.Build.Tasks.Windows
                 // Update the manifest file.
                 try
                 {
-                    manifestWriter = new XmlTextWriter(appManifestFile, System.Text.Encoding.UTF8)
-                    {
-                        Formatting = Formatting.Indented,
-                        Indentation = 4
-                    };
+                    manifestWriter = new XmlTextWriter(appManifestFile, System.Text.Encoding.UTF8);
+                    manifestWriter.Formatting = Formatting.Indented;
+                    manifestWriter.Indentation = 4;
                     manifestDocument.WriteTo(manifestWriter);
                 }
                 finally
                 {
-                    // Close the manifest writer
-                    manifestWriter?.Close();
+                    if (manifestWriter != null)
+                    {
+                        // Close the manifest writer
+                        manifestWriter.Close();
+                    }
                 }
 
             }
             catch (Exception e)
             {
+                // PreSharp Complaint 6500 - do not handle null-ref or SEH exceptions.
                 if (e is NullReferenceException || e is SEHException)
                 {
                     throw;
@@ -134,11 +151,14 @@ namespace Microsoft.Build.Tasks.Windows
                     successful = false;
                 }
             }
+#pragma warning disable 6500
             catch   // Non-cls compliant errors
             {
                 Log.LogErrorWithCodeFromResources(nameof(SR.NonClsError));
                 successful = false;
             }
+#pragma warning restore 6500
+
 
             return successful;
         }

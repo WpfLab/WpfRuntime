@@ -1,7 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Windows.Input;
+using System.Collections;
+using MS.Win32;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+using SR=MS.Internal.PresentationCore.SR;
+using System.Security ; 
+using MS.Internal.PresentationCore; 
 
 namespace System.Windows.Interop
 {
@@ -9,11 +19,17 @@ namespace System.Windows.Interop
     {
         public HwndSourceKeyboardInputSite(HwndSource source, IKeyboardInputSink sink)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            ArgumentNullException.ThrowIfNull(sink);
-            if (!(sink is UIElement))
+            if(source == null)
             {
-                throw new ArgumentException(SR.KeyboardSinkMustBeAnElement, nameof(sink));
+                throw new ArgumentNullException("source");
+            }
+            if(sink == null)
+            {
+                throw new ArgumentNullException("sink");
+            }
+            if(!(sink is UIElement))
+            {
+                throw new ArgumentException(SR.KeyboardSinkMustBeAnElement, "sink");
             }
             
             _source = source;

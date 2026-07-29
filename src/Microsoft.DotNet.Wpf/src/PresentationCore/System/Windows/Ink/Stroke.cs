@@ -1,12 +1,28 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+
+using MS.Utility;
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Media;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Runtime.Serialization;
 using MS.Internal.Ink.InkSerializedFormat;
 using MS.Internal;
 using MS.Internal.Ink;
+using System.Reflection;
 using System.Windows.Input;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 // Primary root namespace for TabletPC/Ink/Handwriting/Recognition in .NET
 
@@ -44,12 +60,18 @@ namespace System.Windows.Ink
         /// <param name="extendedProperties">extendedProperties</param>
         internal Stroke(StylusPointCollection stylusPoints, DrawingAttributes drawingAttributes, ExtendedPropertyCollection extendedProperties)
         {
-            ArgumentNullException.ThrowIfNull(stylusPoints);
+            if (stylusPoints == null)
+            {
+                throw new ArgumentNullException("stylusPoints");
+            }
             if (stylusPoints.Count == 0)
             {
-                throw new ArgumentException(SR.InvalidStylusPointCollectionZeroCount, nameof(stylusPoints));
+                throw new ArgumentException(SR.InvalidStylusPointCollectionZeroCount, "stylusPoints");
             }
-            ArgumentNullException.ThrowIfNull(drawingAttributes);
+            if (drawingAttributes == null)
+            {
+                throw new ArgumentNullException("drawingAttributes");
+            }
 
             _drawingAttributes = drawingAttributes;
             _stylusPoints = stylusPoints;
@@ -141,15 +163,15 @@ namespace System.Windows.Ink
 
             if (!transformMatrix.HasInverse)
             {
-                throw new ArgumentException(SR.MatrixNotInvertible, nameof(transformMatrix));
+                throw new ArgumentException(SR.MatrixNotInvertible, "transformMatrix");
             }
             else if ( MatrixHelper.ContainsNaN(transformMatrix))
             {
-                throw new ArgumentException(SR.InvalidMatrixContainsNaN, nameof(transformMatrix));
+                throw new ArgumentException(SR.InvalidMatrixContainsNaN, "transformMatrix");
             }
             else if ( MatrixHelper.ContainsInfinity(transformMatrix))
             {
-                throw new ArgumentException(SR.InvalidMatrixContainsInfinity, nameof(transformMatrix));
+                throw new ArgumentException(SR.InvalidMatrixContainsInfinity, "transformMatrix");
             }
             else
             {
@@ -460,7 +482,10 @@ namespace System.Windows.Ink
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 _drawingAttributes.AttributeChanged -= new PropertyDataChangedEventHandler(DrawingAttributes_Changed);
 
@@ -474,7 +499,7 @@ namespace System.Windows.Ink
                 // If the drawing attributes change involves Width, Height, StylusTipTransform, IgnorePressure, or FitToCurve,
                 // we need to force a recaculation of the cached path geometry right after the
                 // DrawingAttributes changed, beforet the events are raised.
-                if (!DrawingAttributes.GeometricallyEqual(previousDa, _drawingAttributes))
+                if (false == DrawingAttributes.GeometricallyEqual(previousDa, _drawingAttributes))
                 {
                     _cachedGeometry = null;
                     // Set the cached bounds to empty, which will force a re-calculation of the _cachedBounds upon next GetBounds call.
@@ -499,7 +524,10 @@ namespace System.Windows.Ink
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (null == value)
+                {
+                    throw new ArgumentNullException("value");
+                }
                 if (value.Count == 0)
                 {
                     //we don't allow this
@@ -583,7 +611,7 @@ namespace System.Windows.Ink
         {
             if (null == e)
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             if (DrawingAttributesChanged != null)
@@ -599,7 +627,10 @@ namespace System.Windows.Ink
         /// <param name="e">DrawingAttributesReplacedEventArgs to raise the event with</param>
         protected virtual void OnDrawingAttributesReplaced(DrawingAttributesReplacedEventArgs e)
         {
-            ArgumentNullException.ThrowIfNull(e);
+            if (e == null)
+            {
+                throw new ArgumentNullException("e");
+            }
             if (null != this.DrawingAttributesReplaced)
             {
                 DrawingAttributesReplaced(this, e);
@@ -614,7 +645,7 @@ namespace System.Windows.Ink
         {
             if (null == e)
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             if (StylusPointsReplaced != null)
@@ -629,7 +660,7 @@ namespace System.Windows.Ink
         {
             if (null == e)
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             if (StylusPointsChanged != null)
@@ -646,7 +677,7 @@ namespace System.Windows.Ink
         {
             if (null == e)
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             if (PropertyDataChanged != null)
@@ -664,7 +695,7 @@ namespace System.Windows.Ink
         {
             if (null == e)
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             if (Invalidated != null)
@@ -743,8 +774,8 @@ namespace System.Windows.Ink
             //
             // Assert the findices are NOT out of range with the packets
             //
-            System.Diagnostics.Debug.Assert(DoubleUtil.AreClose(cutAt[cutAt.Length - 1].EndFIndex, StrokeFIndices.AfterLast) ||
-                                        Math.Ceiling(cutAt[cutAt.Length - 1].EndFIndex) <= sourceStylusPoints.Count - 1);
+            System.Diagnostics.Debug.Assert(false == ((!DoubleUtil.AreClose(cutAt[cutAt.Length - 1].EndFIndex, StrokeFIndices.AfterLast)) &&
+                                        Math.Ceiling(cutAt[cutAt.Length - 1].EndFIndex) > sourceStylusPoints.Count - 1));
 
             for (int i = 0; i < cutAt.Length; i++)
             {
@@ -799,8 +830,8 @@ namespace System.Windows.Ink
             //
             // Assert the findices are NOT out of range with the packets
             //
-            System.Diagnostics.Debug.Assert(DoubleUtil.AreClose(cutAt[cutAt.Length - 1].EndFIndex, StrokeFIndices.AfterLast) ||
-                                        Math.Ceiling(cutAt[cutAt.Length - 1].EndFIndex) <= sourceStylusPoints.Count - 1);
+            System.Diagnostics.Debug.Assert(false == ((!DoubleUtil.AreClose(cutAt[cutAt.Length - 1].EndFIndex, StrokeFIndices.AfterLast)) &&
+                                        Math.Ceiling(cutAt[cutAt.Length - 1].EndFIndex) > sourceStylusPoints.Count - 1));
 
 
             int i = 0;
@@ -890,11 +921,11 @@ namespace System.Windows.Ink
             //
             if (!DoubleUtil.AreClose(beginFIndex, StrokeFIndices.BeforeFirst))
             {
-                beginFIndex -= beginIndex;
+                beginFIndex = beginFIndex - beginIndex;
             }
             if (!DoubleUtil.AreClose(endFIndex, StrokeFIndices.AfterLast))
             {
-                endFIndex -= beginIndex;
+                endFIndex = endFIndex - beginIndex;
             }
 
             if (stylusPoints.Count > 1)
@@ -1036,7 +1067,7 @@ namespace System.Windows.Ink
         private void DrawingAttributes_Changed(object sender, PropertyDataChangedEventArgs e)
         {
             // set Geometry flag to be dirty if the DA change will cause change in geometry
-            if (DrawingAttributes.IsGeometricalDaGuid(e.PropertyGuid))
+            if (DrawingAttributes.IsGeometricalDaGuid(e.PropertyGuid) == true)
             {
                 _cachedGeometry = null;
                 // Set the cached bounds to empty, which will force a re-calculation of the _cachedBounds upon next GetBounds call.

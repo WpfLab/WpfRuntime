@@ -1,12 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  Handles serialization to/from X509 Certificate part (X509v3 = ASN.1 DER format)
+//
+//
+//
+//
 
+using System;
+using System.Diagnostics;                               // for Assert
 using System.Security.Cryptography.X509Certificates;
-using System.IO.Packaging;
+using System.Windows;                                   // For Exception strings - SR
+using System.IO.Packaging;      
 using System.IO;                                        // for Stream
+using MS.Internal;                                      // For ContentType
+using MS.Internal.WindowsBase;
 using MS.Internal.IO.Packaging.Extensions;
 
 namespace MS.Internal.IO.Packaging
@@ -25,7 +37,7 @@ namespace MS.Internal.IO.Packaging
         /// <summary>
         /// Type of relationship to a Certificate Part
         /// </summary>
-        internal static string RelationshipType
+        static internal string RelationshipType
         {
             get
             {
@@ -36,7 +48,7 @@ namespace MS.Internal.IO.Packaging
         /// <summary>
         /// Prefix of auto-generated Certificate Part names
         /// </summary>
-        internal static string PartNamePrefix
+        static internal string PartNamePrefix
         {
             get
             {
@@ -47,7 +59,7 @@ namespace MS.Internal.IO.Packaging
         /// <summary>
         /// Extension of Certificate Part file names
         /// </summary>
-        internal static string PartNameExtension
+        static internal string PartNameExtension
         {
             get
             {
@@ -58,7 +70,7 @@ namespace MS.Internal.IO.Packaging
         /// <summary>
         /// ContentType of Certificate Parts
         /// </summary>
-        internal static ContentType ContentType
+        static internal ContentType ContentType
         {
             get
             {
@@ -101,7 +113,7 @@ namespace MS.Internal.IO.Packaging
                         // X509Certificate constructor desires a byte array
                         Byte[] byteArray = new Byte[s.Length];
                         PackagingUtilities.ReliableRead(s, byteArray, 0, (int)s.Length);
-                        _certificate = X509CertificateLoader.LoadCertificate(byteArray);
+                        _certificate = new X509Certificate2(byteArray);
                     }
                 }
             }
@@ -110,7 +122,8 @@ namespace MS.Internal.IO.Packaging
 
         internal void SetCertificate(X509Certificate2 certificate)
         {
-            ArgumentNullException.ThrowIfNull(certificate);
+            if (certificate == null)
+                throw new ArgumentNullException("certificate");
 
             _certificate = certificate;
 
@@ -129,8 +142,11 @@ namespace MS.Internal.IO.Packaging
         /// </summary>
         internal CertificatePart(System.IO.Packaging.Package container, Uri partName)
         {
-            ArgumentNullException.ThrowIfNull(container);
-            ArgumentNullException.ThrowIfNull(partName);
+            if (container == null)
+                throw new ArgumentNullException("container");
+            
+            if (partName == null)
+                throw new ArgumentNullException("partName");
 
             partName = PackUriHelper.ValidatePartUri(partName);
             
@@ -141,7 +157,7 @@ namespace MS.Internal.IO.Packaging
                 _part = container.GetPart(partName);
 
                 // ensure the part is of the expected type
-                if (!_part.ValidatedContentType().AreTypeAndSubTypeEqual(_certificatePartContentType))
+                if (_part.ValidatedContentType().AreTypeAndSubTypeEqual(_certificatePartContentType) == false)
                     throw new FileFormatException(SR.CertificatePartContentTypeMismatch);
             }
             else

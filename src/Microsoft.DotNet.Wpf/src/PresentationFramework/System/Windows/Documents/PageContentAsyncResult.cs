@@ -1,9 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.IO;
-using System.Windows.Threading;
-using System.Threading;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -12,6 +9,22 @@ using System.Threading;
 
 namespace System.Windows.Documents
 {
+    using System;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Windows.Threading;
+    using System.Threading;
+    using MS.Internal;
+    using MS.Internal.AppModel;
+    using MS.Internal.Utility;
+    using MS.Internal.Navigation;
+    using MS.Utility;
+    using System.Reflection;
+    using System.Windows.Controls;
+    using System.Windows.Markup;
+    using System.Net;
+    using System.IO.Packaging;
+
     /// <summary>
     /// IAsyncResult for GetPageAsync. This item is passed around and queued up during various
     /// phase of async call. 
@@ -232,8 +245,11 @@ namespace System.Windows.Documents
         #region Private Methods
         private void _OnPaserFinished(object sender, EventArgs args)
         {
-            _pendingStream?.Close();
-            _pendingStream = null;
+            if (_pendingStream != null)
+            {
+                _pendingStream.Close();
+                _pendingStream = null;
+            }
         }
         #endregion Private Methods
 

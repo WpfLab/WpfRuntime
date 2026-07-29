@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
 //
@@ -7,6 +8,9 @@
 //
 
 
+using System;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
@@ -39,7 +43,10 @@ namespace MS.Internal.PtsHost
             Debug.Assert(Context != null, "TextFormatter host is not initialized.");
             Debug.Assert(textSourceCharacterIndex >= 0, "Character index must be non-negative.");
             TextRun run = Context.GetTextRun(textSourceCharacterIndex);
-            run.Properties?.PixelsPerDip = PixelsPerDip;
+            if (run.Properties != null)
+            {
+                run.Properties.PixelsPerDip = PixelsPerDip;
+            }
 
             return run;
         }

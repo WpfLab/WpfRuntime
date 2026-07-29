@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -12,6 +13,7 @@
 // See specs at Validation.mht
 //
 
+using System;
 using System.Globalization;
 using System.Windows.Data;
 
@@ -89,8 +91,8 @@ namespace System.Windows.Controls
             set { _validatesOnTargetUpdated = value; }
         }
 
-        private ValidationStep  _validationStep;
-        private bool            _validatesOnTargetUpdated;
+        ValidationStep  _validationStep;
+        bool            _validatesOnTargetUpdated;
     }
 }
 

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -7,9 +8,16 @@
 //      It can use its own journal ("island frame") or its prent's, if available.
 //
 
+using System;
+using System.Net;
 using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Windows.Threading;
+using System.Security;
+
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Automation.Peers;
 using System.Windows.Media;
@@ -20,7 +28,12 @@ using MS.Internal;
 using MS.Internal.AppModel;
 using MS.Internal.Utility;
 using MS.Internal.KnownBoxes;
+using MS.Utility;
+using MS.Internal.Controls;
 using MS.Internal.Telemetry.PresentationFramework;
+using System.Collections.Generic;
+
+using SecurityHelper=MS.Internal.PresentationFramework.SecurityHelper;
 
 
 namespace System.Windows.Navigation
@@ -207,7 +220,8 @@ namespace System.Windows.Controls
             if (doContent != null)
             {
                 IInputElement focusedElement = FocusManager.GetFocusedElement(doContent) as IInputElement;
-                focusedElement?.Focus();
+                if (focusedElement != null)
+                    focusedElement.Focus();
             }
 
             if (ContentRendered != null)
@@ -561,7 +575,7 @@ namespace System.Windows.Controls
             // post it from the LoadedHandler.  This guarantees that
             // we don't fire ContentRendered on a subtree that is not
             // connected to a PresentationSource
-            if (IsLoaded)
+            if (IsLoaded == true)
             {
                 PostContentRendered();
             }
@@ -571,7 +585,7 @@ namespace System.Windows.Controls
                 // that we deferred to the Loaded event to PostConetentRendered
                 // for the previous content change and Loaded has not fired yet.
                 // Thus we don't want to hook up another event handler
-                if (!_postContentRenderedFromLoadedHandler)
+                if (_postContentRenderedFromLoadedHandler == false)
                 {
                     this.Loaded += new RoutedEventHandler(LoadedHandler);
                     _postContentRenderedFromLoadedHandler = true;
@@ -581,7 +595,7 @@ namespace System.Windows.Controls
 
         private void LoadedHandler(object sender, RoutedEventArgs args)
         {
-            if (_postContentRenderedFromLoadedHandler)
+            if (_postContentRenderedFromLoadedHandler == true)
             {
                 PostContentRendered();
                 _postContentRenderedFromLoadedHandler = false;
@@ -594,9 +608,12 @@ namespace System.Windows.Controls
         {
             // Post the firing of ContentRendered as Input priority work item so
             // that ContentRendered will be fired after render query empties.
-            // Content was changed again before the previous rendering completed (or at least
-            // before the Dispatcher got to Input priority callbacks).
-            _contentRenderedCallback?.Abort();
+            if (_contentRenderedCallback != null)
+            {
+                // Content was changed again before the previous rendering completed (or at least
+                // before the Dispatcher got to Input priority callbacks).
+                _contentRenderedCallback.Abort();
+            }
             _contentRenderedCallback = Dispatcher.BeginInvoke(DispatcherPriority.Input,
                                    (DispatcherOperationCallback) delegate (object arg)
                                    {
@@ -976,7 +993,7 @@ namespace System.Windows.Controls
         {
             get
             {
-                IEnumerable backStack = _ownJournalScope?.BackStack;
+                IEnumerable backStack = _ownJournalScope == null ? null : _ownJournalScope.BackStack;
                 Debug.Assert(backStack == GetValue(BackStackProperty));
                 return backStack;
             }
@@ -988,7 +1005,7 @@ namespace System.Windows.Controls
         {
             get
             {
-                IEnumerable fwdStack = _ownJournalScope?.ForwardStack;
+                IEnumerable fwdStack = _ownJournalScope == null ? null : _ownJournalScope.ForwardStack;
                 Debug.Assert(fwdStack == GetValue(ForwardStackProperty));
                 return fwdStack;
             }
@@ -1198,7 +1215,10 @@ namespace System.Windows.Controls
                         Debug.Assert(JournalEntry.GetType().IsSerializable);
                     }
                 }
-                Journal?.PruneKeepAliveEntries();
+                if (Journal != null)
+                {
+                    Journal.PruneKeepAliveEntries();
+                }
             }
         };
 #pragma warning restore SYSLIB0050
@@ -1209,18 +1229,17 @@ namespace System.Windows.Controls
                 return null;
             }
 
-            FramePersistState state = new FramePersistState
-            {
-                // Save a JournalEntry for the current content.
-                JournalEntry = _navigationService.MakeJournalEntry(JournalReason.NewContentNavigation),
-                // The current Content may be null or may not want to be journaled (=> JournalEntry=null).
-                // But we still need to save and then restore the NS GUID - there may be other JEs keyed
-                // by this GUID value.
-                // i. There is a somewhat similar case in ApplicationProxyInternal._GetSaveHistoryBytesDelegate().
-                NavSvcGuid = _navigationService.GuidId,
+            FramePersistState state = new FramePersistState();
 
-                JournalOwnership = _journalOwnership
-            };
+            // Save a JournalEntry for the current content.
+            state.JournalEntry = _navigationService.MakeJournalEntry(JournalReason.NewContentNavigation);
+            // The current Content may be null or may not want to be journaled (=> JournalEntry=null).
+            // But we still need to save and then restore the NS GUID - there may be other JEs keyed
+            // by this GUID value.
+            // i. There is a somewhat similar case in ApplicationProxyInternal._GetSaveHistoryBytesDelegate().
+            state.NavSvcGuid = _navigationService.GuidId;
+
+            state.JournalOwnership = _journalOwnership;
             if (_ownJournalScope != null)
             {
                 Debug.Assert(_journalOwnership == JournalOwnership.OwnsJournal);
@@ -1249,7 +1268,10 @@ namespace System.Windows.Controls
                 _ownJournalScope.Journal = state.Journal;
             }
 
-            state.JournalEntry?.Navigate(this, NavigationMode.Back);
+            if(state.JournalEntry != null)
+            {
+                state.JournalEntry.Navigate(this, NavigationMode.Back);
+            }
         }
         #endregion IJournalState
 
@@ -1264,10 +1286,13 @@ namespace System.Windows.Controls
         {
             base.OnPreApplyTemplate();
 
-            // This causes the Journal instance to be created. BackStackProperty and ForwardStackProperty
-            // should be set before the navigation chrome data-binds to them but after any Journal is
-            // restored from FramePersistState.
-            _ownJournalScope?.EnsureJournal();
+            if (_ownJournalScope != null)
+            {
+                // This causes the Journal instance to be created. BackStackProperty and ForwardStackProperty
+                // should be set before the navigation chrome data-binds to them but after any Journal is
+                // restored from FramePersistState.
+                _ownJournalScope.EnsureJournal();
+            }
         }
 
         // Invalidate resources on the frame content if the content isn't
@@ -1318,7 +1343,10 @@ namespace System.Windows.Controls
             {
                 // Entries created for this frame in the parent's journal have to be removed.
                 JournalNavigationScope parentJns = GetParentJournal(false/*don't create*/);
-                parentJns?.Journal.RemoveEntries(_navigationService.GuidId);
+                if (parentJns != null)
+                {
+                    parentJns.Journal.RemoveEntries(_navigationService.GuidId);
+                }
 
                 _ownJournalScope = new JournalNavigationScope(this);
                 _navigationService.InvalidateJournalNavigationScope();

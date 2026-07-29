@@ -1,13 +1,26 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+
+using MS.Utility;
+using System;
 using System.ComponentModel;
 using System.Collections;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows.Media;
+using System.Windows.Ink;
+using System.Windows.Input;
+using System.Runtime.Serialization;
 using System.IO;
+using System.Reflection;
 using MS.Internal.Ink.InkSerializedFormat;
+using MS.Internal.Ink;
+
+using SR = MS.Internal.PresentationCore.SR;
 
 // Primary root namespace for TabletPC/Ink/Handwriting/Recognition in .NET
 
@@ -33,7 +46,10 @@ namespace System.Windows.Ink
         /// <summary>Creates a StrokeCollection based on a collection of existing strokes</summary>
         public StrokeCollection(IEnumerable<Stroke> strokes)
         {
-            ArgumentNullException.ThrowIfNull(strokes);
+            if ( strokes == null )
+            {
+                throw new ArgumentNullException("strokes");
+            }
 
             List<Stroke> items = (List<Stroke>)this.Items;
 
@@ -44,7 +60,7 @@ namespace System.Windows.Ink
                 {
                     //clear and throw
                     items.Clear();
-                    throw new ArgumentException(SR.StrokeIsDuplicated, nameof(strokes));
+                    throw new ArgumentException(SR.StrokeIsDuplicated, "strokes");
                 }
                 items.Add(stroke);
             }
@@ -54,16 +70,19 @@ namespace System.Windows.Ink
         /// <param name="stream">Stream of ISF data</param>
         public StrokeCollection(Stream stream)
         {
-            ArgumentNullException.ThrowIfNull(stream);
+            if ( stream == null )
+            {
+                throw new ArgumentNullException("stream");
+            }
             if ( !stream.CanRead )
             {
-                throw new ArgumentException(SR.Image_StreamRead, nameof(stream));
+                throw new ArgumentException(SR.Image_StreamRead, "stream");
             }
 
             Stream seekableStream = GetSeekableStream(stream);
             if (seekableStream == null)
             {
-                throw new ArgumentException(SR.Invalid_isfData_Length, nameof(stream));
+                throw new ArgumentException(SR.Invalid_isfData_Length, "stream");
             }
 
             //this will init our stroke collection
@@ -78,10 +97,13 @@ namespace System.Windows.Ink
         /// reduce the output buffer size in exchange for slower Save performance.</param>
         public virtual void Save(Stream stream, bool compress)
         {
-            ArgumentNullException.ThrowIfNull(stream);
+            if ( stream == null )
+            {
+                throw new ArgumentNullException("stream");
+            }
             if ( !stream.CanWrite )
             {
-                throw new ArgumentException(SR.Image_StreamWrite, nameof(stream));
+                throw new ArgumentException(SR.Image_StreamWrite, "stream");
             }
             SaveIsf(stream, compress);
         }
@@ -98,10 +120,8 @@ namespace System.Windows.Ink
         /// </summary>
         internal void SaveIsf(Stream stream, bool compress)
         {
-            StrokeCollectionSerializer serializer = new StrokeCollectionSerializer(this)
-            {
-                CurrentCompressionMode = compress ? CompressionMode.Compressed : CompressionMode.NoCompression
-            };
+            StrokeCollectionSerializer serializer = new StrokeCollectionSerializer(this);
+            serializer.CurrentCompressionMode = compress ? CompressionMode.Compressed : CompressionMode.NoCompression;
             serializer.EncodeISF(stream);
         }
 
@@ -184,7 +204,7 @@ namespace System.Windows.Ink
         {
             if ( propertyDataId == Guid.Empty )
             {
-                throw new ArgumentException(SR.InvalidGuid, nameof(propertyDataId));
+                throw new ArgumentException(SR.InvalidGuid, "propertyDataId");
             }
 
             return this.ExtendedProperties[propertyDataId];
@@ -221,8 +241,8 @@ namespace System.Windows.Ink
         public void Transform(Matrix transformMatrix, bool applyToStylusTip)
         {
             // Ensure that the transformMatrix is invertible.
-            if (!transformMatrix.HasInverse)
-                throw new ArgumentException(SR.MatrixNotInvertible, nameof(transformMatrix));
+            if ( false == transformMatrix.HasInverse )
+                throw new ArgumentException(SR.MatrixNotInvertible, "transformMatrix");
 
             // if transformMatrix is identity or the StrokeCollection is empty
             //      then no change will occur anyway
@@ -234,10 +254,14 @@ namespace System.Windows.Ink
             // Apply the transform to each strokes
             foreach ( Stroke stroke in this )
             {
+                // samgeo - Presharp issue
                 // Presharp gives a warning when get methods might deref a null.  It's complaining
                 // here that 'stroke'' could be null, but StrokeCollection never allows nulls to be added
                 // so this is not possible
+#pragma warning disable 1634, 1691
+#pragma warning suppress 6506
                 stroke.Transform(transformMatrix, applyToStylusTip);
+#pragma warning restore 1634, 1691
             }
         }
 
@@ -249,10 +273,14 @@ namespace System.Windows.Ink
             StrokeCollection clone = new StrokeCollection();
             foreach ( Stroke s in this )
             {
+                // samgeo - Presharp issue
                 // Presharp gives a warning when get methods might deref a null.  It's complaining
                 // here that s could be null, but StrokeCollection never allows nulls to be added
                 // so this is not possible
+#pragma warning disable 1634, 1691
+#pragma warning suppress 6506
                 clone.Add(s.Clone());
+#pragma warning restore 1634, 1691
             }
 
             //
@@ -269,7 +297,7 @@ namespace System.Windows.Ink
         /// called by base class Collection&lt;T&gt; when the list is being cleared;
         /// raises a CollectionChanged event to any listeners
         /// </summary>
-        protected sealed override void ClearItems()
+        protected override sealed void ClearItems()
         {
             if ( this.Count > 0 )
             {
@@ -281,50 +309,56 @@ namespace System.Windows.Ink
 
                 base.ClearItems();
 
-                RaiseStrokesChanged(addedStrokes: null, removed, -1);
+                RaiseStrokesChanged(null /*added*/, removed, -1);
             }
         }
 
         /// <summary>
         /// called by base class RemoveAt or Remove methods
         /// </summary>
-        protected sealed override void RemoveItem(int index)
+        protected override sealed void RemoveItem(int index)
         {
             Stroke removedStroke = this[index];
             base.RemoveItem(index);
 
             StrokeCollection removed = new StrokeCollection();
             ( (List<Stroke>)removed.Items ).Add(removedStroke);
-            RaiseStrokesChanged(addedStrokes: null, removed, index);
+            RaiseStrokesChanged(null /*added*/, removed, index);
         }
 
         /// <summary>
         /// called by base class Insert, Add methods
         /// </summary>
-        protected sealed override void InsertItem(int index, Stroke stroke)
+        protected override sealed void InsertItem(int index, Stroke stroke)
         {
-            ArgumentNullException.ThrowIfNull(stroke);
+            if ( stroke == null )
+            {
+                throw new ArgumentNullException("stroke");
+            }
             if ( this.IndexOf(stroke) != -1 )
             {
-                throw new ArgumentException(SR.StrokeIsDuplicated, nameof(stroke));
+                throw new ArgumentException(SR.StrokeIsDuplicated, "stroke");
             }
 
             base.InsertItem(index, stroke);
 
             StrokeCollection addedStrokes = new StrokeCollection();
             ( (List<Stroke>)addedStrokes.Items ).Add(stroke);
-            RaiseStrokesChanged(addedStrokes, removedStrokes: null, index);
+            RaiseStrokesChanged(addedStrokes, null /*removed*/, index);
         }
 
         /// <summary>
         /// called by base class set_Item method
         /// </summary>
-        protected sealed override void SetItem(int index, Stroke stroke)
+        protected override sealed void SetItem(int index, Stroke stroke)
         {
-            ArgumentNullException.ThrowIfNull(stroke);
+            if ( stroke == null )
+            {
+                throw new ArgumentNullException("stroke");
+            }
             if ( IndexOf(stroke) != -1 )
             {
-                throw new ArgumentException(SR.StrokeIsDuplicated, nameof(stroke));
+                throw new ArgumentException(SR.StrokeIsDuplicated, "stroke");
             }
 
             Stroke removedStroke = this[index];
@@ -367,7 +401,10 @@ namespace System.Windows.Ink
         /// <remarks>Changes to the collection trigger a StrokesChanged event.</remarks>
         public void Remove(StrokeCollection strokes)
         {
-            ArgumentNullException.ThrowIfNull(strokes);
+            if ( strokes == null )
+            {
+                throw new ArgumentNullException("strokes");
+            }
             if ( strokes.Count == 0 )
             {
                 // NOTICE-2004/06/08-WAYNEZEN:
@@ -380,7 +417,7 @@ namespace System.Windows.Ink
             if ( indexes == null )
             {
                 // At least one stroke doesn't exist in our collection. We throw.
-                ArgumentException ae = new ArgumentException(SR.InvalidRemovedStroke, nameof(strokes));
+                ArgumentException ae = new ArgumentException(SR.InvalidRemovedStroke, "strokes");
                 //
                 // we add a tag here so we can check for this in EraserBehavior.OnPointEraseResultChanged
                 // to determine if this method is the origin of an ArgumentException we harden against
@@ -397,7 +434,7 @@ namespace System.Windows.Ink
                 ( (List<Stroke>)this.Items ).RemoveAt(indexes[x]);
             }
 
-            RaiseStrokesChanged(addedStrokes: null, strokes, indexes[0]);
+            RaiseStrokesChanged(null /*added*/, strokes, indexes[0]);
         }
 
         /// <summary>
@@ -408,7 +445,10 @@ namespace System.Windows.Ink
         /// If the item already exists in the collection, then the item is not added again.</remarks>
         public void Add(StrokeCollection strokes)
         {
-            ArgumentNullException.ThrowIfNull(strokes);
+            if ( strokes == null )
+            {
+                throw new ArgumentNullException("strokes");
+            }
             if ( strokes.Count == 0 )
             {
                 // NOTICE-2004/06/08-WAYNEZEN:
@@ -424,7 +464,7 @@ namespace System.Windows.Ink
                 Stroke stroke = strokes[x];
                 if ( this.IndexOf(stroke) != -1 )
                 {
-                    throw new ArgumentException(SR.StrokeIsDuplicated, nameof(strokes));
+                    throw new ArgumentException(SR.StrokeIsDuplicated, "strokes");
                 }
             }
 
@@ -433,7 +473,7 @@ namespace System.Windows.Ink
             //and call our protected List<Stroke> directly
             ( (List<Stroke>)this.Items ).AddRange(strokes);
 
-            RaiseStrokesChanged(strokes, removedStrokes: null, index);
+            RaiseStrokesChanged(strokes, null /*removed*/, index);
         }
 
         /// <summary>
@@ -472,7 +512,7 @@ namespace System.Windows.Ink
             int replaceCount = strokesToReplace.Count;
             if ( replaceCount == 0 )
             {
-                ArgumentException ae = new ArgumentException(SR.EmptyScToReplace, nameof(strokesToReplace));
+                ArgumentException ae = new ArgumentException(SR.EmptyScToReplace, "strokesToReplace");
                 //
                 // we add a tag here so we can check for this in EraserBehavior.OnPointEraseResultChanged
                 // to determine if this method is the origin of an ArgumentException we harden against
@@ -485,7 +525,7 @@ namespace System.Windows.Ink
             if ( indexes == null )
             {
                 // At least one stroke doesn't exist in our collection. We throw.
-                ArgumentException ae = new ArgumentException(SR.InvalidRemovedStroke, nameof(strokesToReplace));
+                ArgumentException ae = new ArgumentException(SR.InvalidRemovedStroke, "strokesToReplace");
                 //
                 // we add a tag here so we can check for this in EraserBehavior.OnPointEraseResultChanged
                 // to determine if this method is the origin of an ArgumentException we harden against
@@ -501,7 +541,7 @@ namespace System.Windows.Ink
                 Stroke stroke = strokesToReplaceWith[x];
                 if ( this.IndexOf(stroke) != -1 )
                 {
-                    throw new ArgumentException(SR.StrokeIsDuplicated, nameof(strokesToReplaceWith));
+                    throw new ArgumentException(SR.StrokeIsDuplicated, "strokesToReplaceWith");
                 }
             }
 
@@ -614,7 +654,7 @@ namespace System.Windows.Ink
         {
             if ( null == e )
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             //raise our internal event first.  This is used by
@@ -671,7 +711,7 @@ namespace System.Windows.Ink
         {
             if ( null == e )
             {
-                throw new ArgumentNullException(nameof(e), SR.EventArgIsNull);
+                throw new ArgumentNullException("e", SR.EventArgIsNull);
             }
 
             if ( this.PropertyDataChanged != null )

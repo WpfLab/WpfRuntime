@@ -1,8 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.Collections;              // for ArrayList
+using System.Collections.Generic;
+using System.Diagnostics;
 
 #if DEBUG_RASTERIZATION
 using System.IO;
@@ -11,6 +15,7 @@ using System.IO;
 using System.Windows;                  // for Rect                        WindowsBase.dll
 using System.Windows.Media;            // for Geometry, Brush, ImageData. PresentationCore.dll
 using System.Windows.Media.Imaging;
+using System.Security;
 
 using System.Windows.Xps.Serialization;
 using MS.Utility;
@@ -137,14 +142,14 @@ namespace Microsoft.Internal.AlphaFlattener
         /// <param name="width"></param>
         /// <param name="height"></param>
         /// <returns></returns>
-        internal static double RasterizationCost(double width, double height)
+        static internal double RasterizationCost(double width, double height)
         {
             return  1024 + width / 96 * RasterizationDPI *
                            height / 96 * RasterizationDPI *
                             3;
         }
 
-        internal static double RasterizationCost(double size)
+        static internal double RasterizationCost(double size)
         {
             return 1024 + size / 96 * RasterizationDPI * 3;
         }
@@ -245,11 +250,10 @@ namespace Microsoft.Internal.AlphaFlattener
 
         public PenProxy Clone()
         {
-            PenProxy pen = new PenProxy
-            {
-                _pen = this._pen,
-                _brush = this._brush
-            };
+            PenProxy pen = new PenProxy();
+
+            pen._pen   = this._pen;
+            pen._brush = this._brush;
 
             return pen;
         }
@@ -382,7 +386,7 @@ namespace Microsoft.Internal.AlphaFlattener
 
             if (_brush != null)
             {
-                str += _brush.GetType();
+                str = str + _brush.GetType();
             }
             else if (_brushList != null)
             {
@@ -672,7 +676,7 @@ namespace Microsoft.Internal.AlphaFlattener
 
             if (_brush != null)
             {
-                Debug.Fail("IsOpaque(" + _brush.GetType() + ") not handled");
+                Debug.Assert(false, "IsOpaque(" + _brush.GetType() + ") not handled");
             }
 
             if ((_brushList != null) && (_brushList.Count != 0))
@@ -768,7 +772,7 @@ namespace Microsoft.Internal.AlphaFlattener
 
             if (_brush != null)
             {
-                Debug.Fail("IsTransparent not handled " + _brush.GetType());
+                Debug.Assert(false, "IsTransparent not handled " + _brush.GetType());
             }
 
             return false;
@@ -809,7 +813,10 @@ namespace Microsoft.Internal.AlphaFlattener
                     }
                 }
 
-                _opacityMask?.ApplyTransform(trans);
+                if (_opacityMask != null)
+                {
+                    _opacityMask.ApplyTransform(trans);
+                }
             }
         }
 
@@ -1072,7 +1079,7 @@ namespace Microsoft.Internal.AlphaFlattener
             }
             else
             {
-                Debug.Fail("Unexpected brush type");
+                Debug.Assert(false, "Unexpected brush type");
                 depth = 2;
             }
 
@@ -1433,10 +1440,9 @@ namespace Microsoft.Internal.AlphaFlattener
         /// <returns></returns>
         private Brush BuildOpacityBrush()
         {
-            DrawingGroup drawing = new DrawingGroup
-            {
-                Opacity = _opacity
-            };
+            DrawingGroup drawing = new DrawingGroup();
+
+            drawing.Opacity = _opacity;
 
             Rect bounds = GetBrushFillBounds();
 
@@ -1930,7 +1936,7 @@ namespace Microsoft.Internal.AlphaFlattener
 
             if (!brushHandled)
             {
-                Debug.Fail("Unhandled GradientBrush type");
+                Debug.Assert(false, "Unhandled GradientBrush type");
             }
 
             //
@@ -2417,10 +2423,9 @@ namespace Microsoft.Internal.AlphaFlattener
                     GradientStop gsA = gcA[i];
                     GradientStop gsB = gcB[i];
 
-                    GradientStop gs = new GradientStop
-                    {
-                        Offset = gsA.Offset
-                    };
+                    GradientStop gs = new GradientStop();
+
+                    gs.Offset = gsA.Offset;
 
                     if (opacityOnlyB)
                     {
@@ -2596,10 +2601,10 @@ namespace Microsoft.Internal.AlphaFlattener
 
         #region Static Methods
 
-        private static BrushProxy _blackBrush = new BrushProxy(Brushes.Black);
-        private static BrushProxy _whiteBrush = new BrushProxy(Brushes.White);
+        static private BrushProxy _blackBrush = new BrushProxy(Brushes.Black);
+        static private BrushProxy _whiteBrush = new BrushProxy(Brushes.White);
 
-        public static bool IsOpaqueWhite(Brush brush)
+        static public bool IsOpaqueWhite(Brush brush)
         {
             SolidColorBrush sb = brush as SolidColorBrush;
 
@@ -2616,7 +2621,7 @@ namespace Microsoft.Internal.AlphaFlattener
             return false;
         }
 
-        public static bool IsOpaqueBlack(Brush brush)
+        static public bool IsOpaqueBlack(Brush brush)
         {
             SolidColorBrush sb = brush as SolidColorBrush;
 
@@ -2754,7 +2759,11 @@ namespace Microsoft.Internal.AlphaFlattener
             else
             {
                 BrushProxy result = CreateBrushCore(brush, bounds);
-                result?.OpacityOnly = true;
+
+                if (result != null)
+                {
+                    result.OpacityOnly = true;
+                }
 
                 return result;
             }
@@ -2882,7 +2891,7 @@ namespace Microsoft.Internal.AlphaFlattener
                     return false;
                 }
 
-                Debug.Fail("Unhandled GradientBrush type");
+                Debug.Assert(false, "Unhandled GradientBrush type");
                 return false;
             }
 
@@ -2907,7 +2916,7 @@ namespace Microsoft.Internal.AlphaFlattener
                 return false;
             }
 
-            Debug.Fail("Unandled Brush type");
+            Debug.Assert(false, "Unandled Brush type");
 
             return false;
         }
@@ -2964,10 +2973,9 @@ namespace Microsoft.Internal.AlphaFlattener
 
                 if (allSame)
                 {
-                    Brush b = new SolidColorBrush(c)
-                    {
-                        Opacity = opacity
-                    };
+                    Brush b = new SolidColorBrush(c);
+
+                    b.Opacity = opacity;
 
                     return b;
                 }
@@ -3104,10 +3112,8 @@ namespace Microsoft.Internal.AlphaFlattener
                     treeWalkProgress.EnterTreeWalk(vb);
                     try 
                     {
-                        VisualTreeFlattener flattener = new VisualTreeFlattener(metroContext, pageSize, treeWalkProgress)
-                        {
-                            InheritedTransformHint = visualToWorldTransformHint
-                        };
+                        VisualTreeFlattener flattener = new VisualTreeFlattener(metroContext, pageSize, treeWalkProgress);
+                        flattener.InheritedTransformHint = visualToWorldTransformHint;
                         flattener.VisualWalk(vb.Visual);
                     }
                     finally 
@@ -3196,7 +3202,7 @@ namespace Microsoft.Internal.AlphaFlattener
                     return db;
                 }
 
-                Debug.Fail("Unhandled ImageBrush.ImageSource type");
+                Debug.Assert(false, "Unhandled ImageBrush.ImageSource type");
             }
 
             return brush;
@@ -3321,8 +3327,9 @@ namespace Microsoft.Internal.AlphaFlattener
             }
 
             // SolidColorBrush * GradientBrush
-            if (brushB.Brush is GradientBrush gradientBrush)
+            if (brushB.Brush is GradientBrush)
             {
+                GradientBrush gradientBrush = (GradientBrush)brushB.Brush;
                 return brushB.BlendGradient(colorA, reverse, gradientBrush.ColorInterpolationMode);
             }
 
@@ -3338,7 +3345,7 @@ namespace Microsoft.Internal.AlphaFlattener
                 return brushB.BlendDrawingBrush(colorA, reverse);
             }
 
-            Debug.Fail("Brush type not expected");
+            Debug.Assert(false, "Brush type not expected");
 
             return brushB;
         }
@@ -3491,7 +3498,7 @@ namespace Microsoft.Internal.AlphaFlattener
                     }
                     else
                     {
-                        Debug.Fail("Unexpected brush type");
+                        Debug.Assert(false, "Unexpected brush type");
                     }
                 }
 
@@ -3499,7 +3506,7 @@ namespace Microsoft.Internal.AlphaFlattener
             }
         }
 
-        public static BrushProxy EmptyBrush
+        static public BrushProxy EmptyBrush
         {
             get
             {
@@ -3549,7 +3556,7 @@ namespace Microsoft.Internal.AlphaFlattener
         private ArrayList _brushList;
         private bool _opacityOnly;
 
-        private static BrushProxy s_EmptyBrush;
+        static private BrushProxy s_EmptyBrush;
         #endregion
     }
 
@@ -3611,7 +3618,7 @@ namespace Microsoft.Internal.AlphaFlattener
                 }
                 else
                 {
-                    Debug.Fail("Single brush expected");
+                    Debug.Assert(false, "Single brush expected");
                 }
             }
         }
@@ -3809,7 +3816,7 @@ namespace Microsoft.Internal.AlphaFlattener
                         i = -i;
                     }
 
-                    i %= steps * 2;
+                    i = i % (steps * 2);
 
                     if (i >= steps)
                     {
@@ -3824,7 +3831,7 @@ namespace Microsoft.Internal.AlphaFlattener
                         i += steps;
                     }
 
-                    i %= steps;
+                    i = i % steps;
                     break;
             }
 
@@ -3935,7 +3942,7 @@ namespace Microsoft.Internal.AlphaFlattener
             return true;
         }
 
-        private static MyColor InterpolateColor(double offset, double i0, MyColor c0, double i1, MyColor c1)
+        static private MyColor InterpolateColor(double offset, double i0, MyColor c0, double i1, MyColor c1)
         {
             double di = i1 - i0;
 
@@ -4095,7 +4102,7 @@ namespace Microsoft.Internal.AlphaFlattener
 
         #region Private Methods
 
-        private static Geometry CreateRotatedRectangle(double x, double y, double w, double h, Matrix mat)
+        static private Geometry CreateRotatedRectangle(double x, double y, double w, double h, Matrix mat)
         {
             StreamGeometry geometry = new StreamGeometry();
 
@@ -4305,10 +4312,8 @@ namespace Microsoft.Internal.AlphaFlattener
                 }
                 else
                 {
-                    geometry = new EllipseGeometry(center, _rx * t, _ry * t)
-                    {
-                        Transform = new MatrixTransform(_trans)
-                    };
+                    geometry = new EllipseGeometry(center, _rx * t, _ry * t);
+                    geometry.Transform = new MatrixTransform(_trans);
                 }
 
                 return geometry;

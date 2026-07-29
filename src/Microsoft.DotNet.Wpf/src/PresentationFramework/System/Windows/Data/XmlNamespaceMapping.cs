@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Implementation of XmlNamespaceMapping object.
@@ -8,6 +9,7 @@
 //              WCP DataSources.mht
 //
 
+using System;
 using System.ComponentModel;        // ISupportInitialize
 
 namespace System.Windows.Data
@@ -89,7 +91,13 @@ namespace System.Windows.Data
             if (object.ReferenceEquals(mappingB, null))
                 return false;
 
+#pragma warning disable 1634, 1691
+
+            // presharp false positive for null-checking on mappings
+            #pragma warning suppress 56506
             return ((mappingA.Prefix == mappingB.Prefix) && (mappingA.Uri == mappingB.Uri)) ;
+
+#pragma warning restore 1634, 1691
         }
 
         /// <summary>

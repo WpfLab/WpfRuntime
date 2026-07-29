@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description:
 // Exposes the basic operations that can be performed on documents. (Open,
@@ -8,29 +9,33 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security;
+
+using MS.Internal.PresentationUI;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// Exposes the basic operations that can be performed on documents. (Open,
-    /// EnableEdit, Save)
-    /// </summary>
-    /// <remarks>
-    /// Responsibility:
-    /// The class is responsible for delegating the work to the appropriate
-    /// controller(s) in the order needed based on document dependencies.
-    /// 
-    /// Design Comments:
-    /// Packages are dependent on EncryptedPackages who are dependent on FileStreams
-    /// however all these classes are very different in function.
-    /// 
-    /// By design once a controller has reported handling a document it will not be
-    /// given to other controllers.  A controller should not see documents they are
-    /// not in the dependency chain for.
-    /// 
-    /// Example: FileController should never see RightsDocument.
-    /// </remarks>
-    internal sealed class DocumentManager 
+/// <summary>
+/// Exposes the basic operations that can be performed on documents. (Open,
+/// EnableEdit, Save)
+/// </summary>
+/// <remarks>
+/// Responsibility:
+/// The class is responsible for delegating the work to the appropriate
+/// controller(s) in the order needed based on document dependencies.
+/// 
+/// Design Comments:
+/// Packages are dependent on EncryptedPackages who are dependent on FileStreams
+/// however all these classes are very different in function.
+/// 
+/// By design once a controller has reported handling a document it will not be
+/// given to other controllers.  A controller should not see documents they are
+/// not in the dependency chain for.
+/// 
+/// Example: FileController should never see RightsDocument.
+/// </remarks>
+[FriendAccessAllowed]
+internal sealed class DocumentManager 
     : ChainOfResponsiblity<IDocumentController, Document>
 {
     #region Constructors
@@ -92,14 +97,13 @@ namespace MS.Internal.Documents.Application
         // because we have a fileToken we might be able to save
         _canSave = true;
 
-            PackageDocument doc = new PackageDocument(
-                new RightsDocument(
-                new FileDocument(fileToken)))
-            {
-                Uri = source
-            };
+        PackageDocument doc = new PackageDocument(
+            new RightsDocument(
+            new FileDocument(fileToken)));
 
-            return doc;
+        doc.Uri = source;
+
+        return doc;
     }
 
     /// <summary>
@@ -110,14 +114,13 @@ namespace MS.Internal.Documents.Application
     internal static PackageDocument CreateDefaultDocument(
         Uri source, Stream stream)
     {
-            PackageDocument doc = new PackageDocument(
-                new RightsDocument(
-                new FileDocument(stream)))
-            {
-                Uri = source
-            };
+        PackageDocument doc = new PackageDocument(
+            new RightsDocument(
+            new FileDocument(stream)));
 
-            return doc;
+        doc.Uri = source;
+
+        return doc;
     }
 
     /// <summary>
@@ -130,7 +133,10 @@ namespace MS.Internal.Documents.Application
         {
             IDisposable disposable = controller as IDisposable;
 
-            disposable?.Dispose();
+            if (disposable != null)
+            {
+                disposable.Dispose();
+            }
         }
     }
 

@@ -1,5 +1,25 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+//
+// Description:
+//   Implementation of the CompoundFileStorageReference class.
+
+using System;
+using System.Collections;
+using System.Collections.Specialized;
+using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
+using System.Text;
+
+using System.IO.Packaging;
+
+using System.Windows;
+using MS.Internal.WindowsBase;
 
 namespace MS.Internal.IO.Packaging.CompoundFile
 {
@@ -56,7 +76,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
 
             // Note that because of the GetType() checking above, the casting must be valid.
             CompoundFileStorageReference r = (CompoundFileStorageReference)o;
-            return (string.Equals(_fullName, r._fullName, StringComparison.OrdinalIgnoreCase));
+            return (String.CompareOrdinal(_fullName.ToUpperInvariant(), r._fullName.ToUpperInvariant()) == 0);
         }
 
         /// <summary>Returns an integer suitable for including this object in a hash table</summary>
@@ -116,7 +136,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
                 //  it is not necessary since PathSeparatorAsString is a path symbol
                 if (fullName.StartsWith(ContainerUtilities.PathSeparatorAsString, StringComparison.Ordinal))
                     throw new ArgumentException(
-                        SR.DelimiterLeading, nameof(fullName));
+                        SR.DelimiterLeading, "fullName");
 
                 _fullName = fullName;
 
@@ -124,7 +144,7 @@ namespace MS.Internal.IO.Packaging.CompoundFile
                 string[] strings = ContainerUtilities.ConvertBackSlashPathToStringArrayPath(_fullName);
                 if (strings.Length == 0)
                     throw new ArgumentException (
-                        SR.CompoundFilePathNullEmpty, nameof(fullName));
+                        SR.CompoundFilePathNullEmpty, "fullName");
             }
         }
 

@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,7 +12,11 @@
 //
 
 
+using System;
+using System.Diagnostics;
 using MS.Internal;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.TextFormatting
 {
@@ -79,12 +84,18 @@ namespace System.Windows.Media.TextFormatting
             int                 offsetToFirstChar
             )
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(offsetToFirstChar);
+            if (offsetToFirstChar < 0)
+            {
+                throw new ArgumentOutOfRangeException("offsetToFirstChar", SR.ParameterCannotBeNegative);
+            }
 
             // maximum offset is one less than CharacterBuffer.Count, except that zero is always a valid offset
             // even in the case of an empty or null character buffer
             int maxOffset = (charBuffer == null) ? 0 : Math.Max(0, charBuffer.Count - 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(offsetToFirstChar, maxOffset);
+            if (offsetToFirstChar > maxOffset)
+            {
+                throw new ArgumentOutOfRangeException("offsetToFirstChar", SR.Format(SR.ParameterCannotBeGreaterThan, maxOffset));
+            }
 
             _charBuffer = charBuffer;
             _offsetToFirstChar = offsetToFirstChar;

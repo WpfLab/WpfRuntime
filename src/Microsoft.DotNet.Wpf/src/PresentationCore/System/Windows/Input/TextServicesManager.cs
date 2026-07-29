@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
@@ -13,6 +14,9 @@ using System.Windows.Threading;
 
 using MS.Internal;
 using MS.Win32;
+
+using System;
+using System.Security;
 
 namespace System.Windows.Input
 {
@@ -148,7 +152,7 @@ namespace System.Windows.Input
 
                 if (context != null)
                 {
-                    if (TextServicesKeystroke(context, keyArgs, test: true))
+                    if (TextServicesKeystroke(context, keyArgs, true /* test */))
                     {
                         keyArgs.MarkImeProcessed();
                     }
@@ -191,7 +195,7 @@ namespace System.Windows.Input
 
                     if (context != null)
                     {
-                        if (TextServicesKeystroke(context, keyArgs, test: false))
+                        if (TextServicesKeystroke(context, keyArgs, false /* test */))
                         {
                             keyArgs.Handled = true;
                         }

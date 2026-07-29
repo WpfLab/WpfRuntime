@@ -1,7 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-namespace System.Windows.Threading
+using System;
+using System.Threading;
+using System.Windows;
+using System.Diagnostics;
+using System.Collections.Generic;
+using MS.Internal.WindowsBase;
+
+namespace System.Windows.Threading 
 {
     /// <summary>
     ///     A timer that is integrated into the Dispatcher queues, and will
@@ -41,8 +49,11 @@ namespace System.Windows.Threading
         /// </param>
         public DispatcherTimer(DispatcherPriority priority, Dispatcher dispatcher)  // NOTE: should be Priority
         {
-            ArgumentNullException.ThrowIfNull(dispatcher);
-
+            if(dispatcher == null)
+            {
+                throw new ArgumentNullException("dispatcher");
+            }
+            
             Initialize(dispatcher, priority, TimeSpan.FromMilliseconds(0));
         }
 
@@ -65,14 +76,20 @@ namespace System.Windows.Threading
         /// </param>
         public DispatcherTimer(TimeSpan interval, DispatcherPriority priority, EventHandler callback, Dispatcher dispatcher) // NOTE: should be Priority
         {
-            ArgumentNullException.ThrowIfNull(callback);
-            ArgumentNullException.ThrowIfNull(dispatcher);
+            if(callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
+            if(dispatcher == null)
+            {
+                throw new ArgumentNullException("dispatcher");
+            }
 
             if (interval.TotalMilliseconds < 0)
-                throw new ArgumentOutOfRangeException(nameof(interval), SR.TimeSpanPeriodOutOfRange_TooSmall);
+                throw new ArgumentOutOfRangeException("interval", SR.TimeSpanPeriodOutOfRange_TooSmall);
 
             if (interval.TotalMilliseconds > Int32.MaxValue)
-                throw new ArgumentOutOfRangeException(nameof(interval), SR.TimeSpanPeriodOutOfRange_TooLarge);
+                throw new ArgumentOutOfRangeException("interval", SR.TimeSpanPeriodOutOfRange_TooLarge);
 
             Initialize(dispatcher, priority, interval);
             
@@ -132,10 +149,10 @@ namespace System.Windows.Threading
                 bool updateWin32Timer = false;
                 
                 if (value.TotalMilliseconds < 0)
-                    throw new ArgumentOutOfRangeException(nameof(value), SR.TimeSpanPeriodOutOfRange_TooSmall);
+                    throw new ArgumentOutOfRangeException("value", SR.TimeSpanPeriodOutOfRange_TooSmall);
 
                 if (value.TotalMilliseconds > Int32.MaxValue)
-                    throw new ArgumentOutOfRangeException(nameof(value), SR.TimeSpanPeriodOutOfRange_TooLarge);
+                    throw new ArgumentOutOfRangeException("value", SR.TimeSpanPeriodOutOfRange_TooLarge);
 
                 lock(_instanceLock)
                 {
@@ -186,9 +203,12 @@ namespace System.Windows.Threading
                     updateWin32Timer = true;
 
                     // If the operation is in the queue, abort it.
-                    _operation?.Abort();
-                    _operation = null;
-                }
+                    if(_operation != null)
+                    {
+                        _operation.Abort();
+                        _operation = null;
+                    }
+}
             }
 
             if(updateWin32Timer)
@@ -226,7 +246,7 @@ namespace System.Windows.Threading
             Dispatcher.ValidatePriority(priority, "priority");
             if(priority == DispatcherPriority.Inactive)
             {
-                throw new ArgumentException(SR.InvalidPriority, nameof(priority));
+                throw new ArgumentException(SR.InvalidPriority, "priority");
             }
 
             _dispatcher = dispatcher;
@@ -270,7 +290,10 @@ namespace System.Windows.Threading
             lock(_instanceLock)
             {
                 // Simply promote the operation to it's desired priority.
-                _operation?.Priority = _priority;
+                if(_operation != null)
+                {
+                    _operation.Priority = _priority;
+                }
             }
         }
 

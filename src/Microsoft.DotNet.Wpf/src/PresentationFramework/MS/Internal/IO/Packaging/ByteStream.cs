@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -7,10 +8,14 @@
 //
 
 
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;      // for IStream
 using System.Windows;
 using MS.Win32;                                     // for NativeMethods
+using System.Security;                              // for marking critical methods
 
 namespace MS.Internal.IO.Packaging
 {
@@ -36,7 +41,7 @@ namespace MS.Internal.IO.Packaging
             SecuritySuppressedIStream stream = underlyingStream as SecuritySuppressedIStream;
             Debug.Assert(stream != null);
 
-            _securitySuppressedIStream = stream;
+            _securitySuppressedIStream = new SecurityCriticalDataForSet<SecuritySuppressedIStream>(stream);
             
             _access = openAccess;
             // we only work for reading.
@@ -103,7 +108,7 @@ namespace MS.Internal.IO.Packaging
                     // call Stat to get length back.  STATFLAG_NONAME means string buffer
                     // is not populated.
 
-                    _securitySuppressedIStream.Stat(out streamStat, NativeMethods.STATFLAG_NONAME);
+                    _securitySuppressedIStream.Value.Stat(out streamStat, NativeMethods.STATFLAG_NONAME);
 
                     _isLengthInitialized = true;
                     _length = streamStat.cbSize;
@@ -126,7 +131,7 @@ namespace MS.Internal.IO.Packaging
                 
                 long seekPos = 0;
 
-                _securitySuppressedIStream.Seek(0,
+                _securitySuppressedIStream.Value.Seek(0,
                                                       NativeMethods.STREAM_SEEK_CUR,
                                                       out seekPos);
 
@@ -144,7 +149,7 @@ namespace MS.Internal.IO.Packaging
                 
                 long seekPos = 0;
 
-                _securitySuppressedIStream.Seek(value,
+                _securitySuppressedIStream.Value.Seek(value,
                                                       NativeMethods.STREAM_SEEK_SET,
                                                       out seekPos);
 
@@ -199,7 +204,7 @@ namespace MS.Internal.IO.Packaging
                     translatedSeekOrigin = NativeMethods.STREAM_SEEK_SET;
                     if (0 > offset)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(offset),
+                        throw new ArgumentOutOfRangeException("offset",
                                                               SR.SeekNegative);
                     }
                     break;
@@ -217,7 +222,7 @@ namespace MS.Internal.IO.Packaging
                                                                                  typeof(SeekOrigin));
             }
 
-            _securitySuppressedIStream.Seek(offset, translatedSeekOrigin, out seekPos);
+            _securitySuppressedIStream.Value.Seek(offset, translatedSeekOrigin, out seekPos);
 
             return seekPos;
         }
@@ -261,14 +266,14 @@ namespace MS.Internal.IO.Packaging
             // count has to be positive number
             if (0 > count)
             {
-                throw new ArgumentOutOfRangeException(nameof(count),
+                throw new ArgumentOutOfRangeException("count",
                                                       SR.ReadCountNegative);
             }
 
             // offset has to be a positive number
             if (0 > offset)
             {
-                throw new ArgumentOutOfRangeException(nameof(offset),
+                throw new ArgumentOutOfRangeException("offset",
                                                       SR.BufferOffsetNegative);
             }
 
@@ -276,13 +281,13 @@ namespace MS.Internal.IO.Packaging
             // since all values are > 0, there is no chance of overflow
             if (!((buffer.Length > 0) && ((buffer.Length - offset) >= count)))
             {
-                throw new ArgumentException(SR.BufferTooSmall, nameof(buffer));
+                throw new ArgumentException(SR.BufferTooSmall, "buffer");
             }
             
             // offset == 0 is the normal case
             if (0 == offset)
             {
-                _securitySuppressedIStream.Read(buffer, count, out read);
+                _securitySuppressedIStream.Value.Read(buffer, count, out read);
             }
             // offset involved.  Must be positive
             else if (0 < offset)
@@ -291,7 +296,7 @@ namespace MS.Internal.IO.Packaging
                 //  the specified offset.
                 byte[] localBuffer = new byte[count];
 
-                _securitySuppressedIStream.Read(localBuffer, count, out read);
+                _securitySuppressedIStream.Value.Read(localBuffer, count, out read);
 
                 if (read > 0)
                 {
@@ -368,7 +373,7 @@ namespace MS.Internal.IO.Packaging
         }
 
         #endregion Internal Properties
-
+        
 
         //------------------------------------------------------
         //
@@ -380,11 +385,12 @@ namespace MS.Internal.IO.Packaging
         // This class does not control the life cycle of _securitySupressedIStream
         //  thus it should not dispose it when this class gets disposed
         //  the client code of this class should be the one that dispose _securitySupressedIStream
-        private SecuritySuppressedIStream _securitySuppressedIStream;
-        private FileAccess                 _access;
-        private long                       _length = 0;
-        private bool                       _isLengthInitialized = false;
-        private bool                       _disposed = false;
+        SecurityCriticalDataForSet<SecuritySuppressedIStream> _securitySuppressedIStream;
+
+        FileAccess                 _access;
+        long                       _length = 0;
+        bool                       _isLengthInitialized = false;
+        bool                       _disposed = false;
 
         #endregion Private Fields
         

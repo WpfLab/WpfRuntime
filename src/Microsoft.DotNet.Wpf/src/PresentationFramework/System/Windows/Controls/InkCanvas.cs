@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //#define DEBUG_LASSO_FEEDBACK // DO NOT LEAVE ENABLED IN CHECKED IN CODE
 //
@@ -8,13 +9,23 @@
 //      editing ink
 //
 
+using MS.Utility;
+using MS.Internal;
 using MS.Internal.Commands;
 using MS.Internal.Controls;
 using MS.Internal.Ink;
 using MS.Internal.KnownBoxes;
+using System;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.ComponentModel.Design;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Collections.Generic;
+using System.Security;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Data;
@@ -22,11 +33,13 @@ using System.Windows.Documents;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Input.StylusPlugIns;
+using System.Windows.Controls;
 using System.Windows.Markup; // IAddChild, ContentPropertyAttribute
 using System.Windows.Threading;
 using System.Windows.Automation.Peers;
 
 using BuildInfo = MS.Internal.PresentationFramework.BuildInfo;
+using SecurityHelper = MS.Internal.SecurityHelper;
 
 namespace System.Windows.Controls
 {
@@ -103,30 +116,22 @@ namespace System.Windows.Controls
             defaultStyle.Setters.Add(new Setter(Stylus.IsTouchFeedbackEnabledProperty, false));
 
             // Set MinWidth to 350d if Width is set to Auto
-            Trigger trigger = new Trigger
-            {
-                Property = WidthProperty,
-                Value = double.NaN
-            };
-            Setter setter = new Setter
-            {
-                Property = MinWidthProperty,
-                Value = 350d
-            };
+            Trigger trigger = new Trigger();
+            trigger.Property = WidthProperty;
+            trigger.Value = double.NaN;
+            Setter setter = new Setter();
+            setter.Property = MinWidthProperty;
+            setter.Value = 350d;
             trigger.Setters.Add(setter);
             defaultStyle.Triggers.Add(trigger);
 
             // Set MinHeight to 250d if Height is set to Auto
-            trigger = new Trigger
-            {
-                Property = HeightProperty,
-                Value = double.NaN
-            };
-            setter = new Setter
-            {
-                Property = MinHeightProperty,
-                Value = 250d
-            };
+            trigger = new Trigger();
+            trigger.Property = HeightProperty;
+            trigger.Value = double.NaN;
+            setter = new Setter();
+            setter.Property = MinHeightProperty;
+            setter.Value = 250d;
             trigger.Setters.Add(setter);
             defaultStyle.Triggers.Add(trigger);
 
@@ -155,10 +160,8 @@ namespace System.Windows.Controls
             //
             // instance the DynamicRenderer and add it to the StylusPlugIns
             //
-            _dynamicRenderer = new DynamicRenderer
-            {
-                Enabled = false
-            };
+            _dynamicRenderer = new DynamicRenderer();
+            _dynamicRenderer.Enabled = false;
             this.StylusPlugIns.Add(_dynamicRenderer);
 
             //
@@ -376,7 +379,7 @@ namespace System.Windows.Controls
             if (    (_localAdornerDecorator == null)
                 ||  (index != 0))
             {
-                throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+                throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
             }
 
             return _localAdornerDecorator;
@@ -641,13 +644,11 @@ namespace System.Windows.Controls
 
                     // Bind the InkCanvas.ActiveEditingModeProperty
                     // to SelectionAdorner.VisibilityProperty.
-                    Binding activeEditingModeBinding = new Binding
-                    {
-                        Path = new PropertyPath(InkCanvas.ActiveEditingModeProperty),
-                        Mode = BindingMode.OneWay,
-                        Source = this,
-                        Converter = new ActiveEditingMode2VisibilityConverter()
-                    };
+                    Binding activeEditingModeBinding = new Binding();
+                    activeEditingModeBinding.Path = new PropertyPath(InkCanvas.ActiveEditingModeProperty);
+                    activeEditingModeBinding.Mode = BindingMode.OneWay;
+                    activeEditingModeBinding.Source = this;
+                    activeEditingModeBinding.Converter = new ActiveEditingMode2VisibilityConverter();
                     _selectionAdorner.SetBinding(UIElement.VisibilityProperty, activeEditingModeBinding);
                 }
 
@@ -1089,7 +1090,7 @@ namespace System.Windows.Controls
                             // now that we've raised the Gesture event and the developer
                             // has had a chance to change args.Cancel, see what their intent is.
                             //
-                            if (!args.Cancel)
+                            if (args.Cancel == false)
                             {
                                 //bail out and don't add
                                 //the stroke to InkCanvas.Strokes
@@ -1839,7 +1840,7 @@ namespace System.Windows.Controls
                 Double.IsInfinity(point.X)||
                 Double.IsInfinity(point.Y) )
             {
-                    throw new ArgumentException(SR.InvalidPoint, nameof(point));
+                    throw new ArgumentException(SR.InvalidPoint, "point");
             }
 
 
@@ -2029,12 +2030,10 @@ namespace System.Windows.Controls
                     _inkPresenter = new InkPresenter();
 
                     // Bind the InkPresenter.Strokes to InkCanvas.Strokes
-                    Binding strokes = new Binding
-                    {
-                        Path = new PropertyPath(InkCanvas.StrokesProperty),
-                        Mode = BindingMode.OneWay,
-                        Source = this
-                    };
+                    Binding strokes = new Binding();
+                    strokes.Path = new PropertyPath(InkCanvas.StrokesProperty);
+                    strokes.Mode = BindingMode.OneWay;
+                    strokes.Source = this;
                     _inkPresenter.SetBinding(InkPresenter.StrokesProperty, strokes);
                 }
                 return _inkPresenter;
@@ -2198,12 +2197,10 @@ namespace System.Windows.Controls
                     _innerCanvas = new InkCanvasInnerCanvas(this);
 
                     // Bind the inner Canvas' Background to InkCanvas' Background
-                    Binding background = new Binding
-                    {
-                        Path = new PropertyPath(InkCanvas.BackgroundProperty),
-                        Mode = BindingMode.OneWay,
-                        Source = this
-                    };
+                    Binding background = new Binding();
+                    background.Path = new PropertyPath(InkCanvas.BackgroundProperty);
+                    background.Mode = BindingMode.OneWay;
+                    background.Source = this;
                     _innerCanvas.SetBinding(Panel.BackgroundProperty, background);
                 }
 
@@ -2308,7 +2305,7 @@ namespace System.Windows.Controls
             //
             // attempt to clear selection
             //
-            ChangeInkCanvasSelection(new StrokeCollection(), Array.Empty<UIElement>());
+            ChangeInkCanvasSelection(new StrokeCollection(), new UIElement[]{});
 
             return !InkCanvasSelection.HasSelection;
         }
@@ -2324,7 +2321,7 @@ namespace System.Windows.Controls
             if ( InkCanvasSelection.HasSelection )
             {
                 // Reset the current selection
-                CoreChangeSelection(new StrokeCollection(), Array.Empty<UIElement>(), raiseSelectionChangedEvent);
+                CoreChangeSelection(new StrokeCollection(), new UIElement[] { }, raiseSelectionChangedEvent);
             }
         }
 
@@ -2509,7 +2506,7 @@ namespace System.Windows.Controls
         {
             if (selectedElements == null)
             {
-                return Array.Empty<UIElement>();
+                return new UIElement[]{};
             }
 
             List<UIElement> elements = new List<UIElement>();

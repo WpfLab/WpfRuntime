@@ -1,7 +1,10 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Globalization;
+using System.Windows.Automation;
 using MS.Internal.Automation;
 
 namespace System.Windows.Automation
@@ -114,12 +117,12 @@ namespace System.Windows.Automation
         //  Private Methods
         //
         //------------------------------------------------------
-
+ 
         #region Private Methods
 
-        private void Init(AutomationProperty property, object val, PropertyConditionFlags flags )
+        void Init(AutomationProperty property, object val, PropertyConditionFlags flags )
         {
-            ArgumentNullException.ThrowIfNull(property);
+            Misc.ValidateArgumentNonNull(property, "property");
 
             AutomationPropertyInfo info;
             if (!Schema.GetPropertyInfo(property, out info))
@@ -156,21 +159,24 @@ namespace System.Windows.Automation
                 // If this is a control type, use the ID, not the CLR object
                 val = ((ControlType)val).Id;
             }
-            else if (val is Rect rc)
+            else if (val is Rect)
             {
+                Rect rc = (Rect)val;
                 val = new double[] { rc.Left, rc.Top, rc.Width, rc.Height };
             }
-            else if (val is Point pt)
+            else if (val is Point)
             {
+                Point pt = (Point)val;
                 val = new double[] { pt.X, pt.Y };
             }
             else if (val is CultureInfo)
             {
                 val = ((CultureInfo)val).LCID;
             }
-            else if (val is AutomationHeadingLevel automationHeadingLevel)
+            else if (val is AutomationHeadingLevel)
             {
-                switch (automationHeadingLevel)
+                AutomationHeadingLevel automationHeadingLevel = (AutomationHeadingLevel)(val);
+                switch(automationHeadingLevel)
                 {
                     case AutomationHeadingLevel.None:
                         val = HeadingLevel.None;

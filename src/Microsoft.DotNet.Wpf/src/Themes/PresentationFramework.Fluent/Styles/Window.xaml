@@ -47,13 +47,12 @@
                         Property="Visibility"
                         Value="Visible"/>
             </MultiTrigger>
-
             <DataTrigger Binding="{Binding Path=(SystemParameters.HighContrast)}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=(ms:FrameworkAppContextSwitches.DisableFluentThemeWindowBackdrop)}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
-            </DataTrigger>
+            </DataTrigger>  
             <DataTrigger Binding="{Binding Path=(standard:Utility.IsOSWindows11OrNewer)}" Value="False">
                 <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
             </DataTrigger>
@@ -80,7 +79,7 @@
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=(ms:FrameworkAppContextSwitches.DisableFluentThemeWindowBackdrop)}" Value="True">
                             <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
-                        </DataTrigger>
+                        </DataTrigger>  
                         <DataTrigger Binding="{Binding Path=(standard:Utility.IsOSWindows11OrNewer)}" Value="False">
                             <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
                         </DataTrigger>
@@ -99,7 +98,7 @@
             </DataTrigger>
             <DataTrigger Binding="{Binding Path=(ms:FrameworkAppContextSwitches.DisableFluentThemeWindowBackdrop)}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
-            </DataTrigger>
+            </DataTrigger>  
             <DataTrigger Binding="{Binding Path=(standard:Utility.IsOSWindows11OrNewer)}" Value="False">
                 <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
             </DataTrigger>

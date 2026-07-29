@@ -1,10 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
-
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
 using System.Xaml.Schema;
 
@@ -16,7 +17,7 @@ namespace System.Xaml
         private readonly ReadOnlyCollection<string> _xamlNamespaces;
 
         internal XamlDirective(ReadOnlyCollection<string> immutableXamlNamespaces, string name, AllowedMemberLocations allowedLocation, MemberReflector reflector)
-            : base(name, reflector)
+            : base(name, reflector) 
         {
 #if DEBUG
             Debug.Assert(immutableXamlNamespaces is not null);
@@ -39,7 +40,7 @@ namespace System.Xaml
             List<string> nsList = new List<string>(xamlNamespaces);
             foreach (string ns in nsList)
             {
-                if (ns is null)
+                if (ns == null)
                 {
                     throw new ArgumentException(SR.CollectionCannotContainNulls, nameof(xamlNamespaces));
                 }
@@ -62,7 +63,7 @@ namespace System.Xaml
 
         public override int GetHashCode()
         {
-            int result = (Name is null) ? 0 : Name.GetHashCode();
+            int result = (Name == null) ? 0 : Name.GetHashCode();
 
             ReadOnlyCollection<string> ns = _xamlNamespaces;
             for (int i = 0; i < ns.Count; i++)
@@ -77,7 +78,7 @@ namespace System.Xaml
         {
             if (_xamlNamespaces.Count > 0)
             {
-                return $"{{{_xamlNamespaces[0]}}}{Name}";
+                return "{" + _xamlNamespaces[0] + "}" + Name;
             }
             else
             {
@@ -103,7 +104,6 @@ namespace System.Xaml
             {
                 return false;
             }
-
             for (int i = 0; i < ns1.Count; i++)
             {
                 if (ns1[i] != ns2[i])
@@ -111,7 +111,6 @@ namespace System.Xaml
                     return false;
                 }
             }
-
             return true;
         }
 

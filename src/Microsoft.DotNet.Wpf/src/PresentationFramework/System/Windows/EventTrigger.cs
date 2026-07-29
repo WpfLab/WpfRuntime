@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /***************************************************************************\
 *
@@ -9,7 +10,10 @@
 *
 *
 \***************************************************************************/
+using System.Collections;
+using System.Diagnostics;
 using System.Windows.Markup;
+using System.Collections.Specialized;
 using System.ComponentModel;
 
 namespace System.Windows
@@ -159,11 +163,10 @@ namespace System.Windows
             {
                 if( _actions == null )
                 {
-                    _actions = new TriggerActionCollection
-                    {
-                        // Give the collection a back-link, this is used for the inheritance context
-                        Owner = this
-                    };
+                    _actions = new TriggerActionCollection();
+
+                    // Give the collection a back-link, this is used for the inheritance context
+                    _actions.Owner = this;
                 }
                 return _actions;
             }
@@ -252,10 +255,10 @@ namespace System.Windows
         internal static readonly UncommonField<TriggerCollection> TriggerCollectionField = new UncommonField<TriggerCollection>(null);
 
         // This is the listener that we hook up to the SourceId element.
-        private RoutedEventHandler _routedEventHandler = null;
+        RoutedEventHandler _routedEventHandler = null;
 
         // This is the SourceId-ed element.
-        private FrameworkElement _source;
+        FrameworkElement _source;
         
 
 

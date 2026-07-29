@@ -1,11 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
-using System.Windows.Input;
-using System.Windows.Controls; // ScrollChangedEventArgs
-using System.Windows.Controls.Primitives;  // CharacterCasing, TextBoxBase
-using MS.Internal.Commands; // CommandHelpers
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: A component of TextEditor supporting selection and navigation
@@ -13,6 +8,27 @@ using MS.Internal.Commands; // CommandHelpers
 
 namespace System.Windows.Documents
 {
+    using MS.Internal;
+    using System.Globalization;
+    using System.Threading;
+    using System.ComponentModel;
+    using System.Text;
+    using System.Collections; // ArrayList
+    using System.Runtime.InteropServices;
+    using System.Security; // SecurityCritical attribute.
+
+    using System.Windows.Threading;
+    using System.Windows.Input;
+    using System.Windows.Controls; // ScrollChangedEventArgs
+    using System.Windows.Controls.Primitives;  // CharacterCasing, TextBoxBase
+    using System.Windows.Media;
+    using System.Windows.Markup;
+
+    using MS.Utility;
+    using MS.Win32;
+    using MS.Internal.Documents;
+    using MS.Internal.Commands; // CommandHelpers
+
     /// <summary>
     /// Text editing service for controls.
     /// </summary>
@@ -310,7 +326,7 @@ namespace System.Windows.Documents
 
                         ITextPointer lineEndPosition = GetPositionAtLineEnd(originalMovingPosition);
                         ITextPointer nextPosition = lineEndPosition.GetNextInsertionPosition(LogicalDirection.Forward);
-                        This.Selection.SetCaretToPosition(nextPosition ?? lineEndPosition,
+                        This.Selection.SetCaretToPosition(nextPosition != null ? nextPosition : lineEndPosition,
                             originalMovingPosition.LogicalDirection, /*allowStopAtLineEnd:*/true, /*allowStopNearSpace:*/true);
                     }
                     else if (IsPaginated(This.TextView))
@@ -400,7 +416,7 @@ namespace System.Windows.Documents
 
                         ITextPointer lineStartPosition = GetPositionAtLineStart(originalMovingPosition);
                         ITextPointer previousPosition = lineStartPosition.GetNextInsertionPosition(LogicalDirection.Backward);
-                        This.Selection.SetCaretToPosition(previousPosition ?? lineStartPosition,
+                        This.Selection.SetCaretToPosition(previousPosition != null ? previousPosition : lineStartPosition,
                             originalMovingPosition.LogicalDirection, /*allowStopAtLineEnd:*/true, /*allowStopNearSpace:*/true);
                     }
                     else if (IsPaginated(This.TextView))
@@ -1069,7 +1085,7 @@ namespace System.Windows.Documents
                                 ITextPointer nextPosition = lineEndPosition.GetNextInsertionPosition(LogicalDirection.Forward);
 
                                 // Extend selection and bring new position into view if needed (for paginated viewers)
-                                ExtendSelectionAndBringIntoView(nextPosition ?? lineEndPosition, This);
+                                ExtendSelectionAndBringIntoView(nextPosition != null ? nextPosition : lineEndPosition, This);
                             }
                             else if (IsPaginated(This.TextView))
                             {
@@ -1259,7 +1275,7 @@ namespace System.Windows.Documents
                                 ITextPointer previousPosition = lineStartPosition.GetNextInsertionPosition(LogicalDirection.Backward);
 
                                 // Extend selection and bring new position into view if needed (for paginated viewers)
-                                ExtendSelectionAndBringIntoView(previousPosition ?? lineStartPosition, This);
+                                ExtendSelectionAndBringIntoView(previousPosition != null ? previousPosition : lineStartPosition, This);
                             }
                             else if (IsPaginated(This.TextView))
                             {

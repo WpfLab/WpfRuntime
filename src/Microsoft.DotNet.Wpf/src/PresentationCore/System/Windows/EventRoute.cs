@@ -1,9 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using MS.Utility;
+
+using SR=MS.Internal.PresentationCore.SR;
 using MS.Internal;
-using MS.Internal.KnownBoxes;
 
 namespace System.Windows
 {
@@ -37,8 +43,11 @@ namespace System.Windows
         /// </param>
         public EventRoute(RoutedEvent routedEvent)
         {
-            ArgumentNullException.ThrowIfNull(routedEvent);
-
+            if (routedEvent == null)
+            {
+                throw new ArgumentNullException("routedEvent"); 
+            }
+            
             _routedEvent = routedEvent;
 
             // Changed the initialization size to 16 
@@ -74,10 +83,16 @@ namespace System.Windows
         /// </param>
         public void Add(object target, Delegate handler, bool handledEventsToo)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target"); 
+            }
 
-            ArgumentNullException.ThrowIfNull(handler);
-
+            if (handler == null)
+            {
+                throw new ArgumentNullException("handler"); 
+            }
+            
             RouteItem routeItem = new RouteItem(target, new RoutedEventHandlerInfo(handler, handledEventsToo));
 
             _routeItemList.Add(routeItem);
@@ -119,9 +134,15 @@ namespace System.Windows
 
         private void InvokeHandlersImpl(object source, RoutedEventArgs args, bool reRaised)
         {
-            ArgumentNullException.ThrowIfNull(source);
+            if (source == null)
+            {
+                throw new ArgumentNullException("source"); 
+            }
 
-            ArgumentNullException.ThrowIfNull(args);
+            if (args == null)
+            {
+                throw new ArgumentNullException("args"); 
+            }
 
             if (args.Source == null)
             {
@@ -168,26 +189,30 @@ namespace System.Windows
                                 args.Source=newSource;
                         }
                     }
-
+                    
                     // Invoke listeners
 
-                    bool traceRoutedEventIsEnabled = TraceRoutedEvent.IsEnabled;
-                    if (traceRoutedEventIsEnabled)
+                    if( TraceRoutedEvent.IsEnabled )
                     {
                         TraceRoutedEvent.Trace(
                             TraceEventType.Start,
-                            TraceRoutedEvent.InvokeHandlers,
-                            _routeItemList[i].Target, args, BooleanBoxes.Box(args.Handled));
-                    }
+                            TraceRoutedEvent.InvokeHandlers,  
+                            _routeItemList[i].Target,
+                            args,
+                            args.Handled );
 
+                    }
+                    
                     _routeItemList[i].InvokeHandler(args);
 
-                    if (traceRoutedEventIsEnabled)
+                    if( TraceRoutedEvent.IsEnabled )
                     {
                         TraceRoutedEvent.Trace(
                             TraceEventType.Stop,
-                            TraceRoutedEvent.InvokeHandlers,
-                            _routeItemList[i].Target, args, BooleanBoxes.Box(args.Handled));
+                            TraceRoutedEvent.InvokeHandlers,  
+                            _routeItemList[i].Target,
+                            args,
+                            args.Handled );
                     }
 
 
@@ -238,24 +263,27 @@ namespace System.Windows
                         }
                         
                         
-                        bool traceRoutedEventIsEnabled = TraceRoutedEvent.IsEnabled;
-                        if (traceRoutedEventIsEnabled)
+                        if( TraceRoutedEvent.IsEnabled )
                         {
                             TraceRoutedEvent.Trace(
                                 TraceEventType.Start,
-                                TraceRoutedEvent.InvokeHandlers,
-                                _routeItemList[i].Target, args, BooleanBoxes.Box(args.Handled));
+                                TraceRoutedEvent.InvokeHandlers,  
+                                _routeItemList[i].Target,
+                                args,
+                                args.Handled );
                         }
 
                         // Invoke listeners
                         _routeItemList[i].InvokeHandler(args);
 
-                        if (traceRoutedEventIsEnabled)
+                        if( TraceRoutedEvent.IsEnabled )
                         {
                             TraceRoutedEvent.Trace(
                                 TraceEventType.Stop,
-                                TraceRoutedEvent.InvokeHandlers,
-                                _routeItemList[i].Target, args, BooleanBoxes.Box(args.Handled));
+                                TraceRoutedEvent.InvokeHandlers,  
+                                _routeItemList[i].Target,
+                                args,
+                                args.Handled );
                         }
 
                     }
@@ -288,12 +316,10 @@ namespace System.Windows
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Advanced)]
         public void PushBranchNode(object node, object source)
         {
-            BranchNode branchNode = new BranchNode
-            {
-                Node = node,
-                Source = source
-            };
-
+            BranchNode branchNode = new BranchNode();
+            branchNode.Node = node;
+            branchNode.Source = source;
+            
             (_branchNodeStack ??= new Stack<BranchNode>(1)).Push(branchNode);
         }
 
@@ -499,7 +525,10 @@ namespace System.Windows
             
             _routeItemList.Clear();
 
-            _branchNodeStack?.Clear();
+            if (_branchNodeStack != null)
+            {
+                _branchNodeStack.Clear();
+            }
 
             _sourceItemList.Clear();
         }

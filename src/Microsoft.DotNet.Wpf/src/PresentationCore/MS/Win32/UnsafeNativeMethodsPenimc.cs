@@ -1,12 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //#define OLD_ISF
 
+using System;
+using System.Security;
+using System.Threading;
 using System.Runtime.InteropServices;
+using System.Runtime.ConstrainedExecution;
+using System.Windows;
 using System.Windows.Interop;
 using MS.Internal;
 using MS.Internal.PresentationCore;
+using MS.Win32;
 
 namespace MS.Win32.Penimc
 {
@@ -63,7 +70,7 @@ namespace MS.Win32.Penimc
         /// Whether or not the WISP Tablet Manager server object has been locked in the MTA.
         /// </summary>
         [ThreadStatic]
-        private static bool _wispManagerLocked;
+        private static bool _wispManagerLocked = false;
 
         [ThreadStatic]
         private static IPimcManager3 _pimcManagerThreadStatic;
@@ -72,7 +79,7 @@ namespace MS.Win32.Penimc
         /// The cookie for the PenIMC activation context.
         /// </summary>
         [ThreadStatic]
-        private static IntPtr _pimcActCtxCookie;
+        private static IntPtr _pimcActCtxCookie = IntPtr.Zero;
 
         #endregion
 
@@ -131,8 +138,10 @@ namespace MS.Win32.Penimc
         {
             get
             {
-                _pimcManagerThreadStatic ??= CreatePimcManager();
-
+                if (_pimcManagerThreadStatic == null)
+                {
+                    _pimcManagerThreadStatic = CreatePimcManager();
+                }
                 return _pimcManagerThreadStatic;
             }
         }

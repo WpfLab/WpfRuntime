@@ -1,10 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Globalization;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Markup.Localizer;
+using System.Diagnostics;
 using System.Text;
 
 namespace MS.Internal.Globalization
@@ -112,15 +117,13 @@ namespace MS.Internal.Globalization
              && TryGetContent(key, node, out content))
             {
                 // we only create one if it is localizable
-                resource = new BamlLocalizableResource
-                {
-                    Readable = (localizability.Readability == Readability.Readable),
-                    Modifiable = (localizability.Modifiability == Modifiability.Modifiable),
-                    Category = localizability.Category,
-                    // continue to fill in content.
-                    Content = content,
-                    Comments = _resolver.GetStringComment(commentNode, commentTargetName)
-                };
+                resource = new BamlLocalizableResource();
+                resource.Readable = (localizability.Readability == Readability.Readable);
+                resource.Modifiable = (localizability.Modifiability == Modifiability.Modifiable);
+                resource.Category = localizability.Category;
+                // continue to fill in content.
+                resource.Content = content;
+                resource.Comments = _resolver.GetStringComment(commentNode, commentTargetName);
             }
 
             // return the resource
@@ -512,7 +515,7 @@ namespace MS.Internal.Globalization
                     }
                 default:
                     {
-                        Debug.Fail("Can't process localizability attribute on nodes other than Element, Property and LiteralContent.");
+                        Debug.Assert(false, "Can't process localizability attribute on nodes other than Element, Property and LiteralContent.");
                         break;
                     }
             }
@@ -546,11 +549,9 @@ namespace MS.Internal.Globalization
                 inheritable.Modifiability :
                 source.Modifiability;
 
-            LocalizabilityAttribute attribute = new LocalizabilityAttribute(category)
-            {
-                Readability = readability,
-                Modifiability = modifiability
-            };
+            LocalizabilityAttribute attribute = new LocalizabilityAttribute(category);
+            attribute.Readability = readability;
+            attribute.Modifiability = modifiability;
             return attribute;
         }
 
@@ -568,7 +569,7 @@ namespace MS.Internal.Globalization
         {
             if (first == null || second == null)
             {
-                return first ?? second;
+                return (first == null) ? second : first;
             }
 
             // min of two readability enum. The less the more restrictive.
@@ -604,11 +605,9 @@ namespace MS.Internal.Globalization
                     second.Category;
             }
 
-            LocalizabilityAttribute result = new LocalizabilityAttribute(category)
-            {
-                Readability = readability,
-                Modifiability = modifiability
-            };
+            LocalizabilityAttribute result = new LocalizabilityAttribute(category);
+            result.Readability = readability;
+            result.Modifiability = modifiability;
 
             return result;
         }

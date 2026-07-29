@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 /*++
                                                                                                                                                             
@@ -8,9 +9,15 @@
         the Xps Serialization APIs for serializing fonts
         to a Xps package.                                                                            
 --*/
+using System;
+using System.Collections;
 using System.IO;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Collections.Generic;
+using System.IO.Packaging;
 using System.Windows.Xps.Packaging;
+using System.Security;
 using MS.Internal.Utility;
 using MS.Internal.IO.Packaging;
 
@@ -202,7 +209,10 @@ namespace System.Windows.Xps.Serialization
             {
                 foreach (FEMCacheItem item in _fontEmbeddingManagerCache.Values)
                 {
-                    item?.AddRestrictedRelationship();
+                    if (item != null)
+                    {
+                        item.AddRestrictedRelationship();
+                    }
                 }
 
             }      

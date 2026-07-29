@@ -1,10 +1,29 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Security.Cryptography.Xml;
+//
+//
+// Description:
+//  This class represents a PackageDigitalSignature.  It is immutable. 
+//
+//
+//
+//
+//
+
+using System;
+using System.Collections.Generic;
+using System.Windows;           // For Exception strings - SR
+using System.Text;              // for StringBuilder
+using System.Diagnostics;        // for Assert
+using System.Security;          // for SecurityCritical
+using System.Security.Cryptography.Xml;     // for Xml Signature classes
 using System.Security.Cryptography.X509Certificates;
-using MS.Internal.IO.Packaging;
-using System.Collections.ObjectModel;
+using System.Security.Cryptography;
+using MS.Internal.IO.Packaging;            // helper classes Certificate, HashStream
+using System.Collections.ObjectModel;       // for ReadOnlyCollection<>
+using MS.Internal.WindowsBase;
 
 namespace System.IO.Packaging
 {
@@ -202,7 +221,8 @@ namespace System.IO.Packaging
             set
             {
                 ThrowIfInvalidated();
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 _processor.Signature = value;
             }
@@ -282,7 +302,8 @@ namespace System.IO.Packaging
 
             VerifyResult result = VerifyResult.NotSigned;
 
-            ArgumentNullException.ThrowIfNull(signingCertificate);
+            if (signingCertificate == null)
+                throw new ArgumentNullException("signingCertificate");
 
             // Check for part existence
             foreach (Uri partUri in SignedParts)
@@ -295,7 +316,8 @@ namespace System.IO.Packaging
             }
 
             // convert to Ex variant that has more functionality
-            if (signingCertificate is not X509Certificate2 certificate)
+            X509Certificate2 certificate = signingCertificate as X509Certificate2;
+            if (certificate == null)
                 certificate = new X509Certificate2(signingCertificate.Handle);
 
             // verify

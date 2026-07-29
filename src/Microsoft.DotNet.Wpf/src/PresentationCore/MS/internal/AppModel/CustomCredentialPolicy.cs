@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -26,14 +27,18 @@
 // and that does not prompt the user.
 // 
 
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Security;
 
 using MS.Internal.PresentationCore;
 using MS.Win32;
 
 namespace MS.Internal.AppModel
 {
+    [FriendAccessAllowed]
     internal class CustomCredentialPolicy : ICredentialPolicy
     {
         static CustomCredentialPolicy()
@@ -42,7 +47,7 @@ namespace MS.Internal.AppModel
             _initialized = false;
         }
 
-        internal static void EnsureCustomCredentialPolicy()
+        static internal void EnsureCustomCredentialPolicy()
         {
             if (!_initialized)
             {
@@ -54,13 +59,10 @@ namespace MS.Internal.AppModel
                         // We do not want to overwrite the application's setting. 
                         // Check whether it is already set before setting it. 
                         // The default of this property is null. It demands ControlPolicy permission to be set.
-
-#pragma warning disable SYSLIB0009
                         if (AuthenticationManager.CredentialPolicy == null)
                         {
                             AuthenticationManager.CredentialPolicy = new CustomCredentialPolicy();
                         }
-#pragma warning restore SYSLIB0009
                         _initialized = true;
                     }
                 }

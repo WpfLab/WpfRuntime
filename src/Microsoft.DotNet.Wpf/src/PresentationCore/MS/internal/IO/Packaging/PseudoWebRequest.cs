@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -13,10 +14,17 @@
 #define TRACE
 #endif
 
+using System;
 using System.IO;
 using System.IO.Packaging;
 using System.Net;
 using System.Net.Cache;                 // for RequestCachePolicy
+using System.Runtime.Serialization;
+using System.Diagnostics;               // For Assert
+using MS.Utility;                       // for EventTrace
+using MS.Internal.IO.Packaging;         // for PackageCacheEntry
+using MS.Internal.PresentationCore;     // for SR exception strings
+using MS.Internal;
 
 namespace MS.Internal.IO.Packaging
 {
@@ -193,7 +201,8 @@ namespace MS.Internal.IO.Packaging
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                   throw new ArgumentNullException("value");
 
                 _headers = value;
             }
@@ -213,7 +222,8 @@ namespace MS.Internal.IO.Packaging
             }
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                    throw new ArgumentNullException("value");
 
                 _method = value;
             }
@@ -270,11 +280,9 @@ namespace MS.Internal.IO.Packaging
             }
             set
             {
-                if (value != System.Threading.Timeout.Infinite)
-                {
-                    // negative time that is not -1 (infinite) is an error case
-                    ArgumentOutOfRangeException.ThrowIfNegative(value);
-                }
+                // negative time that is not -1 (infinite) is an error case
+                if (value < 0 && value != System.Threading.Timeout.Infinite)
+                    throw new ArgumentOutOfRangeException("value");
 
                 _timeout = value;
             }

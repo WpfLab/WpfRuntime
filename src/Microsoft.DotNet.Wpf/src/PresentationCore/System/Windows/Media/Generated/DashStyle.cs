@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,20 +12,37 @@
 using MS.Internal;
 using MS.Internal.KnownBoxes;
 using MS.Internal.Collections;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.ComponentModel.Design.Serialization;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Windows.Media.Imaging;
 using System.Windows.Markup;
 using System.Windows.Media.Converters;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows.Media
 {
-    public sealed partial class DashStyle : Animatable, DUCE.IResource
+    sealed partial class DashStyle : Animatable, DUCE.IResource
     {
         //------------------------------------------------------
         //
@@ -72,10 +90,6 @@ namespace System.Windows.Media
         }
         private static void DashesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-
-
-
-
             DashStyle target = ((DashStyle) d);
 
 
@@ -92,7 +106,7 @@ namespace System.Windows.Media
         {
             get
             {
-                return (double)GetValue(OffsetProperty);
+                return (double) GetValue(OffsetProperty);
             }
             set
             {
@@ -107,7 +121,7 @@ namespace System.Windows.Media
         {
             get
             {
-                return (DoubleCollection)GetValue(DashesProperty);
+                return (DoubleCollection) GetValue(DashesProperty);
             }
             set
             {
@@ -185,7 +199,7 @@ namespace System.Windows.Media
 
 
                     // Copy this collection's elements (or their handles) to reserved data
-                    for (int i = 0; i < DashesCount; i++)
+                    for(int i = 0; i < DashesCount; i++)
                     {
                         Double resource = vDashes.Internal_GetItem(i);
                         channel.AppendCommandData(
@@ -204,8 +218,6 @@ namespace System.Windows.Media
             {
                 if (_duceResource.CreateOrAddRefOnChannel(this, channel, System.Windows.Media.Composition.DUCE.ResourceType.TYPE_DASHSTYLE))
                 {
-
-
                     AddRefOnChannelAnimations(channel);
 
 
@@ -223,11 +235,8 @@ namespace System.Windows.Media
 
                 if (_duceResource.ReleaseOnChannel(channel))
                 {
-
-
                     ReleaseOnChannelAnimations(channel);
-
-                }
+}
             }
         }
         DUCE.ResourceHandle DUCE.IResource.GetHandle(DUCE.Channel channel)
@@ -332,7 +341,8 @@ namespace System.Windows.Media
             // We check our static default fields which are of type Freezable
             // to make sure that they are not mutable, otherwise we will throw
             // if these get touched by more than one thread in the lifetime
-            // of your app.
+            // of your app
+
             Debug.Assert(s_Dashes == null || s_Dashes.IsFrozen,
                 "Detected context bound default value DashStyle.s_Dashes (See OS Bug #947272).");
 
@@ -358,8 +368,6 @@ namespace System.Windows.Media
                                    /* isIndependentlyAnimated  = */ false,
                                    /* coerceValueCallback */ null);
         }
-
-
 
         #endregion Constructors
     }

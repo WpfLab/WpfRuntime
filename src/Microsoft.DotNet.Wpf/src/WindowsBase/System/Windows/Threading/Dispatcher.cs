@@ -1,16 +1,30 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using MS.Win32;
-using System.Windows.Interop;
-using MS.Utility;
-using System.Runtime.InteropServices;
-using MS.Internal;
-using MS.Internal.Interop;
+using System;                                // Console
+using System.Collections.Generic;            // List<T>
+using MS.Win32;                              // win32 interop
+using System.Windows.Interop;                // ComponentDispatcher & MSG
+using Microsoft.Win32;                       // Registry
+using System.Security;                       // CAS
+using System.Diagnostics;                    // Debug
+using MS.Utility;                            // EventTrace
+using System.Reflection;                     // Assembly
+using System.Runtime.InteropServices;        // SEHException
+using MS.Internal;                           // SecurityCriticalData, TextServicesInterop
+using MS.Internal.Interop;                   // WM
+using MS.Internal.WindowsBase;               // SecurityHelper
 using System.Threading;
-using System.ComponentModel;
+using System.ComponentModel;                 // EditorBrowsableAttribute, BrowsableAttribute
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+
+// Disabling 1634 and 1691:
+// In order to avoid generating warnings about unknown message numbers and
+// unknown pragmas when compiling C# source code with the C# compiler,
+// you need to disable warnings 1634 and 1691. (Presharp Documentation)
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Threading
 {
@@ -98,12 +112,13 @@ namespace System.Windows.Threading
                         // being updated if we encounter a dead weak reference.
                         for(int i = 0; i < _dispatchers.Count; i++)
                         {
-                            if (_dispatchers[i].Target is Dispatcher d)
+                            Dispatcher d = _dispatchers[i].Target as Dispatcher;
+                            if(d != null)
                             {
                                 // Note: we compare the thread objects themselves to protect
                                 // against threads reusing old thread IDs.
                                 Thread dispatcherThread = d.Thread;
-                                if (dispatcherThread == thread)
+                                if(dispatcherThread == thread)
                                 {
                                     dispatcher = d;
 
@@ -240,6 +255,7 @@ namespace System.Windows.Threading
             CriticalInvokeShutdown();
         }
 
+        [FriendAccessAllowed] //used by Application.ShutdownImpl() in PresentationFramework
         internal void CriticalInvokeShutdown()
         {
             Invoke(DispatcherPriority.Send, new ShutdownCallback(ShutdownCallbackInternal)); // NOTE: should be Priority.Max
@@ -296,7 +312,10 @@ namespace System.Windows.Threading
         /// </param>
         public static void PushFrame(DispatcherFrame frame)
         {
-            ArgumentNullException.ThrowIfNull(frame);
+            if(frame == null)
+            {
+                throw new ArgumentNullException("frame");
+            }
 
             Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
             if(dispatcher._hasShutdownFinished) // Dispatcher thread - no lock needed for read
@@ -562,13 +581,16 @@ namespace System.Windows.Threading
         /// </param>
         public void Invoke(Action callback, DispatcherPriority priority, CancellationToken cancellationToken, TimeSpan timeout)
         {
-            ArgumentNullException.ThrowIfNull(callback);
+            if(callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
             ValidatePriority(priority, "priority");
 
             if( timeout.TotalMilliseconds < 0 &&
                 timeout != TimeSpan.FromMilliseconds(-1))
             {
-                throw new ArgumentOutOfRangeException(nameof(timeout));
+                throw new ArgumentOutOfRangeException("timeout");
             }
 
             // Fast-Path: if on the same thread, and invoking at Send priority,
@@ -704,13 +726,16 @@ namespace System.Windows.Threading
         /// </returns>
         public TResult Invoke<TResult>(Func<TResult> callback, DispatcherPriority priority, CancellationToken cancellationToken, TimeSpan timeout)
         {
-            ArgumentNullException.ThrowIfNull(callback);
+            if(callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
             ValidatePriority(priority, "priority");
 
             if( timeout.TotalMilliseconds < 0 &&
                 timeout != TimeSpan.FromMilliseconds(-1))
             {
-                throw new ArgumentOutOfRangeException(nameof(timeout));
+                throw new ArgumentOutOfRangeException("timeout");
             }
 
             // Fast-Path: if on the same thread, and invoking at Send priority,
@@ -817,7 +842,10 @@ namespace System.Windows.Threading
         /// </returns>
         public DispatcherOperation InvokeAsync(Action callback, DispatcherPriority priority, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(callback);
+            if(callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
             ValidatePriority(priority, "priority");
 
             DispatcherOperation operation = new DispatcherOperation(this, priority, callback);
@@ -887,7 +915,10 @@ namespace System.Windows.Threading
         /// </returns>
         public DispatcherOperation<TResult> InvokeAsync<TResult>(Func<TResult> callback, DispatcherPriority priority, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(callback);
+            if(callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
             ValidatePriority(priority, "priority");
 
             DispatcherOperation<TResult> operation = new DispatcherOperation<TResult>(this, priority, callback);
@@ -899,7 +930,10 @@ namespace System.Windows.Threading
         private DispatcherOperation LegacyBeginInvokeImpl(DispatcherPriority priority, Delegate method, object args, int numArgs)
         {
             ValidatePriority(priority, "priority");
-            ArgumentNullException.ThrowIfNull(method);
+            if(method == null)
+            {
+                throw new ArgumentNullException("method");
+            }
 
             DispatcherOperation operation = new DispatcherOperation(this, method, priority, args, numArgs);
             InvokeAsyncImpl(operation, CancellationToken.None);
@@ -941,7 +975,7 @@ namespace System.Windows.Threading
                 }
             }
 
-            if (succeeded)
+            if (succeeded == true)
             {
                 // We have enqueued the operation.  Register a callback
                 // with the cancellation token to abort the operation
@@ -955,7 +989,10 @@ namespace System.Windows.Threading
                     operation.Completed += (s,e) => cancellationRegistration.Dispose();
                 }
 
-                hooks?.RaiseOperationPosted(this, operation);
+                if(hooks != null)
+                {
+                    hooks.RaiseOperationPosted(this, operation);
+                }
 
                 if (EventTrace.IsEnabled(EventTrace.Keyword.KeywordDispatcher | EventTrace.Keyword.KeywordPerf, EventTrace.Level.Info))
                 {
@@ -1246,12 +1283,15 @@ namespace System.Windows.Threading
             ValidatePriority(priority, "priority");
             if(priority == DispatcherPriority.Inactive)
             {
-                throw new ArgumentException(SR.InvalidPriority, nameof(priority));
+                throw new ArgumentException(SR.InvalidPriority, "priority");
             }
 
-            ArgumentNullException.ThrowIfNull(method);
+            if(method == null)
+            {
+                throw new ArgumentNullException("method");
+            }
 
-            if ( timeout.TotalMilliseconds < 0 &&
+            if( timeout.TotalMilliseconds < 0 &&
                 timeout != TimeSpan.FromMilliseconds(-1))
             {
                 if(CheckAccess())
@@ -1266,7 +1306,7 @@ namespace System.Windows.Threading
                 }
                 else
                 {
-                    throw new ArgumentOutOfRangeException(nameof(timeout));
+                    throw new ArgumentOutOfRangeException("timeout");
                 }
             }
 
@@ -1389,7 +1429,10 @@ namespace System.Windows.Threading
                 finally
                 {
                     ctTimeoutRegistration.Dispose();
-                    ctsTimeout?.Dispose();
+                    if (ctsTimeout != null)
+                    {
+                        ctsTimeout.Dispose();
+                    }
                 }
             }
 
@@ -1413,10 +1456,8 @@ namespace System.Windows.Threading
             // Turn off processing.
             _disableProcessingCount++;
 
-            DispatcherProcessingDisabled dpd = new DispatcherProcessingDisabled
-            {
-                _dispatcher = this
-            };
+            DispatcherProcessingDisabled dpd = new DispatcherProcessingDisabled();
+            dpd._dispatcher = this;
             return dpd;
         }
 
@@ -1626,8 +1667,10 @@ namespace System.Windows.Threading
         /// </summary>
         internal object Reserved0
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reserved0; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reserved0 = value; }
         }
 
@@ -1636,8 +1679,10 @@ namespace System.Windows.Threading
         /// </summary>
         internal object Reserved1
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reserved1; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reserved1 = value; }
         }
 
@@ -1646,8 +1691,10 @@ namespace System.Windows.Threading
         /// </summary>
         internal object Reserved2
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reserved2; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reserved2 = value; }
         }
 
@@ -1656,8 +1703,10 @@ namespace System.Windows.Threading
         /// </summary>
         internal object Reserved3
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reserved3; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reserved3 = value; }
         }
 
@@ -1666,8 +1715,10 @@ namespace System.Windows.Threading
         /// </summary>
         internal object Reserved4
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reserved4; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reserved4 = value; }
         }
 
@@ -1678,23 +1729,27 @@ namespace System.Windows.Threading
         {
             // This gets multiplexed with the log for "request processing" failures.
             // See OnRequestProcessingFailure.
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get
             {
                 if (!_hasRequestProcessingFailed)
                     return _reservedPtsCache;
-                if (_reservedPtsCache is not Tuple<Object, List<String>> tuple)
+                Tuple<Object, List<String>> tuple = _reservedPtsCache as Tuple<Object, List<String>>;
+                if (tuple == null)
                     return _reservedPtsCache;
                 else
                     return tuple.Item1;
             }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set
             {
                 if (!_hasRequestProcessingFailed)
                     _reservedPtsCache = value;
                 else
                 {
-                    List<String> list = (_reservedPtsCache is Tuple<Object, List<String>> tuple) ? tuple.Item2 : new List<String>();
+                    Tuple<Object, List<String>> tuple = _reservedPtsCache as Tuple<Object, List<String>>;
+                    List<String> list = (tuple != null) ? tuple.Item2 : new List<String>();
                     _reservedPtsCache = new Tuple<Object, List<String>>(value, list);
                 }
             }
@@ -1702,15 +1757,19 @@ namespace System.Windows.Threading
 
         internal object InputMethod
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reservedInputMethod; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reservedInputMethod = value; }
         }
 
         internal object InputManager
         {
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             get { return _reservedInputManager; }
 
+            [FriendAccessAllowed] // Built into Base, used by Core or Framework.
             set { _reservedInputManager = value; }
         }
 
@@ -1734,10 +1793,11 @@ namespace System.Windows.Threading
 
             // Create the message-only window we use to receive messages
             // that tell us to process the queue.
-            _window = new MessageOnlyHwndWrapper();
+            MessageOnlyHwndWrapper window = new MessageOnlyHwndWrapper();
+            _window = new SecurityCriticalData<MessageOnlyHwndWrapper>( window );
 
             _hook = new HwndWrapperHook(WndProcHook);
-            _window.AddHook(_hook);
+            _window.Value.AddHook(_hook);
 
             // Verify that the accessibility switches are set prior to any major UI code running.
             AccessibilitySwitches.VerifySwitches(this);
@@ -1783,7 +1843,8 @@ namespace System.Windows.Threading
                 // Because we may have to defer the actual shutting-down until
                 // later, we need to remember the execution context we started
                 // the shutdown from.
-                _shutdownExecutionContext = CulturePreservingExecutionContext.Capture();
+                CulturePreservingExecutionContext shutdownExecutionContext = CulturePreservingExecutionContext.Capture();
+                _shutdownExecutionContext = new SecurityCriticalDataClass<CulturePreservingExecutionContext>(shutdownExecutionContext);
 
                 // Tell Win32 to exit the message loop for this thread.
                 //
@@ -1809,11 +1870,11 @@ namespace System.Windows.Threading
         {
             if(!_hasShutdownFinished) // Dispatcher thread - no lock needed for read
             {
-                if(_shutdownExecutionContext is not null)
+                if(_shutdownExecutionContext != null && _shutdownExecutionContext.Value != null)
                 {
                     // Continue using the execution context that was active when the shutdown
                     // was initiated.
-                    CulturePreservingExecutionContext.Run(_shutdownExecutionContext, new ContextCallback(ShutdownImplInSecurityContext), null);
+                    CulturePreservingExecutionContext.Run(_shutdownExecutionContext.Value, new ContextCallback(ShutdownImplInSecurityContext), null);
                 }
                 else
                 {
@@ -1844,8 +1905,8 @@ namespace System.Windows.Threading
             MessageOnlyHwndWrapper window = null;
             lock(_instanceLock)
             {
-                window = _window;
-                _window = null;
+                window = _window.Value;
+                _window = new SecurityCriticalData<MessageOnlyHwndWrapper>(null);
             }
             window.Dispose();
 
@@ -1873,7 +1934,10 @@ namespace System.Windows.Threading
                     }
                 }
 
-                operation?.Abort();
+                if(operation != null)
+                {
+                    operation.Abort();
+                }
             } while(operation != null);
 
             // clear out the fields that could be holding onto large graphs of objects.
@@ -1927,7 +1991,10 @@ namespace System.Windows.Threading
 
             if (notify)
             {
-                hooks?.RaiseOperationPriorityChanged(this, operation);
+                if(hooks != null)
+                {
+                    hooks.RaiseOperationPriorityChanged(this, operation);
+                }
 
                 if (EventTrace.IsEnabled(EventTrace.Keyword.KeywordDispatcher | EventTrace.Keyword.KeywordPerf, EventTrace.Level.Info))
                 {
@@ -1958,7 +2025,10 @@ namespace System.Windows.Threading
 
             if (notify)
             {
-                hooks?.RaiseOperationAborted(this, operation);
+                if(hooks != null)
+                {
+                    hooks.RaiseOperationAborted(this, operation);
+                }
 
                 if (EventTrace.IsEnabled(EventTrace.Keyword.KeywordDispatcher | EventTrace.Keyword.KeywordPerf, EventTrace.Level.Info))
                 {
@@ -2015,11 +2085,17 @@ namespace System.Windows.Threading
                     eventlogged = true;
                 }
 
-                hooks?.RaiseOperationStarted(this, op);
+                if(hooks != null)
+                {
+                    hooks.RaiseOperationStarted(this, op);
+                }
 
                 op.Invoke();
 
-                hooks?.RaiseOperationCompleted(this, op);
+                if(hooks != null)
+                {
+                    hooks.RaiseOperationCompleted(this, op);
+                }
 
                 if (eventlogged)
                 {
@@ -2184,6 +2260,7 @@ namespace System.Windows.Threading
         /// no WPF element has focus.  This is important to ensure that native
         /// controls receive unfiltered input.
         /// </remarks>
+        [FriendAccessAllowed] // Used by TextServicesManager in PresentationCore.
         internal bool IsTSFMessagePumpEnabled
         {
             set
@@ -2260,7 +2337,10 @@ namespace System.Windows.Threading
 
             if (idle)
             {
-                hooks?.RaiseDispatcherInactive(this);
+                if(hooks != null)
+                {
+                    hooks.RaiseDispatcherInactive(this);
+                }
 
                 ComponentDispatcher.RaiseIdle();
             }
@@ -2341,7 +2421,7 @@ namespace System.Windows.Threading
                 {
                     if (_postedProcessingType == PROCESS_BACKGROUND)
                     {
-                        SafeNativeMethods.KillTimer(new HandleRef(this, _window.Handle), TIMERID_BACKGROUND);
+                        SafeNativeMethods.KillTimer(new HandleRef(this, _window.Value.Handle), TIMERID_BACKGROUND);
                     }
                     else if (_postedProcessingType == PROCESS_FOREGROUND)
                     {
@@ -2350,7 +2430,7 @@ namespace System.Windows.Threading
                         IntPtr extraInformation = UnsafeNativeMethods.GetMessageExtraInfo();
 
                         MSG msg = new MSG();
-                        UnsafeNativeMethods.PeekMessage(ref msg, new HandleRef(this, _window.Handle), _msgProcessQueue, _msgProcessQueue, NativeMethods.PM_REMOVE);
+                        UnsafeNativeMethods.PeekMessage(ref msg, new HandleRef(this, _window.Value.Handle), _msgProcessQueue, _msgProcessQueue, NativeMethods.PM_REMOVE);
 
                         UnsafeNativeMethods.SetMessageExtraInfo(extraInformation);
                     }
@@ -2370,7 +2450,14 @@ namespace System.Windows.Threading
             return succeeded;
         }
 
-        private bool IsWindowNull() => _window is null;
+        private bool IsWindowNull()
+        {
+           if(_window.Value == null)
+            {
+                return true;
+            }
+            return false;
+        }
 
         private bool RequestForegroundProcessing()
         {
@@ -2381,14 +2468,14 @@ namespace System.Windows.Threading
                 // processing.
                 if(_postedProcessingType == PROCESS_BACKGROUND)
                 {
-                    SafeNativeMethods.KillTimer(new HandleRef(this, _window.Handle), TIMERID_BACKGROUND);
+                    SafeNativeMethods.KillTimer(new HandleRef(this, _window.Value.Handle), TIMERID_BACKGROUND);
                 }
 
                 _postedProcessingType = PROCESS_FOREGROUND;
 
                 // We have foreground items to process.
                 // By posting a message, Win32 will service us fairly promptly.
-                bool succeeded = UnsafeNativeMethods.TryPostMessage(new HandleRef(this, _window.Handle), _msgProcessQueue, IntPtr.Zero, IntPtr.Zero);
+                bool succeeded = UnsafeNativeMethods.TryPostMessage(new HandleRef(this, _window.Value.Handle), _msgProcessQueue, IntPtr.Zero, IntPtr.Zero);
                 if (!succeeded)
                 {
                     OnRequestProcessingFailure("TryPostMessage");
@@ -2412,7 +2499,7 @@ namespace System.Windows.Threading
                 {
                     _postedProcessingType = PROCESS_BACKGROUND;
 
-                    succeeded = SafeNativeMethods.TrySetTimer(new HandleRef(this, _window.Handle), TIMERID_BACKGROUND, DELTA_BACKGROUND);
+                    succeeded = SafeNativeMethods.TrySetTimer(new HandleRef(this, _window.Value.Handle), TIMERID_BACKGROUND, DELTA_BACKGROUND);
                     if (!succeeded)
                     {
                         OnRequestProcessingFailure("TrySetTimer");
@@ -2456,7 +2543,8 @@ namespace System.Windows.Threading
             }
 
             // add a new entry to the failure log
-            if (_reservedPtsCache is Tuple<Object, List<String>> tuple)
+            Tuple<Object, List<String>> tuple = _reservedPtsCache as Tuple<Object, List<String>>;
+            if (tuple != null)
             {
                 List<String> list = tuple.Item2;
                 list.Add(String.Format(System.Globalization.CultureInfo.InvariantCulture,
@@ -2467,7 +2555,7 @@ namespace System.Windows.Threading
                 if (list.Count > 1000)
                 {
                     // keep the earliest and latest failures
-                    list.RemoveRange(100, list.Count - 200);
+                    list.RemoveRange(100, list.Count-200);
                     // acknowledge the gap
                     list.Insert(100, "... entries removed to conserve memory ...");
                 }
@@ -2543,7 +2631,10 @@ namespace System.Windows.Threading
                         }
 
                         // Now that we are outside of the lock, promote the timer.
-                        timer?.Promote();
+                        if(timer != null)
+                        {
+                            timer.Promote();
+                        }
                     } while(timer != null);
 }
             }
@@ -2650,7 +2741,7 @@ namespace System.Windows.Threading
                 // _window.Value being non-null without taking the instance lock.
 
                 SafeNativeMethods.SetTimer(
-                    new HandleRef(this, _window.Handle),
+                    new HandleRef(this, _window.Value.Handle),
                     TIMERID_TIMERS,
                     delta);
 
@@ -2666,7 +2757,7 @@ namespace System.Windows.Threading
                 // _window.Value being non-null without taking the instance lock.
 
                 SafeNativeMethods.KillTimer(
-                    new HandleRef(this, _window.Handle),
+                    new HandleRef(this, _window.Value.Handle),
                     TIMERID_TIMERS);
 
                 _isWin32TimerSet = false;
@@ -2770,6 +2861,7 @@ namespace System.Windows.Threading
             get { return (UnhandledException != null); }
         }
 
+        [FriendAccessAllowed] //also used by ResourceReferenceExpression in PresentationFramework
         internal object WrappedInvoke(Delegate callback, object args, int numArgs, Delegate catchHandler)
         {
             return _exceptionWrapper.TryCatchWhen(this, callback, args, numArgs, catchHandler);
@@ -2812,15 +2904,26 @@ namespace System.Windows.Threading
         internal bool _exitAllFrames;       // used from DispatcherFrame
         private bool _startingShutdown;
         internal bool _hasShutdownStarted;  // used from DispatcherFrame
-        private CulturePreservingExecutionContext _shutdownExecutionContext;
+        private SecurityCriticalDataClass<CulturePreservingExecutionContext> _shutdownExecutionContext;
 
         internal int _disableProcessingCount; // read by DispatcherSynchronizationContext, decremented by DispatcherProcessingDisabled
+
+        //private static Priority _foregroundBackgroundBorderPriority = new Priority(Priority.Min, Priority.Max, "Dispatcher.ForegroundBackgroundBorder");
+        //private static Priority _backgroundIdleBorderPriority = new Priority(Priority.Min, _foregroundBackgroundBorderPriority, "Dispatcher.BackgroundIdleBorder");
+
+        //private static Priority _foregroundPriority = new Priority(_foregroundBackgroundBorderPriority, Priority.Max, "Dispatcher.Foreground");
+        //private static Priority _backgroundPriority = new Priority(_backgroundIdleBorderPriority, _foregroundBackgroundBorderPriority, "Dispatcher.Background");
+        //private static Priority _idlePriority = new Priority(Priority.Min, _backgroundIdleBorderPriority, "Dispatcher.Idle");
+
+        //private static PriorityRange _foregroundPriorityRange = new PriorityRange(_foregroundBackgroundBorderPriority, false, Priority.Max, true);
+        //private static PriorityRange _backgroundPriorityRange = new PriorityRange(_backgroundIdleBorderPriority, false, _foregroundBackgroundBorderPriority, false);
+        //private static PriorityRange _idlePriorityRange = new PriorityRange(Priority.Min, false, _backgroundIdleBorderPriority, false);
 
         private static PriorityRange _foregroundPriorityRange = new PriorityRange(DispatcherPriority.Loaded, true, DispatcherPriority.Send, true);
         private static PriorityRange _backgroundPriorityRange = new PriorityRange(DispatcherPriority.Background, true, DispatcherPriority.Input, true);
         private static PriorityRange _idlePriorityRange = new PriorityRange(DispatcherPriority.SystemIdle, true, DispatcherPriority.ContextIdle, true);
 
-        private MessageOnlyHwndWrapper _window;
+        private SecurityCriticalData<MessageOnlyHwndWrapper> _window;
 
         private HwndWrapperHook _hook;
 

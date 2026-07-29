@@ -1,10 +1,72 @@
 <Project>
+  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
-  <Import Project="$(WpfArcadeSdkTargets)"
-          Condition="Exists('$(WpfArcadeSdkProps)') And Exists('$(WpfArcadeSdkTargets)')"/>
+  <Import Project="$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets"
+          Condition="'$(InternalMarkupCompilation)' == 'true' And '$(_PresentationBuildTasksAssembly)' == '' And Exists('$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets')" />
 
-  <Import Sdk="Microsoft.DotNet.Arcade.Wpf.Sdk"
-          Project="Sdk.targets"
-          Condition="!Exists('$(WpfArcadeSdkProps)') Or !Exists('$(WpfArcadeSdkTargets)')"/>
-  <Import Project="eng/Testing.targets"/>
+  <Target Name="UpdateInternalMarkupGeneratedFiles"
+          AfterTargets="MarkupCompilePass1"
+          Condition="'$(InternalMarkupCompilation)' == 'true'">
+    <ItemGroup Condition="'$(NoInternalTypeHelper)' == 'true'">
+      <Compile Remove="@(Compile)"
+               Condition="'%(Compile.FileName)%(Compile.Extension)' == 'GeneratedInternalTypeHelper.g.cs'" />
+      <_GeneratedCodeFiles Remove="@(_GeneratedCodeFiles)"
+                           Condition="'%(_GeneratedCodeFiles.FileName)%(_GeneratedCodeFiles.Extension)' == 'GeneratedInternalTypeHelper.g.cs'" />
+    </ItemGroup>
+    <ItemGroup>
+      <_GeneratedCodeFiles Include="@(EmbeddedResource->'%(StronglyTypedFileName)')"
+                           Condition="'%(EmbeddedResource.StronglyTypedFileName)' != ''" />
+    </ItemGroup>
+  </Target>
+
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'DirectWriteForwarder' And '$(AssemblyOriginatorKeyFile)' != ''">
+    <Link>
+      <AdditionalOptions>%(AdditionalOptions) /keyfile:&quot;$(AssemblyOriginatorKeyFile)&quot; /delaysign</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!--
+    Resolve WinForms references (Accessibility, System.Windows.Forms, etc.)
+    via a target instead of a top-level ItemGroup so that the inline task in
+    Directory.Build.props has already set $(WpfWindowsDesktopReferencePath).
+  -->
+  <Target Name="AddWindowsDesktopReferences"
+          BeforeTargets="ResolveAssemblyReferences"
+          Condition="'$(WpfWindowsDesktopReferencePath)' != '' and '@(MicrosoftPrivateWinFormsReference)' != ''">
+    <ItemGroup>
+      <Reference Include="@(MicrosoftPrivateWinFormsReference->'$(WpfWindowsDesktopReferencePath)%(Identity).dll')"
+                 Private="false">
+        <Private>false</Private>
+      </Reference>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="RemoveInboxWpfReference"
+          AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)"
+                     Condition="('%(ReferencePath.Filename)' == 'WindowsBase' or '%(ReferencePath.Filename)' == 'PresentationCore' or '%(ReferencePath.Filename)' == 'PresentationFramework' or '%(ReferencePath.Filename)' == 'ReachFramework' or '%(ReferencePath.Filename)' == 'System.Printing') and ('%(ReferencePath.FrameworkReferenceName)' == 'Microsoft.NETCore.App' or '%(ReferencePath.FrameworkReferenceName)' == 'Microsoft.WindowsDesktop.App')" />
+      <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
+                                      Condition="('%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing') and ('%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.NETCore.App' or '%(ReferencePathWithRefAssemblies.FrameworkReferenceName)' == 'Microsoft.WindowsDesktop.App')" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="RemovePrebuiltPresentationBuildTasksReference"
+          BeforeTargets="AssignProjectConfiguration;ResolveProjectReferences"
+          Condition="'$(UsePrebuiltPresentationBuildTasks)' == 'true'">
+    <ItemGroup>
+      <ProjectReference Remove="$(WpfSourceDir)PresentationBuildTasks\PresentationBuildTasks.csproj" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="VerifyPerlCommand" Condition="'@(WpfPerlScript)' != ''">
+    <Exec Command="where.exe $(PerlCommand)" IgnoreExitCode="true" ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="PerlCommandExitCode" />
+    </Exec>
+    <PropertyGroup>
+      <WpfPerlCommandAvailable Condition="'$(PerlCommandExitCode)' == '0'">true</WpfPerlCommandAvailable>
+      <WpfPerlCommandAvailable Condition="'$(PerlCommandExitCode)' != '0'">false</WpfPerlCommandAvailable>
+    </PropertyGroup>
+    <Warning Condition="'$(WpfPerlCommandAvailable)' != 'true'" Text="Perl is not available; skipping WPF build script(s): @(WpfPerlScript). Install Perl or set PerlCommand to a valid Perl executable to regenerate these files. The build does not execute .pl files directly because Windows may open them through file association." />
+  </Target>
 </Project>

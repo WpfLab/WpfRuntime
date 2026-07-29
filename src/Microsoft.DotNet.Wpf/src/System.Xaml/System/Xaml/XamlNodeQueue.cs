@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace System.Xaml
 {
@@ -12,12 +14,12 @@ namespace System.Xaml
 
     public class XamlNodeQueue
     {
-        private Queue<XamlNode> _nodeQueue;
-        private XamlNode _endOfStreamNode;
+        Queue<XamlNode> _nodeQueue;
+        XamlNode _endOfStreamNode;
 
-        private ReaderDelegate _reader;
-        private XamlWriter _writer;
-        private bool _hasLineInfo;
+        ReaderDelegate _reader;
+        XamlWriter _writer;
+        bool _hasLineInfo;
 
         public XamlNodeQueue(XamlSchemaContext schemaContext)
         {
@@ -26,16 +28,15 @@ namespace System.Xaml
             _endOfStreamNode = new XamlNode(XamlNode.InternalNodeType.EndOfStream);
             _writer = new WriterDelegate(Add, AddLineInfo, schemaContext);
         }
-
+        
         public XamlReader Reader
         {
             get
             {
-                if (_reader is null)
+                if (_reader == null)
                 {
                     _reader = new ReaderDelegate(_writer.SchemaContext, Next, _hasLineInfo);
                 }
-
                 return _reader;
             }
         }
@@ -65,7 +66,6 @@ namespace System.Xaml
                 _nodeQueue.Enqueue(node);
                 return;
             }
-
             Debug.Assert(XamlNode.IsEof_Helper(nodeType, data));
             _nodeQueue.Enqueue(_endOfStreamNode);
         }
@@ -79,13 +79,12 @@ namespace System.Xaml
             {
                 _hasLineInfo = true;
             }
-
-            if (_reader is not null && !_reader.HasLineInfo)
+            if (_reader != null && !_reader.HasLineInfo)
             {
                 _reader.HasLineInfo = true;
             }
         }
-
+        
         private XamlNode Next()
         {
             XamlNode node;
@@ -97,7 +96,6 @@ namespace System.Xaml
             {
                 node = _endOfStreamNode;
             }
-
             return node;
         }
     }

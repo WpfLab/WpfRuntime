@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable disable
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xaml
 {
@@ -11,7 +10,7 @@ namespace System.Xaml
     // Advancing to the next node with Read() is left to be defined
     // in the deriving class.
     //
-    internal abstract class ReaderBaseDelegate: XamlReader, IXamlLineInfo
+    abstract internal class ReaderBaseDelegate: XamlReader, IXamlLineInfo
     {
         protected XamlSchemaContext _schemaContext;
         protected XamlNode _currentNode;
@@ -20,7 +19,7 @@ namespace System.Xaml
 
         protected ReaderBaseDelegate(XamlSchemaContext schemaContext)
         {
-            _schemaContext = schemaContext ?? throw new ArgumentNullException(nameof(schemaContext));
+            _schemaContext = schemaContext ?? throw new ArgumentNullException(nameof(schemaContext));            
         }
 
         public override XamlNodeType NodeType
@@ -74,9 +73,9 @@ namespace System.Xaml
 
         public int LineNumber
         {
-            get
+            get 
             {
-                if (_currentLineInfo is not null)
+                if (_currentLineInfo != null)
                 {
                     return _currentLineInfo.LineNumber;
                 }
@@ -91,7 +90,7 @@ namespace System.Xaml
         {
             get
             {
-                if (_currentLineInfo is not null)
+                if (_currentLineInfo != null)
                 {
                     return _currentLineInfo.LinePosition;
                 }

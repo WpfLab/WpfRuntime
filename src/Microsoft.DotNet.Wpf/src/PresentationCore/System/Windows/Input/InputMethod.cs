@@ -1,17 +1,32 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+// 
 // Description: Manage Input Methods (EA-IME, TextServicesFramework).
+//
+//
 
 using System.Runtime.InteropServices;
+using System.Collections;
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Windows.Threading;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Security;
+using MS.Utility;
 using MS.Win32;
 using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
 
-namespace System.Windows.Input
+using System;
+
+using SR=MS.Internal.PresentationCore.SR;
+
+namespace System.Windows.Input 
 {
     //------------------------------------------------------
     //
@@ -221,7 +236,10 @@ namespace System.Windows.Input
         /// </summary>
         public static void SetIsInputMethodEnabled(DependencyObject target, bool value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(IsInputMethodEnabledProperty, value);
         }
@@ -232,7 +250,10 @@ namespace System.Windows.Input
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static bool GetIsInputMethodEnabled(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (bool)(target.GetValue(IsInputMethodEnabledProperty));
         }
@@ -254,7 +275,10 @@ namespace System.Windows.Input
         /// </summary>
         public static void SetIsInputMethodSuspended(DependencyObject target, bool value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(IsInputMethodSuspendedProperty, value);
         }
@@ -265,7 +289,10 @@ namespace System.Windows.Input
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static bool GetIsInputMethodSuspended(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (bool)(target.GetValue(IsInputMethodSuspendedProperty));
         }
@@ -288,7 +315,10 @@ namespace System.Windows.Input
         /// </summary>
         public static void SetPreferredImeState(DependencyObject target, InputMethodState value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(PreferredImeStateProperty, value);
         }
@@ -299,7 +329,10 @@ namespace System.Windows.Input
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static InputMethodState GetPreferredImeState(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (InputMethodState)(target.GetValue(PreferredImeStateProperty));
         }
@@ -321,7 +354,10 @@ namespace System.Windows.Input
         /// </summary>
         public static void SetPreferredImeConversionMode(DependencyObject target, ImeConversionModeValues value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(PreferredImeConversionModeProperty, value);
         }
@@ -332,7 +368,10 @@ namespace System.Windows.Input
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static ImeConversionModeValues GetPreferredImeConversionMode(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (ImeConversionModeValues)(target.GetValue(PreferredImeConversionModeProperty));
         }
@@ -354,7 +393,10 @@ namespace System.Windows.Input
         /// </summary>
         public static void SetPreferredImeSentenceMode(DependencyObject target, ImeSentenceModeValues value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(PreferredImeSentenceModeProperty, value);
         }
@@ -365,7 +407,10 @@ namespace System.Windows.Input
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static ImeSentenceModeValues GetPreferredImeSentenceMode(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (ImeSentenceModeValues)(target.GetValue(PreferredImeSentenceModeProperty));
         }
@@ -386,7 +431,10 @@ namespace System.Windows.Input
         /// </summary>
         public static void SetInputScope(DependencyObject target, InputScope value)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             target.SetValue(InputScopeProperty, value);
         }
@@ -397,7 +445,10 @@ namespace System.Windows.Input
         [AttachedPropertyBrowsableForType(typeof(DependencyObject))]
         public static InputScope GetInputScope(DependencyObject target)
         {
-            ArgumentNullException.ThrowIfNull(target);
+            if (target == null)
+            {
+                throw new ArgumentNullException("target");
+            }
 
             return (InputScope)(target.GetValue(InputScopeProperty));
         }
@@ -711,7 +762,7 @@ namespace System.Windows.Input
                     }
                     else
                     {
-                        Debug.Fail("Unknown Speech Mode");
+                        Debug.Assert(false, "Unknown Speech Mode");
                     }
                 }
             }
@@ -1166,7 +1217,10 @@ namespace System.Windows.Input
         {
             add
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 // Advise compartment event sink to Win32 Cicero only when someone
                 // has StateChanged event handler.
@@ -1179,7 +1233,10 @@ namespace System.Windows.Input
             }
             remove
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
 
                 _StateChanged -= value;
                 if ((_StateChanged == null) && TextServicesLoader.ServicesInstalled)
@@ -1332,7 +1389,7 @@ namespace System.Windows.Input
                     //
                     if (DefaultImc != IntPtr.Zero)
                     {
-                        UnsafeNativeMethods.ImmAssociateContext(new HandleRef(this, hwnd), new HandleRef(this, _defaultImc));
+                        UnsafeNativeMethods.ImmAssociateContext(new HandleRef(this, hwnd), new HandleRef(this, _defaultImc.Value));
                     }
                 }
                 else 
@@ -1468,7 +1525,8 @@ namespace System.Windows.Input
                     compartment = TextServicesCompartmentContext.Current.GetThreadCompartment(iminfo.Guid);
                 else if (iminfo.Scope == CompartmentScope.Global)
                     compartment = TextServicesCompartmentContext.Current.GetGlobalCompartment(iminfo.Guid);
-                compartment?.UnadviseNotifySink();
+                if (compartment != null)
+                   compartment.UnadviseNotifySink();
             }
         }
 
@@ -1572,11 +1630,9 @@ namespace System.Windows.Input
                 bCanShown  = true;
                 if (fShow)
                 {
-                    NativeMethods.REGISTERWORD regWord = new NativeMethods.REGISTERWORD
-                    {
-                        lpReading = null,
-                        lpWord = strRegister
-                    };
+                    NativeMethods.REGISTERWORD regWord = new NativeMethods.REGISTERWORD();
+                    regWord.lpReading = null;
+                    regWord.lpWord = strRegister;
                     UnsafeNativeMethods.ImmConfigureIME(new HandleRef(this, hkl), new HandleRef(this, HwndFromInputElement(element)), NativeMethods.IME_CONFIG_REGISTERWORD, ref regWord);
                 }
             }
@@ -1660,7 +1716,7 @@ namespace System.Windows.Input
                 while(enumIpp.Next(1, tf_profiles,  out fetched) == NativeMethods.S_OK)
                 {
                     // Check if this profile is active.
-                    if (tf_profiles[0].fActive)
+                    if (tf_profiles[0].fActive == true)
                     {
                         // Check if this profile is keyboard category..
                         if (tf_profiles[0].catid.Equals(UnsafeNativeMethods.GUID_TFCAT_TIP_KEYBOARD))
@@ -1734,7 +1790,7 @@ namespace System.Windows.Input
         {
             get
             {
-                if (_defaultImc == 0)
+                if (_defaultImc==null)
                 {
                     // 
                     //  Get the default HIMC from default IME window.
@@ -1743,12 +1799,11 @@ namespace System.Windows.Input
                     IntPtr himc = UnsafeNativeMethods.ImmGetContext(new HandleRef(this, hwnd));
 
                     // Store the default imc to _defaultImc.
-                    _defaultImc = himc;
+                    _defaultImc = new SecurityCriticalDataClass<IntPtr>(himc);
 
                     UnsafeNativeMethods.ImmReleaseContext(new HandleRef(this, hwnd), new HandleRef(this, himc));
                 }
-
-                return _defaultImc;
+                return _defaultImc.Value;
             }
         }
 
@@ -1782,7 +1837,7 @@ namespace System.Windows.Input
 
         // the default imc. The default imc is per thread and we cache it in ThreadStatic.
         [ThreadStatic]
-        private static IntPtr _defaultImc;
+        private static SecurityCriticalDataClass<IntPtr> _defaultImc;
 
         #endregion Private Fields
     }

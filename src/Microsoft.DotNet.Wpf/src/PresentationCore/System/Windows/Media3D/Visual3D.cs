@@ -1,11 +1,21 @@
-ï»¿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+
 
 using MS.Internal;
 using MS.Internal.Media;
 using MS.Internal.Media3D;
+using MS.Internal.PresentationCore;
+using System;
+using System.Diagnostics;
+using System.Security;
 using System.Windows.Diagnostics;
 using System.Windows.Media.Composition;
+using System.Windows.Media;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Media3D
 {
@@ -142,8 +152,8 @@ namespace System.Windows.Media.Media3D
         public static readonly DependencyProperty TransformProperty =
             DependencyProperty.Register(
                     "Transform",
-                    propertyType: typeof(Transform3D),
-                    ownerType: typeof(Visual3D),
+                    /* propertyType = */ typeof(Transform3D),
+                    /* ownerType = */ typeof(Visual3D),
                     new PropertyMetadata(Transform3D.Identity, TransformPropertyChanged),
                     (ValidateValueCallback) delegate { return MediaContext.CurrentMediaContext.WriteAccessEnabled; });
 
@@ -165,11 +175,11 @@ namespace System.Windows.Media.Media3D
 
             // Stop over-invalidating _bboxSubgraph
             //
-            // We currently maintain a cache of both a ModelVisual3Dâ€™s content
+            // We currently maintain a cache of both a ModelVisual3D’s content
             // and subgraph bounds.  A better solution that would be both a 2D
             // and 3D win would be to stop invalidating _bboxSubgraph when a
-            // visualâ€™s transform changes.
-            owner.RenderChanged(sender: owner, EventArgs.Empty);
+            // visual’s transform changes.
+            owner.RenderChanged(/* sender = */ owner, EventArgs.Empty);
         }
 
         /// <summary>
@@ -257,7 +267,7 @@ namespace System.Windows.Media.Media3D
             // UIElement.PropagateResumeLayout(child);
 
             // Fire notifications
-            OnVisualChildrenChanged(child, visualRemoved: null);
+            OnVisualChildrenChanged(child, /* visualRemoved = */ null);
 
             child.FireOnVisualParentChanged(null);
             VisualDiagnostics.OnVisualChildChanged(this, child, true);
@@ -289,7 +299,7 @@ namespace System.Windows.Media.Media3D
 
             VisualDiagnostics.OnVisualChildChanged(this, child, false);
 
-            child.SetParent(newParent: (Visual3D) null);  // CS0121: Call is ambigious without casting null to Visual3D.
+            child.SetParent(/* newParent = */ (Visual3D) null);  // CS0121: Call is ambigious without casting null to Visual3D.
 
             // remove the inheritance context
             RemoveSelfAsInheritanceContext(child, null);
@@ -327,7 +337,7 @@ namespace System.Windows.Media.Media3D
             // Fire notifications
             child.FireOnVisualParentChanged(this);
 
-            OnVisualChildrenChanged(visualAdded: null , child);
+            OnVisualChildrenChanged(/* visualAdded = */ null , child);
         }
 
         /// <summary>
@@ -367,7 +377,7 @@ namespace System.Windows.Media.Media3D
 
                     SetFlagsOnAllChannels(true, VisualProxyFlags.IsTransformDirty);
 
-                    RenderChanged(sender: this, EventArgs.Empty);
+                    RenderChanged(/* sender = */ this, EventArgs.Empty);
 
                     _internalIsVisible = value;
                 }
@@ -392,14 +402,14 @@ namespace System.Windows.Media.Media3D
 
             SetFlags(false, VisualFlags.Are3DContentBoundsValid);
 
-            RenderChanged(sender: this, EventArgs.Empty);
+            RenderChanged(/* sender = */ this, EventArgs.Empty);
         }
 
         private void Visual3DModelPropertyChanged(object o, EventArgs e)
         {
             // forward on to the main property changed method.  Since this method is
             // only called on subproperty chanes, oldValue is meaningless.
-            Visual3DModelPropertyChanged(null, isSubpropertyChange: true);
+            Visual3DModelPropertyChanged(null, /* isSubpropertyChange = */ true);
         }
 
         /// <summary>
@@ -427,7 +437,7 @@ namespace System.Windows.Media.Media3D
                     }
 
                     // notify of the property change
-                    Visual3DModelPropertyChanged(_visual3DModel, isSubpropertyChange: false);
+                    Visual3DModelPropertyChanged(_visual3DModel, /* isSubpropertyChange = */ false);
                     _visual3DModel = value;
 
                     // set the new one
@@ -631,9 +641,15 @@ namespace System.Windows.Media.Media3D
             HitTestResultCallback resultCallback,
             HitTestParameters3D hitTestParameters)
         {
-            ArgumentNullException.ThrowIfNull(resultCallback);
+            if (resultCallback == null)
+            {
+                throw new ArgumentNullException("resultCallback");
+            }
 
-            ArgumentNullException.ThrowIfNull(hitTestParameters);
+            if (hitTestParameters == null)
+            {
+                throw new ArgumentNullException("hitTestParameters");
+            }
 
             VerifyAPIReadWrite();
 
@@ -793,6 +809,7 @@ namespace System.Windows.Media.Media3D
         /// Visual2DContentBounds returns the 2D bounding box for the content of this 3D object.  The 2D bounding box
         /// is the projection of the 3D content bounding box up to the nearest 2D visual that contains the Visual3D.
         /// </summary>
+        [FriendAccessAllowed]
         internal Rect Visual2DContentBounds
         {
             get
@@ -986,7 +1003,7 @@ namespace System.Windows.Media.Media3D
         /// </summary>
         protected virtual Visual3D GetVisual3DChild(int index)
         {
-           throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+           throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
         }
 
         /// <summary>
@@ -1230,7 +1247,7 @@ namespace System.Windows.Media.Media3D
                             DUCE.Visual3DNode.InsertChildAt(
                                 handle,
                                 ((DUCE.IResource)child).GetHandle(channel),
-                                iPosition: (uint)i,
+                                /* iPosition = */ (uint)i,
                                 ctx.Channel);
 
                             child.SetFlags(channel, true, VisualProxyFlags.IsConnectedToParent);
@@ -1310,7 +1327,10 @@ namespace System.Windows.Media.Media3D
         /// </summary>
         public bool IsDescendantOf(DependencyObject ancestor)
         {
-            ArgumentNullException.ThrowIfNull(ancestor);
+            if (ancestor == null)
+            {
+                throw new ArgumentNullException("ancestor");
+            }
 
             VisualTreeUtils.EnsureVisual(ancestor);
 
@@ -1400,7 +1420,10 @@ namespace System.Windows.Media.Media3D
         {
             VerifyAPIReadOnly(otherVisual);
 
-            ArgumentNullException.ThrowIfNull(otherVisual);
+            if (otherVisual == null)
+            {
+                throw new System.ArgumentNullException("otherVisual");
+            }
 
             // Since we can't rely on code running in the CLR, we need to first make sure
             // that the FindCommonAncestor flag is not set. It is enought to ensure this
@@ -1610,7 +1633,10 @@ namespace System.Windows.Media.Media3D
         /// <exception cref="InvalidOperationException">If the Visual3Ds are not connected.</exception>
         public GeneralTransform3D TransformToAncestor(Visual3D ancestor)
         {
-            ArgumentNullException.ThrowIfNull(ancestor);
+            if (ancestor == null)
+            {
+                throw new ArgumentNullException("ancestor");
+            }
 
             VerifyAPIReadOnly(ancestor);
 
@@ -1631,7 +1657,10 @@ namespace System.Windows.Media.Media3D
         /// <exception cref="InvalidOperationException">If the Visual3Ds are not connected.</exception>
         public GeneralTransform3D TransformToDescendant(Visual3D descendant)
         {
-            ArgumentNullException.ThrowIfNull(descendant);
+            if (descendant == null)
+            {
+                throw new ArgumentNullException("descendant");
+            }
 
             VerifyAPIReadOnly(descendant);
 
@@ -1675,7 +1704,10 @@ namespace System.Windows.Media.Media3D
                 if (gAsVisual3D != null)
                 {
                     Transform3D transform = gAsVisual3D.Transform;
-                    transform?.Append(ref m);
+                    if (transform != null)
+                    {
+                        transform.Append(ref m);
+                    }
 
                     lastVisual3D = gAsVisual3D;
                     g = VisualTreeHelper.GetParent(gAsVisual3D);
@@ -1750,7 +1782,10 @@ namespace System.Windows.Media.Media3D
                 }
             }
 
-            finalTransform?.Freeze();
+            if (finalTransform != null)
+            {
+                finalTransform.Freeze();
+            }
 
             return finalTransform;
         }
@@ -1772,7 +1807,10 @@ namespace System.Windows.Media.Media3D
         /// <exception cref="InvalidOperationException">If the Visual3D and Visual are not connected.</exception>
         public GeneralTransform3DTo2D TransformToAncestor(Visual ancestor)
         {
-            ArgumentNullException.ThrowIfNull(ancestor);
+            if (ancestor == null)
+            {
+                throw new ArgumentNullException("ancestor");
+            }
 
             VerifyAPIReadOnly(ancestor);
 
@@ -1850,8 +1888,10 @@ namespace System.Windows.Media.Media3D
         // This flag is set during a descendents walk, for property invalidation.
         internal bool IsVisualChildrenIterationInProgress
         {
+            [FriendAccessAllowed]
             get { return CheckFlagsAnd(VisualFlags.IsVisualChildrenIterationInProgress); }
 
+            [FriendAccessAllowed]
             set { SetFlags(value, VisualFlags.IsVisualChildrenIterationInProgress); }
         }
 
@@ -2125,7 +2165,7 @@ namespace System.Windows.Media.Media3D
         // store the parent in an UncommonField.  Both fields must be considered when determining
         // the parent of this node.
         private static readonly UncommonField<Visual> _2DParent =
-            new UncommonField<Visual>(defaultValue: null);
+            new UncommonField<Visual>(/* defaultValue = */ null);
 
         // Sentinel value we use to differentiate between a null inheritance context stored in the
         // _inheritanceContext uncommon field and "empty", meaning use the parent as context.
@@ -2134,7 +2174,7 @@ namespace System.Windows.Media.Media3D
         // Normally the inheritance context is the same as the parent, except when we are parent to
         // a Viewport3D visual, in which case we use this uncommon field to store are alternate context.
         private static readonly UncommonField<DependencyObject> _inheritanceContext =
-            new UncommonField<DependencyObject>(defaultValue: UseParentAsContext);
+            new UncommonField<DependencyObject>(/* defaultValue = */ UseParentAsContext);
 
         private static readonly UncommonField<Visual.AncestorChangedEventHandler> AncestorChangedEventField
             = new UncommonField<Visual.AncestorChangedEventHandler>();

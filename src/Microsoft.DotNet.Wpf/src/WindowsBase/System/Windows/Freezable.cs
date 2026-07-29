@@ -1,12 +1,26 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
 // Description: The Freezable class (plus the FreezableHelper class)
 //              encompasses all of the Freezable pattern.
 
+
+using System;
+using System.Diagnostics;
 using System.Collections;
-using MS.Internal;
-using MS.Utility;
+using System.Collections.Specialized;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+
+using MS.Internal;                          // for Invariant
+using MS.Internal.WindowsBase;              // FriendAccessAllowed
+using MS.Utility;                           // FrugalList
 
 namespace System.Windows
 {
@@ -67,7 +81,7 @@ namespace System.Windows
             Freezable clone = CreateInstance();
 
             clone.CloneCore(this);
-            Debug_VerifyCloneCommon(original: this, clone: clone, isDeepClone: true);
+            Debug_VerifyCloneCommon(/* original = */ this, /* clone = */ clone, /* isDeepClone = */ true);
 
             return clone;
         }
@@ -92,7 +106,7 @@ namespace System.Windows
             // Freezable implementers who override CloneCurrentValueCore must ensure that
             // on creation the copy is not frozen.  Debug_VerifyCloneCommon checks for this,
             // among other things.
-            Debug_VerifyCloneCommon(original: this, clone: clone, isDeepClone: true);
+            Debug_VerifyCloneCommon(/* original = */ this, /* clone = */ clone, /* isDeepClone = */ true);
 
             return clone;
         }
@@ -114,7 +128,7 @@ namespace System.Windows
             Freezable clone = CreateInstance();
 
             clone.GetAsFrozenCore(this);
-            Debug_VerifyCloneCommon(original: this, clone: clone, isDeepClone: false);
+            Debug_VerifyCloneCommon(/* original = */ this, /* clone = */ clone, /* isDeepClone = */ false);
 
             clone.Freeze();
 
@@ -139,7 +153,7 @@ namespace System.Windows
             Freezable clone = CreateInstance();
 
             clone.GetCurrentValueAsFrozenCore(this);
-            Debug_VerifyCloneCommon(original: this, clone: clone, isDeepClone: false);
+            Debug_VerifyCloneCommon(/* original = */ this, /* clone = */ clone, /* isDeepClone = */ false);
 
             clone.Freeze();
 
@@ -153,7 +167,7 @@ namespace System.Windows
         {
             get
             {
-                return IsFrozenInternal || FreezeCore(isChecking: true);
+                return IsFrozenInternal || FreezeCore(/* isChecking = */ true);
             }
         }
 
@@ -172,7 +186,7 @@ namespace System.Windows
                 throw new InvalidOperationException(SR.Freezable_CantFreeze);
             }
 
-            Freeze(isChecking: false);
+            Freeze(/* isChecking = */ false);
         }
 
         #endregion
@@ -290,9 +304,9 @@ namespace System.Windows
             // a subproperty invalidation on each context and fires any changed
             // handlers that have been registered.
 
-            // When a default value is being promoted to a local value the sub property
-            // change that caused the promotion is being merged with the value promotion
-            // change. This fix was implemented for DevDivBug#108642. It is required to
+            // When a default value is being promoted to a local value the sub property 
+            // change that caused the promotion is being merged with the value promotion 
+            // change. This fix was implemented for DevDivBug#108642. It is required to 
             // detect this case specially and propagate subproperty invalidations for it.
 
             if (!e.IsASubPropertyChange || e.OperationType == OperationType.ChangeMutableDefaultValue)
@@ -347,8 +361,8 @@ namespace System.Windows
         protected virtual void CloneCore(Freezable sourceFreezable)
         {
             CloneCoreCommon(sourceFreezable,
-                useCurrentValue: false,
-                cloneFrozenValues: true);
+                /* useCurrentValue = */ false,
+                /* cloneFrozenValues = */ true);
         }
 
         /// <summary>
@@ -369,8 +383,8 @@ namespace System.Windows
         protected virtual void CloneCurrentValueCore(Freezable sourceFreezable)
         {
             CloneCoreCommon(sourceFreezable,
-                useCurrentValue: true,
-                cloneFrozenValues: true);
+                /* useCurrentValue = */ true,
+                /* cloneFrozenValues = */ true);
         }
 
         /// <summary>
@@ -395,8 +409,8 @@ namespace System.Windows
         protected virtual void GetAsFrozenCore(Freezable sourceFreezable)
         {
             CloneCoreCommon(sourceFreezable,
-                useCurrentValue: false,
-                cloneFrozenValues: false);
+                /* useCurrentValue = */ false,
+                /* cloneFrozenValues = */ false);
         }
 
         /// <summary>
@@ -420,8 +434,8 @@ namespace System.Windows
         protected virtual void GetCurrentValueAsFrozenCore(Freezable sourceFreezable)
         {
             CloneCoreCommon(sourceFreezable,
-                useCurrentValue: true,
-                cloneFrozenValues: false);
+                /* useCurrentValue = */ true,
+                /* cloneFrozenValues = */ false);
         }
 
         /// <summary>
@@ -454,7 +468,7 @@ namespace System.Windows
                 {
                     EntryIndex entryIndex = new EntryIndex(i);
                     PropertyMetadata metadata = dp.GetMetadata(DependencyObjectType);
-
+                    
                     FreezeValueCallback freezeValueCallback = metadata.FreezeValueCallback;
                     if(!freezeValueCallback(this, dp, entryIndex, metadata, isChecking))
                     {
@@ -474,16 +488,21 @@ namespace System.Windows
         // FireChanged occurs.
         //
         [ThreadStatic]
-        private static EventStorage _eventStorage;
+        static private EventStorage _eventStorage = null;
 
         /// <summary>
         /// Property to access and intialize the thread static _eventStorage variable.
         /// </summary>
-        private static EventStorage CachedEventStorage
+        private EventStorage CachedEventStorage
         {
             get
             {
-                _eventStorage ??= new EventStorage(INITIAL_EVENTSTORAGE_SIZE);
+                // make sure _eventStorage is not null - with ThreadStatic it appears that the second
+                // thread to access the variable will set this to null
+                if (_eventStorage == null)
+                {
+                    _eventStorage = new EventStorage(INITIAL_EVENTSTORAGE_SIZE);
+                }
 
                 return _eventStorage;
             }
@@ -542,7 +561,10 @@ namespace System.Windows
                 DependencyObject context = SingletonContext;
 
                 contextAsFreezable = context as Freezable;
-                contextAsFreezable?.GetChangeHandlersAndInvalidateSubProperties(ref calledHandlers);
+                if (contextAsFreezable != null)
+                {
+                    contextAsFreezable.GetChangeHandlersAndInvalidateSubProperties(ref calledHandlers);
+                }
 
                 if (SingletonContextProperty != null)
                 {
@@ -568,7 +590,10 @@ namespace System.Windows
                         if (currentDO != lastDO)
                         {
                             contextAsFreezable = currentDO as Freezable;
-                            contextAsFreezable?.GetChangeHandlersAndInvalidateSubProperties(ref calledHandlers);
+                            if (contextAsFreezable != null)
+                            {
+                                contextAsFreezable.GetChangeHandlersAndInvalidateSubProperties(ref calledHandlers);
+                            }
 
                             lastDO = currentDO;
                         }
@@ -701,7 +726,7 @@ namespace System.Windows
         /// Freezable can't be frozen.</exception>
         //  Future Note: Consider removing if we move Freezables to DO's, and moving it into
         // SetFreezableContextCore directly.  What situations would remain for subclasses to need to call it?
-        protected internal static bool Freeze(Freezable freezable, bool isChecking)
+        static protected internal bool Freeze(Freezable freezable, bool isChecking)
         {
             if (freezable != null)
             {
@@ -914,7 +939,7 @@ namespace System.Windows
                         // If the local value has modifiers, ReadLocalValue will return the base
                         // value, which is what we want.  A modified default will return UnsetValue,
                         // which will be ignored at the call to SetValue
-                        sourceValue = sourceFreezable.ReadLocalValueEntry(entryIndex, dp, allowDeferredReferences: true);
+                        sourceValue = sourceFreezable.ReadLocalValueEntry(entryIndex, dp, true /* allowDeferredReferences */);
 
                         // For the useCurrentValue = false case we ignore any UnsetValues.
                         if (sourceValue == DependencyProperty.UnsetValue)
@@ -939,8 +964,9 @@ namespace System.Windows
                     Debug.Assert(!(sourceValue is Expression && sourceValue is Freezable),
                         "This logic assumes Expressions and Freezables don't co-derive");
 
+                    Freezable valueAsFreezable = sourceValue as Freezable;
 
-                    if (sourceValue is Freezable valueAsFreezable)
+                    if (valueAsFreezable != null)
                     {
                         Freezable valueAsFreezableClone;
 
@@ -966,7 +992,7 @@ namespace System.Windows
                             }
 
                             sourceValue = valueAsFreezableClone;
-                            Debug_VerifyCloneCommon(valueAsFreezable, valueAsFreezableClone, isDeepClone: true);
+                            Debug_VerifyCloneCommon(valueAsFreezable, valueAsFreezableClone, /*isDeepClone=*/ true);
                         }
                         else // skip cloning frozen values
                         {
@@ -988,7 +1014,7 @@ namespace System.Windows
                                 }
 
                                 sourceValue = valueAsFreezableClone;
-                                Debug_VerifyCloneCommon(valueAsFreezable, valueAsFreezableClone, isDeepClone: false);
+                                Debug_VerifyCloneCommon(valueAsFreezable, valueAsFreezableClone, /*isDeepClone=*/ false);
                             }
                         }
                     }
@@ -1085,7 +1111,7 @@ namespace System.Windows
             // Make sure we actually removed something - if not throw an exception
             if (failed)
             {
-                throw new ArgumentException(SR.Freezable_NotAContext, nameof(context));
+                throw new ArgumentException(SR.Freezable_NotAContext, "context");
             }
         }
 
@@ -1248,11 +1274,10 @@ namespace System.Windows
 
             if (HasHandlers)
             {
-                HandlerContextStorage hps = new HandlerContextStorage
-                {
-                    _handlerStorage = _contextStorage,
-                    _contextStorage = context
-                };
+                HandlerContextStorage hps = new HandlerContextStorage();
+
+                hps._handlerStorage = _contextStorage;
+                hps._contextStorage = context;
 
                 _contextStorage = hps;
             }
@@ -1446,7 +1471,7 @@ namespace System.Windows
 
             if (failed)
             {
-                throw new ArgumentException(SR.Freezable_UnregisteredHandler, nameof(handler));
+                throw new ArgumentException(SR.Freezable_UnregisteredHandler, "handler");
             }
         }
 
@@ -1531,11 +1556,10 @@ namespace System.Windows
 
             if (HasContextInformation)
             {
-                HandlerContextStorage hps = new HandlerContextStorage
-                {
-                    _contextStorage = _contextStorage,
-                    _handlerStorage = handler
-                };
+                HandlerContextStorage hps = new HandlerContextStorage();
+
+                hps._contextStorage = _contextStorage;
+                hps._handlerStorage = handler;
 
                 _contextStorage = hps;
             }
@@ -1720,6 +1744,7 @@ namespace System.Windows
         /// </summary>
         internal override DependencyObject InheritanceContext
         {
+            [FriendAccessAllowed] // Built into Base, also used by Core and Framework.
             get
             {
                 if (!Freezable_HasMultipleInheritanceContexts)
@@ -1760,6 +1785,7 @@ namespace System.Windows
         /// </summary>
         internal override bool HasMultipleInheritanceContexts
         {
+            [FriendAccessAllowed] // Built into Base, also used by Core and Framework.
             get { return Freezable_HasMultipleInheritanceContexts; }
         }
 
@@ -1887,10 +1913,10 @@ namespace System.Windows
                 }
             }
 
-            private EventHandler[] _events;         // list of events
-            private int _logSize;                   // the logical size of the list
-            private int _physSize;                  // the allocated buffer size
-            private bool _inUse;
+            EventHandler[] _events;         // list of events
+            int _logSize;                   // the logical size of the list
+            int _physSize;                  // the allocated buffer size
+            bool _inUse;
         }
 
         //------------------------------------------------------
@@ -1899,7 +1925,7 @@ namespace System.Windows
         //
         //------------------------------------------------------
 
-        #region Debug
+        #region Debug 
 
         // Verify a clone.  If isDeepClone is true we make sure that the cloned object is not the same as the
         // original. GetAsFrozen and GetCurrentValueAsFrozen do not do deep clones since they will immediately
@@ -1920,7 +1946,8 @@ namespace System.Windows
 
                 Invariant.Assert(!cloneAsFreezable.HasHandlers, "CloneCore should not have handlers attached on construction.");
 
-                if (original is IList originalAsIList)
+                IList originalAsIList = original as IList;
+                if (originalAsIList != null)
                 {
                     // we've already checked that original and clone are the same type
                     IList cloneAsIList = clone as IList;
@@ -1930,7 +1957,8 @@ namespace System.Windows
                     for (int i = 0; i < cloneAsIList.Count; i++)
                     {
                         Freezable originalItemAsFreezable = originalAsIList[i] as Freezable;
-                        if (isDeepClone && cloneAsIList[i] is Freezable cloneItemAsFreezable)
+                        Freezable cloneItemAsFreezable = cloneAsIList[i] as Freezable;
+                        if (isDeepClone && cloneItemAsFreezable != null && cloneItemAsFreezable != null)
                         {
                             Invariant.Assert(originalItemAsFreezable != cloneItemAsFreezable, "CloneCore didn't clone the elements in the list correctly.");
                         }
@@ -1969,7 +1997,7 @@ namespace System.Windows
 
                     for(int i = 0, count = ContextList.Count; i < count; i++)
                     {
-                        FreezableContextPair context = ContextList[i];
+                        FreezableContextPair context = ContextList[i];                        
                         DependencyObject owner = (DependencyObject) context.Owner.Target;
 
                         if (!context.Owner.IsAlive)
@@ -2013,11 +2041,11 @@ namespace System.Windows
                 //
                 //            (Pen.Brush)
                 //
-                //              .-----.
+                //              .-----. 
                 //             '       v
                 //           Pen      Brush
                 //             ^       .
-                //              '-----'
+                //              '-----' 
                 //
                 //              Context
                 //
@@ -2044,7 +2072,7 @@ namespace System.Windows
                     && owner.GetType().FullName != "System.Windows.Media.VisualBrush";    // ResourceDictionaries may not be owned by a VisualBrush.
 
 // Find a way to bring back context verification.
-//
+//                
 //                Invariant.Assert(effectiveValue == this || mayBeResourceDictionary,
 //                    String.Format(System.Globalization.CultureInfo.InvariantCulture,
 //                        "Detected context leak: Property '{0}.{1}' on {2}.  Expected '{3}', Actual '{4}'",
@@ -2057,7 +2085,7 @@ namespace System.Windows
         }
 
         #endregion Debug
-
+ 
         //------------------------------------------------------
         //
         //  Private fields

@@ -1,14 +1,27 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+using System.Windows;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 using MS.Internal;
 using MS.Internal.Automation;
 using MS.Internal.Hashing.PresentationFramework;    // HashHelper
+using MS.Win32;
 
 namespace System.Windows.Automation.Peers
 {
@@ -20,7 +33,7 @@ namespace System.Windows.Automation.Peers
         {}
 
         ///
-        public override object GetPattern(PatternInterface patternInterface)
+        override public object GetPattern(PatternInterface patternInterface)
         {
             if(patternInterface == PatternInterface.Scroll)
             {
@@ -93,7 +106,10 @@ namespace System.Windows.Automation.Peers
                             if (_recentlyRealizedPeers != null && _recentlyRealizedPeers.Count > 0 && this.AncestorsInvalid)
                             {
                                 GroupItemAutomationPeer groupItemPeer = peer as GroupItemAutomationPeer;
-                                groupItemPeer?.InvalidateGroupItemPeersContainingRecentlyRealizedPeers(_recentlyRealizedPeers);
+                                if (groupItemPeer != null)
+                                {
+                                    groupItemPeer.InvalidateGroupItemPeersContainingRecentlyRealizedPeers(_recentlyRealizedPeers);
+                                }
                             }
                         }
                         else
@@ -175,7 +191,10 @@ namespace System.Windows.Automation.Peers
                     if (peer != null)
                     {
                         AutomationPeer wrapperPeer = peer.GetWrapperPeer();
-                        wrapperPeer?.EventsSource = peer;
+                        if (wrapperPeer != null)
+                        {
+                            wrapperPeer.EventsSource = peer;
+                        }
                     }
 
                     // protection from indistinguishable items - for example, 2 strings with same value
@@ -206,7 +225,10 @@ namespace System.Windows.Automation.Peers
                 }
             }
 
-            peer?.ReuseForItem(item);
+            if (peer != null)
+            {
+                peer.ReuseForItem(item);
+            }
 
             return peer;
         }
@@ -320,7 +342,7 @@ namespace System.Windows.Automation.Peers
         /// </summary>
         /// <param name="id">Property Id to be verified</param>
         /// <returns>true if property id is supported else false</returns>
-        internal virtual bool IsPropertySupportedByControlForFindItem(int id)
+        virtual internal bool IsPropertySupportedByControlForFindItem(int id)
         {
             return ItemsControlAutomationPeer.IsPropertySupportedByControlForFindItemInternal(id);
         }
@@ -344,7 +366,7 @@ namespace System.Windows.Automation.Peers
         /// <param name="itemPeer"></param>
         /// <param name="propertyId"></param>
         /// <returns>returns the property value</returns>
-        internal virtual object GetSupportedPropertyValue(ItemAutomationPeer itemPeer, int propertyId)
+        virtual internal object GetSupportedPropertyValue(ItemAutomationPeer itemPeer, int propertyId)
         {
             return ItemsControlAutomationPeer.GetSupportedPropertyValueInternal(itemPeer, propertyId);
         }
@@ -360,7 +382,7 @@ namespace System.Windows.Automation.Peers
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        protected internal virtual ItemAutomationPeer FindOrCreateItemAutomationPeer(object item)
+        protected virtual internal ItemAutomationPeer FindOrCreateItemAutomationPeer(object item)
         {
             ItemAutomationPeer peer = ItemPeers[item];
             if (peer == null)
@@ -370,14 +392,20 @@ namespace System.Windows.Automation.Peers
             {
                 peer = CreateItemAutomationPeer(item);
 
-                peer?.TrySetParentInfo(this);
+                if (peer != null)
+                {
+                    peer.TrySetParentInfo(this);
+                }
             }
 
             if (peer != null)
             {
                 //perform hookup so the events sourced from wrapper peer are fired as if from the data item
                 AutomationPeer wrapperPeer = peer.GetWrapperPeer();
-                wrapperPeer?.EventsSource = peer;
+                if (wrapperPeer != null)
+                {
+                    wrapperPeer.EventsSource = peer;
+                }
             }
 
             return peer;
@@ -390,7 +418,7 @@ namespace System.Windows.Automation.Peers
         }
 
         ///
-        protected abstract ItemAutomationPeer CreateItemAutomationPeer(object item);
+        abstract protected ItemAutomationPeer CreateItemAutomationPeer(object item);
 
         internal RecyclableWrapper GetRecyclableWrapperPeer(object item)
         {
@@ -408,9 +436,9 @@ namespace System.Windows.Automation.Peers
             return _recyclableWrapperCache;
         }
 
-        // UpdateChildrenIntenal is called with ItemsInvalidateLimit to ensure we don’t fire unnecessary structure change events when items are just scrolled in/out of view in case of
+        // UpdateChildrenIntenal is called with ItemsInvalidateLimit to ensure we don�t fire unnecessary structure change events when items are just scrolled in/out of view in case of
         // virtualized controls.
-        internal override IDisposable UpdateChildren()
+        override internal IDisposable UpdateChildren()
         {
             UpdateChildrenInternal(AutomationInteropProvider.ItemsInvalidateLimit);
             WeakRefElementProxyStorage.PurgeWeakRefCollection();
@@ -533,12 +561,15 @@ namespace System.Windows.Automation.Peers
 
             void IDisposable.Dispose()
             {
-                _peer?.ClearReusablePeers(_oldChildren);
-                _peer = null;
+                if (_peer != null)
+                {
+                    _peer.ClearReusablePeers(_oldChildren);
+                    _peer = null;
+                }
             }
 
-            private ItemsControlAutomationPeer _peer;
-            private ItemPeersStorage<ItemAutomationPeer> _oldChildren;
+            ItemsControlAutomationPeer _peer;
+            ItemPeersStorage<ItemAutomationPeer> _oldChildren;
         }
     }
 
@@ -553,9 +584,11 @@ namespace System.Windows.Automation.Peers
             _usesHashCode = false;
             _count = 0;
 
-            _hashtable?.Clear();
+            if (_hashtable != null)
+                _hashtable.Clear();
 
-            _list?.Clear();
+            if (_list != null)
+                _list.Clear();
         }
 
         public T this[object item]
@@ -604,16 +637,16 @@ namespace System.Windows.Automation.Peers
                     if (_hashtable == null)
                         _hashtable = new WeakDictionary<object,T>();
 
-                    if(!_hashtable.ContainsKey(item) && value is not null)
+                    if(!_hashtable.ContainsKey(item) && value is T)
                         _hashtable[item] = value;
                     else
-                        Debug.Fail("it must not add already present Item");
+                        Debug.Assert(false,"it must not add already present Item");
                 }
                 else
                 {
                     if (_list == null)
                         _list = new List<KeyValuePair<object, T>>();
-                    if(value is not null)
+                    if(value is T)
                         _list.Add(new KeyValuePair<object, T>(item, value));
                 }
 
@@ -765,9 +798,9 @@ namespace System.Windows.Automation.Peers
             }
         }
 
-        private ItemsControl _itemsControl;
-        private DependencyObject _container;
-        private object _item;
+        ItemsControl _itemsControl;
+        DependencyObject _container;
+        object _item;
     }
 }
 

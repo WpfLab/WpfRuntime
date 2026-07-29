@@ -1,11 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Media;
-using System.Windows.Shapes;
-using System.Windows.Controls;
-using MS.Internal.Documents;
-using CultureInfo = System.Globalization.CultureInfo;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -15,6 +10,18 @@ using CultureInfo = System.Globalization.CultureInfo;
 
 namespace System.Windows.Documents
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Windows.Media;
+    using System.Windows.Shapes;
+    using System.Windows.Controls;
+    using System.Windows.Markup;
+    using System.Windows.Documents.DocumentStructures;
+    using MS.Internal.Documents;
+    using CultureInfo = System.Globalization.CultureInfo;
+
     //=====================================================================
     /// <summary>
     /// FixedPageStructure represents deduced information (such as boundary,
@@ -290,7 +297,7 @@ namespace System.Windows.Documents
                     currentFixedNode[1] == FixedFlowMap.FixedOrderEndVisual)
                 {
                     prevTextPoint.X = 2;
-                    prevTextPoint.Y += 10;
+                    prevTextPoint.Y = prevTextPoint.Y + 10;
                     String outputString = currentFixedNode[1] == FixedFlowMap.FixedOrderStartVisual ?
                                 "FixedOrderStartVisual" : "FixedOrderEndVisual";
                     ft = new FormattedText(outputString,
@@ -328,7 +335,7 @@ namespace System.Windows.Documents
                     else
                     {
                         prevTextPoint.X = 2;
-                        prevTextPoint.Y += 10;
+                        prevTextPoint.Y = prevTextPoint.Y + 10;
                     }
                     ft = new FormattedText(currentFixedNode.ToString(),
                                             EnglishCulture,
@@ -362,7 +369,7 @@ namespace System.Windows.Documents
                     else
                     {
                         prevTextPoint.X = 2;
-                        prevTextPoint.Y += 10;
+                        prevTextPoint.Y = prevTextPoint.Y + 10;
                     }
                     ft = new FormattedText(currentFixedNode.ToString(),
                                             EnglishCulture,
@@ -406,7 +413,7 @@ namespace System.Windows.Documents
                     else
                     {
                         prevTextPoint.X = 2;
-                        prevTextPoint.Y += 10;
+                        prevTextPoint.Y = prevTextPoint.Y + 10;
 
                     }
 
@@ -425,7 +432,7 @@ namespace System.Windows.Documents
                 // For anything else, there is this code to draw ...
                 //
                 prevTextPoint.X = 2;
-                prevTextPoint.Y += 10;
+                prevTextPoint.Y = prevTextPoint.Y + 10;
                 ft = new FormattedText(currentFixedNode.ToString(),
                                         EnglishCulture,
                                         FlowDirection.LeftToRight,

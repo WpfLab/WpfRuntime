@@ -1,8 +1,11 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Client-side wrapper for Value Pattern
 
+using System;
+using System.Windows.Automation.Provider;
 using MS.Internal.Automation;
 
 namespace System.Windows.Automation
@@ -69,8 +72,8 @@ namespace System.Windows.Automation
         /// <param name="value">Value to set the UI to, the provider is responsible for converting from a string into the appropriate data type</param>
         public void SetValue( string value )
         {
-            ArgumentNullException.ThrowIfNull(value);
-
+            Misc.ValidateArgumentNonNull(value, "value");
+            
             // Test the Enabled state prior to the more general Read-Only state.            
             object enabled = _el.GetCurrentPropertyValue(AutomationElementIdentifiers.IsEnabledProperty);
             if (enabled is bool && !(bool)enabled)
@@ -160,7 +163,7 @@ namespace System.Windows.Automation
  
         #region Internal Methods
 
-        internal static object Wrap(AutomationElement el, SafePatternHandle hPattern, bool cached)
+        static internal object Wrap(AutomationElement el, SafePatternHandle hPattern, bool cached)
         {
             return new ValuePattern(el, hPattern, cached);
         }

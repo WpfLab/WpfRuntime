@@ -1,12 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Diagnostics;
 using System.Collections;
+using System.Collections.Specialized;
+using System.Collections.Generic;
+using System.Text;
+using System.ComponentModel;
+
+using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
+using System.Windows.Media.Animation;
 using Microsoft.Internal.AlphaFlattener;
 
 using MS.Internal;
@@ -46,9 +57,9 @@ namespace System.Windows.Xps.Serialization
         private List<Geometry> _fullClip = new List<Geometry>();
 
         private Size     _pageSize;
-
+        
         // Used to track visual brushes whos visuals are being traversed. We do this to detect cycles in the visual tree
-        private TreeWalkProgress _treeWalkProgress;
+        TreeWalkProgress _treeWalkProgress;
         
         #endregion
 
@@ -458,8 +469,8 @@ namespace System.Windows.Xps.Serialization
 
     internal static class GeometryHelper
     {
-        private const double FUZZ = 1e-6;           // Relative 0
-        private const double PI_OVER_180 = Math.PI / 180;  // PI/180
+        const double FUZZ = 1e-6;           // Relative 0
+        const double PI_OVER_180 = Math.PI / 180;  // PI/180
 
         //  Function: AcceptRadius
         //  Synopsis: Accept one radius
@@ -699,6 +710,7 @@ namespace System.Windows.Xps.Serialization
         //                      cPieces = -1 indicates that the arc degenerates to a point 
         //
         //--------------------------------------------------------------------------------------------------
+        [MS.Internal.ReachFramework.FriendAccessAllowed]
         public static PointCollection ArcToBezier(
             double xStart,     // X coordinate of the last point
             double yStart,     // Y coordinate of the last point

@@ -1,11 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  Wrapper class for existing SignedXml class that works around
 
+
+using System;
 using System.Xml;
+using System.Windows;                          // for SR
 using System.Security.Cryptography.Xml;
+using MS.Internal.WindowsBase;
 using Microsoft.Win32;                          // for Registry and RegistryKey classes
 using System.Globalization;                     // for CultureInfo
 
@@ -73,7 +80,7 @@ namespace MS.Internal.IO.Packaging
             foreach (DataObject dataObject in signature.ObjectList)
             {
                 // direct reference to Object id - supported for all reference typs
-                if (string.Equals(idValue, dataObject.Id, StringComparison.Ordinal))
+                if (String.CompareOrdinal(idValue, dataObject.Id) == 0)
                 {
                     // anticipate duplicate ID's and throw if any found
                     if (node != null)
@@ -109,7 +116,7 @@ namespace MS.Internal.IO.Packaging
             foreach (Reference reference in signature.SignedInfo.References)
             {
                 // if we get a match by Type?
-                if (string.Equals(reference.Type, _XAdESTargetType, StringComparison.Ordinal))
+                if (String.CompareOrdinal(reference.Type, _XAdESTargetType) == 0)
                 {
                     // now try to match by Uri
                     // strip off any preceding # mark to facilitate matching
@@ -121,7 +128,7 @@ namespace MS.Internal.IO.Packaging
 
                     // if we have a XAdES type reference and the ID matches the requested one
                     // search all object tags for the XML with this ID
-                    if (string.Equals(uri, idValue, StringComparison.Ordinal))
+                    if (String.CompareOrdinal(uri, idValue) == 0)
                     {
                         node = SelectSubObjectNodeForXAdESInDataObjects(signature, idValue);
                         break;
@@ -148,7 +155,7 @@ namespace MS.Internal.IO.Packaging
             foreach (DataObject dataObject in signature.ObjectList)
             {
                 // skip the package object
-                if (!string.Equals(dataObject.Id, XTable.Get(XTable.ID.OpcAttrValue), StringComparison.Ordinal))
+                if (String.CompareOrdinal(dataObject.Id, XTable.Get(XTable.ID.OpcAttrValue)) != 0)
                 {
                     XmlElement element = dataObject.GetXml();
 
@@ -177,7 +184,7 @@ namespace MS.Internal.IO.Packaging
                                 temp = temp.ParentNode;
 
                             // only match if the target is in the XAdES namespace
-                            if ((temp != null) && (string.Equals(temp.NamespaceURI, _XAdESNameSpace, StringComparison.Ordinal)))
+                            if ((temp != null) && (String.CompareOrdinal(temp.NamespaceURI, _XAdESNameSpace) == 0))
                             {
                                 node = local as XmlElement;
                                 // continue searching, to find duplicates from different objects

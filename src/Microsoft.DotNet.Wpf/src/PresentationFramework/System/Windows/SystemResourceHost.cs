@@ -1,10 +1,13 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
 // Description: Object supplied as the source when the resource is fetched from the SystemResources
 //
+using System;
+
 namespace System.Windows
 {
     ///<summary/>
@@ -15,7 +18,7 @@ namespace System.Windows
         {
         }
         
-        internal static SystemResourceHost Instance
+        static internal SystemResourceHost Instance
         {
             get
             {
@@ -27,7 +30,7 @@ namespace System.Windows
             }
         }
 
-        private static SystemResourceHost _instance;
+        static private SystemResourceHost _instance;
     }
 }
 

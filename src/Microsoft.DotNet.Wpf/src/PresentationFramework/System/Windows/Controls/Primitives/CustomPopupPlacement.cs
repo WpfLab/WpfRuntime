@@ -1,5 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 
 namespace System.Windows.Controls.Primitives
 {
@@ -80,8 +83,9 @@ namespace System.Windows.Controls.Primitives
         /// <returns>True if equivalent. False otherwise.</returns>
         public override bool Equals(object o)
         {
-            if (o is CustomPopupPlacement placement)
+            if (o is CustomPopupPlacement)
             {
+                CustomPopupPlacement placement = (CustomPopupPlacement)o;
                 return (placement._primaryAxis == _primaryAxis) && (placement._point == _point);
             }
 

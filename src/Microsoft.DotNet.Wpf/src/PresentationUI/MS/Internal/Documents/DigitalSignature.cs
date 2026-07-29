@@ -1,12 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description:    
 //   The DigitalSignature class represents a digital signature or signature
 //   request.
 
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.IO.Packaging;
+using System.Security; // for SecurityCritical attributes
 using System.Windows.Xps.Packaging; // for XpsDigitalSignature
 
 namespace MS.Internal.Documents
@@ -34,12 +38,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _signatureState;
+                return _signatureState.Value;
             }
 
             set
             {
-                _signatureState = value;
+                _signatureState.Value = value;
             }
         }
 
@@ -50,12 +54,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _subjectName;
+                return _subjectName.Value;
             }
 
             set
             {
-                _subjectName = value;
+                _subjectName.Value = value;
             }
         }
 
@@ -66,12 +70,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _reason;
+                return _reason.Value;
             }
 
             set
             {
-                _reason = value;
+                _reason.Value = value;
             }
         }
 
@@ -82,11 +86,11 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _signedOn;
+                return _signedOn.Value;
             }
             set
             {
-                _signedOn = value;
+                _signedOn.Value = value;
             }
         }
 
@@ -97,12 +101,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _location;
+                return _location.Value;
             }
 
             set
             {
-                _location = value;
+                _location.Value = value;
             }
         }
 
@@ -113,12 +117,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _isDocumentPropertiesRestricted;
+                return _isDocumentPropertiesRestricted.Value;
             }
 
             set
             {
-                _isDocumentPropertiesRestricted = value;
+                _isDocumentPropertiesRestricted.Value = value;
             }
         }
 
@@ -129,12 +133,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _isAddingSignaturesRestricted;
+                return _isAddingSignaturesRestricted.Value;
             }
 
             set
             {
-                _isAddingSignaturesRestricted = value;
+                _isAddingSignaturesRestricted.Value = value;
             }
         }
 
@@ -145,12 +149,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _guidID;
+                return _guidID.Value;
             }
 
             set
             {
-                _guidID = value;
+                _guidID.Value = value;
             }
         }
 
@@ -161,12 +165,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _x509Certificate2;
+                return _x509Certificate2.Value;
             }
 
             set
             {
-                _x509Certificate2 = value;
+                _x509Certificate2.Value = value;
             }
         }
 
@@ -178,12 +182,12 @@ namespace MS.Internal.Documents
         {
             get
             {
-                return _xpsDigitalSignature;
+                return _xpsDigitalSignature.Value;
             }
 
             set
             {
-                _xpsDigitalSignature = value;
+                _xpsDigitalSignature.Value = value;
             }
         }
 
@@ -194,49 +198,49 @@ namespace MS.Internal.Documents
         /// <summary>
         /// Status of signature (Valid, Invalid, NotSigned ...)
         /// </summary>
-        private SignatureStatus _signatureState;
+        private SecurityCriticalDataForSet<SignatureStatus> _signatureState;
 
         /// <summary>
         /// Friendly name of the signer (obtained from the certificate)
         /// </summary>
-        private string _subjectName;
+        private SecurityCriticalDataForSet<string> _subjectName;
 
         /// <summary>
         /// Intent:  From the Signature Definition
         /// </summary>
-        private string _reason;
+        private SecurityCriticalDataForSet<string> _reason;
 
         /// <summary>
         /// When this signature was applied (not a trusted time)
         /// </summary>
-        private DateTime? _signedOn;
+        private SecurityCriticalDataForSet<DateTime?> _signedOn;
 
         /// <summary>
         /// Location field (what signer type into signature definition)
         /// </summary>
-        private string _location;
+        private SecurityCriticalDataForSet<string> _location;
 
         /// <summary>
         /// Whether or not document properties changes are restricted by this signature
         /// </summary>
-        private bool _isDocumentPropertiesRestricted;
+        private SecurityCriticalDataForSet<bool> _isDocumentPropertiesRestricted;
 
         /// <summary>
         /// Whether or not adding signatures will invalidate this signature
         /// </summary>
-        private bool _isAddingSignaturesRestricted;
+        private SecurityCriticalDataForSet<bool> _isAddingSignaturesRestricted;
 
         /// <summary>
         /// SignatureID
         /// </summary>
-        private Guid? _guidID;
+        private SecurityCriticalDataForSet<Guid?> _guidID;
 
-        private X509Certificate2 _x509Certificate2;
+        private SecurityCriticalDataForSet<X509Certificate2> _x509Certificate2;
 
         /// <summary>
         /// The XpsDigitalSignature associated with this signature
         /// </summary>
-        private XpsDigitalSignature _xpsDigitalSignature;
+        private SecurityCriticalDataForSet<XpsDigitalSignature> _xpsDigitalSignature;
 
         #endregion Private data
     }

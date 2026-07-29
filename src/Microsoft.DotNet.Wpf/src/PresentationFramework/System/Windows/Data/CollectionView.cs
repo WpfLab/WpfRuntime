@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Base implementation of ICollectionView that enforces
@@ -9,13 +10,17 @@
 //
 
 
+using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Windows;
 using System.Threading;
 using System.Windows.Threading;
 using MS.Internal.Data;
@@ -122,7 +127,10 @@ namespace System.Windows.Data
                         }
 
                         IDisposable d = e as IDisposable;
-                        d?.Dispose();
+                        if (d != null)
+                        {
+                            d.Dispose();
+                        }
                     },
                     false);
             }
@@ -1204,7 +1212,7 @@ namespace System.Windows.Data
         /// </notes>
         protected void ClearPendingChanges()
         {
-            lock (_changeLogLock)
+            lock(_changeLog.SyncRoot)
             {
                 _changeLog.Clear();
                 _tempChangeLog.Clear();
@@ -1223,7 +1231,7 @@ namespace System.Windows.Data
         /// </notes>
         protected void ProcessPendingChanges()
         {
-            lock (_changeLogLock)
+            lock(_changeLog.SyncRoot)
             {
                 ProcessChangeLog(_changeLog, true);
                 _changeLog.Clear();
@@ -1411,6 +1419,9 @@ namespace System.Windows.Data
         // and throw if that is the case.
         internal void VerifyRefreshNotDeferred()
         {
+            #pragma warning disable 1634, 1691 // about to use PreSharp message numbers - unknown to C#
+            #pragma warning disable 6503
+
             if (AllowsCrossThreadChanges)
                 VerifyAccess();
 
@@ -1420,12 +1431,18 @@ namespace System.Windows.Data
 
             if (IsRefreshDeferred)
                 throw new InvalidOperationException(SR.NoCheckOrChangeWhenDeferred);
+
+            #pragma warning restore 6503
+            #pragma warning restore 1634, 1691
         }
 
         internal void InvalidateEnumerableWrapper()
         {
             IndexedEnumerable wrapper = (IndexedEnumerable) Interlocked.Exchange(ref _enumerableWrapper, null);
-            wrapper?.Invalidate();
+            if (wrapper != null)
+            {
+                wrapper.Invalidate();
+            }
         }
 
         internal ReadOnlyCollection<ItemPropertyInfo> GetItemProperties()
@@ -1563,7 +1580,10 @@ namespace System.Windows.Data
             }
 
             IDisposable d = ie as IDisposable;
-            d?.Dispose();
+            if (d != null)
+            {
+                d.Dispose();
+            }
 
             return result;
         }
@@ -1613,7 +1633,7 @@ namespace System.Windows.Data
 
         internal class PlaceholderAwareEnumerator : IEnumerator
         {
-            private enum Position { BeforePlaceholder, OnPlaceholder, OnNewItem, AfterPlaceholder}
+            enum Position { BeforePlaceholder, OnPlaceholder, OnNewItem, AfterPlaceholder}
 
             public PlaceholderAwareEnumerator(CollectionView collectionView, IEnumerator baseEnumerator, NewItemPlaceholderPosition placeholderPosition, object newItem)
             {
@@ -1700,12 +1720,12 @@ namespace System.Windows.Data
                 _baseEnumerator.Reset();
             }
 
-            private CollectionView _collectionView;
-            private IEnumerator _baseEnumerator;
-            private NewItemPlaceholderPosition _placeholderPosition;
-            private Position _position;
-            private object _newItem;
-            private int _timestamp;
+            CollectionView _collectionView;
+            IEnumerator _baseEnumerator;
+            NewItemPlaceholderPosition _placeholderPosition;
+            Position _position;
+            object _newItem;
+            int _timestamp;
         }
 
         #endregion Internal Types
@@ -1799,17 +1819,24 @@ namespace System.Windows.Data
         ///     processed.
         /// </summary>
         /// <param name="changeLog">
-        ///     List of NotifyCollectionChangedEventArgs that could not be precessed.
+        ///     ArrayList of NotifyCollectionChangedEventArgs that could not be precessed.
         /// </param>
-        private void DeferProcessing(List<NotifyCollectionChangedEventArgs> changeLog)
+        private void DeferProcessing(ICollection changeLog)
         {
             Debug.Assert(changeLog != null && changeLog.Count > 0, "don't defer when there's no work");
 
-            lock (SyncRoot)
+            lock(SyncRoot)
             {
-                lock (_changeLogLock)
+                lock(_changeLog.SyncRoot)
                 {
-                    _changeLog.InsertRange(0, changeLog);
+                    if (_changeLog == null)
+                    {
+                        _changeLog = new ArrayList(changeLog);
+                    }
+                    else
+                    {
+                        _changeLog.InsertRange(0, changeLog);
+                    }
 
                     if (_databindOperation != null)
                     {
@@ -1831,15 +1858,21 @@ namespace System.Windows.Data
         /// <param name="changeLog">
         ///     List of NotifyCollectionChangedEventArgs that is to be processed.
         /// </param>
-        private List<NotifyCollectionChangedEventArgs> ProcessChangeLog(List<NotifyCollectionChangedEventArgs> changeLog, bool processAll = false)
+        private ICollection ProcessChangeLog(ArrayList changeLog, bool processAll=false)
         {
             int currentIndex = 0;
             bool mustDeferProcessing = false;
             long beginTime = DateTime.Now.Ticks;
+            int startCount = changeLog.Count;
 
-            for ( ; currentIndex < changeLog.Count && !mustDeferProcessing; currentIndex++)
+            for ( ; currentIndex < changeLog.Count && !(mustDeferProcessing); currentIndex++)
             {
-                ProcessCollectionChanged(changeLog[currentIndex]);
+                NotifyCollectionChangedEventArgs args = changeLog[currentIndex] as NotifyCollectionChangedEventArgs;
+
+                if (args != null)
+                {
+                    ProcessCollectionChanged(args);
+                }
 
                 if (!processAll)
                 {
@@ -1850,7 +1883,7 @@ namespace System.Windows.Data
             if (mustDeferProcessing && currentIndex < changeLog.Count)
             {
                 // create an unprocessed subset of changeLog
-                changeLog.RemoveRange(0, currentIndex);
+                changeLog.RemoveRange(0,currentIndex);
                 return changeLog;
             }
 
@@ -1867,20 +1900,20 @@ namespace System.Windows.Data
         {
             if (value)
             {
-                _flags |= flags;
+                _flags = _flags | flags;
             }
             else
             {
-                _flags &= ~flags;
+                _flags = _flags & ~flags;
             }
         }
 
         // Post a change on the UI thread Dispatcher and updated the _changeLog.
         private void PostChange(NotifyCollectionChangedEventArgs args)
         {
-            lock (SyncRoot)
+            lock(SyncRoot)
             {
-                lock (_changeLogLock)
+                lock(_changeLog.SyncRoot)
                 {
                     // we can ignore everything before a Reset
                     if (args.Action == NotifyCollectionChangedAction.Reset)
@@ -1919,18 +1952,18 @@ namespace System.Windows.Data
         {
             // work on a private copy of the change log, so that other threads
             // can add to the main change log
-            lock (SyncRoot)
+            lock(SyncRoot)
             {
-                lock (_changeLogLock)
+                lock(_changeLog.SyncRoot)
                 {
                     _databindOperation = null;
                     _tempChangeLog = _changeLog;
-                    _changeLog = new List<NotifyCollectionChangedEventArgs>();
+                    _changeLog = new ArrayList();
                 }
             }
 
             // process the changes
-            List<NotifyCollectionChangedEventArgs> unprocessedChanges = ProcessChangeLog(_tempChangeLog);
+            ICollection unprocessedChanges = ProcessChangeLog(_tempChangeLog);
 
             // if changes remain (because we ran out of time), reschedule them
             if (unprocessedChanges != null && unprocessedChanges.Count > 0)
@@ -1938,7 +1971,7 @@ namespace System.Windows.Data
                 DeferProcessing(unprocessedChanges);
             }
 
-            _tempChangeLog = s_emptyList;
+            _tempChangeLog = EmptyArrayList;
 
             return null;
         }
@@ -2065,8 +2098,11 @@ namespace System.Windows.Data
 
             public void Dispose()
             {
-                _collectionView?.EndDefer();
-                _collectionView = null;
+                if (_collectionView != null)
+                {
+                    _collectionView.EndDefer();
+                    _collectionView = null;
+                }
 
                 GC.SuppressFinalize(this);
             }
@@ -2095,7 +2131,7 @@ namespace System.Windows.Data
 
             public bool Busy { get { return _entered; } }
 
-            private bool _entered;
+            bool _entered;
         }
 
         [Flags]
@@ -2122,35 +2158,32 @@ namespace System.Windows.Data
         //------------------------------------------------------
         #region Private Fields
 
-        private readonly Lock _changeLogLock = new();
-
-        private List<NotifyCollectionChangedEventArgs> _changeLog = new();
-        private List<NotifyCollectionChangedEventArgs> _tempChangeLog = s_emptyList;
-
-        private DataBindOperation _databindOperation;
-        private object                  _vmData;            // view manager's private data
-        private IEnumerable             _sourceCollection;  // the underlying collection
-        private CultureInfo             _culture;           // culture to use when sorting
-        private SimpleMonitor           _currentChangedMonitor = new SimpleMonitor();
-        private int                     _deferLevel;
-        private IndexedEnumerable       _enumerableWrapper;
-        private Predicate<object>       _filter;
-        private object                  _currentItem;
-        private int                     _currentPosition;
-        private CollectionViewFlags     _flags = CollectionViewFlags.ShouldProcessCollectionChanged | CollectionViewFlags.NeedsRefresh;
-        private bool _currentElementWasRemovedOrReplaced;
-        private static object           _newItemPlaceholder = new NamedObject("NewItemPlaceholder");
-        private object                  _syncObject = new object();
-        private DataBindEngine          _engine;
-        private int                     _timestamp;
-
-        private static readonly List<NotifyCollectionChangedEventArgs> s_emptyList = new();
-        private static readonly string IEnumerableT = typeof(IEnumerable<>).Name;
+        ArrayList               _changeLog = new ArrayList();
+        ArrayList               _tempChangeLog = EmptyArrayList;
+        DataBindOperation       _databindOperation;
+        object                  _vmData;            // view manager's private data
+        IEnumerable             _sourceCollection;  // the underlying collection
+        CultureInfo             _culture;           // culture to use when sorting
+        SimpleMonitor           _currentChangedMonitor = new SimpleMonitor();
+        int                     _deferLevel;
+        IndexedEnumerable       _enumerableWrapper;
+        Predicate<object>       _filter;
+        object                  _currentItem;
+        int                     _currentPosition;
+        CollectionViewFlags     _flags = CollectionViewFlags.ShouldProcessCollectionChanged |
+                                        CollectionViewFlags.NeedsRefresh;
+        bool                    _currentElementWasRemovedOrReplaced;
+        static object           _newItemPlaceholder = new NamedObject("NewItemPlaceholder");
+        object                  _syncObject = new object();
+        DataBindEngine          _engine;
+        int                     _timestamp;
+        static readonly ArrayList EmptyArrayList = new ArrayList();
+        static readonly string IEnumerableT = typeof(IEnumerable<>).Name;
         internal static readonly object NoNewItem = new NamedObject("NoNewItem");
 
         // since there's nothing in the uncancelable event args that is mutable,
         // just create one instance to be used universally.
-        private static readonly CurrentChangingEventArgs uncancelableCurrentChangingEventArgs = new CurrentChangingEventArgs(false);
+        static readonly CurrentChangingEventArgs uncancelableCurrentChangingEventArgs = new CurrentChangingEventArgs(false);
 
         internal const string CountPropertyName = "Count";
         internal const string IsEmptyPropertyName = "IsEmpty";

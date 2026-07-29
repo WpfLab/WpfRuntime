@@ -1,10 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.ComponentModel;
+using System.Text;
+using System.Globalization;
 using MS.Win32;
 using System.Runtime.InteropServices;
+using System.Resources;
 using System.IO;
+using System.Security;
+using SecurityHelper=MS.Internal.SecurityHelper;
+using SR=MS.Internal.PresentationCore.SR;
+using MS.Internal.PresentationCore;     //  FriendAccessAllowed
 
 namespace System.Windows.Input
 {
@@ -49,7 +58,8 @@ namespace System.Windows.Input
         public Cursor(string cursorFile, bool scaleWithDpi)
         {
             _scaleWithDpi = scaleWithDpi;
-            ArgumentNullException.ThrowIfNull(cursorFile);
+            if (cursorFile == null)
+                throw new ArgumentNullException("cursorFile");
 
             if ((cursorFile != String.Empty) &&
                 (cursorFile.EndsWith(".cur", StringComparison.OrdinalIgnoreCase) ||
@@ -80,7 +90,10 @@ namespace System.Windows.Input
         public Cursor(Stream cursorStream, bool scaleWithDpi)
         {
             _scaleWithDpi = scaleWithDpi;
-            ArgumentNullException.ThrowIfNull(cursorStream);
+            if (cursorStream == null)
+            {
+                throw new ArgumentNullException("cursorStream");
+            }
             LoadFromStream(cursorStream);
         }
 
@@ -88,6 +101,7 @@ namespace System.Windows.Input
         ///     Cursor from a SafeHandle to an HCURSOR
         /// </summary>
         /// <param name="cursorHandle"></param>
+        [FriendAccessAllowed] //used by ColumnHeader.GetCursor in PresentationFramework
         internal Cursor(SafeHandle cursorHandle )
         {
             if (! cursorHandle.IsInvalid )
@@ -114,11 +128,16 @@ namespace System.Windows.Input
             GC.SuppressFinalize(this);
         }
 
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
-            _cursorHandle?.Dispose();
-            _cursorHandle = null;
+            if ( _cursorHandle != null )
+            {
+                _cursorHandle.Dispose();
+                _cursorHandle = null;
+            }
         }
+
+
 
         /// <summary>
         /// CursorType - Cursor Type Enumeration
@@ -225,13 +244,13 @@ namespace System.Windows.Input
                         // If the buffer is filled up, then write those bytes out and read more bytes up to BUFFERSIZE
                         for (dataSize = cursorData.Length;
                              dataSize >= BUFFERSIZE;
-                             dataSize = reader.Read(cursorData, index: 0, count: BUFFERSIZE))
+                             dataSize = reader.Read(cursorData, 0 /*index in array*/, BUFFERSIZE /*bytes to read*/))
                         {
-                            fileStream.Write(cursorData, offset: 0, count: BUFFERSIZE);
+                            fileStream.Write(cursorData, 0 /*index in array*/, BUFFERSIZE /*bytes to write*/);
                         }
 
                         // Write any remaining bytes
-                        fileStream.Write(cursorData, offset: 0, count: dataSize);
+                        fileStream.Write(cursorData, 0 /*index in array*/, dataSize /*bytes to write*/);
                     }
                 }
 
@@ -324,7 +343,7 @@ namespace System.Windows.Input
             else
             {
                 // Get the string representation fo the cursor type enumeration.
-                return Enum.GetName(_cursorType);
+                return Enum.GetName(typeof(CursorType), _cursorType);
             }
         }
 
@@ -339,7 +358,7 @@ namespace System.Windows.Input
 
         private SafeHandle  _cursorHandle;
 
-        private static ReadOnlySpan<int> CursorTypes => [
+        private static readonly int[] CursorTypes = {
             0, // None
             NativeMethods.IDC_NO,
             NativeMethods.IDC_ARROW,
@@ -368,6 +387,6 @@ namespace System.Windows.Input
             NativeMethods.IDC_ARROW + 149, // ScrollSWCursor
             NativeMethods.IDC_ARROW + 150, // ScrollSECursor
             NativeMethods.IDC_ARROW + 151 // ArrowCDCursor
-       ];
+       };
     }
 }

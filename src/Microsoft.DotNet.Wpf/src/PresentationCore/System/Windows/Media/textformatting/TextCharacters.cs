@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,9 +12,18 @@
 //
 
 
+using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.Collections;
+using System.Collections.Generic;
+using System.Security;
+using System.Windows;
+using MS.Internal;
 using MS.Internal.Shaping;
 using MS.Internal.TextFormatting;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.TextFormatting
 {
@@ -105,9 +115,16 @@ namespace System.Windows.Media.TextFormatting
             int                         length,
             TextRunProperties           textRunProperties
             )
-        {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
-            ArgumentNullException.ThrowIfNull(textRunProperties);
+        {        
+            if (length <= 0)
+            {
+                throw new ArgumentOutOfRangeException("length", SR.ParameterMustBeGreaterThanZero);
+            }
+
+            if (textRunProperties == null)
+            {
+                throw new ArgumentNullException("textRunProperties");
+            }
 
             if (textRunProperties.Typeface == null)
             {
@@ -119,7 +136,10 @@ namespace System.Windows.Media.TextFormatting
                 throw new ArgumentNullException("textRunProperties.CultureInfo");
             }
 
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(textRunProperties.FontRenderingEmSize, "textRunProperties.FontRenderingEmSize");
+            if (textRunProperties.FontRenderingEmSize <= 0)
+            {
+                throw new ArgumentOutOfRangeException("textRunProperties.FontRenderingEmSize", SR.ParameterMustBeGreaterThanZero);
+            }
 
             _characterBufferReference = characterBufferReference;
             _length = length;

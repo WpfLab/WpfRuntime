@@ -36,7 +36,6 @@
                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                 Content="{TemplateBinding Content}"
-                RecognizesAccessKey="True"
                 TextElement.FontSize="{TemplateBinding FontSize}" />
             <Grid
                 x:Name="ChevronGrid"
@@ -97,7 +96,6 @@
                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                 Content="{TemplateBinding Content}"
-                RecognizesAccessKey="True"
                 TextElement.FontSize="{TemplateBinding FontSize}" />
             <Grid
                 x:Name="ChevronGrid"
@@ -158,7 +156,6 @@
                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                 Content="{TemplateBinding Content}"
-                RecognizesAccessKey="True"
                 TextElement.FontSize="{TemplateBinding FontSize}" />
             <Grid
                 x:Name="ChevronGrid"
@@ -180,9 +177,6 @@
             </Grid>
         </Grid>
         <ControlTemplate.Triggers>
-            <Trigger Property="FlowDirection" Value="RightToLeft">
-                <Setter TargetName="ControlChevronIcon" Property="Text" Value="{StaticResource ExpanderChevronRightGlyph}" />
-            </Trigger>
             <Trigger Property="IsChecked" Value="True">
                 <Trigger.EnterActions>
                     <BeginStoryboard>
@@ -222,7 +216,6 @@
                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                 Content="{TemplateBinding Content}"
-                RecognizesAccessKey="True"
                 TextElement.FontSize="{TemplateBinding FontSize}" />
             <Grid
                 x:Name="ChevronGrid"
@@ -244,9 +237,6 @@
             </Grid>
         </Grid>
         <ControlTemplate.Triggers>
-            <Trigger Property="FlowDirection" Value="RightToLeft">
-                <Setter TargetName="ControlChevronIcon" Property="Text" Value="{StaticResource ExpanderChevronLeftGlyph}" />
-            </Trigger>
             <Trigger Property="IsChecked" Value="True">
                 <Trigger.EnterActions>
                     <BeginStoryboard>

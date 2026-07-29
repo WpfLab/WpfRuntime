@@ -1,12 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
 //   XamlSerializer used to persist collections of 3D points in Baml
 //
 
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.ComponentModel.Design;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Xml;
+using MS.Utility;
+using MS.Internal;
 
 #if PBTCOMPILER
 using System.Reflection;
@@ -16,8 +27,8 @@ namespace MS.Internal.Markup
 
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
-using MS.Internal.Media;
+using System.Windows.Media.Media3D; 
+using MS.Internal.Media; 
 
 namespace System.Windows.Markup
 #endif

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -12,9 +13,12 @@
 #define TRACE
 #endif
 
+using System;
 using System.Net;
+using System.Diagnostics;               // for Assert
 using MS.Internal.IO.Packaging;         // for PackageCache
 using MS.Internal.PresentationCore;     // for ExceptionStringTable
+using System.Security;
 using MS.Internal;
 
 namespace System.IO.Packaging
@@ -47,17 +51,18 @@ namespace System.IO.Packaging
         /// the "pack" scheme and associating this factory class as its default handler.</remarks>
         WebRequest IWebRequestCreate.Create(Uri uri)
         {
-            ArgumentNullException.ThrowIfNull(uri);
+            if (uri == null)
+                throw new ArgumentNullException("uri");
 
             // Ensure uri is absolute - if we don't check now, the get_Scheme property will throw 
             // InvalidOperationException which would be misleading to the caller.
             if (!uri.IsAbsoluteUri)
-                throw new ArgumentException(SR.UriMustBeAbsolute, nameof(uri));
+                throw new ArgumentException(SR.UriMustBeAbsolute, "uri");
 
             // Ensure uri is correct scheme because we can be called directly.  Case sensitive
             // is fine because Uri.Scheme contract is to return in lower case only.
             if (!string.Equals(uri.Scheme, PackUriHelper.UriSchemePack, StringComparison.Ordinal))
-                throw new ArgumentException(SR.Format(SR.UriSchemeMismatch, PackUriHelper.UriSchemePack), nameof(uri));
+                throw new ArgumentException(SR.Format(SR.UriSchemeMismatch, PackUriHelper.UriSchemePack), "uri");
 
 #if DEBUG
             if (_traceSwitch.Enabled)
@@ -132,6 +137,7 @@ namespace System.IO.Packaging
         // However, these two functions regress 700k working set in System.dll and System.xml.dll
         //  which is mostly for logging and config.
         // This helper function provides a way to bypass the regression
+        [FriendAccessAllowed]
         internal static WebRequest CreateWebRequest(Uri uri)
         {
             if (string.Equals(uri.Scheme, PackUriHelper.UriSchemePack, StringComparison.Ordinal))

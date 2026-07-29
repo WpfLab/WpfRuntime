@@ -1,9 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Windows.Shapes;
-using System.Windows.Controls;
-using System.Windows.Media;
+// See the LICENSE file in the project root for more information.
 
 /*++
     Description:
@@ -13,6 +10,15 @@ using System.Windows.Media;
 
 namespace System.Windows.Documents
 {
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Windows.Shapes;
+    using System.Windows.Controls;
+    using System.Diagnostics;
+    using System.Windows.Media;
+    using System.Windows.Media.Imaging;
+    using System.Globalization;
+
     #region GeometryAnalyzer
 
     /// <summary>
@@ -189,7 +195,7 @@ namespace System.Windows.Documents
 
         internal override void SetClosedState(bool closed)
         {
-            Debug.Fail("It should not be called");
+            Debug.Assert(false, "It should not be called");
         }
 
         internal override void SetFigureCount(int figureCount)
@@ -221,10 +227,8 @@ namespace System.Windows.Documents
             Debug.Assert(fixedPage != null);
             _fixedPage = fixedPage;
             _pageIndex = pageIndex;
-            _fixedSOMPage = new FixedSOMPage
-            {
-                CultureInfo = _fixedPage.Language.GetCompatibleCulture()
-            };
+            _fixedSOMPage  = new FixedSOMPage();
+            _fixedSOMPage.CultureInfo = _fixedPage.Language.GetCompatibleCulture();
             _fixedNodes = new List<FixedNode>();
             _lines = new FixedSOMLineCollection();
         }

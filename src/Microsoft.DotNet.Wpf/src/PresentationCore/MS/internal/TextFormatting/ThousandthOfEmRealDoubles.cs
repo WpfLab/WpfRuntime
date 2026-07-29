@@ -1,5 +1,21 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+//
+// 
+//
+// Description: ThousandthOfEmRealDoubles class
+//
+//
+
+using System;
+using System.Diagnostics;
+using System.Collections.Generic;
+
+using System.Windows;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.TextFormatting
 {
@@ -160,18 +176,24 @@ namespace MS.Internal.TextFormatting
         }
 
         public void CopyTo(double[] array, int arrayIndex)
-        {
+        {            
             // parameter validations
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             if (array.Rank != 1)
             {
                 throw new ArgumentException(
                     SR.Collection_CopyTo_ArrayCannotBeMultidimensional, 
-                    nameof(array));                
+                    "array");                
             }
 
-            ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
+            if (arrayIndex < 0)
+            {
+                throw new ArgumentOutOfRangeException("arrayIndex");
+            }
 
             if (arrayIndex >= array.Length)
             {
@@ -180,7 +202,7 @@ namespace MS.Internal.TextFormatting
                         SR.Collection_CopyTo_IndexGreaterThanOrEqualToArrayLength, 
                         "arrayIndex", 
                         "array"),
-                    nameof(arrayIndex));
+                    "arrayIndex");
             }
 
             if ((array.Length - Count - arrayIndex) < 0)

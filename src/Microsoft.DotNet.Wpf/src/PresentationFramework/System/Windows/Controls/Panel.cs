@@ -1,16 +1,24 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Controls.Primitives;   // IItemContainerGenerator
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Markup; // IAddChild, ContentPropertyAttribute
+using System.Windows.Threading;
+using MS.Internal;
 using MS.Internal.Controls;
 using MS.Internal.KnownBoxes;
 using MS.Internal.PresentationFramework;
+using MS.Utility;
 
 namespace System.Windows.Controls
 {
@@ -88,7 +96,7 @@ namespace System.Windows.Controls
 
             if (uie == null)
             {
-                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(UIElement)), nameof(value));
+                throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(UIElement)), "value");
             }
 
             Children.Add(uie);
@@ -372,7 +380,7 @@ namespace System.Windows.Controls
         {
             if (_uiElementCollection == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(index), index, SR.Visual_ArgumentOutOfRange);
+                throw new ArgumentOutOfRangeException("index", index, SR.Visual_ArgumentOutOfRange);
             }
 
             if (IsZStateDirty) { RecomputeZState(); }

@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,7 +12,15 @@
 //
 
 
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Collections;
+using System.Collections.Generic;
+using System.Security;
+using System.Windows;
 using System.Windows.Markup;    // for XmlLanguage
+using System.Windows.Media;
 using MS.Internal;
 using MS.Internal.FontCache;
 using MS.Internal.TextFormatting;
@@ -247,12 +256,13 @@ namespace System.Windows.Media.TextFormatting
             GlyphRun            glyphRun
             )
         {
-            ArgumentNullException.ThrowIfNull(drawingContext);
+            if (drawingContext == null)
+                throw new ArgumentNullException("drawingContext");
 
             glyphRun.EmitBackground(drawingContext, _properties.BackgroundBrush);
 
             drawingContext.DrawGlyphRun(
-                foregroundBrush ?? _properties.ForegroundBrush,
+                foregroundBrush != null ? foregroundBrush : _properties.ForegroundBrush,
                 glyphRun
                 );
         }

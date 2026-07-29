@@ -1,7 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Windows;
 using System.Threading;
+using MS.Internal.WindowsBase;               // FriendAccessAllowed
 
 namespace System.Windows.Threading
 {
@@ -37,6 +41,7 @@ namespace System.Windows.Threading
 
         // This method allows certain derived classes to break the dispatcher affinity
         // of our objects.
+        [FriendAccessAllowed] // Built into Base, also used by Framework.
         internal void DetachFromDispatcher()
         {
             _dispatcher = null;
@@ -46,6 +51,7 @@ namespace System.Windows.Threading
         // not be used in any other way.  To enforce this and catch bugs, use a special
         // sentinel dispatcher, so that calls to CheckAccess and VerifyAccess will
         // fail;  this will catch most accidental uses of the sentinel.
+        [FriendAccessAllowed] // Built into Base, also used by Framework.
         internal void MakeSentinel()
         {
             _dispatcher = EnsureSentinelDispatcher();
@@ -112,7 +118,10 @@ namespace System.Windows.Threading
 
             // Note: a DispatcherObject that is not associated with a
             // dispatcher is considered to be free-threaded.
-            dispatcher?.VerifyAccess();
+            if(dispatcher != null)
+            {
+                dispatcher.VerifyAccess();
+            }
         }
 
         /// <summary>

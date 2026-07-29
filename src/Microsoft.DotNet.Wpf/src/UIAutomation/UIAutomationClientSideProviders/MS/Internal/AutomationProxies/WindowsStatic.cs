@@ -1,16 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Windows Static Proxy
 
 using System;
+using System.Text;
+using System.Collections;
+using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using MS.Win32;
 
 namespace MS.Internal.AutomationProxies
 {
-    internal class WindowsStatic: ProxyHwnd
+    class WindowsStatic: ProxyHwnd
     {
         // ------------------------------------------------------
         //
@@ -20,7 +24,7 @@ namespace MS.Internal.AutomationProxies
 
         #region Constructors
 
-        private WindowsStatic (IntPtr hwnd, ProxyFragment parent, StaticType type, int style)
+        WindowsStatic (IntPtr hwnd, ProxyFragment parent, StaticType type, int style)
             : base( hwnd, parent, 0)
         {
             _type = type;
@@ -55,9 +59,10 @@ namespace MS.Internal.AutomationProxies
         {
             // This proxy should not be created with idChild != 0,
             // unless it is a link label.
-            if (!IsLinkLabel(hwnd))
+            if (idChild != 0 && !IsLinkLabel(hwnd))
             {
-                ArgumentOutOfRangeException.ThrowIfNotEqual(idChild, 0);
+                System.Diagnostics.Debug.Assert(idChild == 0, "Invalid Child Id, idChild != 0");
+                throw new ArgumentOutOfRangeException("idChild", idChild, SR.ShouldBeZero);
             }
 
             StaticType type;
@@ -110,7 +115,8 @@ namespace MS.Internal.AutomationProxies
                 WindowsStatic wtv = (WindowsStatic) Create (hwnd, 0);
                 // If wtv is null the window handle is invalid or no longer available (or something,
                 // Create eats the problem).
-                wtv?.DispatchEvents (eventId, idProp, idObject, idChild);
+                if (wtv != null)
+                    wtv.DispatchEvents (eventId, idProp, idObject, idChild);
             }
         }
 
@@ -223,12 +229,12 @@ namespace MS.Internal.AutomationProxies
 
         #region Private Fields
 
-        private StaticType _type;
+        StaticType _type;
 
-        private int _style;
+        int _style;
 
         // Static control types based on style constants
-        private enum StaticType
+        enum StaticType
         {
             Bitmap,
             Icon,

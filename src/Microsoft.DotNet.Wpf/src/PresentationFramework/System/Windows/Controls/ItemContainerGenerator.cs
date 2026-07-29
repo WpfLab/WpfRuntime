@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: ItemContainerGenerator object
@@ -7,7 +8,9 @@
 // Specs:       Data Styling.mht
 //
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -16,9 +19,13 @@ using System.Globalization;     // for CultureInfo.InvariantCulture (event traci
 using System.Windows.Media;
 using System.Windows.Controls.Primitives;   // IItemContainerGenerator
 using System.Windows.Data;
+using System.Windows.Markup;
+using System.Diagnostics;
 using System.Text;
 using MS.Internal;
 using MS.Internal.Controls;
+using MS.Internal.KnownBoxes;
+using MS.Internal.Utility;
 using MS.Utility;
 
 
@@ -165,7 +172,7 @@ namespace System.Windows.Controls
         ItemContainerGenerator IItemContainerGenerator.GetItemContainerGeneratorForPanel(Panel panel)
         {
             if (!panel.IsItemsHost)
-                throw new ArgumentException(SR.PanelIsNotItemsHost, nameof(panel));
+                throw new ArgumentException(SR.PanelIsNotItemsHost, "panel");
 
             // if panel came from an ItemsPresenter, use its generator
             ItemsPresenter ip = ItemsPresenter.FromPanel(panel);
@@ -269,14 +276,14 @@ namespace System.Windows.Controls
         private void Remove(GeneratorPosition position, int count, bool isRecycling)
         {
             if (position.Offset != 0)
-                throw new ArgumentException(SR.Format(SR.RemoveRequiresOffsetZero, position.Index, position.Offset), nameof(position));
+                throw new ArgumentException(SR.Format(SR.RemoveRequiresOffsetZero, position.Index, position.Offset), "position");
             if (count <= 0)
-                throw new ArgumentException(SR.Format(SR.RemoveRequiresPositiveCount, count), nameof(count));
+                throw new ArgumentException(SR.Format(SR.RemoveRequiresPositiveCount, count), "count");
 
             if (_itemMap == null)
             {
                 // ignore reentrant call (during RemoveAllInternal)
-                Debug.Fail("Unexpected reentrant call to ICG.Remove");
+                Debug.Assert(false, "Unexpected reentrant call to ICG.Remove");
                 return;
             }
 
@@ -1102,7 +1109,7 @@ namespace System.Windows.Controls
             }
         }
 
-        private void FormatCollectionChangedSource(int level, object source, bool? isLikely, List<string> sources)
+        void FormatCollectionChangedSource(int level, object source, bool? isLikely, List<string> sources)
         {
             Type sourceType = source.GetType();
 
@@ -1133,7 +1140,7 @@ namespace System.Windows.Controls
                                         c, indent, sourceType.FullName));
         }
 
-        private void GetCollectionChangedSources(int level, Action<int, object, bool?, List<string>> format, List<string> sources)
+        void GetCollectionChangedSources(int level, Action<int, object, bool?, List<string>> format, List<string> sources)
         {
             format(level, this, false, sources);
             Host.View.GetCollectionChangedSources(level+1, format, sources);
@@ -1160,7 +1167,10 @@ namespace System.Windows.Controls
                     for (int offset = 0;  offset < block.ContainerCount;  ++offset)
                     {
                         GroupItem gi = ((RealizedItemBlock)block).ContainerAt(offset) as GroupItem;
-                        gi?.Generator.ChangeAlternationCount();
+                        if (gi != null)
+                        {
+                            gi.Generator.ChangeAlternationCount();
+                        }
                     }
 
                     block = block.Next;
@@ -1169,7 +1179,7 @@ namespace System.Windows.Controls
         }
 
         // update AlternationIndex on each container to reflect the new AlternationCount
-        private void ChangeAlternationCount(int newAlternationCount)
+        void ChangeAlternationCount(int newAlternationCount)
         {
             if (_alternationCount == newAlternationCount)
                 return;
@@ -1503,7 +1513,7 @@ namespace System.Windows.Controls
             //      offset - -1 (to distinguish case C from case B)
             //      newBlock = the single unrealized block
             //      others - unused
-            private void OnMapChanged(ItemBlock block, int offset, int count,
+            void OnMapChanged(ItemBlock block, int offset, int count,
                             ItemBlock newBlock, int newOffset, int deltaCount)
             {
                 // Case A.  Items were moved within the map data structure
@@ -1566,10 +1576,10 @@ namespace System.Windows.Controls
             //
             //------------------------------------------------------
 
-            private ItemContainerGenerator     _factory;
-            private GeneratorDirection  _direction;
-            private bool                _done;
-            private GeneratorState      _cachedState;
+            ItemContainerGenerator     _factory;
+            GeneratorDirection  _direction;
+            bool                _done;
+            GeneratorState      _cachedState;
         }
 
         private class BatchGenerator : IDisposable
@@ -1592,7 +1602,7 @@ namespace System.Windows.Controls
                 GC.SuppressFinalize(this);
             }
 
-            private ItemContainerGenerator _factory;
+            ItemContainerGenerator _factory;
         }
 
         //------------------------------------------------------
@@ -1601,17 +1611,17 @@ namespace System.Windows.Controls
         //
         //------------------------------------------------------
 
-        private IGeneratorHost Host { get { return _host; } }
+        IGeneratorHost Host { get { return _host; } }
 
         // The DO for which this generator was created.  For normal generators,
         // this is the ItemsControl.  For subgroup generators, this is
         // the GroupItem.
-        private DependencyObject Peer
+        DependencyObject Peer
         {
             get { return _peer; }
         }
 
-        private bool IsGrouping
+        bool IsGrouping
         {
             get { return (ItemsInternal != Host.View); }
         }
@@ -1622,7 +1632,7 @@ namespace System.Windows.Controls
         //
         //------------------------------------------------------
 
-        private void MoveToPosition(GeneratorPosition position, GeneratorDirection direction, bool allowStartAtRealizedItem, ref GeneratorState state)
+        void MoveToPosition(GeneratorPosition position, GeneratorDirection direction, bool allowStartAtRealizedItem, ref GeneratorState state)
         {
             ItemBlock block = _itemMap;
             if (block == null)
@@ -1700,7 +1710,7 @@ namespace System.Windows.Controls
         // the item map data structure so that the item belongs to a Realized block.
         // It also requires updating the state of every generator to track the
         // changes we make here.
-        private void Realize(UnrealizedItemBlock block, int offset, object item, DependencyObject container)
+        void Realize(UnrealizedItemBlock block, int offset, object item, DependencyObject container)
         {
             RealizedItemBlock prevR, nextR;
 
@@ -1771,7 +1781,7 @@ namespace System.Windows.Controls
             newBlock.RealizeItem(newOffset, item, container);
         }
 
-        private void RemoveAndCoalesceBlocksIfNeeded(ItemBlock block)
+        void RemoveAndCoalesceBlocksIfNeeded(ItemBlock block)
         {
             if (block != null && block != _itemMap && block.ItemCount == 0)
             {
@@ -1789,7 +1799,7 @@ namespace System.Windows.Controls
         // Move 'count' items starting at position 'offset' in block 'block'
         // to position 'newOffset' in block 'newBlock'.  The difference between
         // the cumulative item counts of newBlock and block is given by 'deltaCount'.
-        private void MoveItems(ItemBlock block, int offset, int count,
+        void MoveItems(ItemBlock block, int offset, int count,
                         ItemBlock newBlock, int newOffset, int deltaCount)
         {
             RealizedItemBlock ribSrc = block as RealizedItemBlock;
@@ -1819,7 +1829,7 @@ namespace System.Windows.Controls
         // Set the AlternationIndex on a newly-realized container.  Also, reset
         // the AlternationIndex on other containers to maintain the adjacency
         // criterion.
-        private void SetAlternationIndex(ItemBlock block, int offset, GeneratorDirection direction)
+        void SetAlternationIndex(ItemBlock block, int offset, GeneratorDirection direction)
         {
             // If user doesn't request alternation, don't do anything
             if (_alternationCount <= 0)
@@ -1908,7 +1918,7 @@ namespace System.Windows.Controls
         }
 
         // create a group item for the given group
-        private DependencyObject ContainerForGroup(CollectionViewGroup group)
+        DependencyObject ContainerForGroup(CollectionViewGroup group)
         {
             _generatesGroupItems = true;
             if (!ShouldHide(group))
@@ -1934,7 +1944,7 @@ namespace System.Windows.Controls
         }
 
         // prepare the grouping information.  Called from RemoveAll.
-        private void PrepareGrouping()
+        void PrepareGrouping()
         {
             GroupStyle groupStyle;
             IList items;
@@ -1950,7 +1960,7 @@ namespace System.Windows.Controls
                 else
                 {
                     CollectionView cv = Host.View.CollectionView;
-                    items = cv?.Groups;
+                    items = (cv == null) ? null : cv.Groups;
                     if (items == null)
                     {
                         items = Host.View;
@@ -2006,7 +2016,7 @@ namespace System.Windows.Controls
             }
         }
 
-        private void SetAlternationCount()
+        void SetAlternationCount()
         {
             int alternationCount;
 
@@ -2034,14 +2044,14 @@ namespace System.Windows.Controls
         }
 
         // should the given group be hidden?
-        private bool ShouldHide(CollectionViewGroup group)
+        bool ShouldHide(CollectionViewGroup group)
         {
             return GroupStyle.HidesIfEmpty &&      // user asked to hide
                     group.ItemCount == 0;           // group is empty
         }
 
         // create an empty-group placeholder item
-        private void AddEmptyGroupItem(CollectionViewGroup group)
+        void AddEmptyGroupItem(CollectionViewGroup group)
         {
             EmptyGroupItem emptyGroupItem = new EmptyGroupItem();
 
@@ -2051,17 +2061,17 @@ namespace System.Windows.Controls
 
             // add it to the list of placeholder items (this keeps it from being GC'd)
             if (_emptyGroupItems == null)
-                _emptyGroupItems = new List<EmptyGroupItem>();
-
+                _emptyGroupItems = new ArrayList();
             _emptyGroupItems.Add(emptyGroupItem);
         }
 
         // notification that a subgroup has become non-empty
-        private void OnSubgroupBecameNonEmpty(EmptyGroupItem groupItem, CollectionViewGroup group)
+        void OnSubgroupBecameNonEmpty(EmptyGroupItem groupItem, CollectionViewGroup group)
         {
             // Discard placeholder container.
             UnlinkContainerFromItem(groupItem, group);
-            _emptyGroupItems?.Remove(groupItem);
+            if (_emptyGroupItems != null)
+                _emptyGroupItems.Remove(groupItem);
 
             // inform layout as if the group just got added
             if (ItemsChanged != null)
@@ -2072,7 +2082,7 @@ namespace System.Windows.Controls
         }
 
         // notification that a subgroup has become empty
-        private void OnSubgroupBecameEmpty(CollectionViewGroup group)
+        void OnSubgroupBecameEmpty(CollectionViewGroup group)
         {
             if (ShouldHide(group))
             {
@@ -2097,7 +2107,7 @@ namespace System.Windows.Controls
         }
 
         // convert an index (into Items) into a GeneratorPosition
-        private GeneratorPosition PositionFromIndex(int itemIndex)
+        GeneratorPosition PositionFromIndex(int itemIndex)
         {
             GeneratorPosition position;
             ItemBlock itemBlock;
@@ -2108,7 +2118,8 @@ namespace System.Windows.Controls
             return position;
         }
 
-        private void GetBlockAndPosition(object item, int itemIndex, bool deletedFromItems, out GeneratorPosition position, out ItemBlock block, out int offsetFromBlockStart, out int correctIndex)
+
+        void GetBlockAndPosition(object item, int itemIndex, bool deletedFromItems, out GeneratorPosition position, out ItemBlock block, out int offsetFromBlockStart, out int correctIndex)
         {
             if (itemIndex >= 0)
             {
@@ -2121,7 +2132,8 @@ namespace System.Windows.Controls
             }
         }
 
-        private void GetBlockAndPosition(int itemIndex, out GeneratorPosition position, out ItemBlock block, out int offsetFromBlockStart)
+
+        void GetBlockAndPosition(int itemIndex, out GeneratorPosition position, out ItemBlock block, out int offsetFromBlockStart)
         {
             position = new GeneratorPosition(-1, 0);
             block = null;
@@ -2159,7 +2171,7 @@ namespace System.Windows.Controls
             }
         }
 
-        private void GetBlockAndPosition(object item, bool deletedFromItems, out GeneratorPosition position, out ItemBlock block, out int offsetFromBlockStart, out int correctIndex)
+        void GetBlockAndPosition(object item, bool deletedFromItems, out GeneratorPosition position, out ItemBlock block, out int offsetFromBlockStart, out int correctIndex)
         {
             correctIndex = 0;
             int containerIndex = 0;
@@ -2348,7 +2360,7 @@ namespace System.Windows.Controls
             return false;   // this method is no longer used (but must remain, for compat)
         }
 
-        private void OnGroupStylePropertyChanged(object sender, PropertyChangedEventArgs e)
+        void OnGroupStylePropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "Panel")
             {
@@ -2360,7 +2372,7 @@ namespace System.Windows.Controls
             }
         }
 
-        private void ValidateAndCorrectIndex(object item, ref int index)
+        void ValidateAndCorrectIndex(object item, ref int index)
         {
             if (index >= 0)
             {
@@ -2380,7 +2392,7 @@ namespace System.Windows.Controls
         /// Forward a CollectionChanged event
         /// </summary>
         // Called  when items collection changes.
-        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
+        void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
         {
             if (sender != ItemsInternal && args.Action != NotifyCollectionChangedAction.Reset)
                 return;     // ignore events (except Reset) from ItemsCollection when we're listening to group's items.
@@ -2435,13 +2447,13 @@ namespace System.Windows.Controls
         }
 
         // Called when an item is added to the items collection
-        private void OnItemAdded(object item, int index)
+        void OnItemAdded(object item, int index)
         {
             if (_itemMap == null)
             {
                 // reentrant call (from RemoveAllInternal) shouldn't happen,
                 // but if it does, don't crash
-                Debug.Fail("unexpected reentrant call to OnItemAdded");
+                Debug.Assert(false, "unexpected reentrant call to OnItemAdded");
                 return;
             }
 
@@ -2483,10 +2495,8 @@ namespace System.Windows.Controls
             // otherwise, create a new unrealized block
             else
             {
-                uib = new UnrealizedItemBlock
-                {
-                    ItemCount = 1
-                };
+                uib = new UnrealizedItemBlock();
+                uib.ItemCount = 1;
 
                 // split the current realized block, if necessary
                 RealizedItemBlock rib;
@@ -2518,7 +2528,7 @@ namespace System.Windows.Controls
 
 
         // Called when an item is removed from the items collection
-        private void OnItemRemoved(object item, int itemIndex)
+        void OnItemRemoved(object item, int itemIndex)
         {
             DependencyObject container = null;    // the corresponding container
             int containerCount = 0;
@@ -2582,7 +2592,7 @@ namespace System.Windows.Controls
             }
         }
 
-        private void OnItemReplaced(object oldItem, object newItem, int index)
+        void OnItemReplaced(object oldItem, object newItem, int index)
         {
             // search for the replaced item
             GeneratorPosition position;
@@ -2625,13 +2635,13 @@ namespace System.Windows.Controls
             }
         }
 
-        private void OnItemMoved(object item, int oldIndex, int newIndex)
+        void OnItemMoved(object item, int oldIndex, int newIndex)
         {
             if (_itemMap == null)
             {
                 // reentrant call (from RemoveAllInternal) shouldn't happen,
                 // but if it does, don't crash
-                Debug.Fail("unexpected reentrant call to OnItemMoved");
+                Debug.Assert(false, "unexpected reentrant call to OnItemMoved");
                 return;
             }
 
@@ -2702,10 +2712,8 @@ namespace System.Windows.Controls
             // otherwise, create a new unrealized block
             else
             {
-                uib = new UnrealizedItemBlock
-                {
-                    ItemCount = 1
-                };
+                uib = new UnrealizedItemBlock();
+                uib.ItemCount = 1;
 
                 // split the current realized block, if necessary
                 if (offsetFromBlockStart > 0 && (rib = block as RealizedItemBlock) != null)
@@ -2760,7 +2768,7 @@ namespace System.Windows.Controls
         }
 
         // Called when the items collection is refreshed
-        private void OnRefresh()
+        void OnRefresh()
         {
             ((IItemContainerGenerator)this).RemoveAll();
 
@@ -2790,7 +2798,7 @@ namespace System.Windows.Controls
         private ReadOnlyCollection<object> _itemsReadOnly;
         private GroupStyle      _groupStyle;
         private ItemContainerGenerator _parent;
-        private List<EmptyGroupItem> _emptyGroupItems;
+        private ArrayList       _emptyGroupItems;
         private int             _alternationCount;
 
         private Type            _containerType;     // type of containers on the recycle queue
@@ -2799,9 +2807,9 @@ namespace System.Windows.Controls
         private bool            _generatesGroupItems; // Flag to indicate that this generates GroupItems
         private bool            _isGeneratingBatches;
 
-        private event MapChangedHandler MapChanged;
+        event MapChangedHandler MapChanged;
 
-        private delegate void MapChangedHandler(ItemBlock block, int offset, int count,
+        delegate void MapChangedHandler(ItemBlock block, int offset, int count,
                     ItemBlock newBlock, int newOffset, int deltaCount);
 
 #if GENERATOR_TRACE
@@ -2955,8 +2963,8 @@ namespace System.Windows.Controls
                 return allowMovePastRealizedItem;
             }
 
-            private int _count;
-            private ItemBlock _prev, _next;
+            int _count;
+            ItemBlock _prev, _next;
         }
 
         // represents a block of unrealized (ungenerated) items
@@ -3054,7 +3062,7 @@ namespace System.Windows.Controls
                 return -1;
             }
 
-            private BlockEntry[] _entry = new BlockEntry[BlockSize];
+            BlockEntry[] _entry = new BlockEntry[BlockSize];
         }
 
         // an entry in the table maintained by RealizedItemBlock

@@ -1,20 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using MS.Internal;
-using System.Collections; // IEnumerator
-using System.ComponentModel; // DefaultValue
-using System.Windows.Media;
-using System.Windows.Data; // Binding
-using System.Windows.Documents;
-using System.Windows.Automation.Peers;
-using System.Windows.Input; // CanExecuteRoutedEventArgs, ExecuteRoutedEventArgs
-
-using System.Windows.Controls.Primitives; // TextBoxBase
-using System.Windows.Markup; // IAddChild, XamlDesignerSerializer, ContentPropertyAttribute
-using MS.Internal.Documents;    // Undo
-using MS.Internal.Commands;     // CommandHelpers
-using MS.Internal.Telemetry.PresentationFramework;
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: The stock plain text editing control.
@@ -22,6 +8,28 @@ using MS.Internal.Telemetry.PresentationFramework;
 
 namespace System.Windows.Controls
 {
+    using MS.Internal;
+    using System.Threading;
+    using System.Collections; // IEnumerator
+    using System.ComponentModel; // DefaultValue
+    using System.Globalization;
+    using System.Windows;
+    using System.Windows.Media;
+    using System.Windows.Data; // Binding
+    using System.Windows.Documents;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Input; // CanExecuteRoutedEventArgs, ExecuteRoutedEventArgs
+
+    using System.Windows.Controls.Primitives; // TextBoxBase
+    using System.Windows.Navigation;
+    using System.Windows.Markup; // IAddChild, XamlDesignerSerializer, ContentPropertyAttribute
+    using MS.Utility;
+    using MS.Internal.Text;
+    using MS.Internal.Automation;   // TextAdaptor
+    using MS.Internal.Documents;    // Undo
+    using MS.Internal.Commands;     // CommandHelpers
+    using MS.Internal.Telemetry.PresentationFramework;
+
     /// <summary>
     /// The stock text editing control.
     /// </summary>
@@ -85,10 +93,8 @@ namespace System.Windows.Controls
             TextEditor.RegisterCommandHandlers(typeof(TextBox), /*acceptsRichContent:*/false, /*readOnly*/false, /*registerEventListeners*/false);
 
             // Create TextContainer and TextEditor associated with it
-            TextContainer container = new TextContainer(this, true /* plainTextOnly */)
-            {
-                CollectTextChanges = true
-            };
+            TextContainer container = new TextContainer(this, true /* plainTextOnly */);
+            container.CollectTextChanges = true;
             InitializeTextContainer(container);
 
             // TextBox only accepts plain text, so change TextEditor's default to that.

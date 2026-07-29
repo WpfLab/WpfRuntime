@@ -1,0 +1,51 @@
+name: Comment PR Build Artifacts
+
+on:
+  workflow_run:
+    workflows: [Build WPF NuGet Package]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: comment-wpf-artifacts-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: >-
+      github.event.workflow_run.event == 'pull_request_target' &&
+      github.event.workflow_run.repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout trusted Builder
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.sha }}
+        path: trusted
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore trusted Builder
+      working-directory: trusted
+      run: dotnet restore eng/Builder/Builder.csproj -p:RestoreWpfRuntimePackages=false
+
+    - name: Build trusted Builder
+      working-directory: trusted
+      run: dotnet build eng/Builder/Builder.csproj --no-restore -p:RestoreWpfRuntimePackages=false
+
+    - name: Update PR artifact comment through trusted Builder
+      working-directory: trusted
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: dotnet eng/Builder/bin/Builder.dll comment-pr-artifacts

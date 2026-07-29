@@ -1,8 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Security;
+using System.Windows;
+using System.Windows.Media;
 
 namespace System.Windows.Input
 {
@@ -32,9 +40,15 @@ namespace System.Windows.Input
         /// </summary>
         protected override void InvokeEventHandler(Delegate genericHandler, object genericTarget)
         {
-            ArgumentNullException.ThrowIfNull(genericHandler);
+            if (genericHandler == null)
+            {
+                throw new ArgumentNullException("genericHandler");
+            }
 
-            ArgumentNullException.ThrowIfNull(genericTarget);
+            if (genericTarget == null)
+            {
+                throw new ArgumentNullException("genericTarget");
+            }
 
             if (RoutedEvent == Manipulation.ManipulationBoundaryFeedbackEvent)
             {

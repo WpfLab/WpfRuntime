@@ -1,8 +1,22 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//      The implementation of GestureRecognizer class
+//
+
+using MS.Utility;
 using MS.Internal.Ink.GestureRecognition;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
+using System;
+using System.Security;
+using SecurityHelper=MS.Internal.SecurityHelper;
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Ink
 {
@@ -158,10 +172,13 @@ namespace System.Windows.Ink
         /// <returns></returns>
         private ReadOnlyCollection<GestureRecognitionResult> RecognizeImpl(StrokeCollection strokes)
         {
-            ArgumentNullException.ThrowIfNull(strokes);
+            if (strokes == null)
+            {
+                throw new ArgumentNullException("strokes"); // Null is not allowed as the argument value
+            }
             if (strokes.Count > 2)
             {
-                throw new ArgumentException(SR.StrokeCollectionCountTooBig, nameof(strokes));
+                throw new ArgumentException(SR.StrokeCollectionCountTooBig, "strokes");
             }
             VerifyAccess();
             VerifyDisposed();
@@ -227,9 +244,12 @@ namespace System.Windows.Ink
             // Since the constructor might create a null _nativeRecognizer, 
             // here we have to make sure we do have some thing to dispose. 
             // Otherwise just no-op.
-            _nativeRecognizer?.Dispose();
-            _nativeRecognizer = null;
-
+            if ( _nativeRecognizer != null )
+            {
+                _nativeRecognizer.Dispose();
+                _nativeRecognizer = null;
+            }
+            
             _disposed = true;
         }
 
@@ -254,7 +274,10 @@ namespace System.Windows.Ink
         // Verify whether this object has been disposed.
         private void VerifyDisposed()
         {
-            ObjectDisposedException.ThrowIf(_disposed, typeof(GestureRecognizer));
+            if ( _disposed )
+            {
+                throw new ObjectDisposedException("GestureRecognizer");
+            }
         }
 
         #endregion Private Methods

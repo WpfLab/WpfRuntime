@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -11,9 +12,15 @@
 //
 
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Windows.Annotations.Storage;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
@@ -73,7 +80,7 @@ namespace System.Windows.Annotations
         public AnnotationResource(Guid id)
         {
             if (Guid.Empty.Equals(id))
-                throw new ArgumentException(SR.InvalidGuid, nameof(id));
+                throw new ArgumentException(SR.InvalidGuid, "id");
 
             // Guid is a struct and cannot be null
             _id = id;
@@ -144,7 +151,10 @@ namespace System.Windows.Annotations
             {
                 foreach (XmlElement content in _contents)
                 {
-                    content?.WriteTo(writer);
+                    if (content != null)
+                    {
+                        content.WriteTo(writer);
+                    }
                 }
             }
         }

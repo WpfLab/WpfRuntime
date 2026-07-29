@@ -1,0 +1,102 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)Versions.props"
+		  Condition="'$(SystemConfigurationConfigurationManagerPackageVersion)' == '' And Exists('$(MSBuildThisFileDirectory)Versions.props')" />
+
+  <PropertyGroup>
+	<RepoWpfTargetFramework>net8.0</RepoWpfTargetFramework>
+	<RepoWpfWindowsDesktopRuntimeVersion>8.0.6</RepoWpfWindowsDesktopRuntimeVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<RepoWpfRuntimePackage Include="System.Configuration.ConfigurationManager"
+						   Version="$(SystemConfigurationConfigurationManagerPackageVersion)"
+						   VersionProperty="SystemConfigurationConfigurationManagerPackageVersion" />
+	<RepoWpfRuntimePackage Include="System.Diagnostics.EventLog"
+						   Version="$(SystemDiagnosticsEventLogPackageVersion)"
+						   VersionProperty="SystemDiagnosticsEventLogPackageVersion" />
+	<RepoWpfRuntimePackage Include="System.DirectoryServices"
+						   Version="$(SystemDirectoryServicesVersion)"
+						   VersionProperty="SystemDirectoryServicesVersion" />
+	<RepoWpfRuntimePackage Include="System.Drawing.Common"
+						   Version="$(SystemDrawingCommonVersion)"
+						   VersionProperty="SystemDrawingCommonVersion" />
+	<RepoWpfRuntimePackage Include="System.Formats.Nrbf"
+						   Version="$(SystemFormatsNrbfVersion)"
+						   VersionProperty="SystemFormatsNrbfVersion" />
+	<RepoWpfRuntimePackage Include="System.IO.Packaging"
+						   Version="$(SystemIOPackagingVersion)"
+						   VersionProperty="SystemIOPackagingVersion" />
+	<RepoWpfRuntimePackage Include="System.Resources.Extensions"
+						   Version="$(SystemResourcesExtensionsVersion)"
+						   VersionProperty="SystemResourcesExtensionsVersion" />
+	<RepoWpfRuntimePackage Include="System.Security.Cryptography.Xml"
+						   Version="$(SystemSecurityCryptographyXmlPackageVersion)"
+						   VersionProperty="SystemSecurityCryptographyXmlPackageVersion" />
+	<RepoWpfRuntimePackage Include="System.Security.Permissions"
+						   Version="$(SystemSecurityPermissionsPackageVersion)"
+						   VersionProperty="SystemSecurityPermissionsPackageVersion" />
+	<RepoWpfRuntimePackage Include="System.Windows.Extensions"
+						   Version="$(SystemWindowsExtensionsPackageVersion)"
+						   VersionProperty="SystemWindowsExtensionsPackageVersion" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<RepoWpfCompileAssembly Include="WindowsBase" />
+	<RepoWpfCompileAssembly Include="System.Xaml" />
+	<RepoWpfCompileAssembly Include="System.Windows.Input.Manipulations" />
+	<RepoWpfCompileAssembly Include="UIAutomationTypes" />
+	<RepoWpfCompileAssembly Include="UIAutomationProvider" />
+	<RepoWpfCompileAssembly Include="PresentationCore" />
+	<RepoWpfCompileAssembly Include="PresentationFramework" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Aero\PresentationFramework.Aero.csproj"
+						 WpfAssemblyName="PresentationFramework.Aero" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Aero2\PresentationFramework.Aero2.csproj"
+						 WpfAssemblyName="PresentationFramework.Aero2" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.AeroLite\PresentationFramework.AeroLite.csproj"
+						 WpfAssemblyName="PresentationFramework.AeroLite" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Classic\PresentationFramework.Classic.csproj"
+						 WpfAssemblyName="PresentationFramework.Classic" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Fluent\PresentationFramework.Fluent.csproj"
+						 WpfAssemblyName="PresentationFramework.Fluent" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Luna\PresentationFramework.Luna.csproj"
+						 WpfAssemblyName="PresentationFramework.Luna" />
+	<RepoWpfThemeProject Include="$(WpfSourceDir)Themes\PresentationFramework.Royale\PresentationFramework.Royale.csproj"
+						 WpfAssemblyName="PresentationFramework.Royale" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<RepoWpfRuntimeAssembly Include="WindowsBase" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="System.Xaml" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationCore" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationUI" />
+	<RepoWpfRuntimeAssembly Include="ReachFramework" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="System.Windows.Presentation" />
+	<RepoWpfRuntimeAssembly Include="System.Windows.Controls.Ribbon" />
+	<RepoWpfRuntimeAssembly Include="System.Windows.Input.Manipulations" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="WindowsFormsIntegration" PackReference="false" />
+	<RepoWpfRuntimeAssembly Include="UIAutomationTypes" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="UIAutomationProvider" WpfDemoRequired="true" />
+	<RepoWpfRuntimeAssembly Include="UIAutomationClient" />
+	<RepoWpfRuntimeAssembly Include="UIAutomationClientSideProviders" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Aero" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Aero2" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.AeroLite" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Classic" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Fluent" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Luna" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="PresentationFramework.Royale" WpfDemoRequired="true" WpfThemeAssembly="true" />
+	<RepoWpfRuntimeAssembly Include="DirectWriteForwarder" WpfDemoRequired="true" PackReference="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<RepoWpfNativeRuntimeFile Include="D3DCompiler_47_cor3.dll" />
+	<RepoWpfNativeRuntimeFile Include="PenImc_cor3.dll" />
+	<RepoWpfNativeRuntimeFile Include="PresentationNative_cor3.dll" />
+	<RepoWpfNativeRuntimeFile Include="vcruntime140_cor3.dll" />
+	<RepoWpfNativeRuntimeFile Include="wpfgfx_cor3.dll" />
+  </ItemGroup>
+</Project>

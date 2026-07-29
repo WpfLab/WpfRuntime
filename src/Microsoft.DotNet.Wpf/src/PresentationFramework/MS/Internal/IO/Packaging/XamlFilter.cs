@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -10,13 +11,19 @@
 //  #define TRACE
 #endif
 
+using System;
 using System.IO;
 using System.Xml;
+using MS.Win32;                         // For SafeNativeMethods
 using System.Globalization;             // For CultureInfo
+using System.Diagnostics;               // For Assert
 using System.Collections;               // For Stack and Hashtable
+using System.Collections.Generic;       // For List<>
 using System.Runtime.InteropServices;   // For COMException
+using System.Runtime.InteropServices.ComTypes;   // For IStream, etc.
 using System.Windows;                   // for ExceptionStringTable
 using MS.Internal.Interop;  // for CHUNK_BREAKTYPE (and other IFilter-related definitions)
+using MS.Internal;          // for Invariant
 
 namespace MS.Internal.IO.Packaging
 {
@@ -807,7 +814,10 @@ namespace MS.Internal.IO.Packaging
         ///</summary>
         private void CreateXmlReader()
         {
-            _xamlReader?.Close();
+            if (_xamlReader != null)
+            {
+                _xamlReader.Close();
+            }
             _xamlReader = new XmlTextReader(_xamlStream);
             // Do not return pretty-pretting spacing between tags as data.
             ((XmlTextReader)_xamlReader).WhitespaceHandling = WhitespaceHandling.Significant;
@@ -818,7 +828,10 @@ namespace MS.Internal.IO.Packaging
 
         private void EnsureXmlReaderIsClosed()
         {
-            _xamlReader?.Close();
+            if (_xamlReader != null)
+            {
+                _xamlReader.Close();
+            }
         }
 
         ///<summary>

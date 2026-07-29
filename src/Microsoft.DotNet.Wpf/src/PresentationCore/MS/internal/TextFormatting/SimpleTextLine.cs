@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -8,10 +9,19 @@
 //
 //
 
+using System;
+using System.Security;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.TextFormatting;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using MS.Internal.Shaping;
+using MS.Internal.FontCache;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace MS.Internal.TextFormatting
 {
@@ -75,7 +85,7 @@ namespace MS.Internal.TextFormatting
         /// This method breaks line using Ideal width such that it will be
         /// consistent with FullTextLine
         /// </remarks>
-        public static TextLine  Create(
+        static public TextLine  Create(
             FormatSettings          settings,
             int                     cpFirst,
             int                     paragraphWidth,
@@ -390,7 +400,7 @@ namespace MS.Internal.TextFormatting
         /// <param name="formatter">formatter</param>
         /// <param name="trailing">trailing spaces</param>
         /// <param name="trailingSpaceWidth">trailing spaces width in ideal values</param>
-        private static void CollectTrailingSpaces(
+        static private void CollectTrailingSpaces(
             ArrayList           runs,
             TextFormatterImp    formatter,
             ref int             trailing,
@@ -418,7 +428,7 @@ namespace MS.Internal.TextFormatting
         /// <summary>
         /// Collecting glyph runs
         /// </summary>
-        private static void AddRun(
+        static private void AddRun(
             ArrayList       runs,
             SimpleRun       run,
             ref int         nonHiddenLength
@@ -477,7 +487,10 @@ namespace MS.Internal.TextFormatting
             InvertAxes          inversion
             )
         {
-            ArgumentNullException.ThrowIfNull(drawingContext);
+            if (drawingContext == null)
+            {
+                throw new ArgumentNullException("drawingContext");
+            }
 
             MatrixTransform antiInversion = TextFormatterImp.CreateAntiInversionTransform(
                 inversion,
@@ -584,7 +597,10 @@ namespace MS.Internal.TextFormatting
             int idealXRelativeToOrigin = _idealOffsetUnRounded;
             double y = origin.Y + Baseline;
 
-            drawingContext?.PushGuidelineY1(y);
+            if (drawingContext != null)
+            {
+                drawingContext.PushGuidelineY1(y);
+            }
 
             Rect boundingBox = Rect.Empty;
 
@@ -606,7 +622,10 @@ namespace MS.Internal.TextFormatting
             }
             finally
             {
-                drawingContext?.Pop();
+                if (drawingContext != null)
+                {
+                    drawingContext.Pop();
+                }
             }
 
             if(boundingBox.IsEmpty)
@@ -791,7 +810,10 @@ namespace MS.Internal.TextFormatting
             int     textLength
             )
         {
-            ArgumentOutOfRangeException.ThrowIfZero(textLength);
+            if (textLength == 0)
+            {
+                throw new ArgumentOutOfRangeException("textLength", SR.ParameterMustBeGreaterThanZero);
+            }
 
             if (textLength < 0)
             {
@@ -1382,7 +1404,7 @@ namespace MS.Internal.TextFormatting
         /// <param name="widthMax">maximum column width</param>
         /// <param name="idealRunOffsetUnRounded">run's offset from the beginning of the line</param>
         /// <returns>a SimpleRun object</returns>
-        public static SimpleRun Create(
+        static public SimpleRun Create(
             FormatSettings          settings,
             int                     cp,
             int                     cpFirst,
@@ -1429,7 +1451,7 @@ namespace MS.Internal.TextFormatting
         /// <param name="widthLeft">maximum run width</param>
         /// <param name="idealRunOffsetUnRounded">run's offset from the beginning of the line</param>
         /// <returns>a SimpleRun object</returns>
-        public static SimpleRun Create(
+        static public SimpleRun Create(
             FormatSettings          settings,
             CharacterBufferRange    charString,
             TextRun                 textRun,
@@ -1571,7 +1593,7 @@ namespace MS.Internal.TextFormatting
         /// <param name="settings">text formatting settings</param>
         /// <param name="textRun">text run</param>
         /// <param name="idealRunOffsetUnRounded">run's offset from the beginning of the line</param>
-        private static SimpleRun CreateSimpleRunForTab(
+        static private SimpleRun CreateSimpleRunForTab(
             FormatSettings settings,
             TextRun textRun,
             int idealRunOffsetUnRounded,
@@ -1603,10 +1625,8 @@ namespace MS.Internal.TextFormatting
             // a complex character, we need to do the same thing as the full shaping path and draw a space for each tab.
             TextRun modifedTextRun = new TextCharacters(" ", textRun.Properties);
             CharacterBufferRange characterBufferRange = new CharacterBufferRange(modifedTextRun);
-            SimpleRun run = new SimpleRun(1, modifedTextRun, Flags.Tab, settings.Formatter, pixelsPerDip)
-            {
-                CharBufferReference = characterBufferRange.CharacterBufferReference
-            };
+            SimpleRun run = new SimpleRun(1, modifedTextRun, Flags.Tab, settings.Formatter, pixelsPerDip);
+            run.CharBufferReference = characterBufferRange.CharacterBufferReference;
             run.TextRun.Properties.Typeface.GetCharacterNominalWidthsAndIdealWidth(
                     characterBufferRange,
                     run.EmSize,
@@ -1632,7 +1652,7 @@ namespace MS.Internal.TextFormatting
         /// Returns whether the conditions are met to make it possible to process tabs
         /// in the simple shaping path.
         /// </summary>
-        private static bool CanProcessTabsInSimpleShapingPath(
+        static private bool CanProcessTabsInSimpleShapingPath(
             ParaProp           textParagraphProperties,
             TextFormattingMode textFormattingMode
             )
@@ -1644,7 +1664,7 @@ namespace MS.Internal.TextFormatting
         /// Create simple run of text,
         /// returning null if the specified text run cannot be correctly formatted as simple run
         /// </summary>
-        internal static SimpleRun CreateSimpleTextRun(
+        static internal SimpleRun CreateSimpleTextRun(
             CharacterBufferRange    charBufferRange,
             TextRun                 textRun,
             TextFormatterImp        formatter,
@@ -1656,11 +1676,9 @@ namespace MS.Internal.TextFormatting
         {
             Invariant.Assert(textRun is TextCharacters);
 
-            SimpleRun run = new SimpleRun(formatter, pixelsPerDip)
-            {
-                CharBufferReference = charBufferRange.CharacterBufferReference,
-                TextRun = textRun
-            };
+            SimpleRun run = new SimpleRun(formatter, pixelsPerDip);
+            run.CharBufferReference = charBufferRange.CharacterBufferReference;
+            run.TextRun = textRun;
 
             if (!run.TextRun.Properties.Typeface.CheckFastPathNominalGlyphs(
                 charBufferRange,

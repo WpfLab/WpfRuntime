@@ -1,23 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-#nullable disable
+// XmlDataValue
+// A type to isolate our handling of System.Xml types so that we
+// don't have to load System.Xml in the BAML case unless we really
+// do have an XML Island.
 
 using System.IO;
 using System.Xml;
 
 namespace System.Windows.Markup
 {
-    /// <summary>
-    /// A type to isolate our handling of System.Xml types so that we
-    /// don't have to load System.Xml in the BAML case unless we really
-    /// do have an XML Island.
-    /// </summary>
     [ContentProperty("Text")]
-    public sealed class XData
+    sealed public class XData
     {
-        private XmlReader _reader;
-        private string _text;
+        XmlReader _reader;
+        string _text;
 
         public XData()
         {
@@ -25,7 +24,7 @@ namespace System.Windows.Markup
 
         public string Text
         {
-            get => _text;
+            get { return _text; }
             set
             {
                 _text = value;
@@ -37,12 +36,21 @@ namespace System.Windows.Markup
         // and handle the value without loading System.Xml.dll.
         public object XmlReader
         {
-            get => _reader ??= Xml.XmlReader.Create(new StringReader(Text));
+            get
+            {
+                if (_reader == null)
+                {
+                    StringReader stringReader = new StringReader(Text);
+                    _reader = Xml.XmlReader.Create(stringReader);
+                }
+                return _reader;
+            }
             set
             {
                 _reader = value as XmlReader;
                 _text = null;
             }
         }
+
     }
 }

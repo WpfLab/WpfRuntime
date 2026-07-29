@@ -1,10 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;                       // Object, IServiceProvider
 using System.Windows;               // Rect, Point
 using System.Windows.Documents;     // ITextSelection
 using System.Windows.Controls;      // FlowDocumentScrollViewer
+using System.Windows.Controls.Primitives;   // IScrollInfo
+using System.Windows.Input;         // UICommand
 using System.Windows.Threading;     // Dispatcher
 using MS.Internal.KnownBoxes;       // BooleanBoxes
 
@@ -256,7 +260,10 @@ namespace MS.Internal.Documents
         /// </summary>
         void IFlowDocumentViewer.PreviousPage()
         {
-            ScrollViewer?.PageUp();
+            if (ScrollViewer != null)
+            {
+                ScrollViewer.PageUp();
+            }
         }
 
         /// <summary>
@@ -264,7 +271,10 @@ namespace MS.Internal.Documents
         /// </summary>
         void IFlowDocumentViewer.NextPage()
         {
-            ScrollViewer?.PageDown();
+            if (ScrollViewer != null)
+            {
+                ScrollViewer.PageDown();
+            }
         }
 
         /// <summary>
@@ -272,7 +282,10 @@ namespace MS.Internal.Documents
         /// </summary>
         void IFlowDocumentViewer.FirstPage()
         {
-            ScrollViewer?.ScrollToHome();
+            if (ScrollViewer != null)
+            {
+                ScrollViewer.ScrollToHome();
+            }
         }
 
         /// <summary>
@@ -280,7 +293,10 @@ namespace MS.Internal.Documents
         /// </summary>
         void IFlowDocumentViewer.LastPage()
         {
-            ScrollViewer?.ScrollToEnd();
+            if (ScrollViewer != null)
+            {
+                ScrollViewer.ScrollToEnd();
+            }
         }
 
         /// <summary>

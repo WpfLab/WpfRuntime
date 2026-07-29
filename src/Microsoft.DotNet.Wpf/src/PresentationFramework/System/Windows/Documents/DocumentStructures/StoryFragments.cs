@@ -1,8 +1,20 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using MS.Internal.Documents;
+using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Reflection;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Markup;
 
 [assembly: XmlnsDefinition(
@@ -43,7 +55,7 @@ namespace System.Windows.Documents.DocumentStructures
                 return;
             }
 
-            throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(StoryFragment)), nameof(value));
+            throw new ArgumentException(SR.Format(SR.UnexpectedParameterType, value.GetType(), typeof(StoryFragment)), "value");
         }
         
         void IAddChild.AddText(string text) { } 
@@ -105,7 +117,7 @@ namespace System.Windows.Documents.DocumentStructures
 
             throw new ArgumentException(SR.Format(SR.DocumentStructureUnexpectedParameterType6, value.GetType(),
                 typeof(SectionStructure), typeof(ParagraphStructure), typeof(FigureStructure), typeof(ListStructure), typeof(TableStructure), typeof(StoryBreak)),
-                nameof(value));
+                "value");
         }
         void IAddChild.AddText(string text) { }
 

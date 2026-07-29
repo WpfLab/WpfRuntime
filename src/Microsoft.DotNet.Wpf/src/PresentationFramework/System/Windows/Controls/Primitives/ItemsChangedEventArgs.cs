@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Delegate and args for the ItemsChanged event.
@@ -7,7 +8,9 @@
 // Specs:       Data Styling.mht
 //
 
+using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 
 
 namespace System.Windows.Controls.Primitives
@@ -73,11 +76,11 @@ namespace System.Windows.Controls.Primitives
         //
         //------------------------------------------------------
 
-        private NotifyCollectionChangedAction  _action;
-        private GeneratorPosition       _position;
-        private GeneratorPosition       _oldPosition;
-        private int                     _itemCount;
-        private int                     _itemUICount;
+        NotifyCollectionChangedAction  _action;
+        GeneratorPosition       _position;
+        GeneratorPosition       _oldPosition;
+        int                     _itemCount;
+        int                     _itemUICount;
     }
 
     /// <summary>

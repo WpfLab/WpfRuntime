@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -10,21 +11,37 @@
 
 using MS.Internal;
 using MS.Internal.Collections;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Markup;
 using System.Windows.Media.Media3D.Converters;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
+using System.Windows.Media.Imaging;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows.Media.Media3D
 {
     /// <summary>
     /// A collection of Vector3Ds.
     /// </summary>
+
     [TypeConverter(typeof(Vector3DCollectionConverter))]
     [ValueSerializer(typeof(Vector3DCollectionValueSerializer))] // Used by MarkupWriter
     public sealed partial class Vector3DCollection : Freezable, IFormattable, IList, IList<Vector3D>
@@ -115,8 +132,6 @@ namespace System.Windows.Media.Media3D
         /// </summary>
         public void Insert(int index, Vector3D value)
         {
-
-
             WritePreamble();
             _collection.Insert(index, value);
 
@@ -194,8 +209,6 @@ namespace System.Windows.Media.Media3D
             }
             set
             {
-
-
                 WritePreamble();
                 _collection[ index ] = value;
 
@@ -229,13 +242,18 @@ namespace System.Windows.Media.Media3D
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // This will not throw in the case that we are copying
             // from an empty collection.  This is consistent with the
             // BCL Collection implementations. (Windows 1587365)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _collection.Count);
+            if (index < 0  || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             _collection.CopyTo(array, index);
         }
@@ -352,13 +370,18 @@ namespace System.Windows.Media.Media3D
         {
             ReadPreamble();
 
-            ArgumentNullException.ThrowIfNull(array);
+            if (array == null)
+            {
+                throw new ArgumentNullException("array");
+            }
 
             // This will not throw in the case that we are copying
             // from an empty collection.  This is consistent with the
             // BCL Collection implementations. (Windows 1587365)
-            ArgumentOutOfRangeException.ThrowIfNegative(index);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(index, array.Length - _collection.Count);
+            if (index < 0  || (index + _collection.Count) > array.Length)
+            {
+                throw new ArgumentOutOfRangeException("index");
+            }
 
             if (array.Rank != 1)
             {
@@ -446,7 +469,10 @@ namespace System.Windows.Media.Media3D
 
         private Vector3D Cast(object value)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if( value == null )
+            {
+                throw new System.ArgumentNullException("value");
+            }
 
             if (!(value is Vector3D))
             {
@@ -520,7 +546,7 @@ namespace System.Windows.Media.Media3D
         /// </summary>
         protected override void CloneCore(Freezable source)
         {
-            Vector3DCollection sourceVector3DCollection = (Vector3DCollection)source;
+            Vector3DCollection sourceVector3DCollection = (Vector3DCollection) source;
 
             base.CloneCore(source);
 
@@ -532,14 +558,13 @@ namespace System.Windows.Media.Media3D
             {
                 _collection.Add(sourceVector3DCollection._collection[i]);
             }
-
-        }
+}
         /// <summary>
         /// Implementation of Freezable.CloneCurrentValueCore()
         /// </summary>
         protected override void CloneCurrentValueCore(Freezable source)
         {
-            Vector3DCollection sourceVector3DCollection = (Vector3DCollection)source;
+            Vector3DCollection sourceVector3DCollection = (Vector3DCollection) source;
 
             base.CloneCurrentValueCore(source);
 
@@ -551,14 +576,13 @@ namespace System.Windows.Media.Media3D
             {
                 _collection.Add(sourceVector3DCollection._collection[i]);
             }
-
-        }
+}
         /// <summary>
         /// Implementation of Freezable.GetAsFrozenCore()
         /// </summary>
         protected override void GetAsFrozenCore(Freezable source)
         {
-            Vector3DCollection sourceVector3DCollection = (Vector3DCollection)source;
+            Vector3DCollection sourceVector3DCollection = (Vector3DCollection) source;
 
             base.GetAsFrozenCore(source);
 
@@ -570,14 +594,13 @@ namespace System.Windows.Media.Media3D
             {
                 _collection.Add(sourceVector3DCollection._collection[i]);
             }
-
-        }
+}
         /// <summary>
         /// Implementation of Freezable.GetCurrentValueAsFrozenCore()
         /// </summary>
         protected override void GetCurrentValueAsFrozenCore(Freezable source)
         {
-            Vector3DCollection sourceVector3DCollection = (Vector3DCollection)source;
+            Vector3DCollection sourceVector3DCollection = (Vector3DCollection) source;
 
             base.GetCurrentValueAsFrozenCore(source);
 
@@ -589,8 +612,7 @@ namespace System.Windows.Media.Media3D
             {
                 _collection.Add(sourceVector3DCollection._collection[i]);
             }
-
-        }
+}
 
 
         #endregion ProtectedMethods
@@ -687,7 +709,7 @@ namespace System.Windows.Media.Media3D
             // Helper to get the numeric list separator for a given culture.
             // char separator = MS.Internal.TokenizerHelper.GetNumericListSeparator(provider);
 
-            for (int i = 0; i < _collection.Count; i++)
+            for (int i=0; i<_collection.Count; i++)
             {
                 str.AppendFormat(
                     provider,
@@ -784,7 +806,6 @@ namespace System.Windows.Media.Media3D
 
             void IDisposable.Dispose()
             {
-
             }
 
             /// <summary>
@@ -923,44 +944,45 @@ namespace System.Windows.Media.Media3D
 
             WritePreamble();
 
-            ArgumentNullException.ThrowIfNull(collection);
-
-
-            ICollection<Vector3D> icollectionOfT = collection as ICollection<Vector3D>;
-
-            if (icollectionOfT != null)
+            if (collection != null)
             {
-                _collection = new FrugalStructList<Vector3D>(icollectionOfT);
+                ICollection<Vector3D> icollectionOfT = collection as ICollection<Vector3D>;
+
+                if (icollectionOfT != null)
+                {
+                    _collection = new FrugalStructList<Vector3D>(icollectionOfT);
+                }
+                else
+                {       
+                    ICollection icollection = collection as ICollection;
+
+                    if (icollection != null) // an IC but not and IC<T>
+                    {
+                        _collection = new FrugalStructList<Vector3D>(icollection);
+                    }
+                    else // not a IC or IC<T> so fall back to the slower Add
+                    {
+                        _collection = new FrugalStructList<Vector3D>();
+
+                        foreach (Vector3D item in collection)
+                        {
+                            _collection.Add(item);
+                        }
+}
+                }
+
+
+
+
+
+
+
+                WritePostscript();
             }
             else
             {
-                ICollection icollection = collection as ICollection;
-
-                if (icollection != null) // an IC but not and IC<T>
-                {
-                    _collection = new FrugalStructList<Vector3D>(icollection);
-                }
-                else // not a IC or IC<T> so fall back to the slower Add
-                {
-                    _collection = new FrugalStructList<Vector3D>();
-
-                    foreach (Vector3D item in collection)
-                    {
-
-                        _collection.Add(item);
-                    }
-
-
-                }
+                throw new ArgumentNullException("collection");
             }
-
-
-
-
-
-
-
-            WritePostscript();
         }
 
         #endregion Constructors

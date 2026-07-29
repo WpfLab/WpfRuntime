@@ -1,12 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Base class for Automation Idenfitiers (Property, Event, etc.)
 
 
+using System;
 using System.Collections;
 using System.Diagnostics;
 using MS.Internal.Automation;
+using MS.Internal.UIAutomationTypes.Interop;
 
 
 namespace System.Windows.Automation
@@ -122,7 +125,8 @@ namespace System.Windows.Automation
         public int CompareTo(object obj)
         {
             Debug.Assert(obj != null, "Null obj!");
-            ArgumentNullException.ThrowIfNull(obj);
+            if (obj == null)
+                throw new ArgumentNullException("obj");
 
             // Ordering allows arrays of references to these to be sorted - though the sort order is undefined.
             Debug.Assert(obj is AutomationIdentifier, "CompareTo called with unexpected type");
@@ -165,7 +169,7 @@ namespace System.Windows.Automation
                     case UiaCoreTypesApi.AutomationIdType.Pattern:       autoid = new AutomationPattern(id, programmaticName);       break;
                     case UiaCoreTypesApi.AutomationIdType.ControlType:   autoid = new ControlType(id, programmaticName);             break;
 
-                    default: Debug.Fail("Invalid type specified for AutomationIdentifier");
+                    default: Debug.Assert(false, "Invalid type specified for AutomationIdentifier");
                         throw new InvalidOperationException("Invalid type specified for AutomationIdentifier");
                 }
 

@@ -1,20 +1,32 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Collections;
+using System.Windows.Threading;
+
+using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 
 using System.Windows.Input;
 using System.Windows.Media;
+
+using MS.Win32;
 using MS.Internal;
 using MS.Internal.Commands;
 using MS.Internal.Telemetry.PresentationFramework;
 
 
 // For typeconverter
+using System.ComponentModel.Design.Serialization;
+using System.Reflection;
 
 
 namespace System.Windows.Controls
@@ -124,7 +136,7 @@ namespace System.Windows.Controls
             get { return _maximizeValueCommand; }
         }
 
-        private static void InitializeCommands()
+        static void InitializeCommands()
         {
             _increaseLargeCommand = new RoutedCommand("IncreaseLarge", typeof(Slider));
             _decreaseLargeCommand = new RoutedCommand("DecreaseLarge", typeof(Slider));
@@ -205,37 +217,55 @@ namespace System.Windows.Controls
         private static void OnIncreaseSmallCommand(object sender, ExecutedRoutedEventArgs e)
         {
             Slider slider = sender as Slider;
-            slider?.OnIncreaseSmall();
+            if (slider != null)
+            {
+                slider.OnIncreaseSmall();
+            }
         }
 
         private static void OnDecreaseSmallCommand(object sender, ExecutedRoutedEventArgs e)
         {
             Slider slider = sender as Slider;
-            slider?.OnDecreaseSmall();
+            if (slider != null)
+            {
+                slider.OnDecreaseSmall();
+            }
         }
 
         private static void OnMaximizeValueCommand(object sender, ExecutedRoutedEventArgs e)
         {
             Slider slider = sender as Slider;
-            slider?.OnMaximizeValue();
+            if (slider != null)
+            {
+                slider.OnMaximizeValue();
+            }
         }
 
         private static void OnMinimizeValueCommand(object sender, ExecutedRoutedEventArgs e)
         {
             Slider slider = sender as Slider;
-            slider?.OnMinimizeValue();
+            if (slider != null)
+            {
+                slider.OnMinimizeValue();
+            }
         }
 
         private static void OnIncreaseLargeCommand(object sender, ExecutedRoutedEventArgs e)
         {
             Slider slider = sender as Slider;
-            slider?.OnIncreaseLarge();
+            if (slider != null)
+            {
+                slider.OnIncreaseLarge();
+            }
         }
 
         private static void OnDecreaseLargeCommand(object sender, ExecutedRoutedEventArgs e)
         {
             Slider slider = sender as Slider;
-            slider?.OnDecreaseLarge();
+            if (slider != null)
+            {
+                slider.OnDecreaseLarge();
+            }
         }
 
         #endregion Commands
@@ -817,12 +847,10 @@ namespace System.Windows.Controls
 
             if (_autoToolTip == null)
             {
-                _autoToolTip = new ToolTip
-                {
-                    Placement = PlacementMode.Custom,
-                    PlacementTarget = thumb,
-                    CustomPopupPlacementCallback = new CustomPopupPlacementCallback(this.AutoToolTipCustomPlacementCallback)
-                };
+                _autoToolTip = new ToolTip();
+                _autoToolTip.Placement = PlacementMode.Custom;
+                _autoToolTip.PlacementTarget = thumb;
+                _autoToolTip.CustomPopupPlacementCallback = new CustomPopupPlacementCallback(this.AutoToolTipCustomPlacementCallback);
             }
 
             thumb.ToolTip = _autoToolTip;
@@ -894,7 +922,10 @@ namespace System.Windows.Controls
                 return;
             }
 
-            _autoToolTip?.IsOpen = false;
+            if (_autoToolTip != null)
+            {
+                _autoToolTip.IsOpen = false;
+            }
 
             thumb.ToolTip = _thumbOriginalToolTip;
         }
@@ -944,7 +975,7 @@ namespace System.Windows.Controls
                     }
 
                 default:
-                    return Array.Empty<CustomPopupPlacement>();
+                    return new CustomPopupPlacement[]{};
             }
         }
 
@@ -1329,7 +1360,10 @@ namespace System.Windows.Controls
             SelectedRangeElement = GetTemplateChild(SelectedRangeElementName) as FrameworkElement;
             Track = GetTemplateChild(TrackName) as Track;
 
-            _autoToolTip?.PlacementTarget = Track?.Thumb;
+            if (_autoToolTip != null)
+            {
+                _autoToolTip.PlacementTarget = Track != null ? Track.Thumb : null;
+            }
         }
 
         #endregion Override Functions

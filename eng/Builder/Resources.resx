@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="InvalidPullRequestUrl" xml:space="preserve"><value>The pull request URL must be an HTTPS github.com URL in the form /owner/repository/pull/number.</value></data>
+  <data name="InvalidGitHubRemote" xml:space="preserve"><value>The target remote must be a GitHub.com HTTPS or SSH repository URL.</value></data>
+  <data name="TargetRemoteMismatch" xml:space="preserve"><value>The target remote fetch and push URLs do not identify the same GitHub repository.</value></data>
+  <data name="InvalidGitObjectId" xml:space="preserve"><value>The Git object ID must be a full 40-character hexadecimal SHA.</value></data>
+  <data name="InvalidKeepWorkspacePolicy" xml:space="preserve"><value>--keep-workspace must be always, on-failure, or never.</value></data>
+  <data name="UntrustedBuildConsentRequired" xml:space="preserve"><value>This command builds code from an external pull request. Run only in a disposable, low-privilege environment and pass --allow-untrusted-build to acknowledge the risk.</value></data>
+  <data name="GitHubTokenRequired" xml:space="preserve"><value>GITHUB_TOKEN is required for GitHub API access.</value></data>
+  <data name="DetachedHeadRequiresBase" xml:space="preserve"><value>--base is required when the caller repository is at detached HEAD.</value></data>
+	<data name="PullRequestNotOpen" xml:space="preserve"><value>The source pull request must be open.</value></data>
+  <data name="TargetBranchSourceConflict" xml:space="preserve"><value>The existing target branch or pull request belongs to a different source pull request and will not be overwritten.</value></data>
+  <data name="NoChangesToRelay" xml:space="preserve"><value>The merged branch has no changes relative to the target base; no pull request is required.</value></data>
+  <data name="UnsupportedGitHubActionsEvent" xml:space="preserve"><value>The GitHub Actions event '{0}' is not supported.</value></data>
+  <data name="PullRequestBuildMetadataRequired" xml:space="preserve"><value>A positive pull request number and full source head SHA are required for pull_request_target builds.</value></data>
+  <data name="NonPullRequestBuildMetadataNotAllowed" xml:space="preserve"><value>Pull request metadata must not be supplied for non-pull-request builds.</value></data>
+  <data name="GitHubActionsEventFileNotFound" xml:space="preserve"><value>The GitHub Actions event file was not found.</value></data>
+  <data name="InvalidPullRequestTargetEvent" xml:space="preserve"><value>The pull_request_target event does not contain a valid pull request number and full head SHA.</value></data>
+  <data name="GitHubActionsOutputMustBeSingleLine" xml:space="preserve"><value>GitHub Actions output values must be single-line strings.</value></data>
+  <data name="InvalidGitHubActionsOutputName" xml:space="preserve"><value>GitHub Actions output names may contain only ASCII letters, digits, hyphens, and underscores.</value></data>
+  <data name="CheckoutPersistedHttpCredentials" xml:space="preserve"><value>The tested checkout persisted an HTTP authentication header in .git/config.</value></data>
+  <data name="CheckoutPersistedRemoteCredentials" xml:space="preserve"><value>The tested checkout persisted credentials in a Git remote URL.</value></data>
+  <data name="GitHubActionsOutputRequired" xml:space="preserve"><value>--github-output is required for package builds.</value></data>
+  <data name="InvalidGitHubActionsBuildTarget" xml:space="preserve"><value>--target must be solution or package.</value></data>
+  <data name="TestedCommitDoesNotMatchEventSha" xml:space="preserve"><value>The tested checkout HEAD does not match the GitHub event SHA.</value></data>
+  <data name="TestedMergeDoesNotMatchPullRequestEvent" xml:space="preserve"><value>The tested checkout is not the exact merge of the trusted event base SHA and pull request source head SHA.</value></data>
+  <data name="MsBuildNotFound" xml:space="preserve"><value>Visual Studio MSBuild.exe could not be resolved to an absolute existing path.</value></data>
+  <data name="GitHubActionsEnvironmentVariableRequired" xml:space="preserve"><value>The option or GitHub Actions environment variable {0} is required.</value></data>
+  <data name="InvalidGitHubRepositoryFullName" xml:space="preserve"><value>The GitHub repository must be in owner/repository form.</value></data>
+  <data name="WorkflowRunRepositoryMismatch" xml:space="preserve"><value>The workflow_run event repository does not match GITHUB_REPOSITORY.</value></data>
+  <data name="InvalidWorkflowRunPullRequestAssociation" xml:space="preserve"><value>The workflow_run event contains an invalid pull request association.</value></data>
+  <data name="InvalidWorkflowRunEventProperty" xml:space="preserve"><value>The workflow_run event property '{0}' is missing or invalid.</value></data>
+</root>

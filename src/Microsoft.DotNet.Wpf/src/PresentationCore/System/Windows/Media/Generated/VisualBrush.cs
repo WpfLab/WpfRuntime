@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,20 +12,37 @@
 using MS.Internal;
 using MS.Internal.KnownBoxes;
 using MS.Internal.Collections;
+using MS.Internal.PresentationCore;
 using MS.Utility;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.ComponentModel.Design.Serialization;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Media3D;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Composition;
+using System.Windows.Media.Imaging;
 using System.Windows.Markup;
 using System.Windows.Media.Converters;
+using System.Security;
+using SR=MS.Internal.PresentationCore.SR;
+// These types are aliased to match the unamanaged names used in interop
+using BOOL = System.UInt32;
+using WORD = System.UInt16;
+using Float = System.Single;
 
 namespace System.Windows.Media
 {
-    public sealed partial class VisualBrush : TileBrush
+    sealed partial class VisualBrush : TileBrush
     {
         //------------------------------------------------------
         //
@@ -135,7 +153,7 @@ namespace System.Windows.Media
         {
             get
             {
-                return (Visual)GetValue(VisualProperty);
+                return (Visual) GetValue(VisualProperty);
             }
             set
             {
@@ -152,7 +170,7 @@ namespace System.Windows.Media
         {
             get
             {
-                return (bool)GetValue(AutoLayoutContentProperty);
+                return (bool) GetValue(AutoLayoutContentProperty);
             }
             set
             {
@@ -280,7 +298,6 @@ namespace System.Windows.Media
         }
         internal override DUCE.ResourceHandle AddRefOnChannelCore(DUCE.Channel channel)
         {
-
                 if (_duceResource.CreateOrAddRefOnChannel(this, channel, System.Windows.Media.Composition.DUCE.ResourceType.TYPE_VISUALBRUSH))
                 {
                     Transform vTransform = Transform;
@@ -288,7 +305,7 @@ namespace System.Windows.Media
                     Transform vRelativeTransform = RelativeTransform;
                     if (vRelativeTransform != null) ((DUCE.IResource)vRelativeTransform).AddRefOnChannel(channel);
                     Visual vVisual = Visual;
-                    vVisual?.AddRefOnChannelForCyclicBrush(this, channel);
+                    if (vVisual != null) vVisual.AddRefOnChannelForCyclicBrush(this, channel);
                     AddRefOnChannelAnimations(channel);
 
 
@@ -296,11 +313,9 @@ namespace System.Windows.Media
                 }
 
                 return _duceResource.GetHandle(channel);
-
-        }
+}
         internal override void ReleaseOnChannelCore(DUCE.Channel channel)
         {
-
                 Debug.Assert(_duceResource.IsOnChannel(channel));
 
                 if (_duceResource.ReleaseOnChannel(channel))
@@ -310,12 +325,10 @@ namespace System.Windows.Media
                     Transform vRelativeTransform = RelativeTransform;
                     if (vRelativeTransform != null) ((DUCE.IResource)vRelativeTransform).ReleaseOnChannel(channel);
                     Visual vVisual = Visual;
-                    vVisual?.ReleaseOnChannelForCyclicBrush(this, channel);
+                    if (vVisual != null) vVisual.ReleaseOnChannelForCyclicBrush(this, channel);
                     ReleaseOnChannelAnimations(channel);
-
-                }
-
-        }
+}
+}
         internal override DUCE.ResourceHandle GetHandleCore(DUCE.Channel channel)
         {
             // Note that we are in a lock here already.
@@ -415,6 +428,7 @@ namespace System.Windows.Media
             // of your app.
 
 
+
             // Initializations
             Type typeofThis = typeof(VisualBrush);
             VisualProperty =
@@ -436,8 +450,6 @@ namespace System.Windows.Media
                                    /* isIndependentlyAnimated  = */ false,
                                    /* coerceValueCallback */ null);
         }
-
-
 
         #endregion Constructors
     }

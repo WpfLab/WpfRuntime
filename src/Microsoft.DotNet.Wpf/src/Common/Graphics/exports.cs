@@ -1,19 +1,37 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
 //     Managed exports from MIL core.
 
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Threading;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Effects;
+using System.Windows.Media.Media3D;
 using System.Runtime.InteropServices;
+using System.Windows.Media.Animation;
 using MS.Internal;
+using MS.Internal.PresentationCore;
 using MS.Internal.Interop;
 using MS.Utility;
 using MS.Win32;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Security;
+using Microsoft.Win32.SafeHandles;
 
-using UnsafeNativeMethods = MS.Win32.PresentationCore.UnsafeNativeMethods;
-using HRESULT = MS.Internal.HRESULT;
+using UnsafeNativeMethods=MS.Win32.PresentationCore.UnsafeNativeMethods;
+using SafeNativeMethods=MS.Win32.PresentationCore.SafeNativeMethods;
+using HRESULT=MS.Internal.HRESULT;
+using SR=MS.Internal.PresentationCore.SR;
+using DllImport=MS.Internal.PresentationCore.DllImport;
 
 /*
  *
@@ -150,14 +168,14 @@ namespace System.Windows.Media.Composition
             internal static extern int MilChannel_GetMarshalType(IntPtr channelHandle, out ChannelMarshalType marshalType);
 
             [DllImport (DllImport.MilCore, EntryPoint = "MilResource_SendCommand")]//CASRemoval:
-            internal static extern unsafe int MilResource_SendCommand(
+            unsafe internal static extern int MilResource_SendCommand(
                 byte *pbData,
                 uint cbSize,
                 bool sendInSeparateBatch,
                 IntPtr pChannel);
 
             [DllImport (DllImport.MilCore, EntryPoint = "MilChannel_BeginCommand")]//CASRemoval:
-            internal static extern unsafe int MilChannel_BeginCommand(
+            unsafe internal static extern int MilChannel_BeginCommand(
                 IntPtr pChannel,
                 byte *pbData,
                 uint cbSize,
@@ -165,18 +183,18 @@ namespace System.Windows.Media.Composition
                 );
 
             [DllImport (DllImport.MilCore, EntryPoint = "MilChannel_AppendCommandData")]//CASRemoval:
-            internal static extern unsafe int MilChannel_AppendCommandData(
+            unsafe internal static extern int MilChannel_AppendCommandData(
                 IntPtr pChannel,
                 byte *pbData,
                 uint cbSize
                 );
 
             [DllImport (DllImport.MilCore, EntryPoint = "MilChannel_EndCommand")]//CASRemoval:
-            internal static extern unsafe int MilChannel_EndCommand(
+            unsafe internal static extern int MilChannel_EndCommand(
                 IntPtr pChannel);
 
             [DllImport (DllImport.MilCore, EntryPoint = "MilResource_SendCommandMedia")]//CASRemoval:
-            internal static extern unsafe int MilResource_SendCommandMedia(
+            unsafe internal static extern int MilResource_SendCommandMedia(
                 ResourceHandle handle,
                 SafeMediaHandle pMedia,
                 IntPtr pChannel,
@@ -184,7 +202,7 @@ namespace System.Windows.Media.Composition
                 );
 
             [DllImport (DllImport.MilCore, EntryPoint = "MilResource_SendCommandBitmapSource")]//CASRemoval:
-            internal static extern unsafe int MilResource_SendCommandBitmapSource(
+            unsafe internal static extern int MilResource_SendCommandBitmapSource(
                 ResourceHandle handle,
                 BitmapSourceSafeMILHandle /* IWICBitmapSource */ pBitmapSource,
                 IntPtr pChannel);
@@ -322,13 +340,13 @@ namespace System.Windows.Media.Composition
             /// <summary>
             /// Primary channel.
             /// </summary>
-            private IntPtr _hChannel;
+            IntPtr _hChannel;
 
             private Channel _referenceChannel;
             private bool _isSynchronous;
             private bool _isOutOfBandChannel;
 
-            private IntPtr _pConnection;
+            IntPtr _pConnection;
 
             /// <summary>
             /// Creates a channel and associates it with channel group (partition).
@@ -619,7 +637,7 @@ namespace System.Windows.Media.Composition
             /// <summary>
             /// SendCommand sends a command struct through the composition thread.
             /// </summary>
-            internal unsafe void SendCommand(
+            unsafe internal void SendCommand(
                 byte *pCommandData,
                 int cSize)
             {
@@ -632,7 +650,7 @@ namespace System.Windows.Media.Composition
             /// current open batch, or whether it will be added to a new and separate batch
             /// which is then immediately closed, leaving the current batch untouched.
             /// </summary>
-            internal unsafe void SendCommand(
+            unsafe internal void SendCommand(
                 byte *pCommandData,
                 int cSize,
                 bool sendInSeparateBatch)
@@ -668,7 +686,7 @@ namespace System.Windows.Media.Composition
             /// <summary>
             /// BeginCommand opens a command on a channel
             /// </summary>
-            internal unsafe void BeginCommand(
+            unsafe internal void BeginCommand(
                 byte *pbCommandData,
                 int cbSize,
                 int cbExtra)
@@ -705,7 +723,7 @@ namespace System.Windows.Media.Composition
             /// <summary>
             /// AppendCommandData appends data to an open command on a channel
             /// </summary>
-            internal unsafe void AppendCommandData(
+            unsafe internal void AppendCommandData(
                 byte *pbCommandData,
                 int cbSize)
             {

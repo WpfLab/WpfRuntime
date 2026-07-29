@@ -1,10 +1,30 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
 using System.Runtime.InteropServices;
+using MS.Internal;
 using MS.Internal.Interop;
+using MS.Utility;
+using System.Windows;
 using System.Windows.Threading;
-using System.Threading;
+using System.Security;                       // CAS
+using System.Threading;                      // Thread
+
+// The SecurityHelper class differs between assemblies and could not actually be
+//  shared, so it is duplicated across namespaces to prevent name collision.
+#if WINDOWS_BASE
+    using MS.Internal.WindowsBase;
+#elif PRESENTATION_CORE
+    using MS.Internal.PresentationCore;
+#elif PRESENTATIONFRAMEWORK
+    using MS.Internal.PresentationFramework;
+#elif DRT
+    using MS.Internal.Drt;
+#else
+#error Attempt to use a class (duplicated across multiple namespaces) from an unknown assembly.
+#endif
 
 namespace MS.Win32
 {
@@ -30,6 +50,7 @@ namespace MS.Win32
     ///     the window.
     /// </summary>
     /// <remarks> Not available to partial trust callers</remarks>
+    [FriendAccessAllowed] // Built into Base, also used by Framework
     internal class HwndSubclass : IDisposable
     {
         static HwndSubclass()
@@ -57,7 +78,10 @@ namespace MS.Win32
         /// </returns>
         internal HwndSubclass(HwndWrapperHook hook)
         {
-            ArgumentNullException.ThrowIfNull(hook);
+            if(hook == null)
+            {
+                throw new ArgumentNullException("hook");
+            }
 
             _bond = Bond.Unattached;
             _hook = new WeakReference(hook);
@@ -220,11 +244,11 @@ namespace MS.Win32
         {
             if(hwnd == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(hwnd));
+                throw new ArgumentNullException("hwnd");
             }
             if(subclass == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(subclass));
+                throw new ArgumentNullException("subclass");
             }
 
             int iForce = force ? 1 : 0;
@@ -375,7 +399,7 @@ namespace MS.Win32
         {
             if(hwnd == IntPtr.Zero)
             {
-                throw new ArgumentNullException(nameof(hwnd));
+                throw new ArgumentNullException("hwnd");
             }
             if(_bond != Bond.Unattached)
             {
@@ -397,7 +421,9 @@ namespace MS.Win32
             param.retVal = IntPtr.Zero;
             if (_bond == Bond.Attached)
             {
-                if (_hook.Target is HwndWrapperHook hook)
+                HwndWrapperHook hook= _hook.Target as HwndWrapperHook;
+
+                if (hook != null)
                 {
                     // make the call
                     param.retVal = hook(param.hwnd, param.msg, param.wParam, param.lParam, ref param.handled);
@@ -429,7 +455,7 @@ namespace MS.Win32
         /// <returns>
         ///     The value that is the result of processing the message.
         /// </returns>
-        private IntPtr CallOldWindowProc(IntPtr oldWndProc, IntPtr hwnd, WindowMessage msg, IntPtr wParam, IntPtr lParam)
+        IntPtr CallOldWindowProc(IntPtr oldWndProc, IntPtr hwnd, WindowMessage msg, IntPtr wParam, IntPtr lParam)
         {
             return UnsafeNativeMethods.CallWindowProc(oldWndProc, hwnd, (int)msg, wParam, lParam);
         }

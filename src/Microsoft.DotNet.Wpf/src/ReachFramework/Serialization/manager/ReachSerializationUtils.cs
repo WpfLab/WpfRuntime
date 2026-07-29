@@ -1,15 +1,26 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
 using System.Xml;
 using System.IO;
 using System.IO.Packaging;
+using System.Security;
+using System.ComponentModel.Design.Serialization;
 using System.Windows.Xps.Packaging;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Markup;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Printing;
 
 using MS.Utility;
@@ -621,8 +632,11 @@ namespace System.Windows.Xps.Serialization
 
             _serializationManager.PackagingPolicy.PreCommitCurrentPage();
 
-            _treeWalker?.CommitHyperlinks();
-            _treeWalker = null;
+            if (_treeWalker != null)
+            {
+                _treeWalker.CommitHyperlinks();
+                _treeWalker = null;
+            }
 
             xmlWriter.WriteEndElement();
 
@@ -674,8 +688,9 @@ namespace System.Windows.Xps.Serialization
 
         }
 
-
-        private Size SimulateFixedPageSize(
+              
+        Size
+        SimulateFixedPageSize(
             Visual visual,
             PrintTicket printTicket
             )
@@ -879,8 +894,9 @@ namespace System.Windows.Xps.Serialization
 
         private void SerializeLinkTargetForElement(IInputElement element, IContentHost contentHost, Visual root)
         {
-            if (element is FrameworkElement fe)
+            if (element is FrameworkElement)
             {
+                FrameworkElement fe = (FrameworkElement)element;
                 string id = fe.Name;
                 if (!String.IsNullOrEmpty(id))
                 {
@@ -1140,7 +1156,10 @@ namespace System.Windows.Xps.Serialization
         {
             Size newSize = ValidateDocumentSize(elementSize, printTicket);
 
-            if (!uiElement.IsArrangeValid || !uiElement.IsMeasureValid || elementSize != newSize)
+            if (uiElement.IsArrangeValid == false ||
+                uiElement.IsMeasureValid == false ||
+                elementSize != newSize
+                )
             {
                 EmitEvent(EventTrace.Event.WClientDRXLayoutBegin);
 

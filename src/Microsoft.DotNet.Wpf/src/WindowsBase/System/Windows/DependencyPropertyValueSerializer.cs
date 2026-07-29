@@ -1,8 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+//
 //  Contents:  ValueSerializer for DependencyProperty
+//
+//
 
+using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Windows.Markup;
 
 namespace System.Windows
@@ -21,7 +30,8 @@ namespace System.Windows
 
         public override string ConvertToString(object value, IValueSerializerContext context)
         {
-            if (value is DependencyProperty property)
+            DependencyProperty property = value as DependencyProperty;
+            if (property != null)
             {
                 ValueSerializer typeSerializer = ValueSerializer.GetSerializerFor(typeof(Type), context);
                 if (typeSerializer != null)
@@ -35,7 +45,8 @@ namespace System.Windows
 
         public override IEnumerable<Type> TypeReferences(object value, IValueSerializerContext context)
         {
-            if (value is DependencyProperty property)
+            DependencyProperty property = value as DependencyProperty;
+            if (property != null)
             {
                 return new Type[] { property.OwnerType };
             }

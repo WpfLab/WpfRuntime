@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net472;net10.0</TargetFrameworks>
-    <TargetFramework />
+    <TargetFrameworks>net472;net8.0</TargetFrameworks>
     <EnableDefaultItems>false</EnableDefaultItems>
     <EnablePInvokeAnalyzer>true</EnablePInvokeAnalyzer>
 
@@ -27,7 +26,7 @@
     <BinPlaceRuntime>false</BinPlaceRuntime>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-    <Platforms>AnyCPU</Platforms>
+    <Platforms>AnyCPU;x64;arm64</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -40,6 +39,71 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <OutputPath>$([MSBuild]::Unescape($([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\..\artifacts\bin\PresentationBuildTasks\$(WpfNativePlatform)\$(Configuration)\$(TargetFramework)\'))))</OutputPath>
+    <OutDir>$(OutputPath)</OutDir>
+  </PropertyGroup>
+
+  <UsingTask TaskName="RemoveOrRenameLockedPresentationBuildTasksOutput" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.Diagnostics" />
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        foreach (var item in Files)
+        {
+            var file = item.ItemSpec;
+            if (!File.Exists(file))
+                continue;
+
+            try
+            {
+                File.Delete(file);
+                continue;
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+
+            var directory = Path.GetDirectoryName(file);
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory) || !File.Exists(file))
+                continue;
+
+            var name = Path.GetFileNameWithoutExtension(file);
+            var extension = Path.GetExtension(file);
+            var renamedFile = Path.Combine(directory, $"{name}.locked.{Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}{extension}");
+            try
+            {
+                File.Move(file, renamedFile);
+                Log.LogMessage(Microsoft.Build.Framework.MessageImportance.High, $"Renamed locked PresentationBuildTasks output '{file}' to '{renamedFile}'.");
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
+        }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="RemoveOrRenameLockedPresentationBuildTasksOutputs" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_PresentationBuildTasksOutputDll Include="$(OutDir)**\*.dll" />
+    </ItemGroup>
+    <RemoveOrRenameLockedPresentationBuildTasksOutput Files="@(_PresentationBuildTasksOutputDll)" />
+  </Target>
+
+
   <!--
     Incorporate Microsoft.WinFX.targets in nuget packages under
     content\targets\
@@ -48,13 +112,26 @@
     <PackagingContent Include="$(MSBuildThisFileDirectory)Microsoft.WinFX.targets" SubFolder="root\targets" />
   </ItemGroup>
 
-  <!-- Limit the assemblies that are packaged into Microsoft.NET.Sdk.WindowsDesktop -->
-  <ItemGroup>
+  <!--
+    Limit the assemblies that are packaged into Microsoft.NET.Sdk.WindowsDesktop
+  -->
+  <ItemGroup Condition="'$(TargetFramework)'=='net472'">
     <PackagingAssemblyContent Include="PresentationBuildTasks.dll" />
+    <PackagingAssemblyContent Include="System.Collections.Immutable.dll" />
+    <PackagingAssemblyContent Include="System.Memory.dll" />
+    <PackagingAssemblyContent Include="System.Numerics.Vectors.dll" />
+    <PackagingAssemblyContent Include="System.Reflection.Metadata.dll" />
+    <PackagingAssemblyContent Include="System.Reflection.MetadataLoadContext.dll" />
+    <PackagingAssemblyContent Include="System.Runtime.CompilerServices.Unsafe.dll" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)'=='net9.0'">
+    <PackagingAssemblyContent Include="PresentationBuildTasks.dll" />
+    <PackagingAssemblyContent Include="System.Reflection.MetadataLoadContext.dll" />
   </ItemGroup>
 
+
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Strings.resx" />
+      <EmbeddedResource Include="Resources\Strings.resx" />
   </ItemGroup>
 
   <ItemGroup>
@@ -63,6 +140,7 @@
     <Compile Include="System\AppContextDefaultValues.cs" />
     <Compile Include="MS\Internal\BuildTasksAppContextSwitches.cs" />
   </ItemGroup>
+
 
   <ItemGroup>
     <Compile Include="SR.cs" />
@@ -75,9 +153,6 @@
     </Compile>
     <Compile Include="$(WpfSharedDir)\MS\Internal\ResourceIDHelper.cs">
       <Link>Shared\MS\Internal\ResourceIDHelper.cs</Link>
-    </Compile>
-    <Compile Include="$(WpfSharedDir)\MS\Internal\ReflectionUtils.cs">
-      <Link>Shared\MS\Internal\ReflectionUtils.cs</Link>
     </Compile>
     <Compile Include="$(WpfSharedDir)\MS\Internal\SecurityHelper.cs">
       <Link>Shared\MS\Internal\SecurityHelper.cs</Link>
@@ -122,11 +197,11 @@
     <Compile Include="$(WpfSourceDir)\WindowsBase\MS\Internal\IO\Packaging\CompoundFile\ContainerUtilities.cs">
       <Link>WindowsBase\MS\Internal\IO\Packaging\CompoundFile\ContainerUtilities.cs</Link>
     </Compile>
-    <Compile Include="$(WpfSourceDir)\PresentationCore\MS\internal\Media\XamlSerializationHelper.cs">
-      <Link>PresentationCore\MS\internal\Media\XamlSerializationHelper.cs</Link>
+    <Compile Include="$(WpfSourceDir)\PresentationCore\MS\Internal\Media\XamlSerializationHelper.cs">
+      <Link>PresentationCore\MS\Internal\Media\XamlSerializationHelper.cs</Link>
     </Compile>
-    <Compile Include="$(WpfSourceDir)\PresentationCore\MS\internal\Media\ParserStreamGeometryContext.cs">
-      <Link>PresentationCore\MS\internal\Media\ParserStreamGeometryContext.cs</Link>
+    <Compile Include="$(WpfSourceDir)\PresentationCore\MS\Internal\Media\ParserStreamGeometryContext.cs">
+      <Link>PresentationCore\MS\Internal\Media\ParserStreamGeometryContext.cs</Link>
     </Compile>
     <Compile Include="$(WpfSourceDir)\PresentationCore\System\Windows\Media\StreamGeometryContext.cs">
       <Link>PresentationCore\System\Windows\Media\StreamGeometryContext.cs</Link>
@@ -299,16 +374,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Build.Framework" Version="$(MicrosoftBuildFrameworkPackageVersion)" IncludeAssets="compile" />
-    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="$(MicrosoftBuildUtilitiesCorePackageVersion)" IncludeAssets="compile" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="$(MicrosoftBuildFrameworkPackageVersion)" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="$(MicrosoftBuildUtilitiesCorePackageVersion)" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="$(SystemReflectionMetadataLoadContextVersion)" />
 
-    <!-- Reference (don't redistribute) the live version of SRM on .NETCoreApp and fallback to the toolset version for .NET Framework. -->
-    <PackageReference Include="System.Reflection.MetadataLoadContext" IncludeAssets="compile">
-      <Version Condition="'$(TargetFrameworkIdentifier)' != '.NETFramework'">$(SystemReflectionMetadataLoadContextVersion)</Version>
-      <Version Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">$(SystemReflectionMetadataLoadContextToolsetVersion)</Version>
-    </PackageReference>
-    <!-- System.CodeDom live version is provided by the SDK. Use latest and don't redistribute it. -->
-    <PackageReference Include="System.CodeDom" Version="$(SystemCodeDomPackageVersion)" Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'" IncludeAssets="compile" />
+    <!--
+      Provide specific/old versions for PresentationBuildTasks which needs to run inside MSBuild
+    -->
+    <PackageReference Include="System.CodeDom" Version="$(SystemCodeDomPackageVersionForPresentationBuildTasks)" />
   </ItemGroup>
 
 </Project>

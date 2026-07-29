@@ -1,16 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Extends Document with a single member TrancationalPackage.
 
+using System;
 using System.IO;
+using System.IO.Packaging;
+using System.Security;
+
+using MS.Internal.PresentationUI;
 
 namespace MS.Internal.Documents.Application
 {
-    /// <summary>
-    /// Extends Document with a single member TrancationalPackage.
-    /// </summary>
-    internal class PackageDocument : Document
+/// <summary>
+/// Extends Document with a single member TrancationalPackage.
+/// </summary>
+[FriendAccessAllowed]
+internal class PackageDocument : Document
 {
     #region Constructors
     //--------------------------------------------------------------------------
@@ -68,9 +75,9 @@ namespace MS.Internal.Documents.Application
     /// </summary>
     internal TransactionalPackage Package
     {
-        get { return _package; }
+        get { return _package.Value; }
 
-        set { _package = value; }
+        set { _package.Value = value; }
     }
     #endregion Internal Properties
 
@@ -88,8 +95,11 @@ namespace MS.Internal.Documents.Application
         {
             if (disposing)
             {
-                Package?.Close();
-                Package = null;
+                if (Package != null)
+                {
+                    Package.Close();
+                    Package = null;
+                }
             }
         }
         finally
@@ -103,7 +113,7 @@ namespace MS.Internal.Documents.Application
     //--------------------------------------------------------------------------
     // Private Fields
     //--------------------------------------------------------------------------
-    private TransactionalPackage _package;
+    private SecurityCriticalDataForSet<TransactionalPackage> _package;
     #endregion Private Fields
 }
 }

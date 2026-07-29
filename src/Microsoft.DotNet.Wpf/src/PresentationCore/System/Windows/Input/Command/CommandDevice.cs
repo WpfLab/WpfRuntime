@@ -1,9 +1,17 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
 
+using System;
+using System.Collections;
+using System.Windows;
+using System.Windows.Media;
+using System.Security;
+using MS.Internal;
+using MS.Internal.PresentationCore;                        // SecurityHelper
 using MS.Win32; // VK translation.
 
 namespace System.Windows.Input
@@ -16,9 +24,9 @@ namespace System.Windows.Input
     {
         internal CommandDevice( InputManager inputManager )
         {
-            _inputManager = inputManager;
-            _inputManager.PreProcessInput += new PreProcessInputEventHandler(PreProcessInput);
-            _inputManager.PostProcessInput += new ProcessInputEventHandler(PostProcessInput);
+            _inputManager = new SecurityCriticalData<InputManager>(inputManager);
+            _inputManager.Value.PreProcessInput += new PreProcessInputEventHandler(PreProcessInput);
+            _inputManager.Value.PostProcessInput += new ProcessInputEventHandler(PostProcessInput);
         }
 
         /// <summary>
@@ -92,11 +100,9 @@ namespace System.Windows.Input
                                 {
                                     // Send the app command to the tree to be handled by UIElements and ContentElements
                                     // that will forward the event to CommandManager.
-                                    CommandDeviceEventArgs args = new CommandDeviceEventArgs(this, rawAppCommandInputReport.Timestamp, command)
-                                    {
-                                        RoutedEvent = CommandDeviceEvent,
-                                        Source = commandTarget
-                                    };
+                                    CommandDeviceEventArgs args = new CommandDeviceEventArgs(this, rawAppCommandInputReport.Timestamp, command);
+                                    args.RoutedEvent = CommandDeviceEvent;
+                                    args.Source = commandTarget;
                                     e.PushInput(args, e.StagingItem);
                                 }
                             }
@@ -284,7 +290,7 @@ namespace System.Windows.Input
             }
         }
 
-        private readonly InputManager _inputManager;
+        private SecurityCriticalData<InputManager> _inputManager;
     }
 
     /// <summary>
@@ -301,7 +307,10 @@ namespace System.Windows.Input
         internal CommandDeviceEventArgs(CommandDevice commandDevice, int timestamp, ICommand command)
             : base(commandDevice, timestamp)
         {
-            ArgumentNullException.ThrowIfNull(command);
+            if (command == null)
+            {
+                throw new ArgumentNullException("command");
+            }
 
             _command = command;
         }

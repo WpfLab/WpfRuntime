@@ -1,9 +1,14 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 
+using MS.Internal;
 using MS.Internal.KnownBoxes;
+using MS.Utility;
 using System.ComponentModel;
+
+using System.Diagnostics;
 using System.Windows.Threading;
 
 using System.Windows.Automation;
@@ -11,9 +16,12 @@ using System.Windows.Automation.Peers;
 using System.Windows.Media;
 using System.Windows.Input;
 using System.Windows.Controls.Primitives;
+using System.Windows.Shapes;
+
+using System;
 
 // Disable CS3001: Warning as Error: not CLS-compliant
-#pragma warning disable CS3001
+#pragma warning disable 3001
 
 namespace System.Windows.Controls
 {
@@ -86,7 +94,10 @@ namespace System.Windows.Controls
             bool isSelected = (bool) e.NewValue;
 
             Selector parentSelector = listItem.ParentSelector;
-            parentSelector?.RaiseIsSelectedChangedAutomationEvent(listItem, isSelected);
+            if (parentSelector != null)
+            {
+                parentSelector.RaiseIsSelectedChangedAutomationEvent(listItem, isSelected);
+            }
 
             if (isSelected)
             {
@@ -269,7 +280,10 @@ namespace System.Windows.Controls
             if (Selector.UiGetIsSelectable(this) && Focus())
             {
                 ListBox parent = ParentListBox;
-                parent?.NotifyListItemClicked(this, mouseButton);
+                if (parent != null)
+                {
+                    parent.NotifyListItemClicked(this, mouseButton);
+                }
             }
         }
 
@@ -280,8 +294,11 @@ namespace System.Windows.Controls
         protected override void OnMouseEnter(MouseEventArgs e)
         {
             // abort any drag operation we have queued.
-            parentNotifyDraggedOperation?.Abort();
-            parentNotifyDraggedOperation = null;
+            if (parentNotifyDraggedOperation != null)
+            {
+                parentNotifyDraggedOperation.Abort();
+                parentNotifyDraggedOperation = null;
+            }
 
             if (IsMouseOver)
             {
@@ -302,8 +319,11 @@ namespace System.Windows.Controls
         protected override void OnMouseLeave(MouseEventArgs e)
         {
             // abort any drag operation we have queued.
-            parentNotifyDraggedOperation?.Abort();
-            parentNotifyDraggedOperation = null;
+            if (parentNotifyDraggedOperation != null)
+            {
+                parentNotifyDraggedOperation.Abort();
+                parentNotifyDraggedOperation = null;
+            }
 
             base.OnMouseLeave(e);
         }
@@ -334,7 +354,10 @@ namespace System.Windows.Controls
 
             // If earlier, we decided to set focus to the old parent ListBox, do it here
             // after calling base so that the state for IsKeyboardFocusWithin is updated correctly.
-            oldItemsControl?.Focus();
+            if (oldItemsControl != null)
+            {
+                oldItemsControl.Focus();
+            }
         }
 
 
@@ -378,7 +401,7 @@ namespace System.Windows.Controls
 
         #region Private Fields
 
-        private DispatcherOperation parentNotifyDraggedOperation = null;
+        DispatcherOperation parentNotifyDraggedOperation = null;
 
         #endregion
 

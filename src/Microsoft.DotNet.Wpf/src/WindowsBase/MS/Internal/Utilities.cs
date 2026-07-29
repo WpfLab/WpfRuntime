@@ -1,12 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Runtime.InteropServices;
-using Windows.Win32;
-using Windows.Win32.Foundation;
+
 
 namespace MS.Internal
 {
+    using System;
+    using System.Diagnostics;
+    using System.Runtime.InteropServices;
+    using System.Security;
+    using MS.Win32;
+
     /// <summary>
     /// General utility class for macro-type functions.
     /// </summary>
@@ -38,8 +43,9 @@ namespace MS.Internal
                     return false;
                 }
 
-                PInvoke.DwmIsCompositionEnabled(out BOOL isDesktopCompositionEnabled).ThrowOnFailure();
-                return isDesktopCompositionEnabled;
+                Int32 isDesktopCompositionEnabled = 0;
+                UnsafeNativeMethods.HRESULT.Check(UnsafeNativeMethods.DwmIsCompositionEnabled(out isDesktopCompositionEnabled));
+                return isDesktopCompositionEnabled != 0;
             }
         }
 
@@ -48,7 +54,10 @@ namespace MS.Internal
             // Dispose can safely be called on an object multiple times.
             IDisposable t = disposable;
             disposable = default(T);
-            t?.Dispose();
+            if (null != t)
+            {
+                t.Dispose();
+            }
         }
         
         internal static void SafeRelease<T>(ref T comObject) where T : class

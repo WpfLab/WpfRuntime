@@ -1,17 +1,27 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Windows LinkLabel Proxy
 
+// PRESHARP: In order to avoid generating warnings about unkown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
+
 using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
+using Accessibility;
+using System.Windows;
+using System.Windows.Input;
 using MS.Win32;
 
 namespace MS.Internal.AutomationProxies
 {
     // FormsLink proxy
-    internal class FormsLink : ProxyHwnd, IInvokeProvider
+    class FormsLink : ProxyHwnd, IInvokeProvider
     {
         // ------------------------------------------------------
         //
@@ -39,7 +49,11 @@ namespace MS.Internal.AutomationProxies
         internal static IRawElementProviderSimple Create (IntPtr hwnd, int idChild)
         {
             // Something is wrong if idChild is not zero 
-            ArgumentOutOfRangeException.ThrowIfNotEqual(idChild, 0);
+            if (idChild != 0)
+            {
+                System.Diagnostics.Debug.Assert (idChild == 0, "Invalid Child Id, idChild != 0");
+                throw new ArgumentOutOfRangeException("idChild", idChild, SR.ShouldBeZero);
+            }
 
             return new FormsLink(hwnd, null, idChild);
         }
@@ -65,14 +79,18 @@ namespace MS.Internal.AutomationProxies
         #region ProxyHwnd Interface
 
         // Builds a list of Win32 WinEvents to process a UIAutomation Event.
-        protected override ReadOnlySpan<WinEventTracker.EvtIdProperty> EventToWinEvent(AutomationEvent idEvent)
+        // Param name="idEvent", UIAuotmation event
+        // Param name="cEvent"out, number of winevent set in the array
+        // Returns an array of Events to Set. The number of valid entries in this array pass back in cEvent
+        protected override WinEventTracker.EvtIdProperty[] EventToWinEvent(AutomationEvent idEvent, out int cEvent)
         {
             if (idEvent == InvokePattern.InvokedEvent)
             {
-                return new WinEventTracker.EvtIdProperty[1] { new(NativeMethods.EventSystemCaptureEnd, idEvent) };
+                cEvent = 1;
+                return new WinEventTracker.EvtIdProperty[1] { new WinEventTracker.EvtIdProperty(NativeMethods.EventSystemCaptureEnd, idEvent) };
             }
 
-            return base.EventToWinEvent(idEvent);
+            return base.EventToWinEvent(idEvent, out cEvent);
         }
 
         #endregion ProxyHwnd Interface

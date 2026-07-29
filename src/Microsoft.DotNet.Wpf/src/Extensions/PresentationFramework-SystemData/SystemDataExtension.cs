@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Helper methods for code that uses types from System.Data.
 
@@ -48,22 +49,16 @@ namespace MS.Internal
             {
                 // lazy load the types for the offending PD's.  They're internal, so
                 // we get them indirectly.
-                DataSet dataset = new DataSet
-                {
-                    Locale = System.Globalization.CultureInfo.InvariantCulture
-                };
+                DataSet dataset = new DataSet();
+                dataset.Locale = System.Globalization.CultureInfo.InvariantCulture;
 
-                DataTable table1 = new DataTable("Table1")
-                {
-                    Locale = System.Globalization.CultureInfo.InvariantCulture
-                };
+                DataTable table1 = new DataTable("Table1");
+                table1.Locale = System.Globalization.CultureInfo.InvariantCulture;
                 table1.Columns.Add("ID", typeof(int));
                 dataset.Tables.Add(table1);
 
-                DataTable table2 = new DataTable("Table2")
-                {
-                    Locale = System.Globalization.CultureInfo.InvariantCulture
-                };
+                DataTable table2 = new DataTable("Table2");
+                table2.Locale = System.Globalization.CultureInfo.InvariantCulture;
                 table2.Columns.Add("ID", typeof(int));
                 dataset.Tables.Add(table2);
 
@@ -195,8 +190,9 @@ namespace MS.Internal
                 {
                     column = table.Columns[columnName];
                 }
-                else if (arg is int index)
+                else if (arg is int)
                 {
+                    int index = (int)arg;
                     if (0 <= index && index < table.Columns.Count)
                     {
                         column = table.Columns[index];
@@ -219,11 +215,11 @@ namespace MS.Internal
                 dataTable.Initialized += OnInitialized;
             }
 
-            private void OnInitialized(object sender, EventArgs e)
+            void OnInitialized(object sender, EventArgs e)
             {
             }
 
-            private object _target;
+            object _target;
         }
 
         private class DataRowViewToRelatedViewLink
@@ -234,15 +230,15 @@ namespace MS.Internal
                 dataRowView.PropertyChanged += OnPropertyChanged;
             }
 
-            private void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
+            void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
             {
             }
 
-            private object _target;
+            object _target;
         }
 
-        private static Type s_DataTablePropertyDescriptorType;
-        private static Type s_DataRelationPropertyDescriptorType;
+        static Type s_DataTablePropertyDescriptorType;
+        static Type s_DataRelationPropertyDescriptorType;
     }
 }
 

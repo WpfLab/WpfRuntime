@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -9,8 +10,18 @@
 //
 //
 
+using System;
+using System.Diagnostics;
+using System.Collections.Specialized;
+using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Threading;
 using System.Windows.Threading;
+using MS.Utility;
+using System.Security;
+using MS.Internal;
 
 namespace System.Windows.Input.StylusPlugIns
 {
@@ -45,8 +56,10 @@ namespace System.Windows.Input.StylusPlugIns
         /// </summary>
         public static void AddListener(Dispatcher source, IWeakEventListener listener)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            ArgumentNullException.ThrowIfNull(listener);
+            if (source == null)
+                throw new ArgumentNullException("source");
+            if (listener == null)
+                throw new ArgumentNullException("listener");
 
             CurrentManager.ProtectedAddListener(source, listener);
         }
@@ -230,7 +243,7 @@ namespace System.Windows.Input.StylusPlugIns
         /// Handles disposing of internal object data.
         /// </summary>
         /// <param name="disposing">true when freeing managed and unmanaged resources; false if freeing just unmanaged resources.</param>
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if(!_disposed)
             {

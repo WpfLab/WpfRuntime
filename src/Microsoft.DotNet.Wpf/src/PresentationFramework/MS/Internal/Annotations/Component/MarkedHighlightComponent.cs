@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 //
@@ -11,6 +12,9 @@
 //              See spec at StickyNoteControlSpec.mht
 //
 
+using System;
+using System.ComponentModel;
+using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -18,9 +22,12 @@ using System.Windows.Annotations;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Text;
 using System.Collections;
+using System.Collections.Generic;
 using System.Xml;
 using System.Windows.Input;
+using System.Diagnostics;                           // Assert
 using MS.Internal.Annotations.Anchoring;
 using MS.Utility;
 
@@ -53,7 +60,7 @@ namespace MS.Internal.Annotations.Component
         {
             ArgumentNullException.ThrowIfNull(type);
 
-            _DPHost = host ?? this;
+            _DPHost = host == null ? this : host;
             ClipToBounds = false;
 
             //create anchor highlight. The second parameter controls
@@ -232,7 +239,7 @@ namespace MS.Internal.Annotations.Component
 
             if (attachedAnnotation != _attachedAnnotation)
             {
-                throw new ArgumentException(SR.InvalidAttachedAnnotation, nameof(attachedAnnotation));
+                throw new ArgumentException(SR.InvalidAttachedAnnotation, "attachedAnnotation");
             }
 
             //fire trace event
@@ -407,10 +414,13 @@ namespace MS.Internal.Annotations.Component
             topTailTransform.Children.Add(tailScale);
             topTailTransform.Children.Add(topOffset);
 
-            geometry.Children[0]?.Transform = topTailTransform;
+            if (geometry.Children[0] != null)
+                geometry.Children[0].Transform = topTailTransform;
 
-            geometry.Children[1]?.Transform = bodyTransform;
-            geometry.Children[2]?.Transform = bottomTailTransform;
+            if (geometry.Children[1] != null)
+                geometry.Children[1].Transform = bodyTransform;
+            if (geometry.Children[2] != null)
+                geometry.Children[2].Transform = bottomTailTransform;
 
             //add transform to base anchor if needed
             if (baseAnchor != null)
@@ -546,14 +556,16 @@ namespace MS.Internal.Annotations.Component
         {
             if (_state == 0)
             {
-                _highlightAnchor?.Activate(false);
+                if (_highlightAnchor != null)
+                    _highlightAnchor.Activate(false);
                 MarkerBrush = new SolidColorBrush(DefaultMarkerColor);
                 StrokeThickness = MarkerStrokeThickness;
                 _DPHost.SetValue(StickyNoteControl.IsActiveProperty, false);
             }
             else
             {
-                _highlightAnchor?.Activate(true);
+                if (_highlightAnchor != null)
+                    _highlightAnchor.Activate(true);
                 MarkerBrush = new SolidColorBrush(DefaultActiveMarkerColor);
                 StrokeThickness = ActiveMarkerStrokeThickness;
                 _DPHost.SetValue(StickyNoteControl.IsActiveProperty, true);
@@ -567,21 +579,15 @@ namespace MS.Internal.Annotations.Component
         /// <returns>The MarkerComponent</returns>
         private Path CreateMarker(Geometry geometry)
         {
-            Path marker = new Path
-            {
-                Data = geometry
-            };
+            Path marker = new Path();
+            marker.Data = geometry;
 
             //set activation binding
-            Binding markerStroke = new Binding("MarkerBrushProperty")
-            {
-                Source = this
-            };
+            Binding markerStroke = new Binding("MarkerBrushProperty");
+            markerStroke.Source = this;
             marker.SetBinding(Path.StrokeProperty, markerStroke);
-            Binding markerStrokeThickness = new Binding("StrokeThicknessProperty")
-            {
-                Source = this
-            };
+            Binding markerStrokeThickness = new Binding("StrokeThicknessProperty");
+            markerStrokeThickness.Source = this;
             marker.SetBinding(Path.StrokeThicknessProperty, markerStrokeThickness);
             marker.StrokeEndLineCap = PenLineCap.Round;
             marker.StrokeStartLineCap = PenLineCap.Round;

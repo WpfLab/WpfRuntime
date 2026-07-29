@@ -1,6 +1,9 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
 // Description:
 //  ContentType class parses and validates the content-type string.
 //  It provides functionality to compare the type/subtype values.
@@ -38,14 +41,24 @@
 // CRLF           = CR LF
 // Linear white space (LWS) MUST NOT be used between the type and subtype, nor 
 // between an attribute and its value. Leading and trailing LWS are prohibited.
+// 
+//
+//
+//
 
-using System.Text;
+using System;
+using System.Collections.Generic;   // For Dictionary<string, string>
+using System.Text;                  // For StringBuilder
+using System.Windows;               // For Exception strings - SR
+using MS.Internal.WindowsBase;      // For FriendAccessAllowed
+using System.Diagnostics;           // For Debug.Assert
 
 namespace MS.Internal
 {
     /// <summary>
     /// Content Type class
     /// </summary>
+    [FriendAccessAllowed]
     internal sealed class ContentType
     {       
         //------------------------------------------------------
@@ -70,7 +83,8 @@ namespace MS.Internal
         /// <exception cref="ArgumentException">If the contentType string invalid CR-LF characters</exception>
         internal ContentType(string contentType)
         {
-            ArgumentNullException.ThrowIfNull(contentType);
+            if (contentType == null)
+                throw new ArgumentNullException("contentType");
 
             if (contentType.Length == 0)
             {
@@ -97,7 +111,7 @@ namespace MS.Internal
                 {
                     // Parse content type similar to - type/subtype ; param1=value1 ; param2=value2 ; param3="value3"
                     ParseTypeAndSubType(contentType.AsSpan(0, semiColonIndex));
-                    ParseParameterAndValue(contentType.AsSpan(semiColonIndex));
+                    ParseParameterAndValue(contentType.Substring(semiColonIndex));
                 }
             }
 
@@ -245,8 +259,8 @@ namespace MS.Internal
                 // safe comparison because the _type and _subType strings have been restricted to
                 // ASCII characters, digits, and a small set of symbols.  This is not a safe comparison
                 // for the broader set of strings that have not been restricted in the same way.
-                result = string.Equals(_type, contentType.TypeComponent, StringComparison.OrdinalIgnoreCase) &&
-                         string.Equals(_subType, contentType.SubTypeComponent, StringComparison.OrdinalIgnoreCase);
+                result = (String.Compare(_type, contentType.TypeComponent, StringComparison.OrdinalIgnoreCase) == 0 &&
+                          String.Compare(_subType, contentType.SubTypeComponent, StringComparison.OrdinalIgnoreCase) == 0);
             }           
             return result;
         }
@@ -275,9 +289,9 @@ namespace MS.Internal
                 {   
                     foreach (string paramterKey in _parameterDictionary.Keys)
                     {
-                        stringBuilder.Append(_linearWhiteSpaceChars[0]);
+                        stringBuilder.Append(_LinearWhiteSpaceChars[0]);
                         stringBuilder.Append(_semicolonSeparator);
-                        stringBuilder.Append(_linearWhiteSpaceChars[0]);
+                        stringBuilder.Append(_LinearWhiteSpaceChars[0]);
                         stringBuilder.Append(paramterKey);
                         stringBuilder.Append(_equalSeparator);
                         stringBuilder.Append(_parameterDictionary[paramterKey]);
@@ -324,11 +338,13 @@ namespace MS.Internal
             }            
 
             /// <summary>
-            /// ContentTypes that are equal (which ignores casing) must have the same hash code.
+            /// We lower case the results of ToString() because it returns the original
+            /// casing passed into the constructor.  ContentTypes that are equal (which
+            /// ignores casing) must have the same hash code.
             /// </summary>
             public int GetHashCode(ContentType obj)
             {
-                return StringComparer.OrdinalIgnoreCase.GetHashCode(obj.ToString());
+                return obj.ToString().ToUpperInvariant().GetHashCode();
             }
         }
 
@@ -351,11 +367,13 @@ namespace MS.Internal
             }
 
             /// <summary>
-            /// ContentTypes that are equal (which ignores casing) must have the same hash code.
+            /// We lower case the results of ToString() because it returns the original
+            /// casing passed into the constructor.  ContentTypes that are equal (which
+            /// ignores casing) must have the same hash code.
             /// </summary>
             public int GetHashCode(ContentType obj)
             {
-                return StringComparer.OrdinalIgnoreCase.GetHashCode(obj._type) ^ StringComparer.OrdinalIgnoreCase.GetHashCode(obj._subType);
+                return obj._type.ToUpperInvariant().GetHashCode() ^ obj._subType.ToUpperInvariant().GetHashCode();
             }
         }
         #endregion Nested Classes
@@ -383,13 +401,13 @@ namespace MS.Internal
             //character of the content type are not Linear White Spaces. So its safe to
             //assume that the index will be greater than 0 and less that length-2.
 
-            int index = contentType.IndexOf(_linearWhiteSpaceChars[2]);
+            int index = contentType.IndexOf(_LinearWhiteSpaceChars[2]);
             
             while (index != -1)
             {
-                if (contentType[index - 1] == _linearWhiteSpaceChars[1] || contentType[index + 1] == _linearWhiteSpaceChars[1])
+                if (contentType[index - 1] == _LinearWhiteSpaceChars[1] || contentType[index + 1] == _LinearWhiteSpaceChars[1])
                 {
-                    index = contentType.IndexOf(_linearWhiteSpaceChars[2], ++index);
+                    index = contentType.IndexOf(_LinearWhiteSpaceChars[2], ++index);
                 }
                 else
                     throw new ArgumentException(SR.InvalidLinearWhiteSpaceCharacter);
@@ -405,7 +423,7 @@ namespace MS.Internal
         private void ParseTypeAndSubType(ReadOnlySpan<char> typeAndSubType)
         {
             //okay to trim at this point the end of the string as Linear White Spaces(LWS) chars are allowed here.
-            typeAndSubType = typeAndSubType.TrimEnd(_linearWhiteSpaceChars);
+            typeAndSubType = typeAndSubType.TrimEnd(_LinearWhiteSpaceChars);
 
             int forwardSlashPos = typeAndSubType.IndexOf('/');
             if (forwardSlashPos < 0 || // no slashes
@@ -444,7 +462,7 @@ namespace MS.Internal
 
                 //okay to trim start as there can be spaces before the begining
                 //of the parameter name.
-                parameterAndValue = parameterAndValue.TrimStart(_linearWhiteSpaceChars);
+                parameterAndValue = parameterAndValue.TrimStart(_LinearWhiteSpaceChars);
 
                 int equalSignIndex = parameterAndValue.IndexOf(_equalSeparator);
 
@@ -462,7 +480,7 @@ namespace MS.Internal
                     ValidateToken(parameterAndValue.Slice(0, equalSignIndex).ToString()),
                     ValidateQuotedStringOrToken(parameterAndValue.Slice(parameterStartIndex, parameterValueLength).ToString()));
 
-                parameterAndValue = parameterAndValue.Slice(parameterStartIndex + parameterValueLength).TrimStart(_linearWhiteSpaceChars);
+                parameterAndValue = parameterAndValue.Slice(parameterStartIndex + parameterValueLength).TrimStart(_LinearWhiteSpaceChars);
             }
         }
 
@@ -474,6 +492,8 @@ namespace MS.Internal
         /// <returns></returns>
         private static int GetLengthOfParameterValue(ReadOnlySpan<char> s, int startIndex)
         {
+            Debug.Assert(s != null);
+
             int length;
             
             //if the parameter value does not start with a '"' then,
@@ -485,7 +505,7 @@ namespace MS.Internal
 
                 if (semicolonIndex != -1)
                 {
-                    int lwsIndex = s.Slice(startIndex).IndexOfAny(_linearWhiteSpaceChars);
+                    int lwsIndex = s.Slice(startIndex).IndexOfAny(_LinearWhiteSpaceChars);
                     length = lwsIndex != -1 && lwsIndex < semicolonIndex ? lwsIndex : semicolonIndex;
                     length += startIndex; // the indexes from IndexOf{Any} are based on slicing from startIndex
                 }
@@ -600,7 +620,17 @@ namespace MS.Internal
         /// </summary>
         /// <param name="character">input character</param>
         /// <returns></returns>
-        private static bool IsAllowedCharacter(char character) => AllowedCharacters.Contains(character);
+        private static bool IsAllowedCharacter(char character)
+        {
+            //We did not use any of the .Contains methods as
+            //it will result in boxing costs.
+            foreach (char c in _allowedCharacters)
+            {
+                if (c == character)
+                    return true;               
+            }
+            return false;
+        }
 
         /// <summary>
         /// Returns true if the input character is an ASCII digit or letter
@@ -619,7 +649,21 @@ namespace MS.Internal
         /// </summary>
         /// <param name="ch">input character</param>
         /// <returns></returns>
-        private static bool IsLinearWhiteSpaceChar(char ch) => new ReadOnlySpan<char>(_linearWhiteSpaceChars).Contains(ch);
+        private static bool IsLinearWhiteSpaceChar(char ch)
+        {
+            if (ch > ' ')
+            {
+                return false;
+            }
+
+            foreach (char c in _LinearWhiteSpaceChars)
+            {
+                if (ch == c)
+                    return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Lazy initialization for the ParameterDictionary
@@ -653,21 +697,21 @@ namespace MS.Internal
         private const char       _equalSeparator     = '=';
 
         //This array is sorted by the ascii value of these characters.
-        private static ReadOnlySpan<char> AllowedCharacters => [
-        '!' /*33*/, '#' /*35*/ , '$'  /*36*/,
-        '%' /*37*/, '&' /*38*/ , '\'' /*39*/,
-        '*' /*42*/, '+' /*43*/ , '-'  /*45*/,
-        '.' /*46*/, '^' /*94*/ , '_'  /*95*/,
-        '`' /*96*/, '|' /*124*/, '~'  /*126*/,
-        ];
+        private static readonly char[] _allowedCharacters = 
+         { '!' /*33*/, '#' /*35*/ , '$'  /*36*/,
+           '%' /*37*/, '&' /*38*/ , '\'' /*39*/,
+           '*' /*42*/, '+' /*43*/ , '-'  /*45*/,
+           '.' /*46*/, '^' /*94*/ , '_'  /*95*/,
+           '`' /*96*/, '|' /*124*/, '~'  /*126*/, 
+         };
         
         //Linear White Space characters
-        private static readonly char[] _linearWhiteSpaceChars = [
-           ' ',  // space           - \x20
+        private static readonly char[]     _LinearWhiteSpaceChars = 
+         { ' ',  // space           - \x20
            '\n', // new line        - \x0A
            '\r', // carriage return - \x0D
            '\t'  // horizontal tab  - \x09
-         ];
+         };
 
         private static readonly ContentType _emptyContentType = new ContentType("");
 

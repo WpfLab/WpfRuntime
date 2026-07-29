@@ -1,10 +1,29 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//+-----------------------------------------------------------------------
+//
+//
+//
+//  Contents:  FontFamilyConverter implementation
+//
+//  Spec:      Fonts.htm
+//
+//
+
+using System;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Navigation;
 using System.Windows.Markup;
+
+using SR=MS.Internal.PresentationCore.SR;
+
+// Allow suppression of presharp warnings
+#pragma warning disable 1634, 1691
 
 namespace System.Windows.Media
 {
@@ -42,6 +61,9 @@ namespace System.Windows.Media
                     // only if it's a named font family.
                     FontFamily fontFamily = context.Instance as FontFamily;
 
+                    // Suppress PRESharp warning that fontFamily can be null; apparently PRESharp
+                    // doesn't understand short circuit evaluation of operator &&.
+#pragma warning suppress 56506
                     return fontFamily != null && fontFamily.Source != null && fontFamily.Source.Length != 0;
                 }
                 else
@@ -104,7 +126,7 @@ namespace System.Windows.Media
 
                 return new FontFamily(baseUri, s);
             }
-            return base.ConvertFrom(context, cultureInfo, o);
+            return base.ConvertFrom(context, cultureInfo, o); ;
         }
 
         /// <summary>
@@ -112,15 +134,21 @@ namespace System.Windows.Media
         /// </summary>
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if (null == value)
+            {
+                throw new ArgumentNullException("value");
+            }
 
             FontFamily fontFamily = value as FontFamily;
             if (fontFamily == null)
             {
-                throw new ArgumentException(SR.Format(SR.General_Expected_Type, "FontFamily"), nameof(value));
+                throw new ArgumentException(SR.Format(SR.General_Expected_Type, "FontFamily"), "value");
             }
 
-            ArgumentNullException.ThrowIfNull(destinationType);
+            if (null == destinationType)
+            {
+                throw new ArgumentNullException("destinationType");
+            }
 
             if (destinationType == typeof(string))
             {

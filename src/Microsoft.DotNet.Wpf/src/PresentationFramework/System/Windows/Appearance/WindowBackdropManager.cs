@@ -1,6 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
+using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Media;
 using MS.Internal;
@@ -30,7 +28,7 @@ internal static class WindowBackdropManager
         if (window is null ||
                 !IsSupported(backdropType) ||
                 window.AllowsTransparency ||
-!IsBackdropEnabled)
+                IsBackdropEnabled == false)
         {
             return false;
         }
@@ -131,7 +129,8 @@ internal static class WindowBackdropManager
             margins = new MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
         }
 
-        return NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins);
+        var dwmApiResult = NativeMethods.DwmExtendFrameIntoClientArea(hwnd, ref margins);
+        return new HRESULT((uint)dwmApiResult) == HRESULT.S_OK;
     }
 
     #endregion

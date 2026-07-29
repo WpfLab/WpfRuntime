@@ -1,13 +1,26 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using System.Windows.Media;
 
 using MS.Internal;
 using MS.Internal.Automation;
+using MS.Win32;
 
 namespace System.Windows.Automation.Peers
 {
@@ -146,7 +159,7 @@ namespace System.Windows.Automation.Peers
                 return array.ToArray();
             }
 
-            return Array.Empty<IRawElementProviderSimple>();
+            return new IRawElementProviderSimple[0] ;
         }
 
         /// <summary>
@@ -200,7 +213,10 @@ namespace System.Windows.Automation.Peers
             if (lvi == null)
             {
                 VirtualizingPanel itemsHost = _listview.ItemsHost as VirtualizingPanel;
-                itemsHost?.BringIndexIntoView(row);
+                if (itemsHost != null)
+                {
+                    itemsHost.BringIndexIntoView(row);
+                }
 
                 lvi = _listview.ItemContainerGenerator.ContainerFromIndex(row) as ListViewItem;
 
@@ -255,7 +271,10 @@ namespace System.Windows.Automation.Peers
             {
                 ListViewAutomationPeer peer = UIElementAutomationPeer.FromElement(_listview) as ListViewAutomationPeer;
                 Invariant.Assert(peer != null);
-                peer?.RaisePropertyChangedEvent(GridPatternIdentifiers.ColumnCountProperty, _oldColumnsCount, _owner.Columns.Count);
+                if (peer != null)
+                {
+                    peer.RaisePropertyChangedEvent(GridPatternIdentifiers.ColumnCountProperty, _oldColumnsCount, _owner.Columns.Count);
+                }
             }
 
             _oldColumnsCount = _owner.Columns.Count;

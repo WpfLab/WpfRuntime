@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // 
@@ -7,7 +8,9 @@
 //
 //
 
-namespace System.Windows.Input
+using System;
+
+namespace System.Windows.Input 
 {
     /// <summary>
     ///     The TextCompositionEventArgs class contains a text representation of
@@ -26,7 +29,10 @@ namespace System.Windows.Input
         /// </param>
         public TextCompositionEventArgs(InputDevice inputDevice, TextComposition composition) : base(inputDevice, Environment.TickCount)
         {
-            ArgumentNullException.ThrowIfNull(composition);
+            if (composition == null)
+            {
+                throw new ArgumentNullException("composition");
+            }
 
             _composition = composition;
         }

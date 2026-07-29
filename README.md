@@ -1,4 +1,20 @@
-﻿# Windows Presentation Foundation (WPF)
+﻿# About This Reorganized WPF Repository
+
+This repository is a reorganized version of the original WPF repository. The root solution entry point is `Microsoft.Dotnet.Wpf.slnx`.
+
+Unlike the original repository, this repository currently includes a reorganized set of C# and C++/CLI projects. Modules such as `PenImc` and `WpfGfx` are referenced through binary assets from the WindowsDesktop runtime NuGet packages instead of including their corresponding source code in this repository. See [Docs/00-overview.md](Docs/00-overview.md) for the project inventory, current build status, and validation scope.
+
+## Quick Start
+
+```bash
+msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /v:minimal
+```
+
+This command is the current build entry point, but it is not guaranteed to succeed in every workspace state. Review the current status and security constraints before running it.
+
+---
+
+# Windows Presentation Foundation (WPF)
 [![.NET Foundation](https://img.shields.io/badge/.NET%20Foundation-blueviolet.svg)](https://www.dotnetfoundation.org/)
 [![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/wpf/dotnet-wpf%20CI)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=270)
 [![codecov](https://codecov.io/gh/dotnet/wpf/branch/main/graph/badge.svg?flag=production)](https://codecov.io/gh/dotnet/wpf)

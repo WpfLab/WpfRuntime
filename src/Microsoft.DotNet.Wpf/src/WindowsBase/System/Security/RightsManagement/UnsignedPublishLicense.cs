@@ -1,11 +1,33 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//  This class implements the UnsignedPublishLicense class 
+//   this class is the first step in the RightsManagement publishing process
+//
+//
+//
+//
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Windows;
 using MS.Internal.Security.RightsManagement;
 using MS.Internal;
+using SecurityHelper=MS.Internal.WindowsBase.SecurityHelper; 
 
-namespace System.Security.RightsManagement
+// Disable message about unknown message numbers so as to allow the suppression
+// of PreSharp warnings (whose numbers are unknown to the compiler).
+#pragma warning disable 1634, 1691
+
+namespace System.Security.RightsManagement 
 {
     /// <summary>
     /// UnsignedPublishLicense class is used to represent publish license information before it was signed. 
@@ -30,9 +52,12 @@ namespace System.Security.RightsManagement
         public UnsignedPublishLicense(string publishLicenseTemplate) :this ()
         {
 
-            ArgumentNullException.ThrowIfNull(publishLicenseTemplate);
-
-            using (IssuanceLicense issuanceLicense = new IssuanceLicense(
+            if (publishLicenseTemplate == null)
+            {   
+                throw new ArgumentNullException("publishLicenseTemplate");
+            }
+            
+            using(IssuanceLicense issuanceLicense = new IssuanceLicense(
                                         DateTime.MinValue,  // validFrom, - default 
                                         DateTime.MaxValue,  // validUntil, - default 
                                         null,  // referralInfoName,
@@ -59,7 +84,10 @@ namespace System.Security.RightsManagement
         public PublishLicense Sign(SecureEnvironment secureEnvironment, out UseLicense authorUseLicense)
         {
 
-            ArgumentNullException.ThrowIfNull(secureEnvironment);
+            if (secureEnvironment == null)
+            {
+                throw new ArgumentNullException("secureEnvironment");
+            }
 
             // in case owner wasn't specified we can just assume default owner 
             // based on the user identity that was used to build the secure environment
@@ -90,6 +118,8 @@ namespace System.Security.RightsManagement
                                         _revocationPoint))
             {
                 // The SecureEnvironment constructor makes sure ClientSession cannot be null.
+                // Accordingly suppressing preSharp warning about having to validate ClientSession.
+#pragma warning suppress 6506
                 return secureEnvironment.ClientSession.SignIssuanceLicense(issuanceLicense, out authorUseLicense);
             }
         }
@@ -203,7 +233,7 @@ namespace System.Security.RightsManagement
         /// <summary>
         /// This method produces serialized Publish License XRML template.
         /// </summary>
-        public override string ToString()
+        override public string ToString()
         {
         
             using(IssuanceLicense issuanceLicense = new IssuanceLicense(

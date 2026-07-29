@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: 
@@ -7,6 +8,8 @@
 //
 // See specs at Validation.mht
 //
+
+using System;
 
 namespace System.Windows.Controls
 {
@@ -113,7 +116,7 @@ namespace System.Windows.Controls
         /// <returns>hash code for the current ValidationResult</returns>
         public override int GetHashCode()
         {
-            return IsValid.GetHashCode() ^ (ErrorContent ?? int.MinValue).GetHashCode();
+            return IsValid.GetHashCode() ^ ((ErrorContent == null) ? int.MinValue : ErrorContent).GetHashCode();
         }
 
         private bool _isValid;

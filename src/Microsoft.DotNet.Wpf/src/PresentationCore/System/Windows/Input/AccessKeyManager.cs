@@ -1,10 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
+using System.Windows.Media;
 using System.Windows.Interop;
 using MS.Internal;
+using System.Diagnostics;
+using System.Windows;
+using System.Security;
+
+using SR=MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Input
 {
@@ -23,7 +36,10 @@ namespace System.Windows.Input
         /// <param name="element">The registration element</param>
         public static void Register(string key, IInputElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
             key = NormalizeKey(key);
 
             AccessKeyManager akm = AccessKeyManager.Current;
@@ -54,7 +70,10 @@ namespace System.Windows.Input
         /// <param name="element"></param>
         public static void Unregister(string key, IInputElement element)
         {
-            ArgumentNullException.ThrowIfNull(element);
+            if (element == null)
+            {
+                throw new ArgumentNullException("element");
+            }
             key = NormalizeKey(key);
 
             AccessKeyManager akm = AccessKeyManager.Current;
@@ -116,7 +135,10 @@ namespace System.Windows.Input
         /// <returns></returns>
         private static string NormalizeKey(string key)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            if (key == null)
+            {
+                throw new ArgumentNullException("key");
+            }
 
             string firstCharacter = StringInfo.GetNextTextElement(key);
 
@@ -263,7 +285,7 @@ namespace System.Windows.Input
 
                 if (invokeUIElement != null)
                 {
-                    AccessKeyEventArgs args = new AccessKeyEventArgs(key, isMultiple: !oneUIElement || existsElsewhere, userInitiated);
+                    AccessKeyEventArgs args = new AccessKeyEventArgs(key, !oneUIElement || existsElsewhere /* == isMultiple */,userInitiated);
                     try
                     {
                         invokeUIElement.InvokeAccessKey(args);
@@ -291,7 +313,7 @@ namespace System.Windows.Input
 
             if ((text != null) && (text.Length > 0))
             {
-                if (ProcessKeyForSender(e.OriginalSource, text, existsElsewhere: false,e.UserInitiated) != ProcessKeyResult.NoMatch)
+                if (ProcessKeyForSender(e.OriginalSource, text, false /* existsElsewhere */,e.UserInitiated) != ProcessKeyResult.NoMatch)
                 {
                     e.Handled = true;
                 }
@@ -316,7 +338,7 @@ namespace System.Windows.Input
 
             if (text != null)
             {
-                if (ProcessKeyForSender(e.OriginalSource, text, existsElsewhere: false,e.UserInitiated) != ProcessKeyResult.NoMatch)
+                if (ProcessKeyForSender(e.OriginalSource, text, false /* existsElsewhere */,e.UserInitiated) != ProcessKeyResult.NoMatch)
                 {
                     e.Handled = true;
                 }
@@ -835,12 +857,12 @@ namespace System.Windows.Input
         {
             _key = key;
             _isMultiple = isMultiple;
-            _userInitiated = userInitiated;
+            _userInitiated = new SecurityCriticalDataForSet<bool>(userInitiated);
         }
 
         internal void ClearUserInitiated()
         {
-            _userInitiated = false;
+            _userInitiated.Value = false;
         }
         /// <summary>
         /// The key that was pressed which invoked this access key
@@ -862,12 +884,12 @@ namespace System.Windows.Input
 
         internal bool UserInitiated
         {
-            get { return _userInitiated; }
+            get { return _userInitiated.Value; }
         }
         
 
         private string _key;
         private bool _isMultiple;
-        private bool _userInitiated;
+        private SecurityCriticalDataForSet<bool >_userInitiated;
 }
 }

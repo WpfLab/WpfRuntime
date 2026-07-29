@@ -1,7 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+//
+// Description:
+//
+
+
+using Microsoft.Win32;                       // Registry & ComponentDispatcher & MSG
+using System.Security;                       // CAS
+using System.Runtime.InteropServices;        // SEHException
+using System.Diagnostics;                    // Debug & Debugger
 using System.Threading;
+using MS.Internal.WindowsBase;
 
 namespace System.Windows.Threading
 {
@@ -64,13 +76,15 @@ namespace System.Windows.Threading
             // expensive DynamicInvoke call.
             if(numArgsEx == 0)
             {
-                if (callback is Action action)
+                Action action = callback as Action;
+                if (action != null)
                 {
                     action();
                 }
                 else
                 {
-                    if (callback is Dispatcher.ShutdownCallback shutdownCallback)
+                    Dispatcher.ShutdownCallback shutdownCallback = callback as Dispatcher.ShutdownCallback;
+                    if(shutdownCallback != null)
                     {
                         shutdownCallback();
                     }
@@ -83,19 +97,21 @@ namespace System.Windows.Threading
             }
             else if(numArgsEx == 1)
             {
-                if (callback is DispatcherOperationCallback dispatcherOperationCallback)
+                DispatcherOperationCallback dispatcherOperationCallback = callback as DispatcherOperationCallback;
+                if(dispatcherOperationCallback != null)
                 {
                     result = dispatcherOperationCallback(singleArg);
                 }
                 else
                 {
-                    if (callback is SendOrPostCallback sendOrPostCallback)
+                    SendOrPostCallback sendOrPostCallback = callback as SendOrPostCallback;
+                    if(sendOrPostCallback != null)
                     {
                         sendOrPostCallback(singleArg);
                     }
                     else
                     {
-                        if (numArgs == -1)
+                        if(numArgs == -1)
                         {
                             // Explicitly pass an object[] to DynamicInvoke so that
                             // it will not try to wrap the arg in another object[].

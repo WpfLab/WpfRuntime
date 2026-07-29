@@ -1,5 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -13,13 +14,22 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+using MS.Internal;
 using MS.Utility;
+using Microsoft.Win32;
+using System.Globalization;
 #if PBTCOMPILER
 using MS.Internal.PresentationBuildTasks;
 #else
 using MS.Internal.PresentationFramework;
 using MS.Internal.Utility;  // AssemblyCacheEnum
 #endif
+
+// Since we disable PreSharp warnings in this file, we first need to disable warnings about unknown message numbers and unknown pragmas.
+#pragma warning disable 1634, 1691
 
 #if PBTCOMPILER
 namespace MS.Internal.Markup
@@ -449,9 +459,9 @@ namespace System.Windows.Markup
 #endif
 
 #if PBTCOMPILER
-        private bool _localAssembly;
+        bool _localAssembly;
 #endif
-        private string _assemblyName;
-        private string _clrNamespace;
+        string _assemblyName;
+        string _clrNamespace;
     }
 }

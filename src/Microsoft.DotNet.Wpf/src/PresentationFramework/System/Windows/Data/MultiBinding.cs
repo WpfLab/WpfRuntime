@@ -1,5 +1,6 @@
-ï»¿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Defines MultiBinding object, uses a collection of bindings together.
@@ -7,24 +8,29 @@
 // Specs:       UIBinding.mht
 //
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Controls;  // Validation
 using System.Windows.Markup;
 using MS.Internal.Controls; // Validation
 using MS.Internal.Data;
+using MS.Utility;
 
 namespace System.Windows.Data
 {
-    /// <summary>
-    ///  Describes a collection of bindings attached to a single property.
-    ///     The inner bindings contribute their values to the MultiBinding,
-    ///     which combines/converts them into a resultant final value.
-    ///     In the reverse direction, the target value is tranlated to
-    ///     a set of values that are fed back into the inner bindings.
-    /// </summary>
-    [ContentProperty("Bindings")]
+/// <summary>
+///  Describes a collection of bindings attached to a single property.
+///     The inner bindings contribute their values to the MultiBinding,
+///     which combines/converts them into a resultant final value.
+///     In the reverse direction, the target value is tranlated to
+///     a set of values that are fed back into the inner bindings.
+/// </summary>
+[ContentProperty("Bindings")]
 public class MultiBinding : BindingBase, IAddChild
 {
     //------------------------------------------------------
@@ -53,7 +59,7 @@ public class MultiBinding : BindingBase, IAddChild
         if (binding != null)
             Bindings.Add(binding);
         else
-            throw new ArgumentException(SR.Format(SR.ChildHasWrongType, this.GetType().Name, "BindingBase", value.GetType().FullName), nameof(value));
+            throw new ArgumentException(SR.Format(SR.ChildHasWrongType, this.GetType().Name, "BindingBase", value.GetType().FullName), "value");
     }
 
     ///<summary>
@@ -106,7 +112,7 @@ public class MultiBinding : BindingBase, IAddChild
                 case BindingFlags.OneTime:          return BindingMode.OneTime;
                 case BindingFlags.PropDefault:      return BindingMode.Default;
             }
-            Debug.Fail("Unexpected BindingMode value");
+            Debug.Assert(false, "Unexpected BindingMode value");
             return 0;
         }
         set
@@ -129,7 +135,7 @@ public class MultiBinding : BindingBase, IAddChild
                 case BindingFlags.UpdateExplicitly:     return UpdateSourceTrigger.Explicit;
                 case BindingFlags.UpdateDefault:        return UpdateSourceTrigger.Default;
             }
-            Debug.Fail("Unexpected UpdateSourceTrigger value");
+            Debug.Assert(false, "Unexpected UpdateSourceTrigger value");
             return 0;
         }
         set
@@ -257,9 +263,9 @@ public class MultiBinding : BindingBase, IAddChild
     /// called whenever any exception is encountered when trying to update
     /// the value to the source. The application author can provide its own
     /// handler for handling exceptions here. If the delegate returns
-    ///     null - donâ€™t throw an error or provide a ValidationError.
+    ///     null - don’t throw an error or provide a ValidationError.
     ///     Exception - returns the exception itself, we will fire the exception using Async exception model.
-    ///     ValidationError - it will set itself as the BindingInError and add it to the elementâ€™s Validation errors.
+    ///     ValidationError - it will set itself as the BindingInError and add it to the element’s Validation errors.
     /// </summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public UpdateSourceExceptionFilterCallback UpdateSourceExceptionFilter
@@ -439,12 +445,12 @@ public class MultiBinding : BindingBase, IAddChild
         CheckSealed();
     }
 
-        //------------------------------------------------------
-        //
-        //  Private Fields
-        //
-        //------------------------------------------------------
+    //------------------------------------------------------
+    //
+    //  Private Fields
+    //
+    //------------------------------------------------------
 
-        private BindingCollection       _bindingCollection;
+    BindingCollection       _bindingCollection;
 }
 }

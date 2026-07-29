@@ -1,17 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // Description: Windows Button Proxy
 
 using System;
+using System.Collections;
+using System.Text;
 using System.Windows.Automation;
 using System.Windows.Automation.Provider;
+using System.Windows;
+using System.Runtime.InteropServices;
+using System.ComponentModel;
 using MS.Win32;
 
 namespace MS.Internal.AutomationProxies
 {
     // Windows Button proxy
-    internal class WindowsButton : ProxyHwnd, IInvokeProvider, IToggleProvider, ISelectionProvider, ISelectionItemProvider
+    class WindowsButton : ProxyHwnd, IInvokeProvider, IToggleProvider, ISelectionProvider, ISelectionItemProvider
     {
         // ------------------------------------------------------
         //
@@ -89,7 +95,11 @@ namespace MS.Internal.AutomationProxies
         private static IRawElementProviderSimple Create(IntPtr hwnd, int idChild)
         {
             // Something is wrong if idChild is not zero 
-            ArgumentOutOfRangeException.ThrowIfNotEqual(idChild, 0);
+            if (idChild != 0)
+            {
+                System.Diagnostics.Debug.Assert (idChild == 0, "Invalid Child Id, idChild != 0");
+                throw new ArgumentOutOfRangeException("idChild", idChild, SR.ShouldBeZero);
+            }
 
             ButtonType type;
             int style;
@@ -281,16 +291,19 @@ namespace MS.Internal.AutomationProxies
         #region ProxyHwnd Overrides
 
         // Builds a list of Win32 WinEvents to process a UIAutomation Event.
-        protected override ReadOnlySpan<WinEventTracker.EvtIdProperty> EventToWinEvent(AutomationEvent idEvent)
+        protected override WinEventTracker.EvtIdProperty[] EventToWinEvent(AutomationEvent idEvent, out int cEvent)
         {
             // For Vista, we only need register for EventObjectInvoke to handle InvokePattern.InvokedEvent.
             // For XP, we rely on state changes, handled in ProxyHwnd.EventToWinEvent().
             if (idEvent == InvokePattern.InvokedEvent && Environment.OSVersion.Version.Major >= 6)
             {
-                return new WinEventTracker.EvtIdProperty[1] { new(NativeMethods.EventObjectInvoke, idEvent) };
+                cEvent = 1;
+                return new WinEventTracker.EvtIdProperty[] { 
+                    new WinEventTracker.EvtIdProperty (NativeMethods.EventObjectInvoke, idEvent)
+                };
             }
 
-            return base.EventToWinEvent(idEvent);
+            return base.EventToWinEvent(idEvent, out cEvent);
         }
 
         #endregion
@@ -656,7 +669,7 @@ namespace MS.Internal.AutomationProxies
             }
         }
         
-        private unsafe bool ContainsRadioButtons()
+        unsafe private bool ContainsRadioButtons()
         {
             bool radiobuttonChildFound = false;
             // WinForm GroupBoxes have a parent/child relationship.  Win32 GroupBoxes do not.
@@ -667,7 +680,7 @@ namespace MS.Internal.AutomationProxies
             return radiobuttonChildFound;
         }
 
-        private unsafe bool FindRadioButtonChild(IntPtr hwnd, void* lParam)
+        unsafe private bool FindRadioButtonChild(IntPtr hwnd, void* lParam)
         {
             // Only be concerned with Winforms child controls.
             if (!WindowsFormsHelper.IsWindowsFormsControl(hwnd))

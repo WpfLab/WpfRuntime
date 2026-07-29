@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // Description:
@@ -9,6 +10,7 @@
 //              EncryptedPackageEnvelope respectively.
 //
 
+using System;
 using System.Windows;
 using System.IO.Packaging;
 using MS.Internal.Interop;
@@ -206,8 +208,8 @@ namespace MS.Internal.IO.Packaging
         /// IFilter.Init parameters.
         /// Used to initialize CorePropertyEnumerator.
         /// </summary>
-        private IFILTER_INIT _grfFlags = 0;
-        private ManagedFullPropSpec[] _aAttributes = null;
+        IFILTER_INIT _grfFlags = 0;
+        ManagedFullPropSpec[] _aAttributes = null;
 
         /// <summary>
         /// Chunk ID for the current chunk. Incremented for

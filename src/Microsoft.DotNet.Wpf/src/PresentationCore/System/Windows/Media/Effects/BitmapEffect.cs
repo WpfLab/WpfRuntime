@@ -1,9 +1,29 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+//
+
+using MS.Internal;
+using System;
+using System.IO;
+using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
+using System.Reflection;
+using System.Windows.Threading;
 using System.Threading;
 using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Markup;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Composition;
 using System.Windows.Media.Imaging;
+using System.Security;
+using MS.Internal.PresentationCore;
+
+using SR = MS.Internal.PresentationCore.SR;
 
 namespace System.Windows.Media.Effects
 {
@@ -38,14 +58,14 @@ namespace System.Windows.Media.Effects
         /// of the unmanaged object.
         /// </summary>
         [Obsolete(MS.Internal.Media.VisualTreeUtils.BitmapEffectObsoleteMessage)]
-        protected abstract void UpdateUnmanagedPropertyState(SafeHandle unmanagedEffect);
+        abstract protected void UpdateUnmanagedPropertyState(SafeHandle unmanagedEffect);
 
 
         /// <summary>
         /// Returns a safe handle to an unmanaged effect clone
         /// </summary>
         [Obsolete(MS.Internal.Media.VisualTreeUtils.BitmapEffectObsoleteMessage)]
-        protected abstract unsafe SafeHandle CreateUnmanagedEffect();
+        unsafe abstract protected SafeHandle CreateUnmanagedEffect();
 
         /// <summary>
         /// SetValue
@@ -55,7 +75,7 @@ namespace System.Windows.Media.Effects
         /// <param name="value">Object value to set unmanaged property to</param>
         /// <returns></returns>
         [Obsolete(MS.Internal.Media.VisualTreeUtils.BitmapEffectObsoleteMessage)]
-        protected static unsafe void SetValue(SafeHandle effect, string propertyName, object value)
+        unsafe static protected void SetValue(SafeHandle effect, string propertyName, object value)
         {
         }
 
@@ -64,7 +84,7 @@ namespace System.Windows.Media.Effects
         /// </summary>
         /// <returns>IMILBitmapEffect object</returns>
         [Obsolete(MS.Internal.Media.VisualTreeUtils.BitmapEffectObsoleteMessage)]
-        protected static unsafe SafeHandle /* IMILBitmapEffect */ CreateBitmapEffectOuter()
+        unsafe static protected SafeHandle /* IMILBitmapEffect */ CreateBitmapEffectOuter()
         {
             return null;
         }
@@ -75,7 +95,7 @@ namespace System.Windows.Media.Effects
         /// <param name="outerObject">The IMILBitmapEffect object</param>
         /// <param name="innerObject">The IMILBitmapEffectPrimitive object</param>
         [Obsolete(MS.Internal.Media.VisualTreeUtils.BitmapEffectObsoleteMessage)]
-        protected static unsafe void InitializeBitmapEffect(SafeHandle /*IMILBitmapEffect */ outerObject,
+        unsafe static protected void InitializeBitmapEffect(SafeHandle /*IMILBitmapEffect */ outerObject,
                  SafeHandle/* IMILBitmapEffectPrimitive */ innerObject)
         {
         }
@@ -89,12 +109,15 @@ namespace System.Windows.Media.Effects
         [Obsolete(MS.Internal.Media.VisualTreeUtils.BitmapEffectObsoleteMessage)]
         public BitmapSource GetOutput(BitmapEffectInput input)
         {
-            ArgumentNullException.ThrowIfNull(input);
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
 
             // if we don't have the input set, we should not be calling the output property
             if (input.Input == null)
             {
-                throw new ArgumentException(SR.Effect_No_InputSource, nameof(input));
+                throw new ArgumentException(SR.Effect_No_InputSource, "input");
             }
 
             if (input.Input == BitmapEffectInput.ContextInputSource)

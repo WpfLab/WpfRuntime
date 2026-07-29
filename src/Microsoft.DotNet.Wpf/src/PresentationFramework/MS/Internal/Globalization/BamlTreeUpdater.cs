@@ -1,11 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using System.ComponentModel;
 using System.Xml;
+using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Markup.Localizer;
 
@@ -17,7 +25,11 @@ namespace MS.Internal.Globalization
         // internal methods
         //-----------------------------
 
-        internal static void UpdateTree(BamlTree tree, BamlTreeMap treeMap, BamlLocalizationDictionary dictionary)
+        internal static void UpdateTree(
+            BamlTree tree,
+            BamlTreeMap treeMap,
+            BamlLocalizationDictionary dictionary
+            )
         {
             Debug.Assert(tree != null && tree.Root != null, "Empty Tree!");
             Debug.Assert(treeMap != null, "Empty map!");
@@ -28,7 +40,7 @@ namespace MS.Internal.Globalization
                 return;
 
             // create a tree map to be used for update
-            BamlTreeUpdateMap updateMap = new(treeMap, tree);
+            BamlTreeUpdateMap updateMap = new BamlTreeUpdateMap(treeMap, tree);
 
             //
             // a) Create baml tree nodes for missing child place holders and properties.
@@ -37,17 +49,18 @@ namespace MS.Internal.Globalization
             //
             CreateMissingBamlTreeNode(dictionary, updateMap);
 
+
             // 
             // b) Look through each translation and make modification to the tree
             //    At this step, new nodes are linked to the tree if applicable.
             //            
-            BamlLocalizationDictEnumerator dictionaryEnumerator = new(dictionary);
-            List<KeyValuePair<BamlLocalizableResourceKey, BamlLocalizableResource>> deferredResources = new();
-            foreach (KeyValuePair<BamlLocalizableResourceKey, BamlLocalizableResource> item in dictionaryEnumerator)
+            BamlLocalizationDictionaryEnumerator enumerator = dictionary.GetEnumerator();
+            ArrayList deferredResources = new ArrayList();
+            while (enumerator.MoveNext())
             {
-                if (!ApplyChangeToBamlTree(item.Key, item.Value, updateMap))
+                if (!ApplyChangeToBamlTree(enumerator.Key, enumerator.Value, updateMap))
                 {
-                    deferredResources.Add(item);
+                    deferredResources.Add(enumerator.Entry);
                 }
             }
 
@@ -58,18 +71,25 @@ namespace MS.Internal.Globalization
             //
             for (int i = 0; i < deferredResources.Count; i++)
             {
-                KeyValuePair<BamlLocalizableResourceKey, BamlLocalizableResource> entry = deferredResources[i];
-                ApplyChangeToBamlTree(entry.Key, entry.Value, updateMap);
+                DictionaryEntry entry = (DictionaryEntry)deferredResources[i];
+                ApplyChangeToBamlTree(
+                    (BamlLocalizableResourceKey)entry.Key,
+                    (BamlLocalizableResource)entry.Value,
+                    updateMap
+                    );
             }
         }
 
-        private static void CreateMissingBamlTreeNode(BamlLocalizationDictionary dictionary, BamlTreeUpdateMap treeMap)
+        private static void CreateMissingBamlTreeNode(
+            BamlLocalizationDictionary dictionary,
+            BamlTreeUpdateMap treeMap
+            )
         {
-            BamlLocalizationDictEnumerator dictionaryEnumerator = new(dictionary);
-            foreach (KeyValuePair<BamlLocalizableResourceKey, BamlLocalizableResource> item in dictionaryEnumerator)
+            BamlLocalizationDictionaryEnumerator enumerator = dictionary.GetEnumerator();
+            while (enumerator.MoveNext())
             {
-                BamlLocalizableResourceKey key = item.Key;
-                BamlLocalizableResource resource = item.Value;
+                BamlLocalizableResourceKey key = enumerator.Key;
+                BamlLocalizableResource resource = enumerator.Value;
 
                 // get the baml tree node from the tree
                 BamlTreeNode node = treeMap.MapKeyToBamlTreeNode(key);
@@ -135,15 +155,22 @@ namespace MS.Internal.Globalization
             }
         }
 
-        private static bool ApplyChangeToBamlTree(BamlLocalizableResourceKey key, BamlLocalizableResource resource, BamlTreeUpdateMap treeMap)
+        private static bool ApplyChangeToBamlTree(
+            BamlLocalizableResourceKey key,
+            BamlLocalizableResource resource,
+            BamlTreeUpdateMap treeMap
+            )
         {
-            if (resource == null || resource.Content == null || !resource.Modifiable)
+            if (resource == null
+                || resource.Content == null
+                || !resource.Modifiable)
             {
                 // Invalid translation or the resource is marked as non-modifiable.
                 return true;
             }
 
-            if (!treeMap.LocalizationDictionary.Contains(key) && !treeMap.IsNewBamlTreeNode(key))
+            if (!treeMap.LocalizationDictionary.Contains(key)
+                && !treeMap.IsNewBamlTreeNode(key))
             {
                 // A localizable node is either in the localization dicationary extracted 
                 // from the source or it is a new node created by the localizer. 
@@ -191,7 +218,7 @@ namespace MS.Internal.Globalization
                         // now try to link this node into the parent
                         if (propertyNode.Parent == null)
                         {
-                            BamlStartElementNode parent = treeMap.MapUidToBamlTreeElementNode(key.Uid);
+                            BamlStartElementNode parent = (BamlStartElementNode)treeMap.MapUidToBamlTreeElementNode(key.Uid);
                             if (parent != null)
                             {
                                 // insert property node to the parent
@@ -207,9 +234,9 @@ namespace MS.Internal.Globalization
                 case BamlNodeType.StartElement:
                     {
                         string source = null;
-                        if (treeMap.LocalizationDictionary.TryGetValue(key, out BamlLocalizableResource value))
+                        if (treeMap.LocalizationDictionary.Contains(key))
                         {
-                            source = value.Content;
+                            source = ((BamlLocalizableResource)treeMap.LocalizationDictionary[key]).Content;
                         }
 
                         if (resource.Content != source)
@@ -255,8 +282,7 @@ namespace MS.Internal.Globalization
             IList<BamlTreeNode> newChildren
             )
         {
-            if (newChildren == null)
-                return;
+            if (newChildren == null) return;
 
             List<BamlTreeNode> oldChildren = parent.Children;
 
@@ -414,7 +440,8 @@ namespace MS.Internal.Globalization
             try
             {
                 doc.LoadXml(xmlContent.ToString());
-                if (doc.FirstChild is XmlElement root && root.HasChildNodes)
+                XmlElement root = doc.FirstChild as XmlElement;
+                if (root != null && root.HasChildNodes)
                 {
                     for (int i = 0; i < root.ChildNodes.Count && succeed; i++)
                     {
@@ -562,7 +589,7 @@ namespace MS.Internal.Globalization
                 if (child.HasChildNodes)
                 {
                     // recursively go down 
-                    List<BamlTreeNode> list = new();
+                    IList<BamlTreeNode> list = new List<BamlTreeNode>();
                     for (int i = 0; i < child.ChildNodes.Count && succeed; i++)
                     {
                         succeed = GetBamlTreeNodeFromXmlNode(
@@ -594,9 +621,9 @@ namespace MS.Internal.Globalization
             IList<BamlTreeNode> newChildrenList          // list of new children
             )
         {
-            ReadOnlySpan<BamlStringToken> tokens = BamlResourceContentUtil.ParseChildPlaceholder(content);
+            BamlStringToken[] tokens = BamlResourceContentUtil.ParseChildPlaceholder(content);
 
-            if (tokens.IsEmpty)
+            if (tokens == null)
             {
                 bamlTreeMap.Resolver.RaiseErrorNotifyEvent(
                     new BamlLocalizerErrorNotifyEventArgs(
@@ -608,19 +635,19 @@ namespace MS.Internal.Globalization
             }
 
             bool succeed = true;
-            foreach (BamlStringToken token in tokens)
+            for (int i = 0; i < tokens.Length; i++)
             {
-                switch (token.Type)
+                switch (tokens[i].Type)
                 {
                     case BamlStringToken.TokenType.Text:
                         {
-                            BamlTreeNode node = new BamlTextNode(token.Value);
+                            BamlTreeNode node = new BamlTextNode(tokens[i].Value);
                             newChildrenList.Add(node);
                             break;
                         }
                     case BamlStringToken.TokenType.ChildPlaceHolder:
                         {
-                            BamlTreeNode node = bamlTreeMap.MapUidToBamlTreeElementNode(token.Value);
+                            BamlTreeNode node = bamlTreeMap.MapUidToBamlTreeElementNode(tokens[i].Value);
 
                             // The value will be null if there is no uid-matching node in the tree.                        
                             if (node != null)
@@ -632,7 +659,7 @@ namespace MS.Internal.Globalization
                                 bamlTreeMap.Resolver.RaiseErrorNotifyEvent(
                                     new BamlLocalizerErrorNotifyEventArgs(
                                         new BamlLocalizableResourceKey(
-                                            token.Value,
+                                            tokens[i].Value,
                                             string.Empty,
                                             string.Empty
                                             ),
@@ -653,7 +680,10 @@ namespace MS.Internal.Globalization
         /// <remarks>
         /// Try to add the matching ContentPropertyNode to the newly constructed element
         /// </remarks>
-        private static void TryAddContentPropertyToNewElement(BamlTreeUpdateMap bamlTreeMap, BamlStartElementNode bamlNode)
+        private static void TryAddContentPropertyToNewElement(
+            BamlTreeUpdateMap bamlTreeMap,
+            BamlStartElementNode bamlNode
+            )
         {
             string contentProperty = bamlTreeMap.GetContentProperty(bamlNode.AssemblyName, bamlNode.TypeFullName);
             if (!string.IsNullOrEmpty(contentProperty))
@@ -668,27 +698,27 @@ namespace MS.Internal.Globalization
             }
         }
 
-        private sealed class BamlTreeUpdateMap
+        private class BamlTreeUpdateMap
         {
-            private readonly BamlTreeMap _originalMap;
-            private readonly BamlTree _tree;
+            private BamlTreeMap _originalMap;
+            private BamlTree _tree;
 
             // from Uid to new nodes created, it is used when:
             // o Deserializing formatting tags e.g <b Id="bold01"></b>. It looks up the node by "bold01".
             // o Apply properties for new nodes. e.g. "Italic01:System.Windows.TextElement.Foreground" is applied on 
             //   element with "Italic 01".
-            private readonly Dictionary<string, int> _uidToNewBamlNodeIndexMap;
+            private Hashtable _uidToNewBamlNodeIndexMap;
 
             // from full key name to new nodes created
-            private readonly Dictionary<BamlLocalizableResourceKey, int> _keyToNewBamlNodeIndexMap;
+            private Hashtable _keyToNewBamlNodeIndexMap;
 
             // cached content property table storing (fulltypeName, content property name) pair. 
-            private Dictionary<string, string> _contentPropertyTable;
+            private Dictionary<String, string> _contentPropertyTable;
 
             internal BamlTreeUpdateMap(BamlTreeMap map, BamlTree tree)
             {
-                _uidToNewBamlNodeIndexMap = new Dictionary<string, int>(8);
-                _keyToNewBamlNodeIndexMap = new Dictionary<BamlLocalizableResourceKey, int>(8);
+                _uidToNewBamlNodeIndexMap = new Hashtable(8);
+                _keyToNewBamlNodeIndexMap = new Hashtable(8);
                 _originalMap = map;
                 _tree = tree;
             }
@@ -700,9 +730,9 @@ namespace MS.Internal.Globalization
                 if (node == null)
                 {
                     // find it in the new nodes
-                    if (_keyToNewBamlNodeIndexMap.TryGetValue(key, out int bamlNodeIndex))
+                    if (_keyToNewBamlNodeIndexMap.Contains(key))
                     {
-                        node = _tree[bamlNodeIndex];
+                        node = _tree[(int)_keyToNewBamlNodeIndexMap[key]];
                     }
                 }
 
@@ -711,7 +741,7 @@ namespace MS.Internal.Globalization
 
             internal bool IsNewBamlTreeNode(BamlLocalizableResourceKey key)
             {
-                return _keyToNewBamlNodeIndexMap.ContainsKey(key);
+                return _keyToNewBamlNodeIndexMap.Contains(key);
             }
 
             internal BamlStartElementNode MapUidToBamlTreeElementNode(string uid)
@@ -720,15 +750,19 @@ namespace MS.Internal.Globalization
                 if (node == null)
                 {
                     // find it in the new nodes
-                    if (_uidToNewBamlNodeIndexMap.TryGetValue(uid, out int bamlNodeIndex))
+                    if (_uidToNewBamlNodeIndexMap.Contains(uid))
                     {
-                        node = _tree[bamlNodeIndex] as BamlStartElementNode;
+                        node = _tree[(int)_uidToNewBamlNodeIndexMap[uid]] as BamlStartElementNode;
                     }
                 }
 
                 return node;
             }
-            internal void AddBamlTreeNode(string uid, BamlLocalizableResourceKey key, BamlTreeNode node)
+            internal void AddBamlTreeNode(
+                string uid,
+                BamlLocalizableResourceKey key,
+                BamlTreeNode node
+                )
             {
                 // add to node
                 _tree.AddTreeNode(node);
@@ -744,12 +778,12 @@ namespace MS.Internal.Globalization
 
             internal BamlLocalizationDictionary LocalizationDictionary
             {
-                get => _originalMap.LocalizationDictionary;
+                get { return _originalMap.LocalizationDictionary; }
             }
 
             internal InternalBamlLocalizabilityResolver Resolver
             {
-                get => _originalMap.Resolver;
+                get { return _originalMap.Resolver; }
             }
 
             /// <remarks>
@@ -809,8 +843,11 @@ namespace MS.Internal.Globalization
                         ContentPropertyAttribute contentPropertyAttribute = contentPropertyAttributes[0] as ContentPropertyAttribute;
                         contentProperty = contentPropertyAttribute.Name;
 
-                        // Cache the value for future use.
-                        _contentPropertyTable ??= new Dictionary<string, string>(8);
+                        // Cach the value for future use.
+                        if (_contentPropertyTable == null)
+                        {
+                            _contentPropertyTable = new Dictionary<string, string>(8);
+                        }
                         _contentPropertyTable.Add(fullTypeName, contentProperty);
                     }
                 }

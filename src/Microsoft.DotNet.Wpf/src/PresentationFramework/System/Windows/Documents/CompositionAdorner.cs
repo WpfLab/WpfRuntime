@@ -1,12 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
-using System.Collections; // ArrayList
-using System.Windows.Media; // Brush, Transform
-using System.Windows.Controls.Primitives; // TextBoxBase
-using System.Windows.Input; // InputLanguageManager
-using MS.Win32;             // TextServices
-using MS.Internal; // Invariant
+// See the LICENSE file in the project root for more information.
 
 //
 // Description: Composition adorner to render the composition display attribute.
@@ -14,6 +8,16 @@ using MS.Internal; // Invariant
 
 namespace System.Windows.Documents
 {
+    using System.Collections; // ArrayList
+    using System.Diagnostics;
+    using System.Windows.Media; // Brush, Transform
+    using System.Windows.Controls; // TextBox
+    using System.Windows.Controls.Primitives; // TextBoxBase
+    using System.Windows.Input; // InputLanguageManager
+    using System.Windows.Threading; // Dispatcher
+    using MS.Win32;             // TextServices
+    using MS.Internal; // Invariant
+
     internal class CompositionAdorner : Adorner
     {
         //------------------------------------------------------
@@ -269,10 +273,8 @@ namespace System.Windows.Documents
 
                         double squiggleGap = halfLineHeight;
 
-                        PathFigure pathFigure = new PathFigure
-                        {
-                            StartPoint = pathPoint
-                        };
+                        PathFigure pathFigure = new PathFigure();
+                        pathFigure.StartPoint = pathPoint;
 
                         int indexPoint = 0;
 
@@ -363,8 +365,11 @@ namespace System.Windows.Documents
 
             _adornerLayer = AdornerLayer.GetAdornerLayer(textView.RenderScope);
 
-            // Add the CompositionAdorner to the scoping of AdornerLayer
-            _adornerLayer?.Add(this);
+            if (_adornerLayer != null)
+            {
+                // Add the CompositionAdorner to the scoping of AdornerLayer
+                _adornerLayer.Add(this);
+            }
         }
 
         /// <summary>
@@ -372,9 +377,12 @@ namespace System.Windows.Documents
         /// </summary>
         internal void Uninitialize()
         {
-            // Remove CompositionAdorner form the socping of AdornerLayer
-            _adornerLayer?.Remove(this);
-            _adornerLayer = null;
+            if (_adornerLayer != null)
+            {
+                // Remove CompositionAdorner form the socping of AdornerLayer
+                _adornerLayer.Remove(this);
+                _adornerLayer = null;
+            }
         }
 
         #endregion Internal methods
