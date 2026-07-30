@@ -189,6 +189,7 @@ internal sealed class GitHubActionsBuildService
             "--version",
             identity.PackageVersion).ConfigureAwait(false);
         RequireNonEmptyFile(identity.PackagePath);
+        RequireNonEmptyFile(identity.SymbolPackagePath);
         await RunRequiredAsync(
             "test generated package",
             _dotnetPath,
@@ -205,6 +206,7 @@ internal sealed class GitHubActionsBuildService
             "--package",
             identity.PackagePath).ConfigureAwait(false);
         RequireNonEmptyFile(identity.PackagePath);
+        RequireNonEmptyFile(identity.SymbolPackagePath);
     }
 
     private Task RebuildSolutionAsync(

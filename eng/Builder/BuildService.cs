@@ -99,7 +99,7 @@ foreach (var platform in new[] { "x64", "x86" })
         Log.Info($"  Building {projectName} ({platform})...");
 
         var logPath = MsBuildService.GetBuildLogPath(context.BuildLogsDir, projectName, platform);
-        var arguments = $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform={projectPlatform} /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+        var arguments = $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform={projectPlatform} /p:DebugSymbols=true /p:DebugType=portable /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
         var result = ProcessRunner.Run(
             msbuildExe,
             arguments,
@@ -162,6 +162,14 @@ foreach (var (rid, platform) in new[] { ("win-x64", "x64"), ("win-x86", "x86") }
         var destPath = Path.Join(runtimeLibDir, name);
         File.Copy(sourcePath, destPath, overwrite: true);
         Log.Info($"  runtimes/{rid}/lib/net8.0/{name}");
+
+        var pdbSourcePath = AssemblyCollector.GetPortablePdbPath(sourcePath);
+        if (pdbSourcePath is not null)
+        {
+            var pdbName = Path.GetFileName(pdbSourcePath);
+            File.Copy(pdbSourcePath, Path.Join(runtimeLibDir, pdbName), overwrite: true);
+            Log.Info($"  runtimes/{rid}/lib/net8.0/{pdbName} (symbols)");
+        }
     }
 }
 
@@ -189,7 +197,9 @@ catch (InvalidOperationException exception)
 }
 var runtimePackageDependencies = NuGetPackageService.ReadRuntimePackageDependencies(context.RepoRoot);
 var nuspecPath = NuGetPackageService.GenerateNuspec(context.StagingDir, version, runtimePackageDependencies);
+var symbolNuspecPath = NuGetPackageService.GenerateSymbolNuspec(context.StagingDir, version);
 var nupkgPath = NuGetPackageService.PackNuGet(nuspecPath, context.NupkgOutputDir);
+var snupkgPath = NuGetPackageService.PackSymbolNuGet(symbolNuspecPath, context.NupkgOutputDir);
 
 // ---- Step 7: Compare against official package ----
 Log.Step("Comparing against official Microsoft.WindowsDesktop.App.Ref...");
@@ -199,6 +209,7 @@ var elapsed = Stopwatch.GetElapsedTime(startTime);
 Log.Info("========================================");
 Log.Info($"Build complete! Elapsed: {elapsed.TotalSeconds:F1}s");
 Log.Info($"NuGet package: {nupkgPath}");
+Log.Info($"NuGet symbol package: {snupkgPath}");
 return failedProjects.Count > 0 ? 2 : 0;
 
     }

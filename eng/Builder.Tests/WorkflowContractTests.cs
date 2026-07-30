@@ -22,6 +22,7 @@ public sealed class WorkflowContractTests
         Assert.DoesNotContain("run: |", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("github.event.pull_request.head.sha", workflow, StringComparison.Ordinal);
         Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
+        Assert.Contains("steps.build-package.outputs.symbol-package-path", workflow, StringComparison.Ordinal);
         Assert.Contains("github.run_attempt", workflow, StringComparison.Ordinal);
     }
 

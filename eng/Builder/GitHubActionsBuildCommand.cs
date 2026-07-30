@@ -90,6 +90,7 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
                             ["tested-sha"] = identity.TestedSha.ToString(),
                             ["version"] = identity.PackageVersion,
                             ["package-path"] = identity.PackagePath,
+                            ["symbol-package-path"] = identity.SymbolPackagePath,
                             ["artifact-name"] = identity.ArtifactName,
                         });
                 }
