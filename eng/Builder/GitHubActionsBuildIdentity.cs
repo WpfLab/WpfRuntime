@@ -4,6 +4,7 @@ internal sealed record GitHubActionsBuildIdentity(
     GitObjectId TestedSha,
     string PackageVersion,
     string PackagePath,
+    string SymbolPackagePath,
     string ArtifactName)
 {
     public static GitHubActionsBuildIdentity Create(
@@ -38,6 +39,7 @@ internal sealed record GitHubActionsBuildIdentity(
             "bin",
             "nupkg",
             $"DotNetCampus.WpfLib.{packageVersion}.nupkg"));
+        var symbolPackagePath = Path.ChangeExtension(packagePath, ".snupkg");
         var artifactName =
             $"DotNetCampus.WpfLib-nupkg-{artifactIdentity}-sha-{parsedTestedSha}-run-{runId}-attempt-{runAttempt}";
 
@@ -45,6 +47,7 @@ internal sealed record GitHubActionsBuildIdentity(
             parsedTestedSha,
             packageVersion,
             packagePath,
+            symbolPackagePath,
             artifactName);
     }
 }

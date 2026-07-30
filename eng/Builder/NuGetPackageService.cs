@@ -152,6 +152,47 @@ public static string GenerateNuspec(
     return nuspecPath;
 }
 
+public static string GenerateSymbolNuspec(string stagingDir, string version)
+{
+    var files = new StringBuilder();
+    foreach (var rid in new[] { "win-x64", "win-x86" })
+    {
+        var runtimeLibDir = Path.Join(stagingDir, "runtimes", rid, "lib", "net8.0");
+        foreach (var file in Directory.GetFiles(runtimeLibDir, "*.pdb").OrderBy(Path.GetFileName))
+        {
+            var fileName = Path.GetFileName(file);
+            files.AppendLine($"    <file src=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" target=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" />");
+        }
+    }
+
+    if (files.Length == 0)
+    {
+        throw new InvalidOperationException("No PDB files were found for the symbol package");
+    }
+
+    var nuspecContent = $$"""
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+          <metadata>
+            <id>DotNetCampus.WpfLib</id>
+            <version>{{version}}</version>
+            <authors>dotnet campus</authors>
+            <description>Portable symbols for DotNetCampus.WpfLib.</description>
+            <copyright>dotnet campus</copyright>
+            <license type="expression">MIT</license>
+            <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>
+            <tags>WPF WindowsDesktop symbols</tags>
+          </metadata>
+          <files>
+        {{files}}  </files>
+        </package>
+        """ + Environment.NewLine;
+    var nuspecPath = Path.Join(stagingDir, "DotNetCampus.WpfLib.symbols.nuspec");
+    File.WriteAllText(nuspecPath, nuspecContent);
+    Log.Info($"  Symbol .nuspec generated: {nuspecPath}");
+    return nuspecPath;
+}
+
 public static void GenerateBuildTransitiveTargets(string stagingDir)
 {
     var targetsDir = Path.Join(stagingDir, "buildTransitive");
@@ -277,38 +318,71 @@ private static void RequirePackageFile(string path)
 public static string PackNuGet(string nuspecPath, string outputDir)
 {
     Directory.CreateDirectory(outputDir);
+    var nupkgPath = PackNuspec(nuspecPath, outputDir);
+    var fileInfo = new FileInfo(nupkgPath);
+    Log.Info($"  .nupkg generated: {nupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
+    return nupkgPath;
+}
 
+public static string PackSymbolNuGet(string nuspecPath, string outputDir)
+{
+    Directory.CreateDirectory(outputDir);
+    var symbolOutputDir = Path.Join(Path.GetTempPath(), "WpfBuilderSymbols", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(symbolOutputDir);
+
+    try
+    {
+        var packedPath = PackNuspec(nuspecPath, symbolOutputDir);
+        var snupkgPath = Path.Join(outputDir, $"{Path.GetFileNameWithoutExtension(packedPath)}.snupkg");
+        File.Move(packedPath, snupkgPath, overwrite: true);
+        var fileInfo = new FileInfo(snupkgPath);
+        Log.Info($"  .snupkg generated: {snupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
+        return snupkgPath;
+    }
+    finally
+    {
+        Directory.Delete(symbolOutputDir, recursive: true);
+    }
+}
+
+private static string PackNuspec(string nuspecPath, string outputDir)
+{
     // Place _pack.csproj outside the repo tree (system temp directory)
     // to avoid inheriting Arcade SDK imports from the repo root Directory.Build.props
     var packDir = Path.Join(Path.GetTempPath(), "WpfBuilderPack", Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(packDir);
 
-    var nuspecRelativePath = Path.GetRelativePath(packDir, nuspecPath);
-    var tempProj = Path.Join(packDir, "_pack.csproj");
-    File.WriteAllText(tempProj, "<Project Sdk=\"Microsoft.NET.Sdk\">\n" +
-        "  <PropertyGroup>\n" +
-        "    <TargetFramework>net8.0</TargetFramework>\n" +
-        $"    <NuspecFile>{nuspecRelativePath}</NuspecFile>\n" +
-        "    <IsPackable>true</IsPackable>\n" +
-        "    <NoDefaultExcludes>true</NoDefaultExcludes>\n" +
-        "  </PropertyGroup>\n" +
-        "</Project>\n");
-
-    var result = ProcessRunner.Run("dotnet", $"pack \"{tempProj}\" --output \"{outputDir}\"", packDir);
-
-    if (result.ExitCode != 0)
+    try
     {
-        Log.Error($"Pack failed: {result.Output}");
-        throw new InvalidOperationException("NuGet pack failed");
+        var nuspecRelativePath = Path.GetRelativePath(packDir, nuspecPath);
+        var tempProj = Path.Join(packDir, "_pack.csproj");
+        File.WriteAllText(tempProj, "<Project Sdk=\"Microsoft.NET.Sdk\">\n" +
+            "  <PropertyGroup>\n" +
+            "    <TargetFramework>net8.0</TargetFramework>\n" +
+            $"    <NuspecFile>{nuspecRelativePath}</NuspecFile>\n" +
+            "    <IsPackable>true</IsPackable>\n" +
+            "    <NoDefaultExcludes>true</NoDefaultExcludes>\n" +
+            "  </PropertyGroup>\n" +
+            "</Project>\n");
+
+        var result = ProcessRunner.Run("dotnet", $"pack \"{tempProj}\" --output \"{outputDir}\"", packDir);
+        if (result.ExitCode != 0)
+        {
+            Log.Error($"Pack failed: {result.Output}");
+            throw new InvalidOperationException("NuGet pack failed");
+        }
+
+        var nupkgFiles = Directory.GetFiles(outputDir, "*.nupkg");
+        if (nupkgFiles.Length == 0)
+        {
+            throw new InvalidOperationException("No generated .nupkg file found");
+        }
+
+        return nupkgFiles.OrderByDescending(File.GetLastWriteTime).First();
     }
-
-    var nupkgFiles = Directory.GetFiles(outputDir, "*.nupkg");
-    if (nupkgFiles.Length == 0)
-        throw new InvalidOperationException("No generated .nupkg file found");
-
-    var nupkgPath = nupkgFiles.OrderByDescending(File.GetLastWriteTime).First();
-    var fileInfo = new FileInfo(nupkgPath);
-    Log.Info($"  .nupkg generated: {nupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
-    return nupkgPath;
+    finally
+    {
+        Directory.Delete(packDir, recursive: true);
+    }
 }
 }

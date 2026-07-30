@@ -9,7 +9,7 @@
 设计参考了 Octokit.NET 的 PR、Actions、artifact 和 Issue Comment API。职责边界保持为：
 
 - Octokit.NET 负责读取 PR 元数据、查询或创建目标 PR，以及本地命令需要的其他 GitHub REST API 调用。
-- `git` 负责 clone、fetch、merge 和 push。
+- `git` 负责 clone、fetch、生成和应用 Patch、commit 与 push。
 - Visual Studio MSBuild 与现有 Builder 负责本地构建、NuGet 组包和隔离消费验证。
 - GitHub Actions 负责对目标仓库中的任意贡献者 PR 执行受限权限构建，并在受信任的独立工作流中回写结果。
 
@@ -26,11 +26,11 @@ https://github.com/dotnet/wpf/pull/11781
 Builder 应完成以下动作：
 
 1. 解析 PR 所属仓库和编号，并通过 GitHub API 读取 PR 的真实来源仓库、来源分支和固定 head SHA。
-2. 在独立临时 clone 中，以自己的目标仓库 base 分支为起点创建 `t/bot/PR_<number>` 分支；示例分支为 `t/bot/PR_11781`。
-3. 拉取并校验原 PR 的固定 head SHA，将该提交合并到目标分支。
-4. 在合并后的提交上执行完整本地构建、打包和包验证门禁。
-5. 只有全部本地门禁成功后，才把已验证的精确提交推送到自己的目标仓库。
-6. 在自己的目标仓库内创建或复用 PR，并输出 PR 链接。
+2. 在 `%TEMP%\WpfRuntimeTemp\<repository>-<PR number>-<MMddHHmmss>` 独立临时 clone 中，以自己的目标仓库 base 分支为起点创建 `t/bot/PR_<number>` 分支；示例分支为 `t/bot/PR_11781`。
+3. 拉取并校验原 PR 的固定 base SHA 与 head SHA，生成 `Base.Sha -> Head.Sha` 的 Patch 并应用到目标分支。
+4. 创建 relay commit 时保留来源 PR 首个提交的 Author，并仅使用 `WpfRuntime Bot <wpfruntime-bot@users.noreply.github.com>` 作为 Committer。
+5. 默认跳过 Temp workspace 中的本地构建、打包和包验证，直接推送精确 relay commit；显式传入 `--allow-untrusted-build` 时才执行完整本地门禁，并只在门禁成功后推送。
+6. 在自己的目标仓库内创建或复用 PR，并由 GitHub Actions 对服务端 PR 执行解决方案与包验证。
 
 ### GitHub Actions
 
@@ -46,8 +46,8 @@ Builder 应完成以下动作：
 
 首版不承担以下能力：
 
-- 不自动解决 merge 冲突。
-- 不使用 `--allow-unrelated-histories` 强行合并无共同历史的仓库。
+- 不自动解决 Patch 内容冲突；默认保留 workspace，输出 `git apply`、人工编辑、`git add` 和 `--resume-workspace` 的完整命令。开发者只暂存解决结果，不自行 commit。
+- 不使用 Git merge、cherry-pick 或 `--allow-unrelated-histories` 搬运来源提交历史。
 - 不把当前调用者工作区中的未提交修改带入自动分支。
 - 不在本地命令中等待 GitHub Actions 完成；PR 创建与 CI 结果回写是两个独立阶段。
 - 不把 Actions artifact 当成永久、匿名下载服务。
@@ -87,8 +87,12 @@ dotnet run --project eng/Builder/Builder.csproj --no-build -- relay-pr `
 | `--target-remote` | 否 | `origin` | 调用者仓库中代表“自己的 GitHub 仓库”的 remote；fetch URL 用于取得 base，push URL 用于发布分支 |
 | `--base` | 否 | `<target-remote>/main`（默认 `origin/main`） | 新 PR 的 base 分支；同时接受 `main` 与 `origin/main` 形式 |
 | `--github-token` | 条件必需 | `GITHUB_TOKEN` | GitHub API Token；命令行值优先，未提供或为空时回退到环境变量 |
-| `--allow-untrusted-build` | 是 | `false` | 明确确认将执行外部 PR 中的 MSBuild、C# 和构建脚本；缺少该开关时只输出风险并退出 |
+| `--allow-untrusted-build` | 否 | `false` | 显式允许在 Temp workspace 中执行外部 PR 的本地构建、打包和测试；默认跳过本地验证，直接发布 relay PR 并由 GitHub Actions 验证 |
 | `--keep-workspace` | 否 | `on-failure` | `always`、`on-failure` 或 `never`；控制独立临时 clone 的保留策略 |
+| `--conflict-mode` | 否 | `manual` | `manual` 在 Patch 冲突时保留 workspace 并输出人工处理步骤；显式指定 `fail` 才恢复为失败后清理冲突状态的行为 |
+| `--resume-workspace` | 恢复时必需 | 无 | 开发者解决冲突并执行 `git add` 后，从指定 workspace 直接继续 commit、构建、验证、push 和 PR 创建流程 |
+
+当默认的人工模式遇到 Patch 冲突时，Builder 还会在 relay workspace 根目录生成中文版 `AI_PATCH_CONFLICT_PROMPT.zh-CN.md` 和英文版 `AI_PATCH_CONFLICT_PROMPT.en-US.md`。两份文档包含来源 PR、来源 SHA 范围、目标仓库与基线、实际 Patch 和 repository 路径、冲突处理约束、常规操作步骤及可直接执行的恢复命令，可直接交给 AI LLM 协助分析和解决冲突。AI 只能修改并 `git add` 已解决文件，不应执行 commit、merge、cherry-pick、push 或无关重构。
 
 自动分支名不提供覆盖参数，固定为：
 
@@ -186,9 +190,9 @@ URL 中的仓库是原 PR 的 base repository，不一定是提交代码的来�
 
 本地仓库可能存在未提交修改、Visual Studio 锁定文件和正在进行的迁移工作。自动命令不能执行 checkout、reset、stash 或 merge 来改变调用者工作区。
 
-### 为什么首版不用 linked worktree
+### 为什么不用 linked worktree
 
-linked worktree 与主工作区共享 refs 和对象数据库，而且现有 `RepositoryLocator` 只识别 `.git` 目录，不识别 worktree 中的 `.git` 文件。外部 PR 构建也需要更明确的 Git 元数据隔离。因此首版使用独立 clone。
+linked worktree 与主工作区共享 refs 和对象数据库，而且现有 `RepositoryLocator` 只识别 `.git` 目录，不识别 worktree 中的 `.git` 文件。外部 PR 构建也需要更明确的 Git 元数据隔离。因此使用独立 clone，但 clone 来源是调用者本地仓库；Git 会直接复制或硬链接本地对象，随后仅从目标远端 fetch 受控 ref。这样既不改变调用者工作区，也避免从网络重新下载完整对象库。
 
 ### 临时目录布局
 
@@ -213,31 +217,30 @@ linked worktree 与主工作区共享 refs 和对象数据库，而且现有 `Re
 
 清理必须验证目标路径位于已知临时根下，并带有命令创建的状态文件；不能对任意用户路径执行递归删除。
 
-## Git 合并流程
+## Git Patch 流程
 
 所有 Git 参数必须通过 `ProcessStartInfo.ArgumentList` 分项传递。来源 URL、ref、标题或分支名不得拼成 shell 命令字符串。
 
 建议流程：
 
-1. 独立 clone 自己的目标仓库，不 checkout 默认分支。
-2. fetch 目标 `refs/heads/<base>` 到受控本地 ref。
+1. 从调用者本地仓库创建独立 clone，不 checkout 默认分支，以复用本地 `.git` 对象。
+2. 本地 clone 完成后，将 `target` remote 切换为目标远端 URL，再 fetch `refs/heads/<base>` 到受控本地 ref，只下载本地对象库缺失的对象。
 3. 从远端 base 创建 `t/bot/PR_<number>`。
 4. 按“PR 解析与来源固定”取得精确 source SHA。
-5. 取得 API 返回的原 PR base SHA，并确认它是 target base 的祖先；这证明目标分支已经包含原 PR 的基线，直接 merge source head 不会顺带引入目标分支尚未拥有的大批上游提交。
-6. 查询或计算原 PR commit 列表，确认 `target base..source head` 的待引入提交不超出原 PR 范围；出现额外提交时停止并输出差异。
-7. 确认 source SHA 与 target base 具有共同历史；没有共同历史时停止。
-8. 使用 `--no-ff` 创建明确的 merge commit，不使用 rebase 或 squash。
-9. merge commit message 写入稳定来源信息，例如 canonical PR URL 和完整 source SHA。
-10. 出现冲突时停止，输出 `git diff --name-only --diff-filter=U` 的冲突文件，并按保留策略留下临时目录。
-11. 合并后如果 target base 与新分支没有有效差异，则报告“无需创建 PR”，不调用 GitHub 创建 API。
+5. 取得并固定 API 返回的原 PR 当前 base SHA 与 head SHA。
+6. 在来源 PR 历史中计算 `merge-base(Base.Sha, Head.Sha)`，生成 `git diff --binary --full-index <merge-base> <Head.Sha>`，与 GitHub PR 三点差异语义一致；不使用 target base 或当前 HEAD 生成 Patch。
+7. 在 target base 上通过 `git apply --index --3way --ignore-space-change --ignore-whitespace` 应用 Patch；该过程只搬运文件变化，不导入来源提交历史。
+8. Patch 应用成功后创建单一 relay commit，提交消息必须写入 canonical PR URL 与完整 source head SHA。
+9. Patch 出现真实内容冲突时停止，输出冲突详情，清理半完成操作，并按保留策略留下临时目录。
+10. 应用后如果 target base 与新分支没有有效差异，则报告“无需创建 PR”，不调用 GitHub 创建 API。
 
-如果原 PR base SHA 不是 target base 的祖先，直接 merge head 可能把原 PR 之外的上游提交一起带入自己的仓库。首版必须停止并报告该边界，不自动退化为 cherry-pick、patch 或文件复制；这些策略需要单独设计并由调用者明确选择。
+Patch 应用会忽略上下文中的空白差异，但不会自动选择 `ours` 或 `theirs`，也不会隐藏真实内容冲突。来源仓库和目标仓库的历史关系不参与搬运决策。
 
 禁止以下行为：
 
 - 自动选择 `ours` 或 `theirs` 隐藏冲突。
 - 使用 `--allow-unrelated-histories`。
-- 在失败后提交半完成 merge。
+- 在失败后提交半完成 Patch。
 - 根据分支名猜测 source SHA。
 
 ## 本地构建门禁
@@ -314,7 +317,7 @@ push 时显式推送已验证 SHA，而不是可移动的当前分支名：
 
 ### 来源标记
 
-merge commit message 和目标 PR body 都应包含机器可读标记，例如：
+relay commit message 和目标 PR body 都应包含机器可读标记，例如：
 
 ```text
 Source-PR: https://github.com/dotnet/wpf/pull/11781
@@ -337,7 +340,7 @@ PR body 另加隐藏标记：
 继续前必须同时验证：
 
 - 已有 open PR 的 head/base 与目标分支一致，且 PR body 中来源标记匹配；或
-- 远端分支 head 的 merge commit 来源 trailer 与当前 canonical source PR 匹配。
+- 远端分支 head 的 relay commit 来源 trailer 与当前 canonical source PR 匹配。
 
 来源不匹配时立即停止，不能覆盖。
 
@@ -379,7 +382,7 @@ InputValidated
   -> SourceResolved
   -> RepositoryCloned
   -> SourceFetched
-  -> Merged
+  -> ChangesApplied
   -> LocalValidationSucceeded
   -> BranchPushed
   -> PullRequestCreatedOrReused
@@ -401,7 +404,7 @@ InputValidated
 | `RelayPullRequestCommand.cs` | 声明 `relay-pr` 命令参数、建立取消令牌并调用编排服务 |
 | `PullRequestRelayService.cs` | 执行状态机，保证“验证成功后才发布”的顺序 |
 | `GitHubPullRequestService.cs` | 创建 Octokit client、解析 PR 元数据、查询/创建/复用目标 PR |
-| `GitService.cs` | 使用分项参数执行 clone/fetch/merge/status/push，并实现 SHA 与来源标记校验 |
+| `GitService.cs` | 使用分项参数执行 clone/fetch/diff/apply/commit/status/push，并实现 SHA 与来源标记校验 |
 | `LocalBuildValidationService.cs` | 运行固定本地门禁、计算精确包路径并记录日志 |
 | `GitHubActionsBuildCommand.cs` / `GitHubActionsBuildService.cs` | 作为 Actions 的受信任构建入口，复核事件/checkout 身份、凭据与 Git 状态，并编排 solution/package 门禁 |
 | `GitHubArtifactCommentCommand.cs` / `GitHubArtifactCommentService.cs` | 作为 `workflow_run` 的受信任回写入口，复核 run、PR、artifact 和评论元数据并幂等回写 |

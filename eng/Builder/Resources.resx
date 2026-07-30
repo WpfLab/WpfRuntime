@@ -11,9 +11,10 @@
   <data name="InvalidKeepWorkspacePolicy" xml:space="preserve"><value>--keep-workspace must be always, on-failure, or never.</value></data>
   <data name="UntrustedBuildConsentRequired" xml:space="preserve"><value>This command builds code from an external pull request. Run only in a disposable, low-privilege environment and pass --allow-untrusted-build to acknowledge the risk.</value></data>
   <data name="GitHubTokenRequired" xml:space="preserve"><value>Provide --github-token or set GITHUB_TOKEN for GitHub API access.</value></data>
+  <data name="GitPushAuthenticationMayPrompt" xml:space="preserve"><value>Publishing the relay branch with Git. Git Credential Manager, a browser sign-in window, or SSH authentication may prompt for the credentials configured for the target remote.</value></data>
 	<data name="PullRequestNotOpen" xml:space="preserve"><value>The source pull request must be open.</value></data>
   <data name="TargetBranchSourceConflict" xml:space="preserve"><value>The existing target branch or pull request belongs to a different source pull request and will not be overwritten.</value></data>
-  <data name="NoChangesToRelay" xml:space="preserve"><value>The merged branch has no changes relative to the target base; no pull request is required.</value></data>
+  <data name="NoChangesToRelay" xml:space="preserve"><value>The source pull request patch has no changes relative to the target base; no pull request is required.</value></data>
   <data name="UnsupportedGitHubActionsEvent" xml:space="preserve"><value>The GitHub Actions event '{0}' is not supported.</value></data>
   <data name="PullRequestBuildMetadataRequired" xml:space="preserve"><value>A positive pull request number and full source head SHA are required for pull_request_target builds.</value></data>
   <data name="NonPullRequestBuildMetadataNotAllowed" xml:space="preserve"><value>Pull request metadata must not be supplied for non-pull-request builds.</value></data>

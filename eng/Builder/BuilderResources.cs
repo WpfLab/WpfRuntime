@@ -21,6 +21,8 @@ internal static class BuilderResources
 
     public static string GitHubTokenRequired => GetString(nameof(GitHubTokenRequired));
 
+    public static string GitPushAuthenticationMayPrompt => GetString(nameof(GitPushAuthenticationMayPrompt));
+
     public static string PullRequestNotOpen => GetString(nameof(PullRequestNotOpen));
 
     public static string TargetBranchSourceConflict => GetString(nameof(TargetBranchSourceConflict));

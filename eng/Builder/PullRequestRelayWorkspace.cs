@@ -3,8 +3,10 @@ namespace WpfReorganize.Builder;
 internal sealed class PullRequestRelayWorkspace
 {
     private const string StateFileName = "state.json";
-    private static readonly string TemporaryRoot = Path.GetFullPath(
-        Path.Join(Path.GetTempPath(), "WpfReorganize.Builder", "pr-relay"));
+    private static readonly string TemporaryRoot = Path.GetFullPath
+    (
+        Path.Join(Path.GetTempPath(), "WpfRuntimeTemp")
+    );
 
     private PullRequestRelayWorkspace(string rootPath)
     {
@@ -30,12 +32,29 @@ internal sealed class PullRequestRelayWorkspace
         ArgumentNullException.ThrowIfNull(source);
         Directory.CreateDirectory(TemporaryRoot);
         var repositoryName = SanitizePathSegment(source.Repository);
-        var name = $"{repositoryName}-{source.Number}-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
+        var name = $"{repositoryName}-{source.Number}-{DateTime.UtcNow:MMddHHmmss}";
         var workspace = new PullRequestRelayWorkspace(Path.Join(TemporaryRoot, name));
         Directory.CreateDirectory(workspace.RootPath);
         Directory.CreateDirectory(workspace.LogsPath);
         Directory.CreateDirectory(workspace.IsolatedHomePath);
         return workspace;
+    }
+
+    public static PullRequestRelayWorkspace Open(string rootPath) =>
+        new(Path.GetFullPath(rootPath));
+
+    public async Task<PullRequestRelayState> ReadStateAsync(CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(
+            StatePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 4096,
+            useAsync: true);
+        return await System.Text.Json.JsonSerializer.DeserializeAsync<PullRequestRelayState>(stream, cancellationToken: cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Unable to read relay state from '{StatePath}'.");
     }
 
     public async Task WriteStateAsync(PullRequestRelayState state, CancellationToken cancellationToken)

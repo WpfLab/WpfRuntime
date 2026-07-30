@@ -18,8 +18,8 @@ internal static class RelayMarkers
     public static string CreatePullRequestMarker(PullRequestAddress address) =>
         $"<!-- builder-pr-relay source={address.SourceKey} -->";
 
-    public static string CreateMergeMessage(PullRequestSource source) =>
-        $"Merge {source.Address.CanonicalUrl}\n\n{SourcePullRequestTrailer}{source.Address.CanonicalUrl}\n{SourceHeadShaTrailer}{source.HeadSha}";
+    public static string CreatePatchMessage(PullRequestSource source) =>
+        $"Apply changes from {source.Address.CanonicalUrl}\n\n{SourcePullRequestTrailer}{source.Address.CanonicalUrl}\n{SourceHeadShaTrailer}{source.HeadSha}";
 
     public static bool MergeMessageMatches(string message, PullRequestAddress address) =>
         !string.IsNullOrWhiteSpace(message)

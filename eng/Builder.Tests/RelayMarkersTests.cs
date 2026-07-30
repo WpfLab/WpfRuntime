@@ -14,11 +14,14 @@ public sealed class RelayMarkersTests
     public void Markers_MatchOnlyExpectedSource()
     {
         var source = CreateSource();
-        var message = RelayMarkers.CreateMergeMessage(source);
-        var body = GitHubPullRequestService.CreateBody(
+        var message = RelayMarkers.CreatePatchMessage(source);
+        var body = GitHubPullRequestService.CreateBody
+        (
             CreateTarget(),
             source,
-            DateTimeOffset.Parse("2025-01-02T03:04:05Z"));
+            DateTimeOffset.Parse("2025-01-02T03:04:05Z"),
+            localValidationPerformed: true
+        );
         var other = new PullRequestAddress("other", "repo", 11781);
 
         Assert.True(RelayMarkers.MergeMessageMatches(message, source.Address));
@@ -30,7 +33,8 @@ public sealed class RelayMarkersTests
     private static PullRequestSource CreateSource()
     {
         var sha = GitObjectId.Parse("1111111111111111111111111111111111111111");
-        return new PullRequestSource(
+        return new PullRequestSource
+        (
             new PullRequestAddress("dotnet", "wpf", 11781),
             "Fix a bug",
             "open",
@@ -43,7 +47,10 @@ public sealed class RelayMarkersTests
             "https://github.com/dotnet/wpf.git",
             "main",
             GitObjectId.Parse("0000000000000000000000000000000000000000"),
-            new HashSet<GitObjectId> { sha });
+            new HashSet<GitObjectId> { sha },
+            "Contributor",
+            "contributor@example.com"
+        );
     }
 
     private static TargetRepository CreateTarget() => new(

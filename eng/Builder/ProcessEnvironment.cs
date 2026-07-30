@@ -121,6 +121,18 @@ internal static class ProcessEnvironment
         return environment;
     }
 
+    public static IReadOnlyDictionary<string, string?> CreateGitPushEnvironment() =>
+        new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["GITHUB_TOKEN"] = null,
+            ["GH_TOKEN"] = null,
+            ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"] = null,
+            ["ACTIONS_ID_TOKEN_REQUEST_URL"] = null,
+            ["GIT_TERMINAL_PROMPT"] = null,
+            ["GCM_INTERACTIVE"] = null,
+            ["GIT_OPTIONAL_LOCKS"] = "0",
+        };
+
     internal static bool IsSensitive(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

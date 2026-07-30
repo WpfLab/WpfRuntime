@@ -48,6 +48,15 @@ public sealed class GitHubActionsBuildTests
                     "DotNetCampus.WpfLib.0.0.0-pr.11781.sha333333333333.nupkg")),
                 identity.PackagePath);
             Assert.Equal(
+                Path.GetFullPath(Path.Join(
+                    repositoryPath,
+                    "eng",
+                    "Builder",
+                    "bin",
+                    "nupkg",
+                    "DotNetCampus.WpfLib.0.0.0-pr.11781.sha333333333333.snupkg")),
+                identity.SymbolPackagePath);
+            Assert.Equal(
                 $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3",
                 identity.ArtifactName);
         }

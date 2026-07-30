@@ -3,11 +3,16 @@ namespace WpfReorganize.Builder;
 internal sealed class GitService
 {
     private const string BaseReference = "refs/builder/target-base";
+    private const string SourceBaseReference = "refs/builder/source-base";
     private const string SourceReference = "refs/builder/source-head";
     private readonly string _gitPath;
     private readonly TimeSpan _timeout;
 
-    public GitService(string gitPath, TimeSpan? timeout = null)
+    public GitService
+    (
+        string gitPath,
+        TimeSpan? timeout = null
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gitPath);
         _gitPath = gitPath;
@@ -104,10 +109,12 @@ internal sealed class GitService
     }
 
     public async Task CloneTargetAsync(
+        string callerRepository,
         TargetRepository target,
         PullRequestRelayWorkspace workspace,
         CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerRepository);
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(workspace);
         await RunAsync(
@@ -119,8 +126,25 @@ internal sealed class GitService
             "--no-checkout",
             "--origin",
             "target",
-            target.FetchUrl,
+            callerRepository,
             workspace.RepositoryPath).ConfigureAwait(false);
+        await RunAsync(
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            cancellationToken,
+            allowFailure: false,
+            "config",
+            "core.longpaths",
+            "true").ConfigureAwait(false);
+        await RunAsync(
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            cancellationToken,
+            allowFailure: false,
+            "remote",
+            "set-url",
+            "target",
+            target.FetchUrl).ConfigureAwait(false);
         await RunAsync(
             workspace.RepositoryPath,
             workspace.IsolatedHomePath,
@@ -142,15 +166,21 @@ internal sealed class GitService
                 $"Target base moved from {target.BaseSha} to {fetchedBaseSha}; restart the relay.");
         }
 
-        await RunAsync(
+        var switchResult = await RunAsync(
             workspace.RepositoryPath,
             workspace.IsolatedHomePath,
             cancellationToken,
-            allowFailure: false,
+            allowFailure: true,
             "switch",
             "--create",
             target.RelayBranch,
             BaseReference).ConfigureAwait(false);
+        if (switchResult.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Failed to create relay branch '{target.RelayBranch}' from target base. {switchResult.Output.Trim()}");
+        }
+
         await RunAsync(
             workspace.RepositoryPath,
             workspace.IsolatedHomePath,
@@ -238,83 +268,42 @@ internal sealed class GitService
                     $"Unable to fetch the exact source head {source.HeadSha} from the source branch or pull request ref.");
             }
         }
+
+        var baseFetch = await RunAsync(
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            cancellationToken,
+            allowFailure: true,
+            "fetch",
+            "--no-tags",
+            source.BaseCloneUrl,
+            $"+{source.BaseSha}:{SourceBaseReference}").ConfigureAwait(false);
+        if (baseFetch.ExitCode != 0
+            || !await IsExpectedCommitAsync(
+                workspace.RepositoryPath,
+                workspace.IsolatedHomePath,
+                SourceBaseReference,
+                source.BaseSha,
+                cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(
+                $"Unable to fetch the exact source base {source.BaseSha} from {source.BaseRepository.FullName}/{source.BaseReference}.");
+        }
     }
 
-    public async Task<GitObjectId> MergeSourceAsync(
+    public Task<GitObjectId> ApplySourceChangesAsync(
         PullRequestSource source,
         TargetRepository target,
         PullRequestRelayWorkspace workspace,
-        CancellationToken cancellationToken)
-    {
-        await RequireAncestorAsync(
-            workspace.RepositoryPath,
-            workspace.IsolatedHomePath,
-            source.BaseSha,
-            target.BaseSha,
-            "The source PR base is not an ancestor of the target base.",
-            cancellationToken).ConfigureAwait(false);
-        await RequireCommonHistoryAsync(
-            workspace.RepositoryPath,
-            workspace.IsolatedHomePath,
-            target.BaseSha,
-            source.HeadSha,
-            cancellationToken).ConfigureAwait(false);
-        await ValidateSourceCommitRangeAsync(source, target, workspace, cancellationToken).ConfigureAwait(false);
+        ConflictMode conflictMode,
+        CancellationToken cancellationToken) =>
+        ApplySourcePatchAsync(source, target, workspace, conflictMode, cancellationToken);
 
-        var mergeResult = await RunAsync(
-            workspace.RepositoryPath,
-            workspace.IsolatedHomePath,
-            cancellationToken,
-            allowFailure: true,
-            "-c",
-            "user.name=WpfReorganize Builder",
-            "-c",
-            "user.email=builder@users.noreply.github.com",
-            "merge",
-            "--no-ff",
-            "--no-edit",
-            "--message",
-            RelayMarkers.CreateMergeMessage(source),
-            SourceReference).ConfigureAwait(false);
-        if (mergeResult.ExitCode != 0)
-        {
-            var conflicts = await GetConflictFilesAsync(workspace, cancellationToken).ConfigureAwait(false);
-            await RunAsync(
-                workspace.RepositoryPath,
-                workspace.IsolatedHomePath,
-                cancellationToken,
-                allowFailure: true,
-                "merge",
-                "--abort").ConfigureAwait(false);
-            var suffix = conflicts.Count == 0 ? string.Empty : $" Conflicts: {string.Join(", ", conflicts)}";
-            throw new InvalidOperationException($"Git merge failed.{suffix}\n{mergeResult.Output.Trim()}");
-        }
-
-        var mergedCommit = await ResolveCommitAsync(
-            workspace.RepositoryPath,
-            workspace.IsolatedHomePath,
-            "HEAD",
-            cancellationToken).ConfigureAwait(false);
-        var hasChanges = await RunAsync(
-            workspace.RepositoryPath,
-            workspace.IsolatedHomePath,
-            cancellationToken,
-            allowFailure: true,
-            "diff",
-            "--quiet",
-            target.BaseSha.ToString(),
-            mergedCommit.ToString()).ConfigureAwait(false);
-        if (hasChanges.ExitCode == 0)
-        {
-            throw new NoChangesToRelayException(mergedCommit);
-        }
-        if (hasChanges.ExitCode != 1)
-        {
-            throw CreateGitException(hasChanges);
-        }
-
-        return mergedCommit;
-    }
+    public Task<GitObjectId> ContinueSourceChangesAsync(
+        PullRequestSource source,
+        PullRequestRelayWorkspace workspace,
+        CancellationToken cancellationToken) =>
+        CreateRelayCommitAsync(source, workspace, cancellationToken);
 
     public async Task ValidateExistingBranchSourceAsync(
         PullRequestAddress source,
@@ -386,12 +375,13 @@ internal sealed class GitService
         arguments.Add("--no-verify");
         arguments.Add(target.PushUrl);
         arguments.Add($"{validatedCommit}:refs/heads/{target.RelayBranch}");
-        await RunAsync(
+        Log.Info(BuilderResources.GitPushAuthenticationMayPrompt);
+        await RunPushAsync
+        (
             publicationRepository,
-            workspace.IsolatedHomePath,
-            cancellationToken,
-            allowFailure: false,
-            ["push", .. arguments]).ConfigureAwait(false);
+            arguments,
+            cancellationToken
+        ).ConfigureAwait(false);
     }
 
     public async Task<GitObjectId> ResolveCommitAsync(
@@ -477,92 +467,137 @@ internal sealed class GitService
         return GitObjectId.Parse(sha);
     }
 
-    private async Task ValidateSourceCommitRangeAsync(
+    private async Task<GitObjectId> ApplySourcePatchAsync(
         PullRequestSource source,
         TargetRepository target,
         PullRequestRelayWorkspace workspace,
+        ConflictMode conflictMode,
         CancellationToken cancellationToken)
     {
-        var result = await RunAsync(
+        var mergeBaseResult = await RunAsync(
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            cancellationToken,
+            allowFailure: true,
+            "merge-base",
+            source.BaseSha.ToString(),
+            source.HeadSha.ToString()).ConfigureAwait(false);
+        var mergeBase = mergeBaseResult.ExitCode == 0
+            ? GitObjectId.Parse(GetSingleLine(mergeBaseResult))
+            : throw new InvalidOperationException(
+                $"Unable to determine the source pull request diff base. {mergeBaseResult.Output.Trim()}");
+
+        var patchPath = Path.Join(workspace.RootPath, "source.patch");
+        var diffResult = await RunAsync(
             workspace.RepositoryPath,
             workspace.IsolatedHomePath,
             cancellationToken,
             allowFailure: false,
-            "rev-list",
-            "--reverse",
-            $"{target.BaseSha}..{source.HeadSha}").ConfigureAwait(false);
-        var introducedCommits = SplitLines(result.StandardOutput)
-            .Select(GitObjectId.Parse)
-            .ToHashSet();
-        var unexpectedCommits = introducedCommits.Except(source.CommitShas).ToArray();
-        if (unexpectedCommits.Length > 0)
+            "diff",
+            "--binary",
+            "--full-index",
+            mergeBase.ToString(),
+            source.HeadSha.ToString()).ConfigureAwait(false);
+        await File.WriteAllTextAsync(patchPath, diffResult.StandardOutput, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(diffResult.StandardOutput))
         {
+            var currentCommit = await ResolveCommitAsync(
+                workspace.RepositoryPath,
+                workspace.IsolatedHomePath,
+                "HEAD",
+                cancellationToken).ConfigureAwait(false);
+            throw new NoChangesToRelayException(currentCommit);
+        }
+
+        var applyResult = await RunAsync(
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            cancellationToken,
+            allowFailure: true,
+            "apply",
+            "--index",
+            "--3way",
+            "--ignore-space-change",
+            "--ignore-whitespace",
+            patchPath).ConfigureAwait(false);
+        if (applyResult.ExitCode != 0)
+        {
+            await RunAsync(
+                workspace.RepositoryPath,
+                workspace.IsolatedHomePath,
+                cancellationToken,
+                allowFailure: true,
+                "reset",
+                "--hard",
+                target.BaseSha.ToString()).ConfigureAwait(false);
+            if (conflictMode == ConflictMode.Manual)
+            {
+                throw new PatchConflictException(patchPath, applyResult.Output.Trim());
+            }
+
             throw new InvalidOperationException(
-                $"The relay would introduce commits outside the source pull request: {string.Join(", ", unexpectedCommits)}");
+                $"Unable to apply source pull request changes to the target base while ignoring whitespace differences. {applyResult.Output.Trim()}");
         }
+
+        return await CommitAppliedChangesAsync(source, workspace, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task RequireAncestorAsync(
-        string repositoryPath,
-        string? isolatedHome,
-        GitObjectId ancestor,
-        GitObjectId descendant,
-        string errorMessage,
-        CancellationToken cancellationToken)
-    {
-        var result = await RunAsync(
-            repositoryPath,
-            isolatedHome,
-            cancellationToken,
-            allowFailure: true,
-            "merge-base",
-            "--is-ancestor",
-            ancestor.ToString(),
-            descendant.ToString()).ConfigureAwait(false);
-        if (result.ExitCode == 1)
-        {
-            throw new InvalidOperationException(errorMessage);
-        }
-        if (result.ExitCode != 0)
-        {
-            throw CreateGitException(result);
-        }
-    }
-
-    private async Task RequireCommonHistoryAsync(
-        string repositoryPath,
-        string? isolatedHome,
-        GitObjectId left,
-        GitObjectId right,
-        CancellationToken cancellationToken)
-    {
-        var result = await RunAsync(
-            repositoryPath,
-            isolatedHome,
-            cancellationToken,
-            allowFailure: true,
-            "merge-base",
-            left.ToString(),
-            right.ToString()).ConfigureAwait(false);
-        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.StandardOutput))
-        {
-            throw new InvalidOperationException("The source head and target base do not share Git history.");
-        }
-    }
-
-    private async Task<IReadOnlyList<string>> GetConflictFilesAsync(
+    private async Task<GitObjectId> CommitAppliedChangesAsync(
+        PullRequestSource source,
         PullRequestRelayWorkspace workspace,
         CancellationToken cancellationToken)
     {
-        var result = await RunAsync(
+        var stagedChanges = await RunAsync(
             workspace.RepositoryPath,
             workspace.IsolatedHomePath,
             cancellationToken,
             allowFailure: true,
             "diff",
-            "--name-only",
-            "--diff-filter=U").ConfigureAwait(false);
-        return result.ExitCode == 0 ? SplitLines(result.StandardOutput) : [];
+            "--cached",
+            "--quiet").ConfigureAwait(false);
+        if (stagedChanges.ExitCode == 0)
+        {
+            var currentCommit = await ResolveCommitAsync(
+                workspace.RepositoryPath,
+                workspace.IsolatedHomePath,
+                "HEAD",
+                cancellationToken).ConfigureAwait(false);
+            throw new NoChangesToRelayException(currentCommit);
+        }
+        if (stagedChanges.ExitCode != 1)
+        {
+            throw CreateGitException(stagedChanges);
+        }
+
+        return await CreateRelayCommitAsync(source, workspace, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<GitObjectId> CreateRelayCommitAsync(
+        PullRequestSource source,
+        PullRequestRelayWorkspace workspace,
+        CancellationToken cancellationToken)
+    {
+        await RunAsync
+        (
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            cancellationToken,
+            allowFailure: false,
+            "-c",
+            "user.name=WpfRuntime Bot",
+            "-c",
+            "user.email=wpfruntime-bot@users.noreply.github.com",
+            "commit",
+            "--no-verify",
+            $"--author={source.AuthorName} <{source.AuthorEmail}>",
+            "--message",
+            RelayMarkers.CreatePatchMessage(source)
+        ).ConfigureAwait(false);
+        return await ResolveCommitAsync(
+            workspace.RepositoryPath,
+            workspace.IsolatedHomePath,
+            "HEAD",
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<bool> IsExpectedCommitAsync(
@@ -583,6 +618,26 @@ internal sealed class GitService
         }
     }
 
+    private async Task RunPushAsync
+    (
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken
+    )
+    {
+        var options = new ProcessRunOptions(_gitPath, workingDirectory, ["push", .. arguments])
+        {
+            Timeout = _timeout,
+            InheritEnvironment = true,
+            EnvironmentVariables = ProcessEnvironment.CreateGitPushEnvironment(),
+        };
+        var result = await ProcessRunner.RunAsync(options, cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode != 0)
+        {
+            throw CreateGitException(result, ["push", .. arguments]);
+        }
+    }
+
     private async Task<ProcessResult> RunAsync(
         string workingDirectory,
         string? isolatedHome,
@@ -600,7 +655,7 @@ internal sealed class GitService
         var result = await ProcessRunner.RunAsync(options, cancellationToken).ConfigureAwait(false);
         if (!allowFailure && result.ExitCode != 0)
         {
-            throw CreateGitException(result);
+            throw CreateGitException(result, arguments);
         }
 
         return result;
@@ -630,8 +685,16 @@ internal sealed class GitService
         }
     }
 
-    private static InvalidOperationException CreateGitException(ProcessResult result) =>
-        new($"Git command failed with exit code {result.ExitCode}. Credential helper output is intentionally omitted.");
+    private static InvalidOperationException CreateGitException(ProcessResult result, IReadOnlyList<string>? arguments = null)
+    {
+        var operation = arguments is null || arguments.Count == 0
+            ? "Git command"
+            : $"git {string.Join(' ', arguments.Take(3))}";
+        var detail = result.Output.Trim();
+        return new InvalidOperationException(string.IsNullOrWhiteSpace(detail)
+            ? $"{operation} failed with exit code {result.ExitCode}."
+            : $"{operation} failed with exit code {result.ExitCode}. {detail}");
+    }
 
     private static string GetSingleLine(ProcessResult result) =>
         SplitLines(result.StandardOutput).Single();
@@ -651,11 +714,22 @@ internal sealed class SourceHeadUnavailableException : InvalidOperationException
 
 internal sealed class NoChangesToRelayException : InvalidOperationException
 {
-    public NoChangesToRelayException(GitObjectId mergedCommit)
+    public NoChangesToRelayException(GitObjectId relayCommit)
         : base(BuilderResources.NoChangesToRelay)
     {
-        MergedCommit = mergedCommit;
+        RelayCommit = relayCommit;
     }
 
-    public GitObjectId MergedCommit { get; }
+    public GitObjectId RelayCommit { get; }
+}
+
+internal sealed class PatchConflictException : InvalidOperationException
+{
+    public PatchConflictException(string patchPath, string gitOutput)
+        : base(gitOutput)
+    {
+        PatchPath = patchPath;
+    }
+
+    public string PatchPath { get; }
 }

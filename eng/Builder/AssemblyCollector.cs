@@ -85,4 +85,12 @@ internal static class AssemblyCollector
 
         return result;
     }
+
+    public static string? GetPdbPath(string assemblyPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
+
+        var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
+        return File.Exists(pdbPath) ? pdbPath : null;
+    }
 }

@@ -7,7 +7,10 @@ namespace WpfReorganize.Builder;
 internal sealed class RelayPullRequestCommand : ICommandHandler
 {
     [Option("pull-request")]
-    public required string PullRequest { get; init; }
+    public string? PullRequest { get; init; }
+
+    [Option("resume-workspace")]
+    public string? ResumeWorkspace { get; init; }
 
     [Option("target-remote")]
     public string TargetRemote { get; init; } = "origin";
@@ -24,23 +27,22 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
     [Option("keep-workspace")]
     public string KeepWorkspace { get; init; } = "on-failure";
 
+    [Option("conflict-mode")]
+    public string ConflictMode { get; init; } = "manual";
+
     public async Task<int> RunAsync()
     {
         try
         {
-            if (!AllowUntrustedBuild)
-            {
-                Log.Error(BuilderResources.UntrustedBuildConsentRequired);
-                return 2;
-            }
-
             var context = BuilderContext.Create();
-            var address = PullRequestAddress.Parse(PullRequest);
             var targetRemote = ResolveTargetRemote(TargetRemote);
             var baseBranch = ResolveBaseBranch(Base, targetRemote);
             var keepWorkspace = string.IsNullOrWhiteSpace(KeepWorkspace)
                 ? KeepWorkspacePolicy.OnFailure
                 : ParseKeepWorkspace(KeepWorkspace);
+            var conflictMode = string.IsNullOrWhiteSpace(ConflictMode)
+                ? WpfReorganize.Builder.ConflictMode.Manual
+                : ParseConflictMode(ConflictMode);
             var token = ResolveGitHubToken(
                 GitHubToken,
                 Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
@@ -60,35 +62,66 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             Console.CancelKeyPress += cancelHandler;
             try
             {
-                var gitPath = await GitService.FindGitAsync(
+                var gitPath = await GitService.FindGitAsync
+                (
                     context.RepoRoot,
-                    cancellationTokenSource.Token).ConfigureAwait(false);
-                var dotnetPath = await LocalBuildValidationService.FindDotNetAsync(
-                    context.RepoRoot,
-                    cancellationTokenSource.Token).ConfigureAwait(false);
-                var msBuildPath = MsBuildService.FindMsBuild();
-                if (!Path.IsPathFullyQualified(msBuildPath) || !File.Exists(msBuildPath))
-                {
-                    Log.Error("Visual Studio MSBuild.exe could not be resolved to an absolute existing path.");
-                    return 2;
-                }
-
+                    cancellationTokenSource.Token
+                ).ConfigureAwait(false);
                 var git = new GitService(gitPath);
                 var github = new GitHubPullRequestService(token);
-                var validation = new LocalBuildValidationService(git, dotnetPath, msBuildPath);
+                LocalBuildValidationService? validation = null;
+                if (AllowUntrustedBuild)
+                {
+                    var dotnetPath = await LocalBuildValidationService.FindDotNetAsync
+                    (
+                        context.RepoRoot,
+                        cancellationTokenSource.Token
+                    ).ConfigureAwait(false);
+                    var msBuildPath = MsBuildService.FindMsBuild();
+                    if (!Path.IsPathFullyQualified(msBuildPath) || !File.Exists(msBuildPath))
+                    {
+                        Log.Error("Visual Studio MSBuild.exe could not be resolved to an absolute existing path.");
+                        return 2;
+                    }
+
+                    validation = new LocalBuildValidationService(git, dotnetPath, msBuildPath);
+                }
+                else
+                {
+                    Log.Info("Local build validation is skipped. GitHub Actions will validate the published pull request.");
+                }
+
                 var service = new PullRequestRelayService(git, github, validation);
-                Log.Info($"Source PR: {address.CanonicalUrl}");
-                Log.Info($"Target remote: {targetRemote}");
-                Log.Info($"Target base: {baseBranch}");
-                var result = await service.RunAsync(
-                    new PullRequestRelayOptions(
-                        address,
-                        targetRemote,
-                        baseBranch,
+                PullRequestRelayResult result;
+                if (!string.IsNullOrWhiteSpace(ResumeWorkspace))
+                {
+                    Log.Info($"Resuming relay workspace: {Path.GetFullPath(ResumeWorkspace)}");
+                    result = await service.ContinueAsync
+                    (
+                        ResumeWorkspace,
+                        context.RepoRoot,
+                        keepWorkspace,
                         AllowUntrustedBuild,
-                        keepWorkspace),
-                    context.RepoRoot,
-                    cancellationTokenSource.Token).ConfigureAwait(false);
+                        cancellationTokenSource.Token
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    var address = PullRequestAddress.Parse(PullRequest!);
+                    Log.Info($"Source PR: {address.CanonicalUrl}");
+                    Log.Info($"Target remote: {targetRemote}");
+                    Log.Info($"Target base: {baseBranch}");
+                    result = await service.RunAsync(
+                        new PullRequestRelayOptions(
+                            address,
+                            targetRemote,
+                            baseBranch,
+                            AllowUntrustedBuild,
+                            keepWorkspace,
+                            conflictMode),
+                        context.RepoRoot,
+                        cancellationTokenSource.Token).ConfigureAwait(false);
+                }
                 if (result.PullRequestUrl is null)
                 {
                     Log.Info(BuilderResources.NoChangesToRelay);
@@ -113,6 +146,13 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             {
                 Console.CancelKeyPress -= cancelHandler;
             }
+        }
+        catch (PatchConflictException exception)
+        {
+            Log.Error("The source patch conflicts with the target base and requires manual resolution.");
+            Log.Error(exception.Message);
+            Log.Info(CreateManualConflictInstructions(exception.PatchPath));
+            return 3;
         }
         catch (OperationCanceledException)
         {
@@ -150,4 +190,34 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             "never" => KeepWorkspacePolicy.Never,
             _ => throw new ArgumentException(BuilderResources.InvalidKeepWorkspacePolicy, nameof(value)),
         };
+
+    internal static ConflictMode ParseConflictMode(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "manual" => WpfReorganize.Builder.ConflictMode.Manual,
+            "fail" => WpfReorganize.Builder.ConflictMode.Fail,
+            _ => throw new ArgumentException("--conflict-mode must be manual or fail.", nameof(value)),
+        };
+
+    internal static string CreateManualConflictInstructions(string patchPath)
+    {
+        var workspacePath = Path.GetDirectoryName(patchPath)!;
+        var repositoryPath = Path.Join(workspacePath, "repository");
+        return $"""
+            Manual conflict resolution steps:
+            1. Enter the relay repository:
+               cd /d "{repositoryPath}"
+            2. Apply the generated patch and keep conflicts for manual resolution:
+               git apply --index --3way --ignore-space-change --ignore-whitespace "{patchPath}"
+            3. Edit every conflicted file and remove the conflict markers.
+            4. Stage each resolved file with git add. Do not run git commit. For example:
+               git add "src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Input/Stylus/Wisp/WispLogic.cs"
+            5. Chinese and English AI LLM prompts containing the full context and instructions were created here:
+               "{Path.Join(workspacePath, AiPatchConflictPromptWriter.ChineseFileName)}"
+               "{Path.Join(workspacePath, AiPatchConflictPromptWriter.EnglishFileName)}"
+            6. Resume the relay pipeline with this directly executable command:
+               dotnet run --project "{Path.Join(BuilderContext.Create().RepoRoot, "eng", "Builder", "Builder.csproj")}" -- relay-pr --resume-workspace "{workspacePath}"
+               Add --allow-untrusted-build only if you also want to run the optional local build validation before publishing.
+            """;
+    }
 }

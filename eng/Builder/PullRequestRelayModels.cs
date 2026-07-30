@@ -7,6 +7,12 @@ internal enum KeepWorkspacePolicy
     Never,
 }
 
+internal enum ConflictMode
+{
+    Manual,
+    Fail,
+}
+
 internal enum PullRequestRelayStage
 {
     InputValidated,
@@ -14,7 +20,9 @@ internal enum PullRequestRelayStage
     SourceResolved,
     RepositoryCloned,
     SourceFetched,
-    Merged,
+    ConflictResolutionRequired,
+    ChangesApplied,
+    LocalValidationSkipped,
     LocalValidationSucceeded,
     BranchPushed,
     PullRequestCreatedOrReused,
@@ -33,7 +41,9 @@ internal sealed record PullRequestSource(
     string BaseCloneUrl,
     string BaseReference,
     GitObjectId BaseSha,
-    IReadOnlySet<GitObjectId> CommitShas);
+    IReadOnlySet<GitObjectId> CommitShas,
+    string AuthorName,
+    string AuthorEmail);
 
 internal sealed record TargetRepository(
     string RemoteName,
@@ -50,7 +60,8 @@ internal sealed record PullRequestRelayOptions(
     string TargetRemote,
     string? BaseBranch,
     bool AllowUntrustedBuild,
-    KeepWorkspacePolicy KeepWorkspace);
+    KeepWorkspacePolicy KeepWorkspace,
+    ConflictMode ConflictMode);
 
 internal sealed record PullRequestRelayResult(
     Uri? PullRequestUrl,
@@ -68,15 +79,17 @@ internal sealed record PullRequestRelayState
 
     public string? TargetRepository { get; set; }
 
+    public string? TargetRemote { get; set; }
+
     public string? TargetPushUrl { get; set; }
 
     public string? TargetBaseBranch { get; set; }
 
     public string? TargetRelayBranch { get; set; }
 
-    public string? MergedCommitSha { get; set; }
+    public string? RelayCommitSha { get; set; }
 
-    public string? MergedTreeSha { get; set; }
+    public string? RelayTreeSha { get; set; }
 
     public string? ExistingRemoteBranchSha { get; set; }
 

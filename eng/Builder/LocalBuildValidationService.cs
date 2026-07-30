@@ -50,7 +50,7 @@ internal sealed class LocalBuildValidationService
     public async Task<LocalBuildValidationResult> ValidateAsync(
         PullRequestSource source,
         TargetRepository target,
-        GitObjectId mergedCommit,
+        GitObjectId relayCommit,
         PullRequestRelayWorkspace workspace,
         PullRequestRelayState state,
         CancellationToken cancellationToken)
@@ -65,9 +65,9 @@ internal sealed class LocalBuildValidationService
             workspace.IsolatedHomePath,
             "HEAD",
             cancellationToken).ConfigureAwait(false);
-        if (initialHead != mergedCommit)
+        if (initialHead != relayCommit)
         {
-            throw new InvalidOperationException($"HEAD {initialHead} does not match merged commit {mergedCommit}.");
+            throw new InvalidOperationException($"HEAD {initialHead} does not match relay commit {relayCommit}.");
         }
 
         var initialTree = await _git.ResolveTreeAsync(
@@ -75,7 +75,7 @@ internal sealed class LocalBuildValidationService
             workspace.IsolatedHomePath,
             "HEAD",
             cancellationToken).ConfigureAwait(false);
-        state.MergedTreeSha = initialTree.ToString();
+        state.RelayTreeSha = initialTree.ToString();
         await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
         var initialChanges = await _git.GetTrackedChangesAsync(
             repositoryPath,

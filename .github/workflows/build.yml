@@ -1,4 +1,4 @@
-﻿name: Build WPF NuGet Package
+name: Build WPF NuGet Package
 
 on:
   push:
@@ -115,6 +115,8 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build-package.outputs.artifact-name }}
-        path: ${{ steps.build-package.outputs.package-path }}
+        path: |
+          ${{ steps.build-package.outputs.package-path }}
+          ${{ steps.build-package.outputs.symbol-package-path }}
         if-no-files-found: error
         retention-days: 7
