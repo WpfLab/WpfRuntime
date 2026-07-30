@@ -13,17 +13,17 @@ public sealed class PullRequestRelayWorkspaceTests
     }
 
     [Fact]
-    public void Create_WhenCreatedThenUsesShortWorkspacePath()
+    public async Task Create_WhenCreatedThenUsesShortWorkspacePath()
     {
         var workspace = PullRequestRelayWorkspace.Create(new PullRequestAddress("dotnet", "wpf", 11124));
-        workspace.WriteStateAsync
+        await workspace.WriteStateAsync
         (
             new PullRequestRelayState
             {
                 Stage = PullRequestRelayStage.InputValidated,
             },
             CancellationToken.None
-        ).GetAwaiter().GetResult();
+        );
         try
         {
             Assert.Matches(@"WpfRuntimeTemp[\\/]wpf-11124-\d{10}$", workspace.RootPath);

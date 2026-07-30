@@ -15,10 +15,13 @@ public sealed class RelayMarkersTests
     {
         var source = CreateSource();
         var message = RelayMarkers.CreatePatchMessage(source);
-        var body = GitHubPullRequestService.CreateBody(
+        var body = GitHubPullRequestService.CreateBody
+        (
             CreateTarget(),
             source,
-            DateTimeOffset.Parse("2025-01-02T03:04:05Z"));
+            DateTimeOffset.Parse("2025-01-02T03:04:05Z"),
+            localValidationPerformed: true
+        );
         var other = new PullRequestAddress("other", "repo", 11781);
 
         Assert.True(RelayMarkers.MergeMessageMatches(message, source.Address));

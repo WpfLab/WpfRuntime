@@ -34,12 +34,6 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
     {
         try
         {
-            if (!AllowUntrustedBuild)
-            {
-                Log.Error(BuilderResources.UntrustedBuildConsentRequired);
-                return 2;
-            }
-
             var context = BuilderContext.Create();
             var targetRemote = ResolveTargetRemote(TargetRemote);
             var baseBranch = ResolveBaseBranch(Base, targetRemote);
@@ -68,32 +62,48 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             Console.CancelKeyPress += cancelHandler;
             try
             {
-                var gitPath = await GitService.FindGitAsync(
+                var gitPath = await GitService.FindGitAsync
+                (
                     context.RepoRoot,
-                    cancellationTokenSource.Token).ConfigureAwait(false);
-                var dotnetPath = await LocalBuildValidationService.FindDotNetAsync(
-                    context.RepoRoot,
-                    cancellationTokenSource.Token).ConfigureAwait(false);
-                var msBuildPath = MsBuildService.FindMsBuild();
-                if (!Path.IsPathFullyQualified(msBuildPath) || !File.Exists(msBuildPath))
-                {
-                    Log.Error("Visual Studio MSBuild.exe could not be resolved to an absolute existing path.");
-                    return 2;
-                }
-
+                    cancellationTokenSource.Token
+                ).ConfigureAwait(false);
                 var git = new GitService(gitPath);
                 var github = new GitHubPullRequestService(token);
-                var validation = new LocalBuildValidationService(git, dotnetPath, msBuildPath);
+                LocalBuildValidationService? validation = null;
+                if (AllowUntrustedBuild)
+                {
+                    var dotnetPath = await LocalBuildValidationService.FindDotNetAsync
+                    (
+                        context.RepoRoot,
+                        cancellationTokenSource.Token
+                    ).ConfigureAwait(false);
+                    var msBuildPath = MsBuildService.FindMsBuild();
+                    if (!Path.IsPathFullyQualified(msBuildPath) || !File.Exists(msBuildPath))
+                    {
+                        Log.Error("Visual Studio MSBuild.exe could not be resolved to an absolute existing path.");
+                        return 2;
+                    }
+
+                    validation = new LocalBuildValidationService(git, dotnetPath, msBuildPath);
+                }
+                else
+                {
+                    Log.Info("Local build validation is skipped. GitHub Actions will validate the published pull request.");
+                }
+
                 var service = new PullRequestRelayService(git, github, validation);
                 PullRequestRelayResult result;
                 if (!string.IsNullOrWhiteSpace(ResumeWorkspace))
                 {
                     Log.Info($"Resuming relay workspace: {Path.GetFullPath(ResumeWorkspace)}");
-                    result = await service.ContinueAsync(
+                    result = await service.ContinueAsync
+                    (
                         ResumeWorkspace,
                         context.RepoRoot,
                         keepWorkspace,
-                        cancellationTokenSource.Token).ConfigureAwait(false);
+                        AllowUntrustedBuild,
+                        cancellationTokenSource.Token
+                    ).ConfigureAwait(false);
                 }
                 else
                 {

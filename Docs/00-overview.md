@@ -81,7 +81,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 
 - 已实现共享 native 资产清单。
 - Builder 已实现 x64 和 x86 路径。
-- Builder 已注册独立 `relay-pr` 命令，使用 Octokit 14.0.0 读取来源 PR，并在独立 clone 中执行固定 base/head SHA fetch、纯 Patch 应用、本地门禁、精确 SHA push 和目标 PR 创建/复用；命令缺少 `--allow-untrusted-build` 或 `GITHUB_TOKEN` 时会在 clone、构建和远端写入前退出。
+- Builder 已注册独立 `relay-pr` 命令，使用 Octokit 14.0.0 读取来源 PR，并在独立 clone 中执行固定 base/head SHA fetch、纯 Patch 应用、本地门禁、精确 SHA push 和目标 PR 创建/复用；命令缺少 `GITHUB_TOKEN` 时会在 clone 和远端写入前退出；`--allow-untrusted-build` 仅控制是否在 Temp workspace 执行本地构建验证，默认跳过并依赖 GitHub Actions。
 - 本地门禁在隔离 HOME/NuGet/AppData/TEMP 环境中依次执行 Builder Restore/Build、x64/x86 构建打包、精确 nupkg `test-package` 和根 `Debug|x64` Rebuild，并校验构建前后 HEAD、tree、index 和 tracked working tree。
 - `eng/Builder.Tests` 与 `eng/Builder.ProcessTestHelper` 已纳入根 `slnx`；单元、进程和本地 bare repository 集成测试覆盖 URL/remote 解析、敏感环境、取消/超时、PR ref fallback、纯 Patch 应用与冲突、精确 SHA push、lease 竞争、GitHub Actions 事件/身份、artifact 评论格式、workflow 安全契约和 checkout 换行保持契约。
 - Builder 已注册 `ci-build` 与 `comment-pr-artifacts` 命令，将 GitHub Actions 中的 checkout 凭据检查、事件/merge 身份校验、版本与 artifact 计算、构建/打包门禁、workflow run/artifact 查询及幂等评论迁入 C#。

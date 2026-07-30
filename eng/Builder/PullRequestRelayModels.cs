@@ -22,6 +22,7 @@ internal enum PullRequestRelayStage
     SourceFetched,
     ConflictResolutionRequired,
     ChangesApplied,
+    LocalValidationSkipped,
     LocalValidationSucceeded,
     BranchPushed,
     PullRequestCreatedOrReused,

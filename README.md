@@ -28,11 +28,10 @@ Set `GITHUB_TOKEN` to a fine-grained personal access token or GitHub App token t
 $env:GITHUB_TOKEN = "<fine-grained PAT or GitHub App token>"
 
 dotnet run --project eng/Builder/Builder.csproj -- relay-pr `
-  --pull-request https://github.com/dotnet/wpf/pull/11781 `
-  --allow-untrusted-build
+  --pull-request https://github.com/dotnet/wpf/pull/11781
 ```
 
-This command imports the changes from the specified GitHub pull request, builds the merged result, and creates the corresponding pull request in this repository.
+This command imports the changes from the specified GitHub pull request and creates the corresponding pull request in this repository. Local build validation is skipped by default; GitHub Actions validates the published pull request.
 
 ---
 

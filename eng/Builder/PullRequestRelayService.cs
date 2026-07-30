@@ -4,16 +4,17 @@ internal sealed class PullRequestRelayService
 {
     private readonly GitService _git;
     private readonly GitHubPullRequestService _github;
-    private readonly LocalBuildValidationService _localValidation;
+    private readonly LocalBuildValidationService? _localValidation;
 
-    public PullRequestRelayService(
+    public PullRequestRelayService
+    (
         GitService git,
         GitHubPullRequestService github,
-        LocalBuildValidationService localValidation)
+        LocalBuildValidationService? localValidation
+    )
     {
         ArgumentNullException.ThrowIfNull(git);
         ArgumentNullException.ThrowIfNull(github);
-        ArgumentNullException.ThrowIfNull(localValidation);
         _git = git;
         _github = github;
         _localValidation = localValidation;
@@ -26,10 +27,6 @@ internal sealed class PullRequestRelayService
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(callerRepository);
-        if (!options.AllowUntrustedBuild)
-        {
-            throw new InvalidOperationException(BuilderResources.UntrustedBuildConsentRequired);
-        }
 
         PullRequestRelayWorkspace? workspace = null;
         var succeeded = false;
@@ -136,15 +133,16 @@ internal sealed class PullRequestRelayService
             state.Stage = PullRequestRelayStage.ChangesApplied;
             state.RelayCommitSha = relayCommit.ToString();
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
-            var validation = await _localValidation.ValidateAsync(
+            var validation = await ValidateLocallyWhenRequestedAsync
+            (
+                options.AllowUntrustedBuild,
                 source,
                 target,
                 relayCommit,
                 workspace,
                 state,
-                cancellationToken).ConfigureAwait(false);
-            state.Stage = PullRequestRelayStage.LocalValidationSucceeded;
-            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+                cancellationToken
+            ).ConfigureAwait(false);
 
             if (existingPullRequest is not null)
             {
@@ -163,6 +161,7 @@ internal sealed class PullRequestRelayService
                 target,
                 source,
                 validation.CompletedAtUtc,
+                options.AllowUntrustedBuild,
                 cancellationToken).ConfigureAwait(false);
             state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
             state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
@@ -206,6 +205,7 @@ internal sealed class PullRequestRelayService
         string workspacePath,
         string callerRepository,
         KeepWorkspacePolicy keepWorkspace,
+        bool allowUntrustedBuild,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspacePath);
@@ -231,15 +231,16 @@ internal sealed class PullRequestRelayService
             state.RelayCommitSha = relayCommit.ToString();
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
 
-            var validation = await _localValidation.ValidateAsync(
+            var validation = await ValidateLocallyWhenRequestedAsync
+            (
+                allowUntrustedBuild,
                 source,
                 target,
                 relayCommit,
                 workspace,
                 state,
-                cancellationToken).ConfigureAwait(false);
-            state.Stage = PullRequestRelayStage.LocalValidationSucceeded;
-            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+                cancellationToken
+            ).ConfigureAwait(false);
 
             await _git.PushValidatedCommitAsync(
                 target,
@@ -254,6 +255,7 @@ internal sealed class PullRequestRelayService
                 target,
                 source,
                 validation.CompletedAtUtc,
+                allowUntrustedBuild,
                 cancellationToken).ConfigureAwait(false);
             state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
             state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
@@ -268,6 +270,55 @@ internal sealed class PullRequestRelayService
                 workspace.Delete();
             }
         }
+    }
+
+    private async Task<LocalBuildValidationResult> ValidateLocallyWhenRequestedAsync
+    (
+        bool allowUntrustedBuild,
+        PullRequestSource source,
+        TargetRepository target,
+        GitObjectId relayCommit,
+        PullRequestRelayWorkspace workspace,
+        PullRequestRelayState state,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!allowUntrustedBuild)
+        {
+            var tree = await _git.ResolveTreeAsync
+            (
+                workspace.RepositoryPath,
+                workspace.IsolatedHomePath,
+                relayCommit.ToString(),
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.RelayTreeSha = tree.ToString();
+            state.Stage = PullRequestRelayStage.LocalValidationSkipped;
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            Log.Info("Local build validation skipped; GitHub Actions will validate the pull request.");
+            return new LocalBuildValidationResult
+            (
+                relayCommit,
+                tree,
+                string.Empty,
+                DateTimeOffset.UtcNow
+            );
+        }
+
+        var validation = await (_localValidation
+            ?? throw new InvalidOperationException("Local build validation was requested but is unavailable."))
+            .ValidateAsync
+            (
+                source,
+                target,
+                relayCommit,
+                workspace,
+                state,
+                cancellationToken
+            ).ConfigureAwait(false);
+        state.Stage = PullRequestRelayStage.LocalValidationSucceeded;
+        await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+        return validation;
     }
 
     private async Task<PullRequestSource> FetchSourceWithSingleRefreshAsync(

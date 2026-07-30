@@ -28,9 +28,9 @@ Builder 应完成以下动作：
 1. 解析 PR 所属仓库和编号，并通过 GitHub API 读取 PR 的真实来源仓库、来源分支和固定 head SHA。
 2. 在 `%TEMP%\WpfRuntimeTemp\<repository>-<PR number>-<MMddHHmmss>` 独立临时 clone 中，以自己的目标仓库 base 分支为起点创建 `t/bot/PR_<number>` 分支；示例分支为 `t/bot/PR_11781`。
 3. 拉取并校验原 PR 的固定 base SHA 与 head SHA，生成 `Base.Sha -> Head.Sha` 的 Patch 并应用到目标分支。
-4. 创建 relay commit 时保留来源 PR 首个提交的 Author，并仅使用 `WpfRuntime Bot <wpfruntime-bot@users.noreply.github.com>` 作为 Committer；随后执行完整本地构建、打包和包验证门禁。
-5. 只有全部本地门禁成功后，才把已验证的精确提交推送到自己的目标仓库。
-6. 在自己的目标仓库内创建或复用 PR，并输出 PR 链接。
+4. 创建 relay commit 时保留来源 PR 首个提交的 Author，并仅使用 `WpfRuntime Bot <wpfruntime-bot@users.noreply.github.com>` 作为 Committer。
+5. 默认跳过 Temp workspace 中的本地构建、打包和包验证，直接推送精确 relay commit；显式传入 `--allow-untrusted-build` 时才执行完整本地门禁，并只在门禁成功后推送。
+6. 在自己的目标仓库内创建或复用 PR，并由 GitHub Actions 对服务端 PR 执行解决方案与包验证。
 
 ### GitHub Actions
 
@@ -87,7 +87,7 @@ dotnet run --project eng/Builder/Builder.csproj --no-build -- relay-pr `
 | `--target-remote` | 否 | `origin` | 调用者仓库中代表“自己的 GitHub 仓库”的 remote；fetch URL 用于取得 base，push URL 用于发布分支 |
 | `--base` | 否 | `<target-remote>/main`（默认 `origin/main`） | 新 PR 的 base 分支；同时接受 `main` 与 `origin/main` 形式 |
 | `--github-token` | 条件必需 | `GITHUB_TOKEN` | GitHub API Token；命令行值优先，未提供或为空时回退到环境变量 |
-| `--allow-untrusted-build` | 是 | `false` | 明确确认将执行外部 PR 中的 MSBuild、C# 和构建脚本；缺少该开关时只输出风险并退出 |
+| `--allow-untrusted-build` | 否 | `false` | 显式允许在 Temp workspace 中执行外部 PR 的本地构建、打包和测试；默认跳过本地验证，直接发布 relay PR 并由 GitHub Actions 验证 |
 | `--keep-workspace` | 否 | `on-failure` | `always`、`on-failure` 或 `never`；控制独立临时 clone 的保留策略 |
 | `--conflict-mode` | 否 | `manual` | `manual` 在 Patch 冲突时保留 workspace 并输出人工处理步骤；显式指定 `fail` 才恢复为失败后清理冲突状态的行为 |
 | `--resume-workspace` | 恢复时必需 | 无 | 开发者解决冲突并执行 `git add` 后，从指定 workspace 直接继续 commit、构建、验证、push 和 PR 创建流程 |

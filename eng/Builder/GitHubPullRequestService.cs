@@ -106,7 +106,8 @@ internal sealed class GitHubPullRequestService
     public async Task<Uri> CreateOrReuseTargetPullRequestAsync(
         TargetRepository target,
         PullRequestSource source,
-        DateTimeOffset validationCompletedAtUtc,
+        DateTimeOffset relayCompletedAtUtc,
+        bool localValidationPerformed,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -119,7 +120,7 @@ internal sealed class GitHubPullRequestService
         }
 
         var title = CreateTitle(source);
-        var body = CreateBody(target, source, validationCompletedAtUtc);
+        var body = CreateBody(target, source, relayCompletedAtUtc, localValidationPerformed);
         var newPullRequest = new NewPullRequest(title, $"{target.Address.Owner}:{target.RelayBranch}", target.BaseBranch)
         {
             Body = body,
@@ -158,12 +159,15 @@ internal sealed class GitHubPullRequestService
     internal static string CreateBody(
         TargetRepository target,
         PullRequestSource source,
-        DateTimeOffset validationCompletedAtUtc) =>
+        DateTimeOffset relayCompletedAtUtc,
+        bool localValidationPerformed) =>
         $"Relays {source.Address.CanonicalUrl}.\n\n" +
         $"- Source base: `{EscapeCode(source.BaseRepository.FullName)}:{EscapeCode(source.BaseReference)}` at `{source.BaseSha}`\n" +
         $"- Source head: `{EscapeCode(source.HeadRepository?.FullName ?? "deleted-source-repository")}:{EscapeCode(source.HeadReference)}` at `{source.HeadSha}`\n" +
         $"- Target: `{EscapeCode(target.Address.FullName)}:{EscapeCode(target.BaseBranch)}` <- `{EscapeCode(target.RelayBranch)}`\n" +
-        $"- Local validation completed: `{validationCompletedAtUtc:O}`\n" +
+        (localValidationPerformed
+            ? $"- Local validation completed: `{relayCompletedAtUtc:O}`\n"
+            : "- Local validation skipped; GitHub Actions is responsible for validation.\n") +
         "- GitHub Actions build results will be written back by the trusted metadata workflow.\n\n" +
         $"Source-PR: {source.Address.CanonicalUrl}\n" +
         $"Source-Head-SHA: {source.HeadSha}\n\n" +
