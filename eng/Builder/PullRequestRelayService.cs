@@ -49,6 +49,7 @@ internal sealed class PullRequestRelayService
                 cancellationToken).ConfigureAwait(false);
             state.Stage = PullRequestRelayStage.TargetResolved;
             state.TargetRepository = target.Address.FullName;
+            state.TargetRemote = target.RemoteName;
             state.TargetPushUrl = target.PushUrl;
             state.TargetBaseBranch = target.BaseBranch;
             state.TargetRelayBranch = target.RelayBranch;
@@ -69,7 +70,7 @@ internal sealed class PullRequestRelayService
             workspace = PullRequestRelayWorkspace.Create(source.Address);
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
             Log.Info($"Relay workspace: {workspace.RootPath}");
-            await _git.CloneTargetAsync(target, workspace, cancellationToken).ConfigureAwait(false);
+            await _git.CloneTargetAsync(callerRepository, target, workspace, cancellationToken).ConfigureAwait(false);
             state.Stage = PullRequestRelayStage.RepositoryCloned;
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
             if (existingPullRequest is null)
@@ -89,32 +90,56 @@ internal sealed class PullRequestRelayService
             state.Stage = PullRequestRelayStage.SourceFetched;
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
 
-            GitObjectId mergedCommit;
+            GitObjectId relayCommit;
             try
             {
-                mergedCommit = await _git.MergeSourceAsync(
+                relayCommit = await _git.ApplySourceChangesAsync(
                     source,
                     target,
                     workspace,
+                    options.ConflictMode,
                     cancellationToken).ConfigureAwait(false);
             }
             catch (NoChangesToRelayException exception)
             {
-                state.Stage = PullRequestRelayStage.Merged;
-                state.MergedCommitSha = exception.MergedCommit.ToString();
+                state.Stage = PullRequestRelayStage.ChangesApplied;
+                state.RelayCommitSha = exception.RelayCommit.ToString();
                 await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
                 Log.Info(BuilderResources.NoChangesToRelay);
                 succeeded = true;
                 return CreateResult(null, workspace, null, options.KeepWorkspace, succeeded);
             }
+            catch (PatchConflictException exception)
+            {
+                state.Stage = PullRequestRelayStage.ConflictResolutionRequired;
+                await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+                await AiPatchConflictPromptWriter.WriteAsync
+                (
+                    new AiPatchConflictPromptContext
+                    (
+                        workspace.RootPath,
+                        source.Address.CanonicalUrl,
+                        source.BaseSha.ToString(),
+                        source.HeadSha.ToString(),
+                        target.Address.FullName,
+                        target.BaseBranch,
+                        workspace.RepositoryPath,
+                        exception.PatchPath,
+                        workspace.RootPath,
+                        Path.Join(callerRepository, "eng", "Builder", "Builder.csproj")
+                    ),
+                    CancellationToken.None
+                ).ConfigureAwait(false);
+                throw;
+            }
 
-            state.Stage = PullRequestRelayStage.Merged;
-            state.MergedCommitSha = mergedCommit.ToString();
+            state.Stage = PullRequestRelayStage.ChangesApplied;
+            state.RelayCommitSha = relayCommit.ToString();
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
             var validation = await _localValidation.ValidateAsync(
                 source,
                 target,
-                mergedCommit,
+                relayCommit,
                 workspace,
                 state,
                 cancellationToken).ConfigureAwait(false);
@@ -158,9 +183,11 @@ internal sealed class PullRequestRelayService
         finally
         {
             var publicationNeedsRecovery = !succeeded && state.Stage >= PullRequestRelayStage.BranchPushed;
+            var manualConflictNeedsRecovery = state.Stage == PullRequestRelayStage.ConflictResolutionRequired;
             if (workspace is not null
                 && !canceled
                 && !publicationNeedsRecovery
+                && !manualConflictNeedsRecovery
                 && !ShouldKeepWorkspace(options.KeepWorkspace, succeeded))
             {
                 try
@@ -171,6 +198,74 @@ internal sealed class PullRequestRelayService
                 {
                     Log.Warn($"Unable to delete relay workspace '{workspace.RootPath}': {exception.Message}");
                 }
+            }
+        }
+    }
+
+    public async Task<PullRequestRelayResult> ContinueAsync(
+        string workspacePath,
+        string callerRepository,
+        KeepWorkspacePolicy keepWorkspace,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspacePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerRepository);
+        var workspace = PullRequestRelayWorkspace.Open(workspacePath);
+        var state = await workspace.ReadStateAsync(cancellationToken).ConfigureAwait(false);
+        var sourceAddress = PullRequestAddress.Parse(state.SourcePullRequestUrl!);
+        var source = await _github.GetSourceAsync(sourceAddress, cancellationToken).ConfigureAwait(false);
+        var target = await _git.ResolveTargetAsync(
+            callerRepository,
+            state.TargetRemote!,
+            state.TargetBaseBranch,
+            source.Address.Number,
+            cancellationToken).ConfigureAwait(false);
+        var succeeded = false;
+        try
+        {
+            var relayCommit = await _git.ContinueSourceChangesAsync(
+                source,
+                workspace,
+                cancellationToken).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.ChangesApplied;
+            state.RelayCommitSha = relayCommit.ToString();
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+
+            var validation = await _localValidation.ValidateAsync(
+                source,
+                target,
+                relayCommit,
+                workspace,
+                state,
+                cancellationToken).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.LocalValidationSucceeded;
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+
+            await _git.PushValidatedCommitAsync(
+                target,
+                validation.CommitSha,
+                workspace,
+                cancellationToken).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.BranchPushed;
+            await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Relay branch published: {CreateBranchUrl(target)}");
+
+            var targetPullRequest = await _github.CreateOrReuseTargetPullRequestAsync(
+                target,
+                source,
+                validation.CompletedAtUtc,
+                cancellationToken).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
+            state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
+            await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            succeeded = true;
+            return CreateResult(targetPullRequest, workspace, validation.CommitSha, keepWorkspace, succeeded);
+        }
+        finally
+        {
+            if (succeeded && !ShouldKeepWorkspace(keepWorkspace, succeeded))
+            {
+                workspace.Delete();
             }
         }
     }

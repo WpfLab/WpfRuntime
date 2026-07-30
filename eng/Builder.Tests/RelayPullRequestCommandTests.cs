@@ -62,4 +62,34 @@ public sealed class RelayPullRequestCommandTests
 
         Assert.Null(token);
     }
+
+    [Theory]
+    [InlineData("manual", "Manual")]
+    [InlineData("fail", "Fail")]
+    public void ParseConflictMode_WhenValueIsSupportedThenReturnsMode(string value, string expected)
+    {
+        var result = RelayPullRequestCommand.ParseConflictMode(value);
+
+        Assert.Equal(expected, result.ToString());
+    }
+
+    [Fact]
+    public void CreateManualConflictInstructions_IncludesPatchAndResumeCommands()
+    {
+        var patchPath = Path.Join("C:\\relay", "source.patch");
+
+        var result = RelayPullRequestCommand.CreateManualConflictInstructions(patchPath);
+
+        Assert.Contains($"git apply --index --3way --ignore-space-change --ignore-whitespace \"{patchPath}\"", result);
+    }
+
+    [Fact]
+    public void CreateManualConflictInstructions_IncludesAiPromptPath()
+    {
+        var patchPath = Path.Join("C:\\relay", "source.patch");
+
+        var result = RelayPullRequestCommand.CreateManualConflictInstructions(patchPath);
+
+        Assert.Contains(AiPatchConflictPromptWriter.ChineseFileName, result);
+    }
 }

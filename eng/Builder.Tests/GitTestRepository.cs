@@ -54,13 +54,16 @@ internal sealed class GitTestRepository : IDisposable
 
     public GitService CreateService(TimeSpan? timeout = null) => new(_gitPath, timeout);
 
-    public PullRequestSource CreateSource(
+    public PullRequestSource CreateSource
+    (
         IReadOnlySet<GitObjectId>? commitShas = null,
         GitObjectId? baseSha = null,
         GitObjectId? headSha = null,
         string? headCloneUrl = null,
-        string title = "Test source") =>
-        new(
+        string title = "Test source"
+    ) =>
+        new
+        (
             new PullRequestAddress("dotnet", "wpf", 42),
             title,
             "open",
@@ -73,7 +76,10 @@ internal sealed class GitTestRepository : IDisposable
             SourceBarePath,
             "main",
             baseSha ?? BaseSha,
-            commitShas ?? new HashSet<GitObjectId> { headSha ?? SourceSha });
+            commitShas ?? new HashSet<GitObjectId> { headSha ?? SourceSha },
+            "Source Author",
+            "source-author@example.com"
+        );
 
     public PullRequestRelayWorkspace CreateWorkspace()
     {
@@ -110,6 +116,16 @@ internal sealed class GitTestRepository : IDisposable
         return BaseSha;
     }
 
+    public async Task<GitObjectId> AdvanceSourceBaseAsync(string fileName, string content, string message)
+    {
+        await RunAsync(SeedPath, "switch", "main");
+        File.WriteAllText(Path.Join(SeedPath, fileName), content);
+        await RunAsync(SeedPath, "add", fileName);
+        await RunAsync(SeedPath, "commit", "-m", message);
+        await RunAsync(SeedPath, "push", "source", "main");
+        return await ResolveAsync(SeedPath, "HEAD");
+    }
+
     public Task SetPullRequestRefAsync(GitObjectId sha) =>
         RunAsync(
             RootPath,
@@ -134,12 +150,49 @@ internal sealed class GitTestRepository : IDisposable
         return SourceSha;
     }
 
+    public async Task<GitObjectId> CreateDivergedSourceHistoryAsync(
+        string fileName,
+        string content)
+    {
+        await RunAsync(SeedPath, "switch", "main");
+        File.WriteAllText(Path.Join(SeedPath, "source-base.txt"), "source base");
+        await RunAsync(SeedPath, "add", "source-base.txt");
+        await RunAsync(SeedPath, "commit", "-m", "source base");
+        var sourceBase = await ResolveAsync(SeedPath, "HEAD");
+        await RunAsync(SeedPath, "push", "--force", "source", "main");
+        await RunAsync(SeedPath, "switch", "-C", "feature");
+        File.WriteAllText(Path.Join(SeedPath, fileName), content);
+        await RunAsync(SeedPath, "add", fileName);
+        await RunAsync(SeedPath, "commit", "-m", "diverged feature");
+        await RunAsync(SeedPath, "push", "--force", "source", "feature");
+        SourceSha = await ResolveAsync(SeedPath, "HEAD");
+        return sourceBase;
+    }
+
     public async Task<GitObjectId> GetRemoteBranchShaAsync(string branch)
     {
         var result = await RunAsync(RootPath, "ls-remote", "--heads", TargetBarePath, $"refs/heads/{branch}");
         var sha = result.StandardOutput
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)[0];
         return GitObjectId.Parse(sha);
+    }
+
+    public async Task<string> GetCommitFormatAsync
+    (
+        string repositoryPath,
+        GitObjectId commit,
+        string format
+    )
+    {
+        var result = await RunAsync
+        (
+            repositoryPath,
+            "show",
+            "--no-patch",
+            $"--format={format}",
+            commit.ToString()
+        );
+        return result.StandardOutput.Trim();
     }
 
     public async Task AdvanceRemoteRelayBranchAsync(string branch)

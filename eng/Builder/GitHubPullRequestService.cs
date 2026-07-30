@@ -63,8 +63,10 @@ internal sealed class GitHubPullRequestService
         var commitShas = commits
             .Select(commit => GitObjectId.Parse(commit.Sha))
             .ToHashSet();
+        var firstCommitAuthor = commits.First().Commit.Author;
 
-        return new PullRequestSource(
+        return new PullRequestSource
+        (
             mappedAddress,
             pullRequest.Title,
             pullRequest.State.ToString(),
@@ -77,7 +79,10 @@ internal sealed class GitHubPullRequestService
             baseRepository.CloneUrl,
             pullRequest.Base.Ref,
             GitObjectId.Parse(pullRequest.Base.Sha),
-            commitShas);
+            commitShas,
+            firstCommitAuthor.Name,
+            firstCommitAuthor.Email
+        );
     }
 
     public async Task<PullRequestSource> RefreshSourceOnceAsync(
