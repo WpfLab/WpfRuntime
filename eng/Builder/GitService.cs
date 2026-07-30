@@ -8,7 +8,11 @@ internal sealed class GitService
     private readonly string _gitPath;
     private readonly TimeSpan _timeout;
 
-    public GitService(string gitPath, TimeSpan? timeout = null)
+    public GitService
+    (
+        string gitPath,
+        TimeSpan? timeout = null
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gitPath);
         _gitPath = gitPath;
@@ -371,12 +375,13 @@ internal sealed class GitService
         arguments.Add("--no-verify");
         arguments.Add(target.PushUrl);
         arguments.Add($"{validatedCommit}:refs/heads/{target.RelayBranch}");
-        await RunAsync(
+        Log.Info(BuilderResources.GitPushAuthenticationMayPrompt);
+        await RunPushAsync
+        (
             publicationRepository,
-            workspace.IsolatedHomePath,
-            cancellationToken,
-            allowFailure: false,
-            ["push", .. arguments]).ConfigureAwait(false);
+            arguments,
+            cancellationToken
+        ).ConfigureAwait(false);
     }
 
     public async Task<GitObjectId> ResolveCommitAsync(
@@ -610,6 +615,26 @@ internal sealed class GitService
         catch (InvalidOperationException)
         {
             return false;
+        }
+    }
+
+    private async Task RunPushAsync
+    (
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken
+    )
+    {
+        var options = new ProcessRunOptions(_gitPath, workingDirectory, ["push", .. arguments])
+        {
+            Timeout = _timeout,
+            InheritEnvironment = true,
+            EnvironmentVariables = ProcessEnvironment.CreateGitPushEnvironment(),
+        };
+        var result = await ProcessRunner.RunAsync(options, cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode != 0)
+        {
+            throw CreateGitException(result, ["push", .. arguments]);
         }
     }
 

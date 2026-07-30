@@ -166,6 +166,7 @@ internal sealed class PullRequestRelayService
             state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
             state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
             await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Target pull request: {targetPullRequest}");
             succeeded = true;
             return CreateResult(
                 targetPullRequest,
@@ -223,13 +224,24 @@ internal sealed class PullRequestRelayService
         var succeeded = false;
         try
         {
-            var relayCommit = await _git.ContinueSourceChangesAsync(
-                source,
-                workspace,
-                cancellationToken).ConfigureAwait(false);
-            state.Stage = PullRequestRelayStage.ChangesApplied;
-            state.RelayCommitSha = relayCommit.ToString();
-            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            GitObjectId relayCommit;
+            if (string.IsNullOrWhiteSpace(state.RelayCommitSha))
+            {
+                relayCommit = await _git.ContinueSourceChangesAsync
+                (
+                    source,
+                    workspace,
+                    cancellationToken
+                ).ConfigureAwait(false);
+                state.Stage = PullRequestRelayStage.ChangesApplied;
+                state.RelayCommitSha = relayCommit.ToString();
+                await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                relayCommit = GitObjectId.Parse(state.RelayCommitSha);
+                Log.Info($"Reusing existing relay commit: {relayCommit}");
+            }
 
             var validation = await ValidateLocallyWhenRequestedAsync
             (
@@ -260,6 +272,7 @@ internal sealed class PullRequestRelayService
             state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
             state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
             await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Target pull request: {targetPullRequest}");
             succeeded = true;
             return CreateResult(targetPullRequest, workspace, validation.CommitSha, keepWorkspace, succeeded);
         }

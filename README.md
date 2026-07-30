@@ -22,7 +22,7 @@ The generated `DotNetCampus.WpfLib` package is written to `eng/Builder/bin/nupkg
 
 ## Relay an Existing Pull Request
 
-Set `GITHUB_TOKEN` to a fine-grained personal access token or GitHub App token that can push branches and create pull requests in the target repository. Do not put the token in command-line arguments or commit it to the repository.
+Set `GITHUB_TOKEN` to a fine-grained personal access token or GitHub App token that can read the source pull request and create pull requests in the target repository. Git push uses the credentials already configured for the target remote through Git Credential Manager, SSH, or another local Git credential provider. Do not put the token in command-line arguments or commit it to the repository.
 
 ```powershell
 $env:GITHUB_TOKEN = "<fine-grained PAT or GitHub App token>"

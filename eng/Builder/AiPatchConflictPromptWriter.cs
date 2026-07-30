@@ -99,8 +99,10 @@ internal static class AiPatchConflictPromptWriter
         8. 由开发者执行以下命令恢复流水线：
 
            ```cmd
-           dotnet run --project "{context.BuilderProjectPath}" -- relay-pr --resume-workspace "{context.WorkspacePath}" --allow-untrusted-build
+           dotnet run --project "{context.BuilderProjectPath}" -- relay-pr --resume-workspace "{context.WorkspacePath}"
            ```
+
+           只有开发者希望在发布前额外执行本地构建验证时，才在命令末尾添加 `--allow-untrusted-build`。
 
         ## 完成标准
 
@@ -170,8 +172,10 @@ internal static class AiPatchConflictPromptWriter
         8. Ask the developer to resume the pipeline with:
 
            ```cmd
-           dotnet run --project "{context.BuilderProjectPath}" -- relay-pr --resume-workspace "{context.WorkspacePath}" --allow-untrusted-build
+           dotnet run --project "{context.BuilderProjectPath}" -- relay-pr --resume-workspace "{context.WorkspacePath}"
            ```
+
+           Add `--allow-untrusted-build` only when the developer also wants to run the optional local build validation before publishing.
 
         ## Completion Criteria
 

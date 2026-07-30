@@ -33,7 +33,8 @@ public sealed class AiPatchConflictPromptWriterTests
     {
         var prompt = AiPatchConflictPromptWriter.CreateEnglishPrompt(CreateContext());
 
-        Assert.Contains("--resume-workspace \"C:\\relay\" --allow-untrusted-build", prompt);
+        Assert.Contains("--resume-workspace \"C:\\relay\"", prompt);
+        Assert.Contains("Add `--allow-untrusted-build` only", prompt);
     }
 
     private static AiPatchConflictPromptContext CreateContext() =>

@@ -216,7 +216,8 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                "{Path.Join(workspacePath, AiPatchConflictPromptWriter.ChineseFileName)}"
                "{Path.Join(workspacePath, AiPatchConflictPromptWriter.EnglishFileName)}"
             6. Resume the relay pipeline with this directly executable command:
-               dotnet run --project "{Path.Join(BuilderContext.Create().RepoRoot, "eng", "Builder", "Builder.csproj")}" -- relay-pr --resume-workspace "{workspacePath}" --allow-untrusted-build
+               dotnet run --project "{Path.Join(BuilderContext.Create().RepoRoot, "eng", "Builder", "Builder.csproj")}" -- relay-pr --resume-workspace "{workspacePath}"
+               Add --allow-untrusted-build only if you also want to run the optional local build validation before publishing.
             """;
     }
 }

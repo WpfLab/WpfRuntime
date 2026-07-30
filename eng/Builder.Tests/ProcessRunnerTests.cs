@@ -72,6 +72,16 @@ public sealed class ProcessRunnerTests
     }
 
     [Fact]
+    public void GitPushEnvironment_AllowsCredentialManagerAndRemovesApiTokens()
+    {
+        var environment = ProcessEnvironment.CreateGitPushEnvironment();
+
+        Assert.Null(environment["GITHUB_TOKEN"]);
+        Assert.Null(environment["GIT_TERMINAL_PROMPT"]);
+        Assert.Null(environment["GCM_INTERACTIVE"]);
+    }
+
+    [Fact]
     public void UntrustedEnvironment_RemovesTokensAndUsesIsolatedDirectories()
     {
         var home = Path.Join(Path.GetTempPath(), $"builder-home-{Guid.NewGuid():N}");

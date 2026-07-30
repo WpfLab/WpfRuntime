@@ -92,4 +92,14 @@ public sealed class RelayPullRequestCommandTests
 
         Assert.Contains(AiPatchConflictPromptWriter.ChineseFileName, result);
     }
+
+    [Fact]
+    public void CreateManualConflictInstructions_DefaultResumeCommandSkipsLocalBuild()
+    {
+        var patchPath = Path.Join("C:\\relay", "source.patch");
+
+        var result = RelayPullRequestCommand.CreateManualConflictInstructions(patchPath);
+
+        Assert.DoesNotContain("--resume-workspace \"C:\\relay\" --allow-untrusted-build", result);
+    }
 }
