@@ -163,7 +163,7 @@ foreach (var (rid, platform) in new[] { ("win-x64", "x64"), ("win-x86", "x86") }
         File.Copy(sourcePath, destPath, overwrite: true);
         Log.Info($"  runtimes/{rid}/lib/net8.0/{name}");
 
-        var pdbSourcePath = AssemblyCollector.GetPortablePdbPath(sourcePath);
+        var pdbSourcePath = AssemblyCollector.GetPdbPath(sourcePath);
         if (pdbSourcePath is not null)
         {
             var pdbName = Path.GetFileName(pdbSourcePath);

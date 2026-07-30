@@ -167,7 +167,7 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
 
     if (files.Length == 0)
     {
-        throw new InvalidOperationException("No Portable PDB files were found for the symbol package");
+        throw new InvalidOperationException("No PDB files were found for the symbol package");
     }
 
     var nuspecContent = $$"""

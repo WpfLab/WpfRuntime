@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
 
 namespace WpfReorganize.Builder;
 
@@ -88,34 +86,11 @@ internal static class AssemblyCollector
         return result;
     }
 
-    public static string? GetPortablePdbPath(string assemblyPath)
+    public static string? GetPdbPath(string assemblyPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
 
-        using var assemblyStream = File.OpenRead(assemblyPath);
-        using var peReader = new PEReader(assemblyStream);
-        if (!peReader.HasMetadata)
-        {
-            return null;
-        }
-
         var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
-        if (!File.Exists(pdbPath))
-        {
-            throw new InvalidOperationException($"Portable PDB not found for managed assembly: {assemblyPath}");
-        }
-
-        try
-        {
-            using var pdbStream = File.OpenRead(pdbPath);
-            using var provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
-            _ = provider.GetMetadataReader();
-        }
-        catch (BadImageFormatException exception)
-        {
-            throw new InvalidOperationException($"PDB is not a valid Portable PDB: {pdbPath}", exception);
-        }
-
-        return pdbPath;
+        return File.Exists(pdbPath) ? pdbPath : null;
     }
 }

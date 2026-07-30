@@ -6,7 +6,7 @@ namespace WpfReorganize.Builder.Tests;
 public sealed class NuGetPackageServiceTests
 {
     [Fact]
-    public void GenerateSymbolNuspecIncludesMultiplePortablePdbFilesWithRuntimePaths()
+    public void GenerateSymbolNuspecIncludesMultiplePdbFilesWithRuntimePaths()
     {
         var stagingDirectory = CreateStagingDirectory();
         WritePdb(stagingDirectory, "win-x64", "PresentationCore.pdb");
@@ -30,7 +30,7 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateSymbolNuspecThrowsWhenNoPortablePdbFilesExist()
+    public void GenerateSymbolNuspecThrowsWhenNoPdbFilesExist()
     {
         var stagingDirectory = CreateStagingDirectory();
 
