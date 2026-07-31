@@ -99,7 +99,7 @@
     <WpfSourceDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\</WpfSourceDir>
     <WpfSharedDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\Shared\</WpfSharedDir>
     <WpfCommonDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\src\Common\</WpfCommonDir>
-    <WpfCycleBreakersDir>$(MSBuildThisFileDirectory)cycle-breakers\</WpfCycleBreakersDir>
+    <WpfCycleBreakersDir>$(MSBuildThisFileDirectory)src\Microsoft.DotNet.Wpf\cycle-breakers\</WpfCycleBreakersDir>
     <WpfCodeGenDir>$(MSBuildThisFileDirectory)eng\WpfArcadeSdk\tools\</WpfCodeGenDir>
   </PropertyGroup>
 

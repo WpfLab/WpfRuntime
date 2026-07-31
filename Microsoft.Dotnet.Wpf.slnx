@@ -23,43 +23,43 @@
   <Folder Name="/Build/WpfArcadeSdk/">
     <File Path="eng/WpfArcadeSdk/SystemResources.props" />
   </Folder>
-  <Folder Name="/cycle-breakers/">
-    <Project Path="cycle-breakers/PresentationFramework/PresentationFramework-PresentationUI-api-cycle.csproj">
+  <Folder Name="/src/Microsoft.DotNet.Wpf/cycle-breakers/">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/PresentationFramework/PresentationFramework-PresentationUI-api-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/PresentationFramework/PresentationFramework-ReachFramework-impl-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/PresentationFramework/PresentationFramework-ReachFramework-impl-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/PresentationFramework/PresentationFramework-System.Printing-api-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/PresentationFramework/PresentationFramework-System.Printing-api-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/PresentationFramework/PresentationFramework-System.Printing-impl-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/PresentationFramework/PresentationFramework-System.Printing-impl-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/PresentationUI/PresentationUI-PresentationFramework-impl-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/PresentationUI/PresentationUI-PresentationFramework-impl-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/ReachFramework/ReachFramework-PresentationFramework-api-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/ReachFramework/ReachFramework-PresentationFramework-api-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/ReachFramework/ReachFramework-System.Printing-api-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/ReachFramework/ReachFramework-System.Printing-api-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="cycle-breakers/System.Printing/System.Printing-PresentationFramework-api-cycle.csproj">
+    <Project Path="src/Microsoft.DotNet.Wpf/cycle-breakers/System.Printing/System.Printing-PresentationFramework-api-cycle.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
       <Platform Solution="*|arm64" Project="arm64" />
       <Platform Solution="*|x64" Project="x64" />

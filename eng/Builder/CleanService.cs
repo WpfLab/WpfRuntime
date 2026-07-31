@@ -29,7 +29,7 @@ internal static class CleanService
             skippedDirs += skipped;
         }
 
-        foreach (var subDirectoryName in new[] { "Demo", "cycle-breakers" })
+        foreach (var subDirectoryName in new[] { "Demo" })
         {
             var subDirectory = Path.Join(context.RepoRoot, subDirectoryName);
             if (Directory.Exists(subDirectory))

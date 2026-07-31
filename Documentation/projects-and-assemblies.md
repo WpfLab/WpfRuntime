@@ -382,14 +382,14 @@ The following assemblies are being produced today:
 The following projects exist in the repo. Those corresponding to the assemblies listed above are currently building. 
 
 ```
-cycle-breakers\PresentationFramework\PresentationFramework-PresentationUI-api-cycle.csproj
-cycle-breakers\PresentationFramework\PresentationFramework-ReachFramework-impl-cycle.csproj
-cycle-breakers\PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj
-cycle-breakers\PresentationFramework\PresentationFramework-System.Printing-impl-cycle.csproj
-cycle-breakers\PresentationUI\PresentationUI-PresentationFramework-impl-cycle.csproj
-cycle-breakers\ReachFramework\ReachFramework-PresentationFramework-api-cycle.csproj
-cycle-breakers\ReachFramework\ReachFramework-System.Printing-api-cycle.csproj
-cycle-breakers\System.Printing\System.Printing-PresentationFramework-api-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\PresentationFramework\PresentationFramework-PresentationUI-api-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\PresentationFramework\PresentationFramework-ReachFramework-impl-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\PresentationFramework\PresentationFramework-System.Printing-api-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\PresentationFramework\PresentationFramework-System.Printing-impl-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\PresentationUI\PresentationUI-PresentationFramework-impl-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\ReachFramework\ReachFramework-PresentationFramework-api-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\ReachFramework\ReachFramework-System.Printing-api-cycle.csproj
+src\Microsoft.DotNet.Wpf\cycle-breakers\System.Printing\System.Printing-PresentationFramework-api-cycle.csproj
 
 redist\D3DCompiler\D3DCompiler.vcxproj
 redist\PresentationNative\PresentationNative.vcxproj

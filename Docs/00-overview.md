@@ -21,8 +21,8 @@
 
 | 所在区域 | 数量 |
 |---|---:|
-| `src/` | 46 |
-| `cycle-breakers/` | 8 |
+| `src/Microsoft.DotNet.Wpf/src/` | 46 |
+| `src/Microsoft.DotNet.Wpf/cycle-breakers/` | 8 |
 | `Demo/` | 1 |
 | `Docs/` | 1 |
 | `eng/` | 3 |
