@@ -65,6 +65,7 @@ public sealed class GitHubArtifactCommentTests
         {
             CreateArtifact(2, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2"),
             CreateArtifact(1, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2"),
+            CreateArtifact(6, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-symbols"),
             CreateArtifact(3, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{HeadSha}-run-99-attempt-2"),
             CreateArtifact(4, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2", expired: true),
             CreateArtifact(5, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2", size: 0),
@@ -72,7 +73,7 @@ public sealed class GitHubArtifactCommentTests
 
         var filtered = GitHubArtifactCommentFormatter.FilterArtifacts(artifacts, 11781, 42, 2);
 
-        Assert.Equal([1L, 2L], filtered.Select(artifact => artifact.Id));
+        Assert.Equal([1L, 2L, 6L], filtered.Select(artifact => artifact.Id));
         Assert.All(filtered, artifact => Assert.Equal(TestedSha, artifact.TestedSha.ToString()));
     }
 

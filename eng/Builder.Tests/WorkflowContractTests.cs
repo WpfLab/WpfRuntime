@@ -21,8 +21,12 @@ public sealed class WorkflowContractTests
         Assert.DoesNotContain("shell:", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("run: |", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("github.event.pull_request.head.sha", workflow, StringComparison.Ordinal);
+        Assert.Equal(2, CountOccurrences(workflow, "tested/eng/Builder/bin/nupkg/*."));
+        Assert.Contains("path: tested/eng/Builder/bin/nupkg/*.nupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("path: tested/eng/Builder/bin/nupkg/*.snupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: ${{ steps.build-package.outputs.artifact-name }}-symbols", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("steps.build-package.outputs.symbol-package-path", workflow, StringComparison.Ordinal);
         Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
-        Assert.Contains("steps.build-package.outputs.symbol-package-path", workflow, StringComparison.Ordinal);
         Assert.Contains("github.run_attempt", workflow, StringComparison.Ordinal);
     }
 

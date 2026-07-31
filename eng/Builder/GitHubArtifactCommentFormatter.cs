@@ -108,7 +108,7 @@ internal static class GitHubArtifactCommentFormatter
     {
         ArgumentNullException.ThrowIfNull(artifacts);
         var pattern = new Regex(
-            $"^DotNetCampus\\.WpfLib-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}$",
+            $"^DotNetCampus\\.WpfLib-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}(?:-symbols)?$",
             RegexOptions.CultureInvariant);
         return artifacts
             .Where(artifact => artifact is not null

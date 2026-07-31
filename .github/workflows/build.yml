@@ -115,8 +115,14 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build-package.outputs.artifact-name }}
-        path: |
-          ${{ steps.build-package.outputs.package-path }}
-          ${{ steps.build-package.outputs.symbol-package-path }}
+        path: tested/eng/Builder/bin/nupkg/*.nupkg
+        if-no-files-found: error
+        retention-days: 7
+
+    - name: Upload NuGet symbol package artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.build-package.outputs.artifact-name }}-symbols
+        path: tested/eng/Builder/bin/nupkg/*.snupkg
         if-no-files-found: error
         retention-days: 7
