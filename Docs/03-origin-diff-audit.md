@@ -19,7 +19,7 @@
 - 递归排除路径中的 `bin/`、`obj/`、`artifacts/`、`TestResults/`。
 - “项目”只统计 `*.csproj`、`*.vcxproj`、`*.proj`。
 - “文件”统计排除上述输出目录后的全部普通文件，项目文件也包含在文件数中。
-- “当前仓库主要项目根”合并统计 `src/`、`cycle-breakers/`、`Demo/`、`Docs/`、`eng/`。
+- “当前仓库主要项目根”合并统计 `src/`、`Demo/`、`Docs/`、`eng/`。
 - 根解决方案统计以 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 中唯一的 `<Project Path="...">` 声明为准，不与磁盘项目数混用。
 
 ### 当前结果
@@ -27,8 +27,8 @@
 | 范围 | 项目数 | 文件数 | 说明 |
 |---|---:|---:|---|
 | `origin/src/` | 90 | 6380 | 本地来源快照 |
-| 当前主源码树 `src/` | 56 | 4980 | 不含根级 `cycle-breakers/` 等其他项目根 |
-| 当前仓库主要项目根合计 | 68 | — | 合并 `src/`、`cycle-breakers/`、`Demo/`、`Docs/`、`eng/` |
+| 当前主源码树 `src/` | 64 | 4980 | 包含 `src/Microsoft.DotNet.Wpf/cycle-breakers/` 下的 8 个桥接项目 |
+| 当前仓库主要项目根合计 | 68 | — | 合并 `src/`、`Demo/`、`Docs/`、`eng/` |
 | 根 `slnx` | 57 | — | 解决方案声明数，不代表磁盘项目总数或 IDE 加载状态 |
 
 这些数字是树状态的瞬时结果。新增、迁移、删除项目或生成文件后必须按同一口径重算，不能长期沿用旧数字，也不能仅用项目数差值推导“遗漏项目数”。
@@ -71,7 +71,7 @@
 
 ### 当前重组层
 
-- 根 `cycle-breakers/` 下的 8 个项目属于当前重组树维护的桥接层，并全部纳入根 `slnx`；它们计入 68 个磁盘项目和 57 个解决方案项目，但不计入 `src/` 的 56 个主源码项目。
+- `src/Microsoft.DotNet.Wpf/cycle-breakers/` 下的 8 个项目属于当前重组树维护的桥接层，并全部纳入根 `slnx`；它们计入 68 个磁盘项目、57 个解决方案项目以及 `src/` 的 64 个项目。
 - 各桥接项目的直接消费者、状态和退出条件见 [cycle-breaker.md](cycle-breaker.md)。结构审计不得仅凭名称判断某个桥接项目或其中某个文件与来源树的关系。
 - `System.Printing.vcxproj` 真实实现仍位于磁盘但未被根 `slnx` 直接纳管。该事实应与 cycle-breaker 的暂时桥接职责分开记录。
 

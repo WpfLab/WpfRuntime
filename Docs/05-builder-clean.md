@@ -25,9 +25,8 @@ dotnet run --project eng/Builder/Builder.csproj --no-build -- clean
 | 范围 | 行为 |
 |---|---|
 | `artifacts/` | 递归删除整个目录；无法删除的文件或目录会被保留 |
-| `src/**/bin/`、`src/**/obj/` | 在 `src/` 树中查找并递归删除名为 `bin` 或 `obj` 的目录 |
+| `src/**/bin/`、`src/**/obj/` | 在 `src/` 树中查找并递归删除名为 `bin` 或 `obj` 的目录，包括 `src/Microsoft.DotNet.Wpf/cycle-breakers/` |
 | `Demo/**/bin/`、`Demo/**/obj/` | 清理 Demo 项目的局部输出 |
-| `cycle-breakers/**/bin/`、`cycle-breakers/**/obj/` | 清理 cycle-breaker 项目的局部输出 |
 | `.vs/` | 尝试递归删除 Visual Studio 缓存 |
 | 仓库根 `*.log` | 只删除仓库根目录直接包含的日志文件，不递归搜索 |
 
@@ -42,7 +41,7 @@ Builder 自身的 `eng/Builder/bin/` 不在独立 `clean` 清单中，因此命�
 3. 尝试删除 `artifacts/` 根目录直接包含的文件。
 4. 删除 `eng/Builder/bin/staging/`；后续资产收集按需重新创建其中的目录。
 
-它会保留 `artifacts/log/` 等其他子目录，也不会扫描 `src/`、`Demo/`、`cycle-breakers/` 或 `.vs/`。因此需要更广的已知输出清理时，应显式运行 `clean`，不能把默认构建开头的清理等同于独立命令。
+它会保留 `artifacts/log/` 等其他子目录，也不会扫描 `src/`、`Demo/` 或 `.vs/`。因此需要更广的已知输出清理时，应显式运行 `clean`，不能把默认构建开头的清理等同于独立命令。
 
 ## 锁定文件和进程边界
 
