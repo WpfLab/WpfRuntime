@@ -11,6 +11,8 @@ internal readonly record struct GitObjectId
 
     public string Short => Value[..12];
 
+    public string Short6 => Value[..6];
+
     public static GitObjectId Parse(string value)
     {
         if (!TryParse(value, out var objectId))

@@ -21,6 +21,9 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
     [Option("target")]
     public required string Target { get; init; }
 
+    [Option("ref")]
+    public string? GitRef { get; init; }
+
     [Option("run-id")]
     public long? RunId { get; init; }
 
@@ -38,6 +41,7 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
             var eventPath = GitHubActionsEnvironment.GetRequired(EventPath, "GITHUB_EVENT_PATH");
             var eventName = GitHubActionsEnvironment.GetRequired(EventName, "GITHUB_EVENT_NAME");
             var trustedSha = GitHubActionsEnvironment.GetRequired(TrustedSha, "GITHUB_SHA");
+            var gitRef = GitHubActionsEnvironment.GetRequired(GitRef, "GITHUB_REF");
             var runId = GitHubActionsEnvironment.GetPositiveInt64(RunId, "GITHUB_RUN_ID");
             var runAttempt = GitHubActionsEnvironment.GetPositiveInt64(RunAttempt, "GITHUB_RUN_ATTEMPT");
             var githubOutput = string.IsNullOrWhiteSpace(GitHubOutput)
@@ -71,6 +75,8 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
                             repositoryPath,
                             metadata,
                             target,
+                            gitRef,
+                            DateTimeOffset.UtcNow,
                             runId,
                             runAttempt),
                         cancellationTokenSource.Token)

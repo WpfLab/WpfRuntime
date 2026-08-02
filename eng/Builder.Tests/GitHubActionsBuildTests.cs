@@ -31,13 +31,15 @@ public sealed class GitHubActionsBuildTests
                 metadata,
                 repositoryPath,
                 TestedSha,
+                "refs/pull/11781/merge",
+                new DateTimeOffset(2026, 3, 11, 12, 34, 56, TimeSpan.Zero),
                 runId: 42,
                 runAttempt: 3);
 
             Assert.True(metadata.IsPullRequest);
             Assert.Equal(11781, metadata.PullRequestNumber);
             Assert.Equal(SourceHeadSha, metadata.SourceHeadSha.ToString());
-            Assert.Equal("0.0.0-pr.11781.sha333333333333", identity.PackageVersion);
+            Assert.Equal("0.0.0-test.20260311123456.sha333333", identity.PackageVersion);
             Assert.Equal(
                 Path.GetFullPath(Path.Join(
                     repositoryPath,
@@ -45,7 +47,7 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "DotNetCampus.WpfLib.0.0.0-pr.11781.sha333333333333.nupkg")),
+                    "DotNetCampus.WpfLib.0.0.0-test.20260311123456.sha333333.nupkg")),
                 identity.PackagePath);
             Assert.Equal(
                 Path.GetFullPath(Path.Join(
@@ -54,7 +56,7 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "DotNetCampus.WpfLib.0.0.0-pr.11781.sha333333333333.snupkg")),
+                    "DotNetCampus.WpfLib.0.0.0-test.20260311123456.sha333333.snupkg")),
                 identity.SymbolPackagePath);
             Assert.Equal(
                 $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3",
@@ -67,23 +69,45 @@ public sealed class GitHubActionsBuildTests
     }
 
     [Fact]
-    public void PushEvent_UsesCiIdentityAndRejectsPullRequestMetadata()
+    public void BranchPushEvent_UsesPreviewIdentityAndRejectsPullRequestMetadata()
     {
         var metadata = GitHubActionsBuildMetadata.Create("push", TrustedSha, null, null);
         var identity = GitHubActionsBuildIdentity.Create(
             metadata,
             Path.GetTempPath(),
             TrustedSha,
+            "refs/heads/main",
+            new DateTimeOffset(2026, 3, 11, 12, 34, 56, TimeSpan.Zero),
             runId: 7,
             runAttempt: 1);
 
         Assert.False(metadata.IsPullRequest);
-        Assert.Equal("0.0.0-ci.sha222222222222", identity.PackageVersion);
+        Assert.Equal("0.0.0-test.20260311123456.sha222222", identity.PackageVersion);
         Assert.Equal(
             $"DotNetCampus.WpfLib-nupkg-event-push-sha-{TrustedSha}-run-7-attempt-1",
             identity.ArtifactName);
         Assert.Throws<ArgumentException>(() =>
             GitHubActionsBuildMetadata.Create("push", TrustedSha, 1, SourceHeadSha));
+    }
+
+    [Theory]
+    [InlineData("refs/tags/1.2.3", "1.2.3")]
+    [InlineData("refs/tags/v1.2.3", "1.2.3")]
+    [InlineData("refs/tags/1.0.0-alpha.1", "1.0.0-alpha.1")]
+    [InlineData("refs/tags/v1.0.0-alpha.1", "1.0.0-alpha.1")]
+    public void TagPushEvent_UsesTagAsReleaseVersion(string gitRef, string expectedVersion)
+    {
+        var metadata = GitHubActionsBuildMetadata.Create("push", TrustedSha, null, null);
+        var identity = GitHubActionsBuildIdentity.Create(
+            metadata,
+            Path.GetTempPath(),
+            TrustedSha,
+            gitRef,
+            DateTimeOffset.UtcNow,
+            runId: 7,
+            runAttempt: 1);
+
+        Assert.Equal(expectedVersion, identity.PackageVersion);
     }
 
     [Fact]

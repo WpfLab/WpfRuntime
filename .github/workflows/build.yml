@@ -3,6 +3,7 @@ name: Build WPF NuGet Package
 on:
   push:
     branches: [ main, WpfReorganize ]
+    tags: [ '*' ]
   pull_request_target:
     branches: [ main, WpfReorganize ]
   workflow_dispatch:
@@ -18,6 +19,8 @@ jobs:
   build-solution:
     runs-on: windows-latest
     timeout-minutes: 180
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout trusted Builder
@@ -61,6 +64,11 @@ jobs:
   build-package:
     runs-on: windows-latest
     timeout-minutes: 180
+    permissions:
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.build-package.outputs.artifact-name }}
+      version: ${{ steps.build-package.outputs.version }}
 
     steps:
     - name: Checkout trusted Builder
@@ -126,3 +134,40 @@ jobs:
         path: tested/eng/Builder/bin/nupkg/*.snupkg
         if-no-files-found: error
         retention-days: 7
+
+  publish-package:
+    needs: [build-solution, build-package]
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+
+    steps:
+    - name: Download NuGet package artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ needs.build-package.outputs.artifact-name }}
+        path: nupkg
+
+    - name: Download NuGet symbol package artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ needs.build-package.outputs.artifact-name }}-symbols
+        path: nupkg
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Push generated package to NuGet registries
+      shell: pwsh
+      run: |
+        $packagePath = "nupkg/DotNetCampus.WpfLib.${{ needs.build-package.outputs.version }}.nupkg"
+        if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
+          throw "Expected NuGet package was not found: $packagePath"
+        }
+        dotnet nuget push $packagePath -s https://api.nuget.org/v3/index.json -k "${{ secrets.NugetKey }}"
+        dotnet nuget push $packagePath -s "https://nuget.pkg.github.com/${{ github.repository_owner }}" --api-key "${{ secrets.GITHUB_TOKEN }}"

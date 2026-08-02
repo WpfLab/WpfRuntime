@@ -85,7 +85,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 - 本地门禁在隔离 HOME/NuGet/AppData/TEMP 环境中依次执行 Builder Restore/Build、x64/x86 构建打包、精确 nupkg `test-package` 和根 `Debug|x64` Rebuild，并校验构建前后 HEAD、tree、index 和 tracked working tree。
 - `eng/Builder.Tests` 与 `eng/Builder.ProcessTestHelper` 已纳入根 `slnx`；单元、进程和本地 bare repository 集成测试覆盖 URL/remote 解析、敏感环境、取消/超时、PR ref fallback、纯 Patch 应用与冲突、精确 SHA push、lease 竞争、GitHub Actions 事件/身份、artifact 评论格式、workflow 安全契约和 checkout 换行保持契约。
 - Builder 已注册 `ci-build` 与 `comment-pr-artifacts` 命令，将 GitHub Actions 中的 checkout 凭据检查、事件/merge 身份校验、版本与 artifact 计算、构建/打包门禁、workflow run/artifact 查询及幂等评论迁入 C#。
-- `.github/workflows/build.yml` 使用只读 `pull_request_target`，分别 checkout `github.sha` 的受信任 Builder 与 PR merge ref，再由受信任 Builder 构建 tested checkout；`.github/workflows/comment-pr-build-artifacts.yml` 只 checkout `github.sha` 的受信任 Builder，不 checkout PR 或下载 artifact，并通过 Octokit 回写 bot 评论。
+- `.github/workflows/build.yml` 使用 `pull_request_target`，分别 checkout `github.sha` 的受信任 Builder 与 PR merge ref，再由仅具只读权限的 Job 构建 tested checkout；成功生成的 `-test.*` NuGet 包由不 checkout、也不执行 PR 内容的独立 Job 下载并推送到 NuGet.org 与 GitHub Packages。Tag 包保留 Tag 的完整语义版本（可选移除 `v` 前缀）。`.github/workflows/comment-pr-build-artifacts.yml` 只 checkout `github.sha` 的受信任 Builder，不 checkout PR 或下载 artifact，并通过 Octokit 回写 bot 评论。
 - arm64 尚未实现。
 
 ### WpfDemo
