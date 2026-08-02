@@ -423,7 +423,7 @@ InputValidated
 
 GitHub Actions 部分拆为两个安全主体：
 
-1. **受信任编排的构建工作流**：处理 `pull_request_target`，分别 checkout base `github.sha` 的受信任 Builder 和 PR 测试合并 ref；由受信任 Builder 复核 tested checkout 后再执行不可信代码。工作流只授予只读权限，不持有评论权限或仓库 secrets。
+1. **受信任编排的构建工作流**：处理 `pull_request_target`，分别 checkout base `github.sha` 的受信任 Builder和 PR 测试合并 ref；由受信任 Builder 复核 tested checkout 后再执行不可信代码。执行 tested 内容的 Job 只授予只读权限且不持有 secrets；包发布位于全新的隔离 Job，只下载构建产物，不 checkout 或执行 PR 内容。
 2. **回写工作流**：处理构建工作流的 `workflow_run: completed`，在默认分支的受信任上下文中 checkout `github.sha` 的 Builder，再只读取 run/artifact 元数据并评论 PR；不 checkout PR，不下载 artifact，不执行 artifact 内容。
 
 这种拆分让同仓库和 fork PR 都使用默认分支定义的只读构建编排，同时让构建完成后的评论拥有最小写权限。
@@ -432,22 +432,26 @@ GitHub Actions 部分拆为两个安全主体：
 
 不能直接依赖普通 `pull_request` 从 PR 测试合并提交加载的 workflow 定义建立权限边界。Builder 搬运命令会把外部代码推到目标仓库内的 `t/bot/*` 分支；GitHub 会把它视为同仓库 PR，而这些不可信提交可以同时修改 `.github/workflows/build.yml`。仅在可被 PR 修改的 YAML 中写 `permissions: contents: read`，不能证明攻击者无法替换该声明或增加其他 job。
 
-首版因此使用 `pull_request_target` 取得 base 分支中的受信任 workflow 定义，但把它严格限制为“只读 Token、零 secrets、GitHub-hosted 临时 runner、显式 checkout 不可信测试合并 ref”的构建入口。若仓库或组织无法强制这些限制，应改用独立构建仓库、GitHub App 或其他隔离安全主体，不执行同仓库搬运 PR。
+因此使用 `pull_request_target` 取得 base 分支中的受信任 workflow 定义。执行不可信测试合并 ref 的 Job 严格限制为“只读 Token、零 secrets、GitHub-hosted 临时 runner”；发布 Job 使用另一个临时 runner，只下载 nupkg/snupkg artifact 并调用 `dotnet nuget push`，不 checkout 或执行 PR 内容。若仓库或组织无法强制这些边界，应改用独立构建仓库、GitHub App 或其他隔离安全主体，不执行同仓库搬运 PR。
 
 在现有 `.github/workflows/build.yml` 基础上调整，而不是增加一套重复构建：
 
 - 把 PR 入口改为 `pull_request_target`，保留对 `main` 和 `WpfReorganize` 的 base 过滤；这里的“任何人”指任意贡献者或 fork，不改变仓库当前受支持的 base 范围。
-- workflow 顶层显式设置 `permissions: contents: read`，其他权限为 `none`，并在仓库或组织设置中把 `GITHUB_TOKEN` 默认权限强制为只读。
-- 每个 job 先把 `github.sha` checkout 到 `trusted/`，再把 `refs/pull/<number>/merge` 显式 checkout 到 `tested/`；merge ref 不存在时失败并报告不可合并状态，不退化为只构建 base。
+- workflow 顶层显式设置 `permissions: contents: read`；两个执行 tested 内容的构建 Job 也显式保持 `contents: read`。独立发布 Job 仅增加下载 artifact 所需的 `actions: read` 与推送 GitHub Packages 所需的 `packages: write`。
+- 每个构建 Job 先把 `github.sha` checkout 到 `trusted/`，再把 `refs/pull/<number>/merge` 显式 checkout 到 `tested/`；merge ref 不存在时失败并报告不可合并状态，不退化为只构建 base。
 - 两个 `actions/checkout` 都设置 `persist-credentials: false`；受信任 `ci-build` 命令检查 tested checkout 的 `.git/config` 与 remote URL 不含凭据。
-- workflow 不引用任何 Actions secret、environment secret 或 OIDC，不把 `github.token` 传入构建环境。
-- 不向 `t/bot/*` 等搬运分支的 PR 提供 Actions secrets；同仓库来源不能被视为可信代码。
+- 构建 Job 不引用任何 Actions secret、environment secret 或 OIDC，也不把 `github.token` 传入构建环境。
+- 发布 Job 使用 `NugetKey` 和独立 runner 的 `GITHUB_TOKEN` 推送已经构建并测试成功的包；这些密钥不进入构建 Job，也不与执行 tested 内容的进程共享 runner。
+- `t/bot/*` 等搬运分支仍视为不可信代码，只能通过固定的 `-test.*` 版本发布测试包。
 - 不调用来自 PR checkout 目录的 local action 或安全编排器；第三方 action 固定到经过审计的完整 commit SHA。
 - 只使用 GitHub-hosted 临时 runner，不在持久化 self-hosted runner 上执行不可信 PR。
-- 不授予 OIDC、packages、contents、actions 或其他写权限。
+- 构建 Job 不授予 OIDC、packages、contents、actions 或其他写权限；发布 Job 仅按前述范围授予 `packages: write`。
 - 不为不可信 PR 恢复可被其他安全上下文消费的可写缓存。
 - 根解决方案 job 和 Builder/package-test job 均由 `trusted/eng/Builder` 中构建出的 `ci-build` 命令驱动，两个 job 均成功时 workflow 才是 success。
-- NuGet artifact 只在 Builder 与 `test-package` 成功后上传。
+- NuGet artifact 只在 Builder 与 `test-package` 成功后上传；发布 Job 同时依赖根解决方案构建和包构建，任一门禁失败均不发布。
+- 每个成功的 PR 构建都以 `0.0.0-test.<UTC 时间到秒>.sha<tested SHA 前 6 位>` 版本推送到 NuGet.org 与 GitHub Packages；分支和手动构建继续使用该测试版本格式。
+- 发布 Job 只接受受信任 Builder 输出版本所对应的 `DotNetCampus.WpfLib.<version>.nupkg`，不使用通配符推送 artifact 中可能存在的额外包。
+- Tag 构建直接使用 Tag 的完整语义版本，可选移除数字版本前的 `v`；例如 `1.0.0`、`v1.0.0`、`1.0.0-alpha.1` 和 `v1.0.0-alpha.1`。
 - `if-no-files-found` 从 `warn` 改为 `error`，避免 workflow success 但没有包。
 - artifact 名加入 PR 编号、tested SHA、run ID 和 run attempt，避免来源混淆和 rerun 名称冲突。
 - artifact 保留期使用仓库策略或显式配置，并由回写工作流读取 API 返回的 `expires_at` 展示。
@@ -564,7 +568,7 @@ workflow 失败、取消或成功但无有效 nupkg artifact 时，也更新同�
 
 ### 为什么此处受限使用 `pull_request_target`
 
-通常不应在 `pull_request_target` 中 checkout 并执行 PR 代码，因为该事件可访问 base 仓库的受信任上下文。这里使用它的唯一原因，是 `t/bot/*` 属于同仓库但内容不可信，普通 `pull_request` 会允许该提交替换构建 workflow。该例外必须与只读 Token、零 secrets、无 OIDC、无持久化凭据、无可写缓存、无 self-hosted runner 和固定第三方 action SHA 同时成立；任何后续修改若需要写权限或 secret，必须移到独立受信任工作流，不能加入构建 job。
+通常不应在 `pull_request_target` 中 checkout 并执行 PR 代码，因为该事件可访问 base 仓库的受信任上下文。这里使用它的唯一原因，是 `t/bot/*` 属于同仓库但内容不可信，普通 `pull_request` 会允许该提交替换构建 workflow。执行 tested 内容的 Job 必须同时保持只读 Token、零 secrets、无 OIDC、无持久化凭据、无可写缓存、无 self-hosted runner 和固定第三方 action 版本；需要写权限或 secret 的 NuGet 发布只能位于不 checkout、不执行 tested 内容且使用全新 runner 的隔离 Job。
 
 ### 为什么回写工作流不下载 artifact
 

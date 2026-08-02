@@ -50,6 +50,8 @@ internal sealed class GitHubActionsBuildService
             options.Metadata,
             repositoryPath,
             testedSha.ToString(),
+            options.GitRef,
+            options.BuildTime,
             options.RunId,
             options.RunAttempt);
         LogIdentity(options.Metadata, identity);
