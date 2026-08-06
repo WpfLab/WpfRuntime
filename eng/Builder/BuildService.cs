@@ -8,7 +8,7 @@ internal static class BuildService
     {
 var startTime = Stopwatch.GetTimestamp();
 
-Log.Info("=== DotNetCampus.WpfLib Builder ===");
+Log.Info($"=== {PackageMetadata.Id} Builder ===");
 Log.Info($"Repo root: {context.RepoRoot}");
 
 // ---- Step 1: Clean artifacts ----

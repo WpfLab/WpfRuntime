@@ -47,7 +47,7 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "DotNetCampus.WpfLib.0.0.0-test.20260311123456.sha333333.nupkg")),
+                    "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.nupkg")),
                 identity.PackagePath);
             Assert.Equal(
                 Path.GetFullPath(Path.Join(
@@ -56,10 +56,10 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "DotNetCampus.WpfLib.0.0.0-test.20260311123456.sha333333.snupkg")),
+                    "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.snupkg")),
                 identity.SymbolPackagePath);
             Assert.Equal(
-                $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3",
+                $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3-version-0.0.0-test.20260311123456.sha333333",
                 identity.ArtifactName);
         }
         finally
@@ -84,7 +84,7 @@ public sealed class GitHubActionsBuildTests
         Assert.False(metadata.IsPullRequest);
         Assert.Equal("0.0.0-test.20260311123456.sha222222", identity.PackageVersion);
         Assert.Equal(
-            $"DotNetCampus.WpfLib-nupkg-event-push-sha-{TrustedSha}-run-7-attempt-1",
+            $"WpfLab.WpfRuntime-nupkg-event-push-sha-{TrustedSha}-run-7-attempt-1-version-0.0.0-test.20260311123456.sha222222",
             identity.ArtifactName);
         Assert.Throws<ArgumentException>(() =>
             GitHubActionsBuildMetadata.Create("push", TrustedSha, 1, SourceHeadSha));

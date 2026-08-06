@@ -39,10 +39,10 @@ internal sealed record GitHubActionsBuildIdentity(
             "Builder",
             "bin",
             "nupkg",
-            $"DotNetCampus.WpfLib.{packageVersion}.nupkg"));
+            $"{PackageMetadata.Id}.{packageVersion}.nupkg"));
         var symbolPackagePath = Path.ChangeExtension(packagePath, ".snupkg");
         var artifactName =
-            $"DotNetCampus.WpfLib-nupkg-{artifactIdentity}-sha-{parsedTestedSha}-run-{runId}-attempt-{runAttempt}";
+            $"{PackageMetadata.Id}-nupkg-{artifactIdentity}-sha-{parsedTestedSha}-run-{runId}-attempt-{runAttempt}-version-{packageVersion}";
 
         return new GitHubActionsBuildIdentity(
             parsedTestedSha,

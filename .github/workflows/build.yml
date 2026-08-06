@@ -114,7 +114,7 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v7
       with:
-        name: DotNetCampus.WpfLib-package-tests-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+        name: WpfLab.WpfRuntime-package-tests-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
         path: tested/eng/Builder/bin/package-tests
         if-no-files-found: warn
         retention-days: 7
@@ -165,7 +165,7 @@ jobs:
     - name: Push generated package to NuGet registries
       shell: pwsh
       run: |
-        $packagePath = "nupkg/DotNetCampus.WpfLib.${{ needs.build-package.outputs.version }}.nupkg"
+        $packagePath = "nupkg/WpfLab.WpfRuntime.${{ needs.build-package.outputs.version }}.nupkg"
         if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
           throw "Expected NuGet package was not found: $packagePath"
         }

@@ -99,7 +99,7 @@ internal sealed class LocalBuildValidationService
         Directory.CreateDirectory(nupkgDirectory);
 
         var version = $"0.0.0-pr.{source.Address.Number}.sha{source.HeadSha.Short}";
-        var packagePath = Path.Join(nupkgDirectory, $"DotNetCampus.WpfLib.{version}.nupkg");
+        var packagePath = Path.Join(nupkgDirectory, $"{PackageMetadata.Id}.{version}.nupkg");
         var environment = ProcessEnvironment.CreateUntrustedBuildEnvironment(workspace.IsolatedHomePath);
         await RunGateAsync(
             "restore-builder",

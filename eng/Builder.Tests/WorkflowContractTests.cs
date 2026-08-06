@@ -32,7 +32,7 @@ public sealed class WorkflowContractTests
         Assert.Contains("    permissions:\n      actions: read\n      contents: read\n      packages: write", normalized, StringComparison.Ordinal);
         Assert.Equal(2, CountOccurrences(workflow, "uses: actions/download-artifact@v7"));
         Assert.Contains("name: ${{ needs.build-package.outputs.artifact-name }}", workflow, StringComparison.Ordinal);
-        Assert.Contains("$packagePath = \"nupkg/DotNetCampus.WpfLib.${{ needs.build-package.outputs.version }}.nupkg\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("$packagePath = \"nupkg/WpfLab.WpfRuntime.${{ needs.build-package.outputs.version }}.nupkg\"", workflow, StringComparison.Ordinal);
         Assert.Contains("dotnet nuget push $packagePath -s https://api.nuget.org/v3/index.json -k \"${{ secrets.NugetKey }}\"", workflow, StringComparison.Ordinal);
         Assert.Contains("dotnet nuget push $packagePath -s \"https://nuget.pkg.github.com/${{ github.repository_owner }}\" --api-key \"${{ secrets.GITHUB_TOKEN }}\"", workflow, StringComparison.Ordinal);
         var publishJobIndex = normalized.IndexOf("\n  publish-package:", StringComparison.Ordinal);

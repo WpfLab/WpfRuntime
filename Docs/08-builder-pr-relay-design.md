@@ -58,7 +58,7 @@ Builder 应完成以下动作：
 ## 已确认的当前基础
 
 - `eng/Builder/Builder.csproj` 是 `net8.0` 控制台项目，当前注册默认构建、`clean`、`compare`、`test-package` 和 `relay-pr` 命令。
-- 默认 Builder 构建会构建 x64/x86、收集程序集与 native 资产、生成 `DotNetCampus.WpfLib` NuGet 包，并在项目构建不完整时返回非零退出码。
+- 默认 Builder 构建会构建 x64/x86、收集程序集与 native 资产、生成 `WpfLab.WpfRuntime` NuGet 包，并在项目构建不完整时返回非零退出码。
 - `test-package` 会对 net8.0/net9.0 与 win-x86/win-x64 组合执行隔离 Publish、哈希校验和运行探针。
 - `.github/workflows/build.yml` 使用只读 `pull_request_target` 受信任定义，将 `github.sha` 的 Builder 与 PR merge ref 分别 checkout 到 `trusted/` 和 `tested/`，再由受信任 C# 命令校验并构建 tested checkout；`.github/workflows/comment-pr-build-artifacts.yml` 在 `workflow_run` 受信任上下文中只 checkout `github.sha` 的 Builder、读取元数据并回写 PR 评论。
 - 当前仓库有多个远端，因此不能用“列表中的第一个 GitHub 远端”猜测目标仓库。命令使用显式目标 remote，默认值为 `origin`。
@@ -450,7 +450,7 @@ GitHub Actions 部分拆为两个安全主体：
 - 根解决方案 job 和 Builder/package-test job 均由 `trusted/eng/Builder` 中构建出的 `ci-build` 命令驱动，两个 job 均成功时 workflow 才是 success。
 - NuGet artifact 只在 Builder 与 `test-package` 成功后上传；发布 Job 同时依赖根解决方案构建和包构建，任一门禁失败均不发布。
 - 每个成功的 PR 构建都以 `0.0.0-test.<UTC 时间到秒>.sha<tested SHA 前 6 位>` 版本推送到 NuGet.org 与 GitHub Packages；分支和手动构建继续使用该测试版本格式。
-- 发布 Job 只接受受信任 Builder 输出版本所对应的 `DotNetCampus.WpfLib.<version>.nupkg`，不使用通配符推送 artifact 中可能存在的额外包。
+- 发布 Job 只接受受信任 Builder 输出版本所对应的 `WpfLab.WpfRuntime.<version>.nupkg`，不使用通配符推送 artifact 中可能存在的额外包。
 - Tag 构建直接使用 Tag 的完整语义版本，可选移除数字版本前的 `v`；例如 `1.0.0`、`v1.0.0`、`1.0.0-alpha.1` 和 `v1.0.0-alpha.1`。
 - `if-no-files-found` 从 `warn` 改为 `error`，避免 workflow success 但没有包。
 - artifact 名加入 PR 编号、tested SHA、run ID 和 run attempt，避免来源混淆和 rerun 名称冲突。
@@ -460,7 +460,7 @@ GitHub Actions 部分拆为两个安全主体：
 建议 artifact 名：
 
 ```text
-DotNetCampus.WpfLib-nupkg-pr-<pr-number>-sha-<tested-sha>-run-<run-id>-attempt-<run-attempt>
+WpfLab.WpfRuntime-nupkg-pr-<pr-number>-sha-<tested-sha>-run-<run-id>-attempt-<run-attempt>-version-<package-version>
 ```
 
 在 `pull_request_target` 中，`github.sha` 是 base 分支提交，不是被构建提交。受信任 `ci-build` 命令从事件文件读取贡献者 head SHA，从 tested checkout 读取 merge SHA，并要求该 merge commit 恰好以 `github.sha` 和贡献者 head SHA 为两个有序双亲；包版本与 artifact 名使用 tested merge SHA，三者不能混用。
@@ -505,7 +505,7 @@ on:
 
 回写工作流通过 Actions API 分页读取当前 run 的 artifacts，并只选择：
 
-- 名称符合 `DotNetCampus.WpfLib-nupkg-` 前缀。
+- 名称符合 `WpfLab.WpfRuntime-nupkg-` 前缀，并包含 `-version-<package-version>` 后缀以生成已发布 NuGet 链接。
 - `Expired == false`。
 - 大小大于零。
 

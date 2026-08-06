@@ -12,7 +12,7 @@ internal sealed class TestPackageCommand : ICommandHandler
     public Task<int> RunAsync()
     {
         var context = BuilderContext.Create();
-        Log.Info("=== DotNetCampus.WpfLib Builder — Package Test Mode ===");
+        Log.Info($"=== {PackageMetadata.Id} Builder — Package Test Mode ===");
         Log.Info($"Repo root: {context.RepoRoot}");
         return Task.FromResult(PackageTestService.Run(context, Package));
     }
