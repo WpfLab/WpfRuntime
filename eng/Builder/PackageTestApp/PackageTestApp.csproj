@@ -8,6 +8,6 @@
 	<AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-	<PackageReference Include="DotNetCampus.WpfLib" Version="0.0.0-package-test" />
+	<PackageReference Include="WpfLab.WpfRuntime" Version="0.0.0-package-test" />
   </ItemGroup>
 </Project>

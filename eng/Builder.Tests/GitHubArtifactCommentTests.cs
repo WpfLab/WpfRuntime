@@ -63,18 +63,19 @@ public sealed class GitHubArtifactCommentTests
     {
         var artifacts = new[]
         {
-            CreateArtifact(2, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2"),
-            CreateArtifact(1, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2"),
-            CreateArtifact(6, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-symbols"),
-            CreateArtifact(3, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{HeadSha}-run-99-attempt-2"),
-            CreateArtifact(4, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2", expired: true),
-            CreateArtifact(5, $"DotNetCampus.WpfLib-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2", size: 0),
+            CreateArtifact(2, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222"),
+            CreateArtifact(1, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222"),
+            CreateArtifact(6, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222-symbols"),
+            CreateArtifact(3, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-99-attempt-2-version-0.0.0-test.20260311123456.sha111111"),
+            CreateArtifact(4, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha111111", expired: true),
+            CreateArtifact(5, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha111111", size: 0),
         };
 
         var filtered = GitHubArtifactCommentFormatter.FilterArtifacts(artifacts, 11781, 42, 2);
 
         Assert.Equal([1L, 2L, 6L], filtered.Select(artifact => artifact.Id));
         Assert.All(filtered, artifact => Assert.Equal(TestedSha, artifact.TestedSha.ToString()));
+        Assert.All(filtered, artifact => Assert.Equal("0.0.0-test.20260311123456.sha222222", artifact.PackageVersion));
     }
 
     [Fact]
@@ -94,7 +95,8 @@ public sealed class GitHubArtifactCommentTests
                     "package@team[debug]",
                     1536,
                     DateTime.Parse("2025-02-03T04:05:06Z").ToUniversalTime(),
-                    GitObjectId.Parse(TestedSha)),
+                    GitObjectId.Parse(TestedSha),
+                    "0.0.0-test.20260311123456.sha222222"),
             ]);
 
         Assert.True(content.HasValidSuccessArtifacts);
@@ -103,6 +105,7 @@ public sealed class GitHubArtifactCommentTests
         Assert.Contains("<!-- wpf-nuget-artifacts-run id=42 attempt=2 -->", content.Body, StringComparison.Ordinal);
         Assert.Contains("## WPF NuGet Build", content.Body, StringComparison.Ordinal);
         Assert.Contains("- Result: Succeeded", content.Body, StringComparison.Ordinal);
+        Assert.Contains("- Published NuGet: [WpfLab.WpfRuntime 0.0.0-test.20260311123456.sha222222](https://www.nuget.org/packages/WpfLab.WpfRuntime/0.0.0-test.20260311123456.sha222222)", content.Body, StringComparison.Ordinal);
         Assert.Contains("package@\u200bteam\\[debug\\]", content.Body, StringComparison.Ordinal);
         Assert.Contains("1.5 KiB", content.Body, StringComparison.Ordinal);
         Assert.Contains("actions/runs/42/artifacts/7", content.Body, StringComparison.Ordinal);
@@ -123,8 +126,8 @@ public sealed class GitHubArtifactCommentTests
             2,
             "success",
             [
-                new GitHubArtifactCommentItem(1, "one", 1, DateTime.UtcNow, GitObjectId.Parse(TestedSha)),
-                new GitHubArtifactCommentItem(2, "two", 1, DateTime.UtcNow, GitObjectId.Parse(HeadSha)),
+                new GitHubArtifactCommentItem(1, "one", 1, DateTime.UtcNow, GitObjectId.Parse(TestedSha), "1.0.0"),
+                new GitHubArtifactCommentItem(2, "two", 1, DateTime.UtcNow, GitObjectId.Parse(HeadSha), "1.0.0"),
             ]);
 
         Assert.False(content.HasValidSuccessArtifacts);

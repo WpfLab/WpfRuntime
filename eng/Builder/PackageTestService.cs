@@ -335,8 +335,8 @@ static PackageTestProject CreatePackageTestProject(
 
     var packageReference = document
         .Descendants("PackageReference")
-        .SingleOrDefault(element => string.Equals((string?)element.Attribute("Include"), "DotNetCampus.WpfLib", StringComparison.Ordinal))
-        ?? throw new InvalidOperationException($"Package test project does not reference DotNetCampus.WpfLib: {projectPath}");
+        .SingleOrDefault(element => string.Equals((string?)element.Attribute("Include"), PackageMetadata.Id, StringComparison.Ordinal))
+        ?? throw new InvalidOperationException($"Package test project does not reference {PackageMetadata.Id}: {projectPath}");
     packageReference.SetAttributeValue("Version", packageVersion);
     document.Save(projectPath);
 
@@ -381,9 +381,9 @@ static string ResolvePackagePath(string nupkgOutputDir, string? packageArg)
     if (!Directory.Exists(nupkgOutputDir))
         throw new DirectoryNotFoundException($"NuGet package output directory not found: {nupkgOutputDir}");
 
-    return Directory.GetFiles(nupkgOutputDir, "DotNetCampus.WpfLib.*.nupkg")
+    return Directory.GetFiles(nupkgOutputDir, $"{PackageMetadata.Id}.*.nupkg")
         .OrderByDescending(File.GetLastWriteTimeUtc)
         .FirstOrDefault()
-        ?? throw new InvalidOperationException($"No DotNetCampus.WpfLib package found in {nupkgOutputDir}");
+        ?? throw new InvalidOperationException($"No {PackageMetadata.Id} package found in {nupkgOutputDir}");
 }
 }

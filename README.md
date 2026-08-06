@@ -18,7 +18,7 @@ msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x6
 dotnet run --project eng/Builder/Builder.csproj -- --version 1.0.0-local
 ```
 
-The generated `DotNetCampus.WpfLib` package is written to `eng/Builder/bin/nupkg/`.
+The generated `WpfLab.WpfRuntime` package is written to `eng/Builder/bin/nupkg/`.
 
 ## Relay an Existing Pull Request
 

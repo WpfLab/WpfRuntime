@@ -125,19 +125,19 @@ public static string GenerateNuspec(
         }
     }
 
-    files.AppendLine("    <file src=\"buildTransitive\\DotNetCampus.WpfLib.targets\" target=\"buildTransitive\\DotNetCampus.WpfLib.targets\" />");
+    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\\{PackageMetadata.Id}.targets\" />");
 
     var nuspecContent = $$"""
         <?xml version="1.0" encoding="utf-8"?>
         <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
           <metadata>
-            <id>DotNetCampus.WpfLib</id>
+            <id>{{PackageMetadata.Id}}</id>
             <version>{{version}}</version>
-            <authors>dotnet campus</authors>
+            <authors>WpfLab</authors>
             <description>Custom-built WPF managed assemblies and native runtimes.</description>
-            <copyright>dotnet campus</copyright>
+            <copyright>WpfLab</copyright>
             <license type="expression">MIT</license>
-            <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>
+            <projectUrl>{{PackageMetadata.ProjectUrl}}</projectUrl>
             <tags>WPF WindowsDesktop</tags>
             <dependencies>
         {{dependencyGroups}}    </dependencies>
@@ -146,7 +146,7 @@ public static string GenerateNuspec(
         {{files}}  </files>
         </package>
         """ + Environment.NewLine;
-    var nuspecPath = Path.Join(stagingDir, "DotNetCampus.WpfLib.nuspec");
+    var nuspecPath = Path.Join(stagingDir, $"{PackageMetadata.Id}.nuspec");
     File.WriteAllText(nuspecPath, nuspecContent);
     Log.Info($"  .nuspec generated: {nuspecPath}");
     return nuspecPath;
@@ -174,20 +174,20 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
         <?xml version="1.0" encoding="utf-8"?>
         <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
           <metadata>
-            <id>DotNetCampus.WpfLib</id>
+            <id>{{PackageMetadata.Id}}</id>
             <version>{{version}}</version>
-            <authors>dotnet campus</authors>
-            <description>Portable symbols for DotNetCampus.WpfLib.</description>
-            <copyright>dotnet campus</copyright>
+            <authors>WpfLab</authors>
+            <description>Portable symbols for {{PackageMetadata.Id}}.</description>
+            <copyright>WpfLab</copyright>
             <license type="expression">MIT</license>
-            <projectUrl>https://github.com/dotnet-campus/wpf</projectUrl>
+            <projectUrl>{{PackageMetadata.ProjectUrl}}</projectUrl>
             <tags>WPF WindowsDesktop symbols</tags>
           </metadata>
           <files>
         {{files}}  </files>
         </package>
         """ + Environment.NewLine;
-    var nuspecPath = Path.Join(stagingDir, "DotNetCampus.WpfLib.symbols.nuspec");
+    var nuspecPath = Path.Join(stagingDir, $"{PackageMetadata.Id}.symbols.nuspec");
     File.WriteAllText(nuspecPath, nuspecContent);
     Log.Info($"  Symbol .nuspec generated: {nuspecPath}");
     return nuspecPath;
@@ -197,7 +197,7 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
 {
     var targetsDir = Path.Join(stagingDir, "buildTransitive");
     Directory.CreateDirectory(targetsDir);
-    var targetsPath = Path.Join(targetsDir, "DotNetCampus.WpfLib.targets");
+    var targetsPath = Path.Join(targetsDir, $"{PackageMetadata.Id}.targets");
     var content = """
         <Project>
           <ItemGroup>
@@ -243,12 +243,12 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
         </Project>
         """;
     File.WriteAllText(targetsPath, content);
-    Log.Info("  buildTransitive/DotNetCampus.WpfLib.targets");
+    Log.Info($"  buildTransitive/{PackageMetadata.Id}.targets");
 }
 
 public static void ValidatePackageAssets(string stagingDir)
 {
-    RequirePackageFile(Path.Join(stagingDir, "buildTransitive", "DotNetCampus.WpfLib.targets"));
+    RequirePackageFile(Path.Join(stagingDir, "buildTransitive", $"{PackageMetadata.Id}.targets"));
 
     var requiredReferenceAssemblies = new[]
     {

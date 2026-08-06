@@ -10,7 +10,8 @@ internal sealed record GitHubArtifactCommentItem(
     string Name,
     int SizeInBytes,
     DateTime ExpiresAt,
-    GitObjectId TestedSha);
+    GitObjectId TestedSha,
+    string PackageVersion);
 
 internal sealed record GitHubArtifactCommentContent(
     string Marker,
@@ -78,6 +79,14 @@ internal static class GitHubArtifactCommentFormatter
 
         if (hasValidSuccessArtifacts)
         {
+            var packageVersions = artifacts.Select(artifact => artifact.PackageVersion).Distinct(StringComparer.Ordinal).ToArray();
+            if (packageVersions.Length == 1)
+            {
+                var packageVersion = packageVersions[0];
+                var packageUrl = $"https://www.nuget.org/packages/{PackageMetadata.Id}/{Uri.EscapeDataString(packageVersion)}";
+                body.Add($"- Published NuGet: [{PackageMetadata.Id} {packageVersion}]({packageUrl})");
+            }
+
             foreach (var artifact in artifacts.Take(MaxArtifacts))
             {
                 var artifactUrl = $"{runUrl}/artifacts/{artifact.Id}";
@@ -108,13 +117,13 @@ internal static class GitHubArtifactCommentFormatter
     {
         ArgumentNullException.ThrowIfNull(artifacts);
         var pattern = new Regex(
-            $"^DotNetCampus\\.WpfLib-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}(?:-symbols)?$",
+            $"^{Regex.Escape(PackageMetadata.Id)}-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}-version-([0-9A-Za-z.+-]+?)(?:-symbols)?$",
             RegexOptions.CultureInvariant);
         return artifacts
             .Where(artifact => artifact is not null
                 && !artifact.Expired
                 && artifact.SizeInBytes > 0
-                && artifact.Name?.StartsWith("DotNetCampus.WpfLib-nupkg-", StringComparison.Ordinal) == true)
+                && artifact.Name?.StartsWith($"{PackageMetadata.Id}-nupkg-", StringComparison.Ordinal) == true)
             .Select(artifact => (Artifact: artifact, Match: pattern.Match(artifact.Name)))
             .Where(item => item.Match.Success)
             .Select(item => new GitHubArtifactCommentItem(
@@ -122,7 +131,8 @@ internal static class GitHubArtifactCommentFormatter
                 item.Artifact.Name,
                 item.Artifact.SizeInBytes,
                 item.Artifact.ExpiresAt,
-                GitObjectId.Parse(item.Match.Groups[1].Value)))
+                GitObjectId.Parse(item.Match.Groups[1].Value),
+                item.Match.Groups[2].Value))
             .OrderBy(item => item.Id)
             .ToArray();
     }
