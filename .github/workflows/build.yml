@@ -143,6 +143,7 @@ jobs:
       actions: read
       contents: read
       packages: write
+      id-token: write  # enable GitHub OIDC token issuance for this job
 
     steps:
     - name: Download NuGet package artifact
@@ -157,6 +158,14 @@ jobs:
         name: ${{ needs.build-package.outputs.artifact-name }}-symbols
         path: nupkg
 
+    # Get a short-lived NuGet API key
+    - name: NuGet login (OIDC → temp API key)
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: lindexi # Recommended: use a secret like ${{ secrets.NUGET_USER }} for your nuget.org username (profile name), NOT your email address
+    
+
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v6
       with:
@@ -169,5 +178,5 @@ jobs:
         if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
           throw "Expected NuGet package was not found: $packagePath"
         }
-        dotnet nuget push $packagePath -s https://api.nuget.org/v3/index.json -k "${{ secrets.NugetKey }}"
+        dotnet nuget push $packagePath -s https://api.nuget.org/v3/index.json -api-key ${{steps.login.outputs.NUGET_API_KEY}}
         dotnet nuget push $packagePath -s "https://nuget.pkg.github.com/${{ github.repository_owner }}" --api-key "${{ secrets.GITHUB_TOKEN }}"
