@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
 
@@ -84,8 +85,17 @@ public static void CopyIjwHostFromPackage(Dictionary<string, string> packagePath
 public static string GenerateNuspec(
     string stagingDir,
     string version,
-    IReadOnlyList<PackageDependency> runtimePackageDependencies)
+    IReadOnlyList<PackageDependency> runtimePackageDependencies,
+    string readmePath)
 {
+    if (!File.Exists(readmePath))
+    {
+        throw new FileNotFoundException("Package README file was not found", readmePath);
+    }
+
+    const string packageReadmeFileName = "README.md";
+    File.Copy(readmePath, Path.Join(stagingDir, packageReadmeFileName), overwrite: true);
+
     var referenceDir = Path.Join(stagingDir, "ref", "net8.0");
     var referenceFiles = Directory.Exists(referenceDir)
         ? Directory.GetFiles(referenceDir, "*.dll").Select(Path.GetFileName).OrderBy(x => x).ToList()
@@ -126,6 +136,7 @@ public static string GenerateNuspec(
     }
 
     files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\\{PackageMetadata.Id}.targets\" />");
+    files.AppendLine($"    <file src=\"{packageReadmeFileName}\" target=\"{packageReadmeFileName}\" />");
 
     var nuspecContent = $$"""
         <?xml version="1.0" encoding="utf-8"?>
@@ -138,6 +149,7 @@ public static string GenerateNuspec(
             <copyright>WpfLab</copyright>
             <license type="expression">MIT</license>
             <projectUrl>{{PackageMetadata.ProjectUrl}}</projectUrl>
+            <readme>{{packageReadmeFileName}}</readme>
             <tags>WPF WindowsDesktop</tags>
             <dependencies>
         {{dependencyGroups}}    </dependencies>
@@ -161,13 +173,19 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
         foreach (var file in Directory.GetFiles(runtimeLibDir, "*.pdb").OrderBy(Path.GetFileName))
         {
             var fileName = Path.GetFileName(file);
+            if (!IsPortablePdb(file))
+            {
+                Log.Info($"  Excluding non-portable PDB from symbol package: runtimes/{rid}/lib/net8.0/{fileName}");
+                continue;
+            }
+
             files.AppendLine($"    <file src=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" target=\"runtimes\\{rid}\\lib\\net8.0\\{fileName}\" />");
         }
     }
 
     if (files.Length == 0)
     {
-        throw new InvalidOperationException("No PDB files were found for the symbol package");
+        throw new InvalidOperationException("No portable PDB files were found for the symbol package");
     }
 
     var nuspecContent = $$"""
@@ -182,6 +200,9 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
             <license type="expression">MIT</license>
             <projectUrl>{{PackageMetadata.ProjectUrl}}</projectUrl>
             <tags>WPF WindowsDesktop symbols</tags>
+            <packageTypes>
+              <packageType name="SymbolsPackage" />
+            </packageTypes>
           </metadata>
           <files>
         {{files}}  </files>
@@ -324,6 +345,34 @@ public static string PackNuGet(string nuspecPath, string outputDir)
     return nupkgPath;
 }
 
+public static string CreateAllSymbolsArchive(string buildOutputDir, string version, string outputDir)
+{
+    Directory.CreateDirectory(outputDir);
+    var archivePath = Path.Join(outputDir, $"{PackageMetadata.Id}.{version}.symbols.zip");
+    File.Delete(archivePath);
+
+    var pdbFiles = Directory.GetFiles(buildOutputDir, "*.pdb", SearchOption.AllDirectories)
+        .OrderBy(path => Path.GetRelativePath(buildOutputDir, path), StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    if (pdbFiles.Length == 0)
+    {
+        throw new InvalidOperationException("No PDB files were found for the all-symbols archive");
+    }
+
+    using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+    {
+        foreach (var pdbPath in pdbFiles)
+        {
+            var entryName = Path.GetRelativePath(buildOutputDir, pdbPath).Replace('\\', '/');
+            archive.CreateEntryFromFile(pdbPath, entryName, CompressionLevel.Optimal);
+        }
+    }
+
+    var fileInfo = new FileInfo(archivePath);
+    Log.Info($"  All-symbols archive generated: {archivePath} ({fileInfo.Length / 1024.0:F1} KB, {pdbFiles.Length} PDB files)");
+    return archivePath;
+}
+
 public static string PackSymbolNuGet(string nuspecPath, string outputDir)
 {
     Directory.CreateDirectory(outputDir);
@@ -343,6 +392,14 @@ public static string PackSymbolNuGet(string nuspecPath, string outputDir)
     {
         Directory.Delete(symbolOutputDir, recursive: true);
     }
+}
+
+private static bool IsPortablePdb(string path)
+{
+    Span<byte> signature = stackalloc byte[4];
+    using var stream = File.OpenRead(path);
+    return stream.Read(signature) == signature.Length
+        && signature.SequenceEqual("BSJB"u8);
 }
 
 private static string PackNuspec(string nuspecPath, string outputDir)

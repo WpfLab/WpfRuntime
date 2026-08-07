@@ -66,6 +66,7 @@ public sealed class GitHubArtifactCommentTests
             CreateArtifact(2, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222"),
             CreateArtifact(1, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222"),
             CreateArtifact(6, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222-symbols"),
+            CreateArtifact(7, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha222222-all-symbols"),
             CreateArtifact(3, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-99-attempt-2-version-0.0.0-test.20260311123456.sha111111"),
             CreateArtifact(4, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha111111", expired: true),
             CreateArtifact(5, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-0.0.0-test.20260311123456.sha111111", size: 0),
@@ -73,7 +74,7 @@ public sealed class GitHubArtifactCommentTests
 
         var filtered = GitHubArtifactCommentFormatter.FilterArtifacts(artifacts, 11781, 42, 2);
 
-        Assert.Equal([1L, 2L, 6L], filtered.Select(artifact => artifact.Id));
+        Assert.Equal([1L, 2L, 6L, 7L], filtered.Select(artifact => artifact.Id));
         Assert.All(filtered, artifact => Assert.Equal(TestedSha, artifact.TestedSha.ToString()));
         Assert.All(filtered, artifact => Assert.Equal("0.0.0-test.20260311123456.sha222222", artifact.PackageVersion));
     }
