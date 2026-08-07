@@ -84,8 +84,17 @@ public static void CopyIjwHostFromPackage(Dictionary<string, string> packagePath
 public static string GenerateNuspec(
     string stagingDir,
     string version,
-    IReadOnlyList<PackageDependency> runtimePackageDependencies)
+    IReadOnlyList<PackageDependency> runtimePackageDependencies,
+    string readmePath)
 {
+    if (!File.Exists(readmePath))
+    {
+        throw new FileNotFoundException("Package README file was not found", readmePath);
+    }
+
+    const string packageReadmeFileName = "README.md";
+    File.Copy(readmePath, Path.Join(stagingDir, packageReadmeFileName), overwrite: true);
+
     var referenceDir = Path.Join(stagingDir, "ref", "net8.0");
     var referenceFiles = Directory.Exists(referenceDir)
         ? Directory.GetFiles(referenceDir, "*.dll").Select(Path.GetFileName).OrderBy(x => x).ToList()
@@ -126,6 +135,7 @@ public static string GenerateNuspec(
     }
 
     files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\\{PackageMetadata.Id}.targets\" />");
+    files.AppendLine($"    <file src=\"{packageReadmeFileName}\" target=\"{packageReadmeFileName}\" />");
 
     var nuspecContent = $$"""
         <?xml version="1.0" encoding="utf-8"?>
@@ -138,6 +148,7 @@ public static string GenerateNuspec(
             <copyright>WpfLab</copyright>
             <license type="expression">MIT</license>
             <projectUrl>{{PackageMetadata.ProjectUrl}}</projectUrl>
+            <readme>{{packageReadmeFileName}}</readme>
             <tags>WPF WindowsDesktop</tags>
             <dependencies>
         {{dependencyGroups}}    </dependencies>

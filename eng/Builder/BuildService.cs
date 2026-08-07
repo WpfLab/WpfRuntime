@@ -196,7 +196,8 @@ catch (InvalidOperationException exception)
     return 1;
 }
 var runtimePackageDependencies = NuGetPackageService.ReadRuntimePackageDependencies(context.RepoRoot);
-var nuspecPath = NuGetPackageService.GenerateNuspec(context.StagingDir, version, runtimePackageDependencies);
+var readmePath = Path.Join(context.RepoRoot, "README.md");
+var nuspecPath = NuGetPackageService.GenerateNuspec(context.StagingDir, version, runtimePackageDependencies, readmePath);
 var symbolNuspecPath = NuGetPackageService.GenerateSymbolNuspec(context.StagingDir, version);
 var nupkgPath = NuGetPackageService.PackNuGet(nuspecPath, context.NupkgOutputDir);
 var snupkgPath = NuGetPackageService.PackSymbolNuGet(symbolNuspecPath, context.NupkgOutputDir);

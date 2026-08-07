@@ -6,6 +6,30 @@ namespace WpfReorganize.Builder.Tests;
 public sealed class NuGetPackageServiceTests
 {
     [Fact]
+    public void GenerateNuspecIncludesRepositoryReadme()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+        foreach (var rid in new[] { "win-x64", "win-x86" })
+        {
+            Directory.CreateDirectory(Path.Join(stagingDirectory, "runtimes", rid, "native"));
+        }
+
+        var readmePath = Path.Join(Path.GetTempPath(), $"builder-readme-{Guid.NewGuid():N}.md");
+        File.WriteAllText(readmePath, "# Package README");
+
+        var nuspecPath = NuGetPackageService.GenerateNuspec(stagingDirectory, "1.2.3", [], readmePath);
+        var document = XDocument.Load(nuspecPath);
+        XNamespace ns = "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd";
+        var readme = document.Descendants(ns + "readme").Single().Value;
+        var readmeTarget = document.Descendants(ns + "file")
+            .Single(element => element.Attribute("src")?.Value == "README.md")
+            .Attribute("target")?.Value;
+        var packagedContent = File.ReadAllText(Path.Join(stagingDirectory, "README.md"));
+
+        Assert.Equal(("README.md", "README.md", "# Package README"), (readme, readmeTarget, packagedContent));
+    }
+
+    [Fact]
     public void GenerateSymbolNuspecIncludesMultiplePdbFilesWithRuntimePaths()
     {
         var stagingDirectory = CreateStagingDirectory();
