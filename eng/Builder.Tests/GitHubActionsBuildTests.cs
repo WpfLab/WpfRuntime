@@ -59,6 +59,15 @@ public sealed class GitHubActionsBuildTests
                     "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.snupkg")),
                 identity.SymbolPackagePath);
             Assert.Equal(
+                Path.GetFullPath(Path.Join(
+                    repositoryPath,
+                    "eng",
+                    "Builder",
+                    "bin",
+                    "nupkg",
+                    "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.symbols.zip")),
+                identity.AllSymbolsArchivePath);
+            Assert.Equal(
                 $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3-version-0.0.0-test.20260311123456.sha333333",
                 identity.ArtifactName);
         }

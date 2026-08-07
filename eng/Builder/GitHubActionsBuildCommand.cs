@@ -97,6 +97,7 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
                             ["version"] = identity.PackageVersion,
                             ["package-path"] = identity.PackagePath,
                             ["symbol-package-path"] = identity.SymbolPackagePath,
+                            ["all-symbols-archive-path"] = identity.AllSymbolsArchivePath,
                             ["artifact-name"] = identity.ArtifactName,
                         });
                 }

@@ -201,6 +201,7 @@ var nuspecPath = NuGetPackageService.GenerateNuspec(context.StagingDir, version,
 var symbolNuspecPath = NuGetPackageService.GenerateSymbolNuspec(context.StagingDir, version);
 var nupkgPath = NuGetPackageService.PackNuGet(nuspecPath, context.NupkgOutputDir);
 var snupkgPath = NuGetPackageService.PackSymbolNuGet(symbolNuspecPath, context.NupkgOutputDir);
+var allSymbolsArchivePath = NuGetPackageService.CreateAllSymbolsArchive(context.ArtifactsDir, version, context.NupkgOutputDir);
 
 // ---- Step 7: Compare against official package ----
 Log.Step("Comparing against official Microsoft.WindowsDesktop.App.Ref...");
@@ -211,6 +212,7 @@ Log.Info("========================================");
 Log.Info($"Build complete! Elapsed: {elapsed.TotalSeconds:F1}s");
 Log.Info($"NuGet package: {nupkgPath}");
 Log.Info($"NuGet symbol package: {snupkgPath}");
+Log.Info($"All-symbols archive: {allSymbolsArchivePath}");
 return failedProjects.Count > 0 ? 2 : 0;
 
     }

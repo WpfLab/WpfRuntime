@@ -117,7 +117,7 @@ internal static class GitHubArtifactCommentFormatter
     {
         ArgumentNullException.ThrowIfNull(artifacts);
         var pattern = new Regex(
-            $"^{Regex.Escape(PackageMetadata.Id)}-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}-version-([0-9A-Za-z.+-]+?)(?:-symbols)?$",
+            $"^{Regex.Escape(PackageMetadata.Id)}-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}-version-([0-9A-Za-z.+-]+?)(?:-symbols|-all-symbols)?$",
             RegexOptions.CultureInvariant);
         return artifacts
             .Where(artifact => artifact is not null

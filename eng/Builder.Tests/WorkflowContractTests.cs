@@ -21,10 +21,12 @@ public sealed class WorkflowContractTests
         Assert.Equal(2, CountOccurrences(normalized, "        path: tested\n        fetch-depth: 0"));
         Assert.Equal(2, CountOccurrences(workflow, "Builder.dll ci-build"));
         Assert.DoesNotContain("github.event.pull_request.head.sha", workflow, StringComparison.Ordinal);
-        Assert.Equal(2, CountOccurrences(workflow, "tested/eng/Builder/bin/nupkg/*."));
+        Assert.Equal(3, CountOccurrences(workflow, "tested/eng/Builder/bin/nupkg/*."));
         Assert.Contains("path: tested/eng/Builder/bin/nupkg/*.nupkg", workflow, StringComparison.Ordinal);
         Assert.Contains("path: tested/eng/Builder/bin/nupkg/*.snupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("path: tested/eng/Builder/bin/nupkg/*.symbols.zip", workflow, StringComparison.Ordinal);
         Assert.Contains("name: ${{ steps.build-package.outputs.artifact-name }}-symbols", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: ${{ steps.build-package.outputs.artifact-name }}-all-symbols", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("steps.build-package.outputs.symbol-package-path", workflow, StringComparison.Ordinal);
         Assert.Contains("name: Push generated package to NuGet registries", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("if: github.event_name != 'pull_request_target'", workflow, StringComparison.Ordinal);

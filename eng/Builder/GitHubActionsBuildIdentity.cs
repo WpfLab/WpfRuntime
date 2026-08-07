@@ -5,6 +5,7 @@ internal sealed record GitHubActionsBuildIdentity(
     string PackageVersion,
     string PackagePath,
     string SymbolPackagePath,
+    string AllSymbolsArchivePath,
     string ArtifactName)
 {
     public static GitHubActionsBuildIdentity Create(
@@ -41,6 +42,9 @@ internal sealed record GitHubActionsBuildIdentity(
             "nupkg",
             $"{PackageMetadata.Id}.{packageVersion}.nupkg"));
         var symbolPackagePath = Path.ChangeExtension(packagePath, ".snupkg");
+        var allSymbolsArchivePath = Path.Join(
+            Path.GetDirectoryName(packagePath)!,
+            $"{Path.GetFileNameWithoutExtension(packagePath)}.symbols.zip");
         var artifactName =
             $"{PackageMetadata.Id}-nupkg-{artifactIdentity}-sha-{parsedTestedSha}-run-{runId}-attempt-{runAttempt}-version-{packageVersion}";
 
@@ -49,6 +53,7 @@ internal sealed record GitHubActionsBuildIdentity(
             packageVersion,
             packagePath,
             symbolPackagePath,
+            allSymbolsArchivePath,
             artifactName);
     }
 
