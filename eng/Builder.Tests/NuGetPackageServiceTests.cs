@@ -30,6 +30,20 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateSymbolNuspecDeclaresSymbolsPackageType()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+        WritePdb(stagingDirectory, "win-x64", "PresentationCore.pdb");
+
+        var nuspecPath = NuGetPackageService.GenerateSymbolNuspec(stagingDirectory, "1.2.3");
+        var document = XDocument.Load(nuspecPath);
+        XNamespace ns = "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd";
+        var packageType = document.Descendants(ns + "packageType").Single();
+
+        Assert.Equal("SymbolsPackage", packageType.Attribute("name")?.Value);
+    }
+
+    [Fact]
     public void GenerateSymbolNuspecThrowsWhenNoPdbFilesExist()
     {
         var stagingDirectory = CreateStagingDirectory();

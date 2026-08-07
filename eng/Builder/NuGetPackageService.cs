@@ -182,6 +182,9 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
             <license type="expression">MIT</license>
             <projectUrl>{{PackageMetadata.ProjectUrl}}</projectUrl>
             <tags>WPF WindowsDesktop symbols</tags>
+            <packageTypes>
+              <packageType name="SymbolsPackage" />
+            </packageTypes>
           </metadata>
           <files>
         {{files}}  </files>
