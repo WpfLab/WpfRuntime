@@ -83,6 +83,21 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitiveTargetsRemovesDuplicateNativeIjwHostFromPublishAssets()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            @"<ResolvedFileToPublish Remove=""$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\ijwhost.dll"" />",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateSymbolNuspecIncludesMultiplePdbFilesWithRuntimePaths()
     {
         var stagingDirectory = CreateStagingDirectory();

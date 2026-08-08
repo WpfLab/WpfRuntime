@@ -263,6 +263,14 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
             </ItemGroup>
           </Target>
 
+          <Target Name="RemoveDuplicateDotNetCampusIjwHostPublishAsset"
+                  BeforeTargets="_HandleFileConflictsForPublish"
+                  Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' != ''">
+            <ItemGroup>
+              <ResolvedFileToPublish Remove="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\ijwhost.dll" />
+            </ItemGroup>
+          </Target>
+
           <Target Name="CopyDotNetCampusWpfRuntimeDllsToOutput"
                   AfterTargets="Build"
                   Condition="'@(_DotNetCampusWpfRuntimeDll)' != ''">
