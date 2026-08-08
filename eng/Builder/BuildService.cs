@@ -179,8 +179,16 @@ var packagePaths = NuGetPackageService.ReadPackagePaths(context.BuilderOutputDir
 var runtimesDir = Path.Join(context.StagingDir, "runtimes");
 NuGetPackageService.CopyNativeDllsFromPackage(packagePaths, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
 NuGetPackageService.CopyNativeDllsFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
-NuGetPackageService.CopyIjwHostFromPackage(packagePaths, "win-x64", Path.Join(runtimesDir, "win-x64", "native"));
-NuGetPackageService.CopyIjwHostFromPackage(packagePaths, "win-x86", Path.Join(runtimesDir, "win-x86", "native"));
+NuGetPackageService.CopyIjwHostFromPackage(
+    packagePaths,
+    "win-x64",
+    Path.Join(runtimesDir, "win-x64", "native"),
+    Path.Join(runtimesDir, "win-x64", "lib", "net8.0"));
+NuGetPackageService.CopyIjwHostFromPackage(
+    packagePaths,
+    "win-x86",
+    Path.Join(runtimesDir, "win-x86", "native"),
+    Path.Join(runtimesDir, "win-x86", "lib", "net8.0"));
 
 // ---- Step 6: Generate .nuspec and pack ----
 Log.Step("Generating .nuspec and packing...");

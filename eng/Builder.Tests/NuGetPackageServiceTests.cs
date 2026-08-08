@@ -7,6 +7,28 @@ namespace WpfReorganize.Builder.Tests;
 public sealed class NuGetPackageServiceTests
 {
     [Fact]
+    public void CopyIjwHostFromPackageCopiesFileToNativeAndRuntimeLibDirectories()
+    {
+        var packageRoot = Path.Join(Path.GetTempPath(), $"builder-host-package-{Guid.NewGuid():N}");
+        var sourceDirectory = Path.Join(packageRoot, "runtimes", "win-x64", "native");
+        Directory.CreateDirectory(sourceDirectory);
+        File.WriteAllText(Path.Join(sourceDirectory, "ijwhost.dll"), "ijw-host");
+        var nativeDirectory = Path.Join(Path.GetTempPath(), $"builder-native-{Guid.NewGuid():N}");
+        var runtimeLibDirectory = Path.Join(Path.GetTempPath(), $"builder-runtime-lib-{Guid.NewGuid():N}");
+
+        NuGetPackageService.CopyIjwHostFromPackage(
+            new Dictionary<string, string> { ["host-win-x64"] = packageRoot },
+            "win-x64",
+            nativeDirectory,
+            runtimeLibDirectory);
+
+        Assert.Equal(
+            ("ijw-host", "ijw-host"),
+            (File.ReadAllText(Path.Join(nativeDirectory, "ijwhost.dll")),
+             File.ReadAllText(Path.Join(runtimeLibDirectory, "ijwhost.dll"))));
+    }
+
+    [Fact]
     public void GenerateNuspecIncludesRepositoryReadme()
     {
         var stagingDirectory = CreateStagingDirectory();
@@ -28,6 +50,36 @@ public sealed class NuGetPackageServiceTests
         var packagedContent = File.ReadAllText(Path.Join(stagingDirectory, "README.md"));
 
         Assert.Equal(("README.md", "README.md", "# Package README"), (readme, readmeTarget, packagedContent));
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsInfersRuntimeIdentifierFromPlatformTarget()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "Condition=\"'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x64' Or '$(Platform)' == 'x64')\">win-x64",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsCopiesNativeAssetsForInferredRuntimeIdentifier()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            @"runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\*.dll",
+            targetsContent,
+            StringComparison.Ordinal);
     }
 
     [Fact]

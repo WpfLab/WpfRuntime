@@ -117,7 +117,13 @@ x86 收集会依次接受 `x86` 和 `Win32` 输出，以覆盖托管项目与 C+
 
 Builder 构建时使用 `$(NuGetPackageRoot)` 和共享版本写出 `PackagePaths.txt`。打包阶段从两个 WindowsDesktop runtime 包的 `runtimes/<rid>/native/` 复制 DLL，并从对应 host 包补充 `ijwhost.dll`。
 
-共享 props 已定义 `RepoWpfNativeRuntimeFile`，但 Builder 当前仍会复制 runtime 包 native 目录中的全部 DLL，并在 `ValidatePackageAssets` 中硬编码检查 `ijwhost.dll`、`PenImc_cor3.dll`、`PresentationNative_cor3.dll` 和 `wpfgfx_cor3.dll`。因此 Builder 的 native 必需文件规则与共享清单尚未完全统一。
+共享 props 已定义 `RepoWpfNativeRuntimeFile`，但 Builder 当前仍会复制 runtime 包 native 目录中的全部 DLL，并在 `ValidatePackageAssets` 中硬编码检查 `ijwhost.dll`、`PenImc_cor3.dll`、`PresentationNative_cor3.dll` 和 `wpfgfx_cor3.dll`；此外还会检查 `lib/net8.0` 中与 `DirectWriteForwarder.dll` 同目录的 `ijwhost.dll`。因此 Builder 的 native 必需文件规则与共享清单尚未完全统一。
+
+### C++/CLI 宿主依赖的部署约定
+
+`ijwhost.dll` 必须同时写入 `runtimes/<rid>/native/` 和 `runtimes/<rid>/lib/net8.0/`。`DirectWriteForwarder.dll` 是从 RID 专属 `lib/net8.0` 目录加载的 C++/CLI 程序集；NuGet 的 `native` 资产分类只影响资产选择与复制，不会让 Windows Loader 自动搜索相邻的 `native` 目录。若只保留 native 目录中的副本，消费应用可能在 WPF 模块初始化期间因无法解析该间接依赖而退出。
+
+因此，Builder 除保留标准 native 资产副本外，还会把 `ijwhost.dll` 放到 `DirectWriteForwarder.dll` 所在目录，并在打包前校验这两个位置。相关 C++/CLI 运行时加载背景见 [dotnet/runtime#38231](https://github.com/dotnet/runtime/issues/38231)。
 
 ## NuGet 包结构与消费逻辑
 
@@ -126,10 +132,10 @@ Builder 构建时使用 `$(NuGetPackageRoot)` 和共享版本写出 `PackagePath
 ```text
 DotNetCampus.WpfLib.<version>.nupkg
 ├─ ref/net8.0/*.dll
-├─ runtimes/win-x64/lib/net8.0/*.dll
-├─ runtimes/win-x64/native/*.dll
-├─ runtimes/win-x86/lib/net8.0/*.dll
-├─ runtimes/win-x86/native/*.dll
+├─ runtimes/win-x64/lib/net8.0/*.dll（包含 ijwhost.dll）
+├─ runtimes/win-x64/native/*.dll（包含 ijwhost.dll）
+├─ runtimes/win-x86/lib/net8.0/*.dll（包含 ijwhost.dll）
+├─ runtimes/win-x86/native/*.dll（包含 ijwhost.dll）
 └─ buildTransitive/DotNetCampus.WpfLib.targets
 ```
 

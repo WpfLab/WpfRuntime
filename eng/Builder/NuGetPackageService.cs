@@ -68,7 +68,11 @@ public static void CopyNativeDllsFromPackage(Dictionary<string, string> packageP
     }
 }
 
-public static void CopyIjwHostFromPackage(Dictionary<string, string> packagePaths, string rid, string destDir)
+public static void CopyIjwHostFromPackage(
+    Dictionary<string, string> packagePaths,
+    string rid,
+    string nativeDestDir,
+    string runtimeLibDestDir)
 {
     var packageKey = $"host-{rid}";
     if (!packagePaths.TryGetValue(packageKey, out var packageRoot))
@@ -77,9 +81,16 @@ public static void CopyIjwHostFromPackage(Dictionary<string, string> packagePath
     RequirePackageDirectory(packageKey, packageRoot);
     var sourcePath = Path.Join(packageRoot, "runtimes", rid, "native", "ijwhost.dll");
     RequirePackageFile(sourcePath);
-    Directory.CreateDirectory(destDir);
-    File.Copy(sourcePath, Path.Join(destDir, "ijwhost.dll"), overwrite: true);
+
+    Directory.CreateDirectory(nativeDestDir);
+    File.Copy(sourcePath, Path.Join(nativeDestDir, "ijwhost.dll"), overwrite: true);
     Log.Info($"  runtimes/{rid}/native/ijwhost.dll");
+
+    // Keep ijwhost.dll beside DirectWriteForwarder.dll because the Windows loader does not search
+    // the sibling native asset directory when loading the C++/CLI assembly. See https://github.com/dotnet/runtime/issues/38231.
+    Directory.CreateDirectory(runtimeLibDestDir);
+    File.Copy(sourcePath, Path.Join(runtimeLibDestDir, "ijwhost.dll"), overwrite: true);
+    Log.Info($"  runtimes/{rid}/lib/net8.0/ijwhost.dll");
 }
 
 public static string GenerateNuspec(
@@ -221,13 +232,19 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
     var targetsPath = Path.Join(targetsDir, $"{PackageMetadata.Id}.targets");
     var content = """
         <Project>
+          <PropertyGroup>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == 'win-x64'">$(RuntimeIdentifier)</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x64' Or '$(Platform)' == 'x64')">win-x64</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x86' Or '$(Platform)' == 'x86' Or '$(Platform)' == 'Win32')">win-x86</_DotNetCampusWpfRuntimeIdentifier>
+          </PropertyGroup>
+
           <ItemGroup>
             <FrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
           </ItemGroup>
 
-          <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == 'win-x64'">
-            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(RuntimeIdentifier)\lib\net8.0\*.dll" />
-            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(RuntimeIdentifier)\native\*.dll" />
+          <ItemGroup Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' != ''">
+            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll" />
+            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\*.dll" />
           </ItemGroup>
 
           <ItemGroup>
@@ -283,6 +300,7 @@ public static void ValidatePackageAssets(string stagingDir)
         "PresentationCore.dll",
         "PresentationFramework.dll",
         "DirectWriteForwarder.dll",
+        "ijwhost.dll",
     };
     var requiredNativeAssemblies = new[]
     {
