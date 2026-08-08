@@ -152,20 +152,46 @@ static void ValidatePublishedPackageDlls(
             throw new InvalidOperationException($"Expected package asset directory was not found for {rid}: {directory}");
     }
 
-    var expectedFiles = expectedDirectories.SelectMany(directory => Directory.GetFiles(directory, "*.dll")).ToList();
-    var duplicateFileNames = expectedFiles
+    var runtimeLibDirectory = expectedDirectories[0];
+    var nativeDirectory = expectedDirectories[1];
+    var expectedFileGroups = expectedDirectories
+        .SelectMany(directory => Directory.GetFiles(directory, "*.dll"))
         .GroupBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
-        .Where(group => group.Count() > 1)
+        .ToList();
+    var unexpectedDuplicateFileNames = expectedFileGroups
+        .Where(group => group.Count() > 1 && !string.Equals(group.Key, "ijwhost.dll", StringComparison.OrdinalIgnoreCase))
         .Select(group => group.Key)
         .ToList();
-    if (duplicateFileNames.Count > 0)
+    if (unexpectedDuplicateFileNames.Count > 0)
     {
         throw new InvalidOperationException(
-            $"Package contains duplicate DLL file names for {rid}: {string.Join(", ", duplicateFileNames)}");
+            $"Package contains duplicate DLL file names for {rid}: {string.Join(", ", unexpectedDuplicateFileNames)}");
     }
 
-    var expectedDlls = expectedFiles
-        .ToDictionary(path => Path.GetFileName(path)!, StringComparer.OrdinalIgnoreCase);
+    var ijwHostFiles = expectedFileGroups
+        .SingleOrDefault(group => string.Equals(group.Key, "ijwhost.dll", StringComparison.OrdinalIgnoreCase))?
+        .ToList() ?? [];
+    var expectedIjwHostFiles = new[]
+    {
+        Path.Join(runtimeLibDirectory, "ijwhost.dll"),
+        Path.Join(nativeDirectory, "ijwhost.dll"),
+    };
+    if (ijwHostFiles.Count != expectedIjwHostFiles.Length ||
+        expectedIjwHostFiles.Any(expectedPath => !ijwHostFiles.Contains(expectedPath, StringComparer.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException(
+            $"Package must contain ijwhost.dll in both runtime lib and native directories for {rid}");
+    }
+
+    if (!ComputeSha256(expectedIjwHostFiles[0]).SequenceEqual(ComputeSha256(expectedIjwHostFiles[1])))
+        throw new InvalidOperationException($"Package contains different ijwhost.dll binaries for {rid}");
+
+    var expectedDlls = expectedFileGroups.ToDictionary(
+        group => group.Key,
+        group => string.Equals(group.Key, "ijwhost.dll", StringComparison.OrdinalIgnoreCase)
+            ? expectedIjwHostFiles[0]
+            : group.Single(),
+        StringComparer.OrdinalIgnoreCase);
 
     if (expectedDlls.Count == 0)
         throw new InvalidOperationException($"No expected DLLs were found in the package for {rid}");
