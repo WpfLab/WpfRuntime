@@ -83,7 +83,7 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateBuildTransitiveTargetsRemovesDuplicateNativeIjwHostFromPublishAssets()
+    public void GenerateBuildTransitiveTargetsSelectsSingleIjwHostPublishAsset()
     {
         var stagingDirectory = CreateStagingDirectory();
 
@@ -92,7 +92,15 @@ public sealed class NuGetPackageServiceTests
             Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
 
         Assert.Contains(
-            @"<ResolvedFileToPublish Remove=""$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\ijwhost.dll"" />",
+            "Condition=\"'%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'ijwhost.dll'\"",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            @"<ResolvedFileToPublish Remove=""@(_DotNetCampusIjwHostPublishAsset)"" />",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            @"runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\ijwhost.dll",
             targetsContent,
             StringComparison.Ordinal);
     }

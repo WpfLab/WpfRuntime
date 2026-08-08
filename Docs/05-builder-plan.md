@@ -123,7 +123,7 @@ Builder 构建时使用 `$(NuGetPackageRoot)` 和共享版本写出 `PackagePath
 
 `ijwhost.dll` 必须同时写入 `runtimes/<rid>/native/` 和 `runtimes/<rid>/lib/net8.0/`。`DirectWriteForwarder.dll` 是从 RID 专属 `lib/net8.0` 目录加载的 C++/CLI 程序集；NuGet 的 `native` 资产分类只影响资产选择与复制，不会让 Windows Loader 自动搜索相邻的 `native` 目录。若只保留 native 目录中的副本，消费应用可能在 WPF 模块初始化期间因无法解析该间接依赖而退出。
 
-因此，Builder 除保留标准 native 资产副本外，还会把 `ijwhost.dll` 放到 `DirectWriteForwarder.dll` 所在目录，并在打包前校验这两个位置。生成的 `buildTransitive` targets 会在 SDK 执行发布文件冲突检查前，从 `ResolvedFileToPublish` 中移除 native 目录的重复项，以 `lib/net8.0` 中的副本作为唯一发布来源；否则两个同名资产被展平到发布根目录时会触发 `NETSDK1152`。相关 C++/CLI 运行时加载背景见 [dotnet/runtime#38231](https://github.com/dotnet/runtime/issues/38231)。
+因此，Builder 除保留标准 native 资产副本外，还会把 `ijwhost.dll` 放到 `DirectWriteForwarder.dll` 所在目录，并在打包前校验这两个位置。生成的 `buildTransitive` targets 会在 SDK 执行发布文件冲突检查前，按文件名从 `ResolvedFileToPublish` 中移除所有已有的 `ijwhost.dll` 发布项，再显式加入 `lib/net8.0` 中的副本作为唯一发布来源；不能按拼接出的包文件路径直接删除，因为 SDK 生成的发布资产项标识可能经过路径规范化。若不去重，两个同名资产被展平到发布根目录时会触发 `NETSDK1152`。相关 C++/CLI 运行时加载背景见 [dotnet/runtime#38231](https://github.com/dotnet/runtime/issues/38231)。
 
 ## NuGet 包结构与消费逻辑
 
