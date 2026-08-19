@@ -1,5 +1,9 @@
 # WpfRuntime
 
+[![NuGet](https://img.shields.io/nuget/v/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
+[![Build WPF NuGet Package](https://github.com/WpfLab/WpfRuntime/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/WpfLab/WpfRuntime/actions/workflows/build.yml)
+
 WpfRuntime is an experimental and actively maintained WPF repository based on the open-source [dotnet/wpf](https://github.com/dotnet/wpf) project. It aims to enable faster iteration, provide a straightforward development experience, and make it easier for the community to build, modify, and experiment with WPF.
 
 The source originates from `dotnet/wpf` and remains subject to the notices and license included in this repository.
