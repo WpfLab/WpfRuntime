@@ -1,4 +1,4 @@
-# WpfRuntime
+﻿# WpfRuntime
 
 [![NuGet](https://img.shields.io/nuget/v/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
@@ -36,6 +36,22 @@ dotnet run --project eng/Builder/Builder.csproj -- relay-pr `
 ```
 
 This command imports the changes from the specified GitHub pull request and creates the corresponding pull request in this repository. Local build validation is skipped by default; GitHub Actions validates the published pull request.
+
+## Use in a WPF Application
+
+Install the package in your WPF application:
+
+```powershell
+dotnet add package WpfLab.WpfRuntime
+```
+
+Or
+
+```xml
+<PackageReference Include="WpfLab.WpfRuntime" Version="xxx" />
+```
+
+Build and publish the application as usual. The package automatically uses the WPF assemblies and runtime files provided by this repository.
 
 ---
 
