@@ -1,4 +1,8 @@
-# WpfRuntime
+﻿# WpfRuntime
+
+[![NuGet](https://img.shields.io/nuget/v/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
+[![Build WPF NuGet Package](https://github.com/WpfLab/WpfRuntime/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/WpfLab/WpfRuntime/actions/workflows/build.yml)
 
 WpfRuntime is an experimental and actively maintained WPF repository based on the open-source [dotnet/wpf](https://github.com/dotnet/wpf) project. It aims to enable faster iteration, provide a straightforward development experience, and make it easier for the community to build, modify, and experiment with WPF.
 
@@ -32,6 +36,22 @@ dotnet run --project eng/Builder/Builder.csproj -- relay-pr `
 ```
 
 This command imports the changes from the specified GitHub pull request and creates the corresponding pull request in this repository. Local build validation is skipped by default; GitHub Actions validates the published pull request.
+
+## Use in a WPF Application
+
+Install the package in your WPF application:
+
+```powershell
+dotnet add package WpfLab.WpfRuntime
+```
+
+Or
+
+```xml
+<PackageReference Include="WpfLab.WpfRuntime" Version="xxx" />
+```
+
+Build and publish the application as usual. The package automatically uses the WPF assemblies and runtime files provided by this repository.
 
 ---
 
