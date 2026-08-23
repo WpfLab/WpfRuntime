@@ -146,8 +146,11 @@ public static string GenerateNuspec(
         }
     }
 
-    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.props\" target=\"buildTransitive\\{PackageMetadata.Id}.props\" />");
-    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\\{PackageMetadata.Id}.targets\" />");
+    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.props\" target=\"buildTransitive\" />");
+    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\" />");
+    files.AppendLine("    <file src=\"tools\\net8.0\\PresentationBuildTasks.dll\" target=\"tools\\net8.0\" />");
+    files.AppendLine("    <file src=\"tools\\net8.0\\PresentationBuildTasks.deps.json\" target=\"tools\\net8.0\" />");
+    files.AppendLine("    <file src=\"tools\\net8.0\\System.Reflection.MetadataLoadContext.dll\" target=\"tools\\net8.0\" />");
     files.AppendLine($"    <file src=\"{packageReadmeFileName}\" target=\"{packageReadmeFileName}\" />");
 
     var nuspecContent = $$"""
@@ -413,9 +416,32 @@ public static string PackNuGet(string nuspecPath, string outputDir)
 {
     Directory.CreateDirectory(outputDir);
     var nupkgPath = PackNuspec(nuspecPath, outputDir);
+    ValidatePackedPresentationBuildTaskAssets(nupkgPath);
     var fileInfo = new FileInfo(nupkgPath);
     Log.Info($"  .nupkg generated: {nupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
     return nupkgPath;
+}
+
+internal static void ValidatePackedPresentationBuildTaskAssets(string nupkgPath)
+{
+    using var archive = ZipFile.OpenRead(nupkgPath);
+    var entries = archive.Entries
+        .Select(entry => entry.FullName)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var requiredEntries = new[]
+    {
+        $"buildTransitive/{PackageMetadata.Id}.props",
+        $"buildTransitive/{PackageMetadata.Id}.targets",
+        "tools/net8.0/PresentationBuildTasks.dll",
+        "tools/net8.0/PresentationBuildTasks.deps.json",
+        "tools/net8.0/System.Reflection.MetadataLoadContext.dll",
+    };
+
+    foreach (var entry in requiredEntries)
+    {
+        if (!entries.Contains(entry))
+            throw new InvalidOperationException($"Required packed NuGet asset not found: {entry}");
+    }
 }
 
 public static string CreateAllSymbolsArchive(string buildOutputDir, string version, string outputDir)

@@ -53,7 +53,7 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateNuspecIncludesBuildTransitivePropsAndTargets()
+    public void GenerateNuspecIncludesPresentationBuildTaskAssets()
     {
         var stagingDirectory = CreateStagingDirectory();
         foreach (var rid in new[] { "win-x64", "win-x86" })
@@ -67,17 +67,73 @@ public sealed class NuGetPackageServiceTests
         var nuspecPath = NuGetPackageService.GenerateNuspec(stagingDirectory, "1.2.3", [], readmePath);
         var document = XDocument.Load(nuspecPath);
         XNamespace ns = "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd";
-        var buildTransitiveFiles = document.Descendants(ns + "file")
+        var presentationBuildTaskAssets = document.Descendants(ns + "file")
             .Select(element => element.Attribute("src")?.Value)
-            .Where(value => value?.StartsWith("buildTransitive\\", StringComparison.Ordinal) == true)
+            .Where(value => value?.StartsWith("buildTransitive\\", StringComparison.Ordinal) == true
+                || value?.StartsWith("tools\\net8.0\\", StringComparison.Ordinal) == true)
             .ToList();
 
         Assert.Equal(
             [
                 $"buildTransitive\\{PackageMetadata.Id}.props",
-                $"buildTransitive\\{PackageMetadata.Id}.targets"
+                $"buildTransitive\\{PackageMetadata.Id}.targets",
+                "tools\\net8.0\\PresentationBuildTasks.dll",
+                "tools\\net8.0\\PresentationBuildTasks.deps.json",
+                "tools\\net8.0\\System.Reflection.MetadataLoadContext.dll"
             ],
-            buildTransitiveFiles);
+            presentationBuildTaskAssets);
+    }
+
+    [Fact]
+    public void GenerateNuspecUsesDirectoriesForPresentationBuildTaskTargets()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+        foreach (var rid in new[] { "win-x64", "win-x86" })
+        {
+            Directory.CreateDirectory(Path.Join(stagingDirectory, "runtimes", rid, "native"));
+        }
+
+        var readmePath = Path.Join(Path.GetTempPath(), $"builder-readme-{Guid.NewGuid():N}.md");
+        File.WriteAllText(readmePath, "# Package README");
+
+        var nuspecPath = NuGetPackageService.GenerateNuspec(stagingDirectory, "1.2.3", [], readmePath);
+        var document = XDocument.Load(nuspecPath);
+        XNamespace ns = "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd";
+        var targets = document.Descendants(ns + "file")
+            .Where(element => element.Attribute("src")?.Value.StartsWith("buildTransitive\\", StringComparison.Ordinal) == true
+                || element.Attribute("src")?.Value.StartsWith("tools\\net8.0\\", StringComparison.Ordinal) == true)
+            .Select(element => element.Attribute("target")?.Value)
+            .ToArray();
+
+        Assert.Equal(["buildTransitive", "buildTransitive", "tools\\net8.0", "tools\\net8.0", "tools\\net8.0"], targets);
+    }
+
+    [Fact]
+    public void PackNuGetIncludesPresentationBuildTasksAtExpectedPath()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+        foreach (var rid in new[] { "win-x64", "win-x86" })
+        {
+            Directory.CreateDirectory(Path.Join(stagingDirectory, "runtimes", rid, "native"));
+        }
+
+        var toolsDirectory = Path.Join(stagingDirectory, "tools", "net8.0");
+        Directory.CreateDirectory(toolsDirectory);
+        File.WriteAllText(Path.Join(toolsDirectory, "PresentationBuildTasks.dll"), "build-tasks");
+        File.WriteAllText(Path.Join(toolsDirectory, "PresentationBuildTasks.deps.json"), "{}");
+        File.WriteAllText(Path.Join(toolsDirectory, "System.Reflection.MetadataLoadContext.dll"), "metadata-load-context");
+        NuGetPackageService.GenerateBuildTransitiveFiles(stagingDirectory);
+
+        var readmePath = Path.Join(Path.GetTempPath(), $"builder-readme-{Guid.NewGuid():N}.md");
+        File.WriteAllText(readmePath, "# Package README");
+        var nuspecPath = NuGetPackageService.GenerateNuspec(stagingDirectory, "1.2.3", [], readmePath);
+        var outputDirectory = Path.Join(Path.GetTempPath(), $"builder-package-output-{Guid.NewGuid():N}");
+
+        var packagePath = NuGetPackageService.PackNuGet(nuspecPath, outputDirectory);
+        using var archive = ZipFile.OpenRead(packagePath);
+        var entries = archive.Entries.Select(entry => entry.FullName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("tools/net8.0/PresentationBuildTasks.dll", entries);
     }
 
     [Fact]
