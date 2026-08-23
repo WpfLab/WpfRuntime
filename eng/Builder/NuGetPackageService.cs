@@ -146,6 +146,7 @@ public static string GenerateNuspec(
         }
     }
 
+    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.props\" target=\"buildTransitive\\{PackageMetadata.Id}.props\" />");
     files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\\{PackageMetadata.Id}.targets\" />");
     files.AppendLine($"    <file src=\"{packageReadmeFileName}\" target=\"{packageReadmeFileName}\" />");
 

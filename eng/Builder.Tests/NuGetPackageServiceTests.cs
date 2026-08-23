@@ -53,6 +53,34 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateNuspecIncludesBuildTransitivePropsAndTargets()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+        foreach (var rid in new[] { "win-x64", "win-x86" })
+        {
+            Directory.CreateDirectory(Path.Join(stagingDirectory, "runtimes", rid, "native"));
+        }
+
+        var readmePath = Path.Join(Path.GetTempPath(), $"builder-readme-{Guid.NewGuid():N}.md");
+        File.WriteAllText(readmePath, "# Package README");
+
+        var nuspecPath = NuGetPackageService.GenerateNuspec(stagingDirectory, "1.2.3", [], readmePath);
+        var document = XDocument.Load(nuspecPath);
+        XNamespace ns = "http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd";
+        var buildTransitiveFiles = document.Descendants(ns + "file")
+            .Select(element => element.Attribute("src")?.Value)
+            .Where(value => value?.StartsWith("buildTransitive\\", StringComparison.Ordinal) == true)
+            .ToList();
+
+        Assert.Equal(
+            [
+                $"buildTransitive\\{PackageMetadata.Id}.props",
+                $"buildTransitive\\{PackageMetadata.Id}.targets"
+            ],
+            buildTransitiveFiles);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsInfersRuntimeIdentifierFromPlatformTarget()
     {
         var stagingDirectory = CreateStagingDirectory();
