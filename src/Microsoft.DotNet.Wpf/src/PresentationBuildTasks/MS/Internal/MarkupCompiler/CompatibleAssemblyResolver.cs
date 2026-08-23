@@ -13,6 +13,21 @@ namespace MS.Internal.Markup
 {
     internal sealed class CompatibleAssemblyResolver : MetadataAssemblyResolver
     {
+        private static readonly HashSet<string> WpfContractAssemblyNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "PresentationCore",
+            "PresentationFramework",
+            "System.Xaml",
+            "System.Windows.Controls.Ribbon",
+            "System.Windows.Input.Manipulations",
+            "UIAutomationClient",
+            "UIAutomationClientSideProviders",
+            "UIAutomationProvider",
+            "UIAutomationTypes",
+            "WindowsBase",
+            "WindowsFormsIntegration",
+        };
+
         private readonly IReadOnlyList<AssemblyCandidate> _candidates;
 
         internal CompatibleAssemblyResolver(IEnumerable<string> assemblyPaths)
@@ -38,13 +53,20 @@ namespace MS.Internal.Markup
             return context.LoadFromAssemblyPath(candidate.Path);
         }
 
+        internal static bool IsCompatibleReferenceForTest(AssemblyName requested, AssemblyName candidate) =>
+            IsCompatibleReference(requested, candidate);
+
         private static bool IsCompatibleReference(AssemblyName requested, AssemblyName candidate)
         {
             return string.Equals(requested.Name, candidate.Name, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(NormalizeCulture(requested.CultureName), NormalizeCulture(candidate.CultureName), StringComparison.OrdinalIgnoreCase)
-                && PublicKeyTokenMatches(requested.GetPublicKeyToken(), candidate.GetPublicKeyToken())
+                && (IsWpfContractAssembly(requested.Name)
+                    || PublicKeyTokenMatches(requested.GetPublicKeyToken(), candidate.GetPublicKeyToken()))
                 && (requested.Version == null || candidate.Version >= requested.Version);
         }
+
+        private static bool IsWpfContractAssembly(string? assemblyName) =>
+            assemblyName != null && WpfContractAssemblyNames.Contains(assemblyName);
 
         private static string NormalizeCulture(string? cultureName) =>
             string.IsNullOrEmpty(cultureName) ? CultureInfo.InvariantCulture.Name : cultureName;

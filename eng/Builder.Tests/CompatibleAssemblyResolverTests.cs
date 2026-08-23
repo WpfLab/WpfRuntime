@@ -30,7 +30,25 @@ public sealed class CompatibleAssemblyResolverTests
     }
 
     [Fact]
-    public void WhenPublicKeyTokenDiffersThenAssemblyIsRejected()
+    public void WhenWpfContractUsesHistoricalPublicKeyTokenThenHigherVersionAssemblyIsResolved()
+    {
+        var assemblyPath = typeof(CompatibleAssemblyResolverTests).Assembly.Location;
+        var availableName = AssemblyName.GetAssemblyName(assemblyPath);
+        var requestedName = new AssemblyName
+        {
+            Name = "System.Xaml",
+            Version = new Version(4, 0, 0, 0),
+            CultureName = availableName.CultureName,
+        };
+        requestedName.SetPublicKeyToken(Convert.FromHexString("B77A5C561934E089"));
+        var candidateName = CopyWithVersion(availableName, new Version(8, 0, 0, 0));
+        candidateName.Name = "System.Xaml";
+
+        Assert.True(CompatibleAssemblyResolver.IsCompatibleReferenceForTest(requestedName, candidateName));
+    }
+
+    [Fact]
+    public void WhenNonWpfPublicKeyTokenDiffersThenAssemblyIsRejected()
     {
         var assemblyPath = typeof(CompatibleAssemblyResolverTests).Assembly.Location;
         var availableName = AssemblyName.GetAssemblyName(assemblyPath);
