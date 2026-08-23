@@ -11,6 +11,7 @@
   <ItemGroup>
 	<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
 	<PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.11.0" PrivateAssets="all" />
+	<PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
 	<PackageReference Include="xunit" Version="2.9.2" />
 	<PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
 	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -19,10 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
+	<Compile Include="..\..\src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\MS\Internal\MarkupCompiler\CompatibleAssemblyResolver.cs"
+			 Link="CompatibleAssemblyResolver.cs" />
 	<ProjectReference Include="..\Builder\Builder.csproj" />
-	  <ProjectReference Include="..\Builder.ProcessTestHelper\Builder.ProcessTestHelper.csproj"
-					  ReferenceOutputAssembly="false"
-					  OutputItemType="Content"
-					  CopyToOutputDirectory="PreserveNewest" />
+	<ProjectReference Include="..\Builder.ProcessTestHelper\Builder.ProcessTestHelper.csproj"
+				  ReferenceOutputAssembly="false"
+				  OutputItemType="Content"
+				  CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

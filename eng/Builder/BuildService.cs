@@ -68,7 +68,8 @@ foreach (var platform in new[] { "x64", "x86" })
 {
     var projectName = "PresentationBuildTasks";
     var logPath = MsBuildService.GetBuildLogPath(context.BuildLogsDir, projectName, platform);
-    var arguments = $"\"{presentationBuildTasksPath}\" -restore /p:Configuration=Debug /p:Platform={platform} /p:TargetFramework=net472 /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+    var targetFrameworks = platform == "x64" ? "net472;net8.0" : "net472";
+    var arguments = $"\"{presentationBuildTasksPath}\" -restore /p:Configuration=Debug /p:Platform={platform} /p:TargetFrameworks=\"{targetFrameworks}\" /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
     var presentationBuildTasksResult = ProcessRunner.Run(
         msbuildExe,
         arguments,
@@ -193,7 +194,15 @@ NuGetPackageService.CopyIjwHostFromPackage(
 // ---- Step 6: Generate .nuspec and pack ----
 Log.Step("Generating .nuspec and packing...");
 Log.Info($"  Package version: {version}");
-NuGetPackageService.GenerateBuildTransitiveTargets(context.StagingDir);
+var presentationBuildTasksOutputDir = Path.Join(
+    context.ArtifactsDir,
+    "bin",
+    "PresentationBuildTasks",
+    "x64",
+    "Debug",
+    "net8.0");
+NuGetPackageService.CopyPresentationBuildTasks(presentationBuildTasksOutputDir, context.StagingDir);
+NuGetPackageService.GenerateBuildTransitiveFiles(context.StagingDir);
 try
 {
     NuGetPackageService.ValidatePackageAssets(context.StagingDir);

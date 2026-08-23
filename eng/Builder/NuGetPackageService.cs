@@ -225,6 +225,24 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
     return nuspecPath;
 }
 
+public static void GenerateBuildTransitiveFiles(string stagingDir)
+{
+    var buildTransitiveDir = Path.Join(stagingDir, "buildTransitive");
+    Directory.CreateDirectory(buildTransitiveDir);
+    var propsPath = Path.Join(buildTransitiveDir, $"{PackageMetadata.Id}.props");
+    var propsContent = """
+        <Project>
+          <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core'">
+            <_PresentationBuildTasksAssembly>$(MSBuildThisFileDirectory)..\tools\net8.0\PresentationBuildTasks.dll</_PresentationBuildTasksAssembly>
+          </PropertyGroup>
+        </Project>
+        """;
+    File.WriteAllText(propsPath, propsContent);
+    Log.Info($"  buildTransitive/{PackageMetadata.Id}.props");
+
+    GenerateBuildTransitiveTargets(stagingDir);
+}
+
 public static void GenerateBuildTransitiveTargets(string stagingDir)
 {
     var targetsDir = Path.Join(stagingDir, "buildTransitive");
@@ -298,9 +316,31 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
     Log.Info($"  buildTransitive/{PackageMetadata.Id}.targets");
 }
 
+public static void CopyPresentationBuildTasks(string sourceDir, string stagingDir)
+{
+    var toolsDir = Path.Join(stagingDir, "tools", "net8.0");
+    Directory.CreateDirectory(toolsDir);
+    foreach (var fileName in new[]
+    {
+        "PresentationBuildTasks.dll",
+        "PresentationBuildTasks.deps.json",
+        "System.Reflection.MetadataLoadContext.dll",
+    })
+    {
+        var sourcePath = Path.Join(sourceDir, fileName);
+        RequirePackageFile(sourcePath);
+        File.Copy(sourcePath, Path.Join(toolsDir, fileName), overwrite: true);
+        Log.Info($"  tools/net8.0/{fileName}");
+    }
+}
+
 public static void ValidatePackageAssets(string stagingDir)
 {
+    RequirePackageFile(Path.Join(stagingDir, "buildTransitive", $"{PackageMetadata.Id}.props"));
     RequirePackageFile(Path.Join(stagingDir, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+    RequirePackageFile(Path.Join(stagingDir, "tools", "net8.0", "PresentationBuildTasks.dll"));
+    RequirePackageFile(Path.Join(stagingDir, "tools", "net8.0", "PresentationBuildTasks.deps.json"));
+    RequirePackageFile(Path.Join(stagingDir, "tools", "net8.0", "System.Reflection.MetadataLoadContext.dll"));
 
     var requiredReferenceAssemblies = new[]
     {

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net472;net8.0</TargetFrameworks>
     <EnableDefaultItems>false</EnableDefaultItems>
@@ -163,6 +163,7 @@
     <Compile Include="$(WpfSharedDir)\System\Windows\Markup\ReflectionHelper.cs">
       <Link>Shared\System\Windows\Markup\ReflectionHelper.cs</Link>
     </Compile>
+    <Compile Include="MS\Internal\MarkupCompiler\CompatibleAssemblyResolver.cs" />
     <Compile Include="$(WpfSharedDir)\MS\Internal\Xaml\Parser\SpecialBracketCharacters.cs">
       <Link>Shared\MS\Internal\Xaml\Parser\SpecialBracketCharacters.cs</Link>
     </Compile>
