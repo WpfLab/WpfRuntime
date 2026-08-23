@@ -57,21 +57,45 @@ internal static class BuildService
             return 1;
         }
 
-        foreach (var platform in new[] { "x64", "x86" })
+        var presentationBuildTasksBuilds = new[]
+        {
+            (OutputPlatform: "x64", TargetFramework: "net472"),
+            (OutputPlatform: "x64", TargetFramework: "net8.0"),
+            (OutputPlatform: "x86", TargetFramework: "net472"),
+        };
+        foreach (var build in presentationBuildTasksBuilds)
         {
             const string projectName = "PresentationBuildTasks";
-            var logPath = MsBuildService.GetBuildLogPath(context.BuildLogsDir, projectName, platform);
-            var arguments = GetPresentationBuildTasksBuildArguments(presentationBuildTasksPath, platform, logPath);
+            var buildName = $"{build.OutputPlatform}-{build.TargetFramework}";
+            var logPath = MsBuildService.GetBuildLogPath(context.BuildLogsDir, projectName, buildName);
+            var arguments = GetPresentationBuildTasksBuildArguments(
+                presentationBuildTasksPath,
+                build.OutputPlatform,
+                build.TargetFramework,
+                logPath);
             var result = ProcessRunner.Run(msbuildExe, arguments, context.RepoRoot);
             if (result.ExitCode == 0)
                 continue;
 
-            MsBuildService.LogBuildFailure(projectName, platform, msbuildExe, arguments, context.RepoRoot, logPath, result);
-            failedProjects.Add($"{projectName} ({platform})");
+            MsBuildService.LogBuildFailure(projectName, buildName, msbuildExe, arguments, context.RepoRoot, logPath, result);
+            failedProjects.Add($"{projectName} ({buildName})");
         }
 
         if (failedProjects.Count > 0)
             return 1;
+
+        foreach (var build in presentationBuildTasksBuilds)
+        {
+            var outputPath = GetPresentationBuildTasksOutputPath(
+                context.ArtifactsDir,
+                build.OutputPlatform,
+                build.TargetFramework);
+            if (File.Exists(outputPath))
+                continue;
+
+            Log.Error($"PresentationBuildTasks build succeeded but required output was not found: {outputPath}");
+            return 1;
+        }
 
         foreach (var platform in new[] { "x64", "x86" })
         {
@@ -173,17 +197,12 @@ internal static class BuildService
 
         Log.Step("Generating .nuspec and packing...");
         Log.Info($"  Package version: {version}");
-        var presentationBuildTasksOutputDir = Path.Join(
-            context.ArtifactsDir,
-            "bin",
-            "PresentationBuildTasks",
-            "x64",
-            "Debug",
-            "net8.0");
-        NuGetPackageService.CopyPresentationBuildTasks(presentationBuildTasksOutputDir, context.StagingDir);
-        NuGetPackageService.GenerateBuildTransitiveFiles(context.StagingDir);
         try
         {
+            var presentationBuildTasksOutputDir = Path.GetDirectoryName(
+                GetPresentationBuildTasksOutputPath(context.ArtifactsDir, "x64", "net8.0"))!;
+            NuGetPackageService.CopyPresentationBuildTasks(presentationBuildTasksOutputDir, context.StagingDir);
+            NuGetPackageService.GenerateBuildTransitiveFiles(context.StagingDir);
             NuGetPackageService.ValidatePackageAssets(context.StagingDir);
         }
         catch (InvalidOperationException exception)
@@ -212,6 +231,23 @@ internal static class BuildService
         return failedProjects.Count > 0 ? 2 : 0;
     }
 
-    internal static string GetPresentationBuildTasksBuildArguments(string projectPath, string outputPlatform, string logPath) =>
-        $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFrameworks=\"net472;net8.0\" /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+    internal static string GetPresentationBuildTasksBuildArguments(
+        string projectPath,
+        string outputPlatform,
+        string targetFramework,
+        string logPath) =>
+        $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFramework={targetFramework} /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+
+    internal static string GetPresentationBuildTasksOutputPath(
+        string artifactsDir,
+        string outputPlatform,
+        string targetFramework) =>
+        Path.Join(
+            artifactsDir,
+            "bin",
+            "PresentationBuildTasks",
+            outputPlatform,
+            "Debug",
+            targetFramework,
+            "PresentationBuildTasks.dll");
 }

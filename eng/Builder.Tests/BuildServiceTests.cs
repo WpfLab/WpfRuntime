@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using WpfReorganize.Builder;
 
 namespace WpfReorganize.Builder.Tests;
@@ -5,30 +6,68 @@ namespace WpfReorganize.Builder.Tests;
 public sealed class BuildServiceTests
 {
     [Fact]
-    public void PresentationBuildTasksForX86UsesSupportedHostPlatformAndX86OutputSlot()
+    public void PresentationBuildTasksProjectTargetsNet472AndNet80()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var projectPath = Path.Join(
+            repositoryRoot,
+            "src",
+            "Microsoft.DotNet.Wpf",
+            "src",
+            "PresentationBuildTasks",
+            "PresentationBuildTasks.csproj");
+        var document = XDocument.Load(projectPath);
+        var targetFrameworks = document.Descendants()
+            .Single(element => element.Name.LocalName == "TargetFrameworks")
+            .Value;
+
+        Assert.Equal("net472;net8.0", targetFrameworks);
+    }
+
+    [Theory]
+    [InlineData("x64", "net472")]
+    [InlineData("x64", "net8.0")]
+    [InlineData("x86", "net472")]
+    public void PresentationBuildTasksUsesSupportedHostPlatformAndExplicitTargetFramework(
+        string outputPlatform,
+        string targetFramework)
     {
         var arguments = BuildService.GetPresentationBuildTasksBuildArguments(
             "PresentationBuildTasks.csproj",
-            "x86",
+            outputPlatform,
+            targetFramework,
             "build.log");
 
         Assert.Contains(
-            "/p:Platform=x64 /p:WpfNativePlatform=x86 /p:TargetFrameworks=\"net472;net8.0\"",
+            $"/p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFramework={targetFramework}",
             arguments,
             StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PresentationBuildTasksForX64RestoresAllTargetFrameworks()
+    public void PresentationBuildTasksOutputPathMatchesPackagingLayout()
     {
-        var arguments = BuildService.GetPresentationBuildTasksBuildArguments(
-            "PresentationBuildTasks.csproj",
+        var path = BuildService.GetPresentationBuildTasksOutputPath(
+            "artifacts",
             "x64",
-            "build.log");
+            "net8.0");
 
-        Assert.Contains(
-            "/p:Platform=x64 /p:WpfNativePlatform=x64 /p:TargetFrameworks=\"net472;net8.0\"",
-            arguments,
-            StringComparison.Ordinal);
+        Assert.Equal(
+            Path.Join("artifacts", "bin", "PresentationBuildTasks", "x64", "Debug", "net8.0", "PresentationBuildTasks.dll"),
+            path);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Join(directory.FullName, "Microsoft.Dotnet.Wpf.slnx")))
+                return directory.FullName;
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root was not found.");
     }
 }
