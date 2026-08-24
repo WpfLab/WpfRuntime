@@ -24,6 +24,20 @@ public sealed class BuildServiceTests
         Assert.Equal("net472;net8.0", targetFrameworks);
     }
 
+    [Fact]
+    public void RuntimeAssembliesAreBuiltInReleaseWithPortableSymbols()
+    {
+        var arguments = BuildService.GetRuntimeBuildArguments(
+            "WindowsBase.csproj",
+            "x86",
+            "build.log");
+
+        Assert.Contains(
+            "/p:Configuration=Release /p:Platform=x86 /p:DebugSymbols=true /p:DebugType=portable",
+            arguments,
+            StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("x64", "net472")]
     [InlineData("x64", "net8.0")]

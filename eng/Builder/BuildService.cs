@@ -116,7 +116,7 @@ internal static class BuildService
                 Log.Info($"  Building {projectName} ({platform})...");
 
                 var logPath = MsBuildService.GetBuildLogPath(context.BuildLogsDir, projectName, platform);
-                var arguments = $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform={projectPlatform} /p:DebugSymbols=true /p:DebugType=portable /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+                var arguments = GetRuntimeBuildArguments(projectPath, projectPlatform, logPath);
                 var result = ProcessRunner.Run(msbuildExe, arguments, context.RepoRoot);
                 if (result.ExitCode == 0)
                     continue;
@@ -230,6 +230,12 @@ internal static class BuildService
         Log.Info($"All-symbols archive: {allSymbolsArchivePath}");
         return failedProjects.Count > 0 ? 2 : 0;
     }
+
+    internal static string GetRuntimeBuildArguments(
+        string projectPath,
+        string platform,
+        string logPath) =>
+        $"\"{projectPath}\" -restore /p:Configuration=Release /p:Platform={platform} /p:DebugSymbols=true /p:DebugType=portable /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
 
     internal static string GetPresentationBuildTasksBuildArguments(
         string projectPath,
