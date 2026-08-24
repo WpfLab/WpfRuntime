@@ -25,6 +25,24 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
+    public void StrongNameIdentityMatchesOriginalWpfProjectClassification()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var directoryBuildProps = XDocument.Load(Path.Join(repositoryRoot, "Directory.Build.props"));
+        var strongNameImport = directoryBuildProps.Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Import" &&
+                string.Equals((string?)element.Attribute("Project"), @"eng\WpfStrongName.props", StringComparison.Ordinal));
+        var strongNameDocument = XDocument.Load(Path.Join(repositoryRoot, (string)strongNameImport.Attribute("Project")!));
+        var ecmaProjects = strongNameDocument.Descendants()
+            .Single(element => element.Name.LocalName == "_WpfEcmaStrongNameProjects")
+            .Value;
+
+        Assert.Contains("System.Xaml;", ecmaProjects, StringComparison.Ordinal);
+        Assert.DoesNotContain("PresentationFramework;", ecmaProjects, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RuntimeAssembliesAreBuiltInReleaseWithPortableSymbols()
     {
         var arguments = BuildService.GetRuntimeBuildArguments(
