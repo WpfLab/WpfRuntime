@@ -40,6 +40,44 @@ public sealed class BuildServiceTests
 
         Assert.Contains("System.Xaml;", ecmaProjects, StringComparison.Ordinal);
         Assert.DoesNotContain("PresentationFramework;", ecmaProjects, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows.Controls.Ribbon;", ecmaProjects, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows.Presentation;", ecmaProjects, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RibbonStrongNameIdentityMatchesFriendAssemblyContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var refAssemblyAttributes = File.ReadAllText(Path.Join(
+            repositoryRoot,
+            "src",
+            "Microsoft.DotNet.Wpf",
+            "src",
+            "Shared",
+            "RefAssemblyAttrs.cs"));
+
+        Assert.Contains(
+            "SystemWindowsControlsRibbon = \"System.Windows.Controls.Ribbon, PublicKey=\" + WCP_PUBLIC_KEY_STRING",
+            refAssemblyAttributes,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SystemWindowsPresentationStrongNameIdentityMatchesFriendAssemblyContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var refAssemblyAttributes = File.ReadAllText(Path.Join(
+            repositoryRoot,
+            "src",
+            "Microsoft.DotNet.Wpf",
+            "src",
+            "Shared",
+            "RefAssemblyAttrs.cs"));
+
+        Assert.Contains(
+            "SystemWindowsPresentation = \"System.Windows.Presentation, PublicKey=\" + WCP_PUBLIC_KEY_STRING",
+            refAssemblyAttributes,
+            StringComparison.Ordinal);
     }
 
     [Fact]

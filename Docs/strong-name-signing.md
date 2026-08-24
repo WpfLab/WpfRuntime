@@ -17,7 +17,8 @@
 
 - 原始 WPF `UseMicrosoftSharedKeyId` 名单中的程序集保持 `MicrosoftShared`。
 - shipping/helper 项目中不在该名单内的程序集使用 `ECMA`。
-- 当前解决方案内的 ECMA 项目名单维护在 `eng/WpfStrongName.props`，其中包括 `System.Xaml`、`System.Windows.Input.Manipulations`、`System.Windows.Controls.Ribbon` 和 `System.Windows.Presentation` 及其相应引用程序集。
+- 当前解决方案内的 ECMA 项目名单维护在 `eng/WpfStrongName.props`，其中包括 `System.Xaml`、`System.Windows.Input.Manipulations` 及其相应引用程序集。
+- 当前重组仓库的 `System.Windows.Controls.Ribbon` 与 `System.Windows.Presentation` 依赖使用 MicrosoftShared 公钥声明的 `InternalsVisibleTo`，因此它们及对应引用程序集保持 MicrosoftShared；这是相对 origin 默认分类的有证据偏离。
 - WPF 生成的 `_wpftmp` 临时项目按原项目名称选择相同密钥。
 
 关键身份示例：
@@ -31,8 +32,8 @@
 
 ## 修改约束
 
-- 新增或恢复 WPF 产品项目时，必须先对照 `origin/wpf` 确认其原始签名身份。
-- 不允许因为构建冲突而任意统一为 ECMA 或 MicrosoftShared。
+- 新增或恢复 WPF 产品项目时，必须先对照 `origin/wpf` 确认其原始签名身份，并检查当前仓库的 `InternalsVisibleTo`、共享 `BuildInfo` 常量及重组说明。
+- 不允许只依据 origin 项目名单机械修改当前仓库已有的友元身份契约，也不允许因为构建冲突而任意统一为 ECMA 或 MicrosoftShared。
 - 引用程序集与对应运行时程序集必须使用相同身份。
 - 修改映射后应构建受影响的实现项目和 `-ref` 项目，并运行 Builder 测试。
 - 若消费项目同时看到 inbox 和包内同名程序集，应修复引用替换逻辑，不能通过改变程序集身份掩盖重复引用。
