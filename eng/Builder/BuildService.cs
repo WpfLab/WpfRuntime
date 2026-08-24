@@ -242,7 +242,7 @@ internal static class BuildService
         string outputPlatform,
         string targetFramework,
         string logPath) =>
-        $"\"{projectPath}\" -restore /p:Configuration=Debug /p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFramework={targetFramework} /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+        $"\"{projectPath}\" -restore /p:Configuration=Release /p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFramework={targetFramework} /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
 
     internal static string GetPresentationBuildTasksOutputPath(
         string artifactsDir,
@@ -253,7 +253,7 @@ internal static class BuildService
             "bin",
             "PresentationBuildTasks",
             outputPlatform,
-            "Debug",
+            "Release",
             targetFramework,
             "PresentationBuildTasks.dll");
 }

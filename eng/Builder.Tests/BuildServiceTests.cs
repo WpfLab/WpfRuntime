@@ -53,7 +53,7 @@ public sealed class BuildServiceTests
             "build.log");
 
         Assert.Contains(
-            $"/p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFramework={targetFramework}",
+            $"/p:Configuration=Release /p:Platform=x64 /p:WpfNativePlatform={outputPlatform} /p:TargetFramework={targetFramework}",
             arguments,
             StringComparison.Ordinal);
     }
@@ -67,7 +67,7 @@ public sealed class BuildServiceTests
             "net8.0");
 
         Assert.Equal(
-            Path.Join("artifacts", "bin", "PresentationBuildTasks", "x64", "Debug", "net8.0", "PresentationBuildTasks.dll"),
+            Path.Join("artifacts", "bin", "PresentationBuildTasks", "x64", "Release", "net8.0", "PresentationBuildTasks.dll"),
             path);
     }
 
