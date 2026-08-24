@@ -152,6 +152,25 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitiveTargetsReplacesEveryPackagedWpfReference()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "<_DotNetCampusWpfReferenceName Include=\"@(_DotNetCampusWpfReferenceDll->'%(Filename)')\" />",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "WithMetadataValue('Identity', '%(ReferencePath.Filename)')",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsCopiesNativeAssetsForInferredRuntimeIdentifier()
     {
         var stagingDirectory = CreateStagingDirectory();

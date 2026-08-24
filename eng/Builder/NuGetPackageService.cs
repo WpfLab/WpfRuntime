@@ -276,10 +276,11 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
           <Target Name="RemoveInboxWpfReferencesForDotNetCampusWpfLib"
                   AfterTargets="ResolveReferences">
             <ItemGroup>
+              <_DotNetCampusWpfReferenceName Include="@(_DotNetCampusWpfReferenceDll->'%(Filename)')" />
               <ReferencePath Remove="@(ReferencePath)"
-                             Condition="'%(ReferencePath.Filename)' == 'WindowsBase' Or '%(ReferencePath.Filename)' == 'PresentationCore' Or '%(ReferencePath.Filename)' == 'PresentationFramework' Or '%(ReferencePath.Filename)' == 'ReachFramework' Or '%(ReferencePath.Filename)' == 'System.Printing' Or '%(ReferencePath.Filename)' == 'System.Xaml'" />
+                             Condition="@(_DotNetCampusWpfReferenceName->WithMetadataValue('Identity', '%(ReferencePath.Filename)')->Count()) != 0" />
               <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
-                                               Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Xaml'" />
+                                               Condition="@(_DotNetCampusWpfReferenceName->WithMetadataValue('Identity', '%(ReferencePathWithRefAssemblies.Filename)')->Count()) != 0" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
             </ItemGroup>
