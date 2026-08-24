@@ -277,9 +277,9 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
                   AfterTargets="ResolveReferences">
             <ItemGroup>
               <ReferencePath Remove="@(ReferencePath)"
-                             Condition="'%(ReferencePath.Filename)' == 'WindowsBase' Or '%(ReferencePath.Filename)' == 'PresentationCore' Or '%(ReferencePath.Filename)' == 'PresentationFramework' Or '%(ReferencePath.Filename)' == 'ReachFramework' Or '%(ReferencePath.Filename)' == 'System.Printing'" />
+                             Condition="'%(ReferencePath.Filename)' == 'WindowsBase' Or '%(ReferencePath.Filename)' == 'PresentationCore' Or '%(ReferencePath.Filename)' == 'PresentationFramework' Or '%(ReferencePath.Filename)' == 'ReachFramework' Or '%(ReferencePath.Filename)' == 'System.Printing' Or '%(ReferencePath.Filename)' == 'System.Xaml'" />
               <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
-                                               Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing'" />
+                                               Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Xaml'" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
             </ItemGroup>
