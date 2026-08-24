@@ -152,22 +152,60 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateBuildTransitiveTargetsReplacesEveryPackagedWpfReference()
+    public async Task GenerateBuildTransitiveTargetsReplacesEveryPackagedWpfReferenceAsync()
     {
         var stagingDirectory = CreateStagingDirectory();
-
+        var referenceDirectory = Path.Join(stagingDirectory, "ref", "net8.0");
+        Directory.CreateDirectory(referenceDirectory);
+        File.WriteAllText(Path.Join(referenceDirectory, "WindowsBase.dll"), "package-windows-base");
+        File.WriteAllText(Path.Join(referenceDirectory, "PresentationFramework.dll"), "package-presentation-framework");
         NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
-        var targetsContent = File.ReadAllText(
-            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
 
-        Assert.Contains(
-            "<_DotNetCampusWpfReferenceName Include=\"@(_DotNetCampusWpfReferenceDll->'%(Filename)')\" />",
-            targetsContent,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "WithMetadataValue('Identity', '%(ReferencePath.Filename)')",
-            targetsContent,
-            StringComparison.Ordinal);
+        var outputPath = Path.Join(stagingDirectory, "references.txt");
+        var projectPath = Path.Join(stagingDirectory, "ReferenceReplacement.proj");
+        var targetsPath = Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets");
+        var projectContent = $$"""
+            <Project>
+              <Import Project="{{targetsPath}}" />
+              <Target Name="ResolveReferences">
+                <ItemGroup>
+                  <ReferencePath Include="inbox\WindowsBase.dll">
+                    <Version>9.0.0.0</Version>
+                  </ReferencePath>
+                  <ReferencePath Include="inbox\PresentationFramework.dll">
+                    <Version>9.0.0.0</Version>
+                  </ReferencePath>
+                </ItemGroup>
+              </Target>
+              <Target Name="Validate" DependsOnTargets="ResolveReferences;RemoveInboxWpfReferencesForDotNetCampusWpfLib">
+                <WriteLinesToFile File="{{outputPath}}" Lines="@(ReferencePath->'%(Identity)|%(Filename)|%(Version)')" Overwrite="true" />
+              </Target>
+            </Project>
+            """;
+        File.WriteAllText(projectPath, projectContent);
+
+        var result = await ProcessRunner.RunAsync(new ProcessRunOptions(
+            "dotnet",
+            stagingDirectory,
+            "msbuild",
+            projectPath,
+            "-target:Validate",
+            "-nologo",
+            "-verbosity:quiet"));
+        Assert.True(
+            result.ExitCode == 0,
+            $"MSBuild failed with exit code {result.ExitCode}.{Environment.NewLine}{result.StandardOutput}{Environment.NewLine}{result.StandardError}");
+        var references = File.ReadAllLines(outputPath);
+
+        var normalizedReferences = references
+            .Select(reference => reference.Replace(@"\\", @"\", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(2, normalizedReferences.Length);
+        Assert.Contains(normalizedReferences, reference => reference.Contains(@"\ref\net8.0\WindowsBase.dll|WindowsBase|", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(normalizedReferences, reference => reference.Contains(@"\ref\net8.0\PresentationFramework.dll|PresentationFramework|", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(normalizedReferences, reference => reference.Contains("inbox", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(normalizedReferences, reference => reference.EndsWith("|9.0.0.0", StringComparison.Ordinal));
     }
 
     [Fact]

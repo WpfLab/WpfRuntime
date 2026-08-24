@@ -276,11 +276,10 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
           <Target Name="RemoveInboxWpfReferencesForDotNetCampusWpfLib"
                   AfterTargets="ResolveReferences">
             <ItemGroup>
-              <_DotNetCampusWpfReferenceName Include="@(_DotNetCampusWpfReferenceDll->'%(Filename)')" />
-              <ReferencePath Remove="@(ReferencePath)"
-                             Condition="@(_DotNetCampusWpfReferenceName->WithMetadataValue('Identity', '%(ReferencePath.Filename)')->Count()) != 0" />
-              <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
-                                               Condition="@(_DotNetCampusWpfReferenceName->WithMetadataValue('Identity', '%(ReferencePathWithRefAssemblies.Filename)')->Count()) != 0" />
+              <ReferencePath Remove="@(_DotNetCampusWpfReferenceDll)"
+                             MatchOnMetadata="Filename" />
+              <ReferencePathWithRefAssemblies Remove="@(_DotNetCampusWpfReferenceDll)"
+                                               MatchOnMetadata="Filename" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
             </ItemGroup>
