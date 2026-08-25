@@ -274,7 +274,11 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
           </ItemGroup>
 
           <Target Name="RemoveInboxWpfReferencesForDotNetCampusWpfLib"
-                  AfterTargets="ResolveReferences">
+                  AfterTargets="ResolveReferences"
+                  BeforeTargets="MarkupCompilePass1;GenerateTemporaryTargetAssembly;CoreCompile">
+            <Message Importance="high"
+                     Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"
+                     Text="[WpfRuntime refs before] Project=$(MSBuildProjectFullPath); TargetFramework=$(TargetFramework); RuntimeIdentifier=$(RuntimeIdentifier); FrameworkReference=@(FrameworkReference->'%(Identity)', ', '); ReferencePath=@(ReferencePath->'%(Filename)|%(Version)|%(FrameworkReferenceName)|%(Identity)', ' || ')" />
             <ItemGroup>
               <ReferencePath Remove="@(_DotNetCampusWpfReferenceDll)"
                              MatchOnMetadata="Filename" />
@@ -283,6 +287,9 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
             </ItemGroup>
+            <Message Importance="high"
+                     Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"
+                     Text="[WpfRuntime refs after] Project=$(MSBuildProjectFullPath); TargetFramework=$(TargetFramework); RuntimeIdentifier=$(RuntimeIdentifier); ReferencePath=@(ReferencePath->'%(Filename)|%(Version)|%(FrameworkReferenceName)|%(Identity)', ' || ')" />
           </Target>
 
           <Target Name="SelectDotNetCampusIjwHostPublishAsset"

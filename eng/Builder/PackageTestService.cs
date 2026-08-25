@@ -73,7 +73,13 @@ static void PublishAndValidatePackageTest(
     Directory.CreateDirectory(publishDir);
     Log.Step($"Publishing {testProject.Name} for {targetFramework}/{rid}...");
 
-    var arguments = $"publish \"{testProject.ProjectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained true --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo";
+    var arguments = GetPublishArguments(
+        testProject.ProjectPath,
+        targetFramework,
+        rid,
+        nugetConfigPath,
+        restorePackagesDir,
+        publishDir);
     var result = ProcessRunner.Run("dotnet", arguments, Path.GetDirectoryName(testProject.ProjectPath)!);
     if (result.ExitCode != 0)
     {
@@ -383,6 +389,15 @@ static void CopyPackageTestProjectTemplate(string sourceDir, string destinationD
         File.Copy(sourcePath, destinationPath, overwrite: true);
     }
 }
+
+internal static string GetPublishArguments(
+    string projectPath,
+    string targetFramework,
+    string rid,
+    string nugetConfigPath,
+    string restorePackagesDir,
+    string publishDir) =>
+    $"publish \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained true --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
 
 static string XmlEscape(string value) =>
     value.Replace("&", "&amp;", StringComparison.Ordinal)

@@ -152,6 +152,21 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitiveTargetsRunsBeforeWpfCompilationStages()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "BeforeTargets=\"MarkupCompilePass1;GenerateTemporaryTargetAssembly;CoreCompile\"",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task GenerateBuildTransitiveTargetsReplacesEveryPackagedWpfReferenceAsync()
     {
         var stagingDirectory = CreateStagingDirectory();

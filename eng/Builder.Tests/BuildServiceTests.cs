@@ -81,6 +81,21 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
+    public void PackagePublishEnablesWpfReferenceDiagnostics()
+    {
+        var arguments = PackageTestService.GetPublishArguments(
+            "PackageTestApp.csproj",
+            "net9.0-windows",
+            "win-x86",
+            "NuGet.Config",
+            "packages",
+            "publish");
+
+        Assert.Contains("--property:WpfRuntimeReferenceDiagnostics=true", arguments, StringComparison.Ordinal);
+        Assert.Contains("--property:GenerateTemporaryTargetAssemblyDebuggingInformation=true", arguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RuntimeAssembliesAreBuiltInReleaseWithPortableSymbols()
     {
         var arguments = BuildService.GetRuntimeBuildArguments(
