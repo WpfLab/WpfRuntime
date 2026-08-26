@@ -90,7 +90,8 @@ internal static class GitHubArtifactCommentFormatter
             foreach (var artifact in artifacts.Take(MaxArtifacts))
             {
                 var artifactUrl = $"{runUrl}/artifacts/{artifact.Id}";
-                body.Add($"- NuGet artifact: [{EscapeMarkdown(artifact.Name)}]({artifactUrl})");
+                var (artifactLabel, fileName) = GetArtifactPresentation(artifact.Name);
+                body.Add($"- {artifactLabel}: [{EscapeMarkdown(fileName)}]({artifactUrl})");
                 body.Add($"  - Size: {FormatBytes(artifact.SizeInBytes)}");
                 body.Add($"  - Expires at: {EscapeMarkdown(artifact.ExpiresAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}");
             }
@@ -109,6 +110,21 @@ internal static class GitHubArtifactCommentFormatter
             testedSha);
     }
 
+    private static (string Label, string FileName) GetArtifactPresentation(string artifactName)
+    {
+        if (artifactName.EndsWith(".symbols.zip", StringComparison.Ordinal))
+        {
+            return ("PDB symbols archive", artifactName);
+        }
+
+        if (artifactName.EndsWith(".snupkg", StringComparison.Ordinal))
+        {
+            return ("NuGet symbol package", artifactName);
+        }
+
+        return ("NuGet package", artifactName);
+    }
+
     public static IReadOnlyList<GitHubArtifactCommentItem> FilterArtifacts(
         IEnumerable<Artifact> artifacts,
         int pullRequestNumber,
@@ -117,7 +133,7 @@ internal static class GitHubArtifactCommentFormatter
     {
         ArgumentNullException.ThrowIfNull(artifacts);
         var pattern = new Regex(
-            $"^{Regex.Escape(PackageMetadata.Id)}-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}-version-([0-9A-Za-z.+-]+?)(?:-symbols|-all-symbols)?$",
+            $"^{Regex.Escape(PackageMetadata.Id)}-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}-version-([0-9A-Za-z.+-]+?)\\.(?:nupkg|snupkg|symbols\\.zip)$",
             RegexOptions.CultureInvariant);
         return artifacts
             .Where(artifact => artifact is not null
