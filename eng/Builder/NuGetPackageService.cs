@@ -271,6 +271,8 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
 
           <ItemGroup>
             <_DotNetCampusWpfReferenceDll Include="$(MSBuildThisFileDirectory)..\ref\net8.0\*.dll" />
+            <_DotNetCampusWpfReplacementDll Include="@(_DotNetCampusWpfReferenceDll)" />
+            <_DotNetCampusWpfReplacementDll Include="$(MSBuildThisFileDirectory)..\runtimes\win-x64\lib\net8.0\*.dll" />
           </ItemGroup>
 
           <Target Name="RemoveInboxWpfReferencesForDotNetCampusWpfLib"
@@ -280,9 +282,9 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
                      Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"
                      Text="[WpfRuntime refs before] Project=$(MSBuildProjectFullPath); TargetFramework=$(TargetFramework); RuntimeIdentifier=$(RuntimeIdentifier); FrameworkReference=@(FrameworkReference->'%(Identity)', ', '); ReferencePath=@(ReferencePath->'%(Filename)|%(Version)|%(FrameworkReferenceName)|%(Identity)', ' || ')" />
             <ItemGroup>
-              <ReferencePath Remove="@(_DotNetCampusWpfReferenceDll)"
+              <ReferencePath Remove="@(_DotNetCampusWpfReplacementDll)"
                              MatchOnMetadata="Filename" />
-              <ReferencePathWithRefAssemblies Remove="@(_DotNetCampusWpfReferenceDll)"
+              <ReferencePathWithRefAssemblies Remove="@(_DotNetCampusWpfReplacementDll)"
                                                MatchOnMetadata="Filename" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
