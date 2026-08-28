@@ -16,7 +16,7 @@
              Text="PresentationBuildTasks.dll was not found at '$(_BuiltPresentationBuildTasksAssembly)'. Building '$(_PresentationBuildTasksProject)' for '$(_PresentationBuildTasksTfm)' once before markup compilation." />
     <MSBuild Projects="$(_PresentationBuildTasksProject)"
              Targets="Build"
-             Properties="Configuration=$(Configuration);Platform=$(WpfNativePlatform);TargetFramework=$(_PresentationBuildTasksTfm);BuildPresentationBuildTasksOnDemand=false"
+             Properties="Configuration=$(Configuration);Platform=x64;WpfNativePlatform=$(WpfNativePlatform);TargetFramework=$(_PresentationBuildTasksTfm);BuildPresentationBuildTasksOnDemand=false"
              StopOnFirstFailure="true" />
     <PropertyGroup Condition="Exists('$(_BuiltPresentationBuildTasksAssembly)')">
       <_PresentationBuildTasksAssembly>$(_BuiltPresentationBuildTasksAssembly)</_PresentationBuildTasksAssembly>

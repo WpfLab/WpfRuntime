@@ -23,10 +23,10 @@ internal static class AssemblyCollector
 
             foreach (var dllDir in new[]
             {
-                Path.Join(projectDir, "x64", "Debug", "net8.0"),
-                Path.Join(projectDir, "AnyCPU", "Debug", "net8.0"),
-                Path.Join(projectDir, "Any CPU", "Debug", "net8.0"),
-                Path.Join(projectDir, "Debug", "net8.0"),
+                Path.Join(projectDir, "x64", "Release", "net8.0"),
+                Path.Join(projectDir, "AnyCPU", "Release", "net8.0"),
+                Path.Join(projectDir, "Any CPU", "Release", "net8.0"),
+                Path.Join(projectDir, "Release", "net8.0"),
             })
             {
                 if (!Directory.Exists(dllDir)) continue;
@@ -65,10 +65,10 @@ internal static class AssemblyCollector
             {
                 foreach (var dllDir in new[]
                 {
-                    Path.Join(projectDir, platformCandidate, "Debug", "net8.0"),
-                    Path.Join(projectDir, platformCandidate, "Debug"),
-                    Path.Join(projectDir, "Debug", "net8.0"),
-                    Path.Join(projectDir, "Debug"),
+                    Path.Join(projectDir, platformCandidate, "Release", "net8.0"),
+                    Path.Join(projectDir, platformCandidate, "Release"),
+                    Path.Join(projectDir, "Release", "net8.0"),
+                    Path.Join(projectDir, "Release"),
                 })
                 {
                     if (!Directory.Exists(dllDir)) continue;

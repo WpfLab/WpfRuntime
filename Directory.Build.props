@@ -1,6 +1,7 @@
 <Project>
 
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  <Import Project="eng\WpfStrongName.props" />
 
   <PropertyGroup>
     <RepositoryName>wpf</RepositoryName>

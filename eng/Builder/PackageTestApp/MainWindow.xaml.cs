@@ -52,7 +52,7 @@ public partial class MainWindow : Window
         RequireControl(StandardModeRadioButton, nameof(StandardModeRadioButton));
         RequireControl(ValidationProgressBar, nameof(ValidationProgressBar));
         RequireControl(ActionButton, nameof(ActionButton));
-        RequireControl(FeatureListBox, nameof(FeatureListBox));
+        RequireControl(AvalonEditor, nameof(AvalonEditor));
         RequireControl(StatusTextBlock, nameof(StatusTextBlock));
 
         if (Application.Current.Resources["AccentBrush"] is not SolidColorBrush)
@@ -63,7 +63,7 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("Button routed event was not handled.");
 
         Console.WriteLine(
-            $"Validated XAML controls: {ContentTabs.Items.Count} tabs, {FeatureListBox.Items.Count} list items, " +
+            $"Validated XAML controls: {ContentTabs.Items.Count} tabs, AvalonEdit text length {AvalonEditor.Text.Length}, " +
             $"progress {ValidationProgressBar.Value}.");
     }
 

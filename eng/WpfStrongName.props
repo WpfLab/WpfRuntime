@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <_WpfStrongNameProjectName Condition="!$(MSBuildProjectName.EndsWith('_wpftmp'))">$(MSBuildProjectName)</_WpfStrongNameProjectName>
+    <_WpfStrongNameProjectName Condition="$(MSBuildProjectName.EndsWith('_wpftmp'))">$(MSBuildProjectName.SubString(0, $(MSBuildProjectName.IndexOf('_'))))</_WpfStrongNameProjectName>
+    <_WpfEcmaStrongNameProjects>
+      System.Xaml;
+      System.Xaml-ref;
+      System.Windows.Input.Manipulations;
+      System.Windows.Input.Manipulations-ref;
+      PresentationUI-ref;
+    </_WpfEcmaStrongNameProjects>
+    <StrongNameKeyId Condition="$(_WpfEcmaStrongNameProjects.Contains('$(_WpfStrongNameProjectName);'))">ECMA</StrongNameKeyId>
+  </PropertyGroup>
+</Project>

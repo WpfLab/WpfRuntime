@@ -18,6 +18,7 @@
 - [07-wpfdemo-implementation.md](07-wpfdemo-implementation.md)：记录 WpfDemo 消费仓库 WPF 的实现结构、MSBuild 数据流和扩展约束。
 - [08-builder-pr-relay-design.md](08-builder-pr-relay-design.md)：设计 Builder 从 GitHub PR 链接搬运提交、本地验证后创建目标 PR，以及 Actions 构建产物回写机制。
 - [PresentationBuildTasks-bootstrap.md](PresentationBuildTasks-bootstrap.md)：说明 `PresentationBuildTasks` 的任务程序集选择、按需构建和锁定输出处理机制。
+- [strong-name-signing.md](strong-name-signing.md)：说明 WPF 强名称密钥来源、与原始仓库一致的身份映射及修改约束。
 - [cycle-breaker.md](cycle-breaker.md)：记录循环依赖证据、cycle-breaker 的职责、保留条件和退出条件。
 - [backlog.md](backlog.md)：记录不打断正式阶段顺序的已观察问题；进入正式计划的事项以 `01-phase-plan.md` 为准。
 

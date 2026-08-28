@@ -146,7 +146,11 @@ public static string GenerateNuspec(
         }
     }
 
-    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\\{PackageMetadata.Id}.targets\" />");
+    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.props\" target=\"buildTransitive\" />");
+    files.AppendLine($"    <file src=\"buildTransitive\\{PackageMetadata.Id}.targets\" target=\"buildTransitive\" />");
+    files.AppendLine("    <file src=\"tools\\net8.0\\PresentationBuildTasks.dll\" target=\"tools\\net8.0\" />");
+    files.AppendLine("    <file src=\"tools\\net8.0\\PresentationBuildTasks.deps.json\" target=\"tools\\net8.0\" />");
+    files.AppendLine("    <file src=\"tools\\net8.0\\System.Reflection.MetadataLoadContext.dll\" target=\"tools\\net8.0\" />");
     files.AppendLine($"    <file src=\"{packageReadmeFileName}\" target=\"{packageReadmeFileName}\" />");
 
     var nuspecContent = $$"""
@@ -225,6 +229,24 @@ public static string GenerateSymbolNuspec(string stagingDir, string version)
     return nuspecPath;
 }
 
+public static void GenerateBuildTransitiveFiles(string stagingDir)
+{
+    var buildTransitiveDir = Path.Join(stagingDir, "buildTransitive");
+    Directory.CreateDirectory(buildTransitiveDir);
+    var propsPath = Path.Join(buildTransitiveDir, $"{PackageMetadata.Id}.props");
+    var propsContent = """
+        <Project>
+          <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core'">
+            <_PresentationBuildTasksAssembly>$(MSBuildThisFileDirectory)..\tools\net8.0\PresentationBuildTasks.dll</_PresentationBuildTasksAssembly>
+          </PropertyGroup>
+        </Project>
+        """;
+    File.WriteAllText(propsPath, propsContent);
+    Log.Info($"  buildTransitive/{PackageMetadata.Id}.props");
+
+    GenerateBuildTransitiveTargets(stagingDir);
+}
+
 public static void GenerateBuildTransitiveTargets(string stagingDir)
 {
     var targetsDir = Path.Join(stagingDir, "buildTransitive");
@@ -249,18 +271,27 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
 
           <ItemGroup>
             <_DotNetCampusWpfReferenceDll Include="$(MSBuildThisFileDirectory)..\ref\net8.0\*.dll" />
+            <_DotNetCampusWpfReplacementDll Include="@(_DotNetCampusWpfReferenceDll)" />
+            <_DotNetCampusWpfReplacementDll Include="$(MSBuildThisFileDirectory)..\runtimes\win-x64\lib\net8.0\*.dll" />
           </ItemGroup>
 
           <Target Name="RemoveInboxWpfReferencesForDotNetCampusWpfLib"
-                  AfterTargets="ResolveReferences">
+                  AfterTargets="ResolveReferences"
+                  BeforeTargets="MarkupCompilePass1;GenerateTemporaryTargetAssembly;CoreCompile">
+            <Message Importance="high"
+                     Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"
+                     Text="[WpfRuntime refs before] Project=$(MSBuildProjectFullPath); TargetFramework=$(TargetFramework); RuntimeIdentifier=$(RuntimeIdentifier); FrameworkReference=@(FrameworkReference->'%(Identity)', ', '); ReferencePath=@(ReferencePath->'%(Filename)|%(Version)|%(FrameworkReferenceName)|%(Identity)', ' || ')" />
             <ItemGroup>
-              <ReferencePath Remove="@(ReferencePath)"
-                             Condition="'%(ReferencePath.Filename)' == 'WindowsBase' Or '%(ReferencePath.Filename)' == 'PresentationCore' Or '%(ReferencePath.Filename)' == 'PresentationFramework' Or '%(ReferencePath.Filename)' == 'ReachFramework' Or '%(ReferencePath.Filename)' == 'System.Printing'" />
-              <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)"
-                                               Condition="'%(ReferencePathWithRefAssemblies.Filename)' == 'WindowsBase' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationCore' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'PresentationFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'ReachFramework' Or '%(ReferencePathWithRefAssemblies.Filename)' == 'System.Printing'" />
+              <ReferencePath Remove="@(_DotNetCampusWpfReplacementDll)"
+                             MatchOnMetadata="Filename" />
+              <ReferencePathWithRefAssemblies Remove="@(_DotNetCampusWpfReplacementDll)"
+                                               MatchOnMetadata="Filename" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
             </ItemGroup>
+            <Message Importance="high"
+                     Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"
+                     Text="[WpfRuntime refs after] Project=$(MSBuildProjectFullPath); TargetFramework=$(TargetFramework); RuntimeIdentifier=$(RuntimeIdentifier); ReferencePath=@(ReferencePath->'%(Filename)|%(Version)|%(FrameworkReferenceName)|%(Identity)', ' || ')" />
           </Target>
 
           <Target Name="SelectDotNetCampusIjwHostPublishAsset"
@@ -298,9 +329,31 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
     Log.Info($"  buildTransitive/{PackageMetadata.Id}.targets");
 }
 
+public static void CopyPresentationBuildTasks(string sourceDir, string stagingDir)
+{
+    var toolsDir = Path.Join(stagingDir, "tools", "net8.0");
+    Directory.CreateDirectory(toolsDir);
+    foreach (var fileName in new[]
+    {
+        "PresentationBuildTasks.dll",
+        "PresentationBuildTasks.deps.json",
+        "System.Reflection.MetadataLoadContext.dll",
+    })
+    {
+        var sourcePath = Path.Join(sourceDir, fileName);
+        RequirePackageFile(sourcePath);
+        File.Copy(sourcePath, Path.Join(toolsDir, fileName), overwrite: true);
+        Log.Info($"  tools/net8.0/{fileName}");
+    }
+}
+
 public static void ValidatePackageAssets(string stagingDir)
 {
+    RequirePackageFile(Path.Join(stagingDir, "buildTransitive", $"{PackageMetadata.Id}.props"));
     RequirePackageFile(Path.Join(stagingDir, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+    RequirePackageFile(Path.Join(stagingDir, "tools", "net8.0", "PresentationBuildTasks.dll"));
+    RequirePackageFile(Path.Join(stagingDir, "tools", "net8.0", "PresentationBuildTasks.deps.json"));
+    RequirePackageFile(Path.Join(stagingDir, "tools", "net8.0", "System.Reflection.MetadataLoadContext.dll"));
 
     var requiredReferenceAssemblies = new[]
     {
@@ -372,9 +425,32 @@ public static string PackNuGet(string nuspecPath, string outputDir)
 {
     Directory.CreateDirectory(outputDir);
     var nupkgPath = PackNuspec(nuspecPath, outputDir);
+    ValidatePackedPresentationBuildTaskAssets(nupkgPath);
     var fileInfo = new FileInfo(nupkgPath);
     Log.Info($"  .nupkg generated: {nupkgPath} ({fileInfo.Length / 1024.0:F1} KB)");
     return nupkgPath;
+}
+
+internal static void ValidatePackedPresentationBuildTaskAssets(string nupkgPath)
+{
+    using var archive = ZipFile.OpenRead(nupkgPath);
+    var entries = archive.Entries
+        .Select(entry => entry.FullName)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var requiredEntries = new[]
+    {
+        $"buildTransitive/{PackageMetadata.Id}.props",
+        $"buildTransitive/{PackageMetadata.Id}.targets",
+        "tools/net8.0/PresentationBuildTasks.dll",
+        "tools/net8.0/PresentationBuildTasks.deps.json",
+        "tools/net8.0/System.Reflection.MetadataLoadContext.dll",
+    };
+
+    foreach (var entry in requiredEntries)
+    {
+        if (!entries.Contains(entry))
+            throw new InvalidOperationException($"Required packed NuGet asset not found: {entry}");
+    }
 }
 
 public static string CreateAllSymbolsArchive(string buildOutputDir, string version, string outputDir)

@@ -8,6 +8,7 @@
 	<AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
+	<PackageReference Include="AvalonEdit" Version="6.0.1" />
 	<PackageReference Include="WpfLab.WpfRuntime" Version="0.0.0-package-test" />
   </ItemGroup>
 </Project>

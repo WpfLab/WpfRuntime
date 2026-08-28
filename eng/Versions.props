@@ -32,8 +32,8 @@
     <SystemCodeDomPackageVersion>8.0.0</SystemCodeDomPackageVersion>
     <SystemConfigurationConfigurationManagerPackageVersion>8.0.0</SystemConfigurationConfigurationManagerPackageVersion>
     <SystemDiagnosticsEventLogPackageVersion>8.0.0</SystemDiagnosticsEventLogPackageVersion>
-    <SystemDrawingCommonVersion>8.0.0-rc.1.23410.2</SystemDrawingCommonVersion>
-    <SystemFormatsNrbfVersion>8.0.0</SystemFormatsNrbfVersion>
+    <SystemDrawingCommonVersion>8.0.30</SystemDrawingCommonVersion>
+    <SystemFormatsNrbfVersion>9.0.0</SystemFormatsNrbfVersion>
     <SystemDirectoryServicesVersion>8.0.0</SystemDirectoryServicesVersion>
     <SystemIOPackagingVersion>8.0.0</SystemIOPackagingVersion>
     <SystemReflectionMetadataLoadContextVersion>8.0.0</SystemReflectionMetadataLoadContextVersion>
