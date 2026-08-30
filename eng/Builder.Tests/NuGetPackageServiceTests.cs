@@ -152,6 +152,36 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitiveTargetsInfersRuntimeIdentifierForAnyCpuProjects()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "Condition=\"'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x64'\">win-x64",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsUsesX86RuntimeWhenPrefer32BitIsEnabled()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "Or '$(Prefer32Bit)' == 'true')\">win-x86",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsRunsBeforeWpfCompilationStages()
     {
         var stagingDirectory = CreateStagingDirectory();

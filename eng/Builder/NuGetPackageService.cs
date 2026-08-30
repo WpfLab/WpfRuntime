@@ -257,7 +257,9 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
           <PropertyGroup>
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == 'win-x64'">$(RuntimeIdentifier)</_DotNetCampusWpfRuntimeIdentifier>
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x64' Or '$(Platform)' == 'x64')">win-x64</_DotNetCampusWpfRuntimeIdentifier>
-            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x86' Or '$(Platform)' == 'x86' Or '$(Platform)' == 'Win32')">win-x86</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x86' Or '$(Platform)' == 'x86' Or '$(Platform)' == 'Win32' Or '$(Prefer32Bit)' == 'true')">win-x86</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x64'">win-x64</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x86'">win-x86</_DotNetCampusWpfRuntimeIdentifier>
           </PropertyGroup>
 
           <ItemGroup>
