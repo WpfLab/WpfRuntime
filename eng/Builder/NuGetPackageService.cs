@@ -269,6 +269,7 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
           <ItemGroup Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' != ''">
             <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll" />
             <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\*.dll" />
+            <_DotNetCampusDirectWriteForwarder Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll" />
           </ItemGroup>
 
           <ItemGroup>
@@ -290,6 +291,17 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
                                                MatchOnMetadata="Filename" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
+              <ReferenceDependencyPaths Remove="@(_DotNetCampusDirectWriteForwarder)"
+                                        MatchOnMetadata="Filename" />
+              <ReferenceCopyLocalPaths Remove="@(_DotNetCampusDirectWriteForwarder)"
+                                       MatchOnMetadata="Filename" />
+              <ReferenceDependencyPaths Include="@(_DotNetCampusDirectWriteForwarder)"
+                                        CopyLocal="true"
+                                        IncludeRuntimeDependency="true"
+                                        ReferenceSourceTarget="WpfLab.WpfRuntime" />
+              <ReferenceCopyLocalPaths Include="@(_DotNetCampusDirectWriteForwarder)"
+                                       CopyLocal="true"
+                                       ReferenceSourceTarget="WpfLab.WpfRuntime" />
             </ItemGroup>
             <Message Importance="high"
                      Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"

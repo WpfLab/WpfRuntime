@@ -285,6 +285,33 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitiveTargetsRegistersDirectWriteForwarderAsResolvedReference()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            @"runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            @"<ReferenceDependencyPaths Include=""@(_DotNetCampusDirectWriteForwarder)""",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IncludeRuntimeDependency=\"true\"",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            @"<ReferenceCopyLocalPaths Include=""@(_DotNetCampusDirectWriteForwarder)""",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsSelectsSingleIjwHostPublishAsset()
     {
         var stagingDirectory = CreateStagingDirectory();
