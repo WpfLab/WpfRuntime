@@ -26,9 +26,15 @@ internal static class ModuleInitializer
 
         DWriteLoader.LoadDWrite();
 
-        MS.Internal.NativeWPFDLLLoader.LoadDwrite();
+        LoadNativeWpfDlls();
     }
 #pragma warning restore CA2255
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void LoadNativeWpfDlls()
+    {
+        MS.Internal.NativeWPFDLLLoader.LoadDwrite();
+    }
 
     private static void LoadAppLocalDirectWriteForwarder()
     {
