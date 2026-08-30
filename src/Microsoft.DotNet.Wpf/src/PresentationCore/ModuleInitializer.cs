@@ -30,6 +30,7 @@ internal static class ModuleInitializer
     }
 #pragma warning restore CA2255
 
+    // Keep the static DirectWriteForwarder reference out of Initialize so the JIT cannot bind it before the app-local load.
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void LoadNativeWpfDlls()
     {
