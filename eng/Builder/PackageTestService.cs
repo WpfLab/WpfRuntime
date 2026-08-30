@@ -397,7 +397,7 @@ internal static string GetPublishArguments(
     string nugetConfigPath,
     string restorePackagesDir,
     string publishDir) =>
-    $"publish \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained true --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
+    $"publish \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained false --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
 
 static string XmlEscape(string value) =>
     value.Replace("&", "&amp;", StringComparison.Ordinal)

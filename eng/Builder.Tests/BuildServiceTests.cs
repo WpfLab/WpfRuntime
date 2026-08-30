@@ -93,6 +93,7 @@ public sealed class BuildServiceTests
 
         Assert.Contains("--property:WpfRuntimeReferenceDiagnostics=true", arguments, StringComparison.Ordinal);
         Assert.Contains("--property:GenerateTemporaryTargetAssemblyDebuggingInformation=true", arguments, StringComparison.Ordinal);
+        Assert.Contains("--self-contained false", arguments, StringComparison.Ordinal);
     }
 
     [Fact]

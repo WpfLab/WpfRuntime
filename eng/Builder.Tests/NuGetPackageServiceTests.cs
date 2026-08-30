@@ -285,7 +285,7 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateBuildTransitiveTargetsRegistersDirectWriteForwarderAsResolvedReference()
+    public void GenerateBuildTransitiveTargetsRegistersDirectWriteForwarderAsPrivateReference()
     {
         var stagingDirectory = CreateStagingDirectory();
 
@@ -294,19 +294,15 @@ public sealed class NuGetPackageServiceTests
             Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
 
         Assert.Contains(
-            @"runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll",
+            @"<Reference Include=""DirectWriteForwarder"">",
             targetsContent,
             StringComparison.Ordinal);
         Assert.Contains(
-            @"<ReferenceDependencyPaths Include=""@(_DotNetCampusDirectWriteForwarder)""",
+            @"<HintPath>$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll</HintPath>",
             targetsContent,
             StringComparison.Ordinal);
         Assert.Contains(
-            "IncludeRuntimeDependency=\"true\"",
-            targetsContent,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            @"<ReferenceCopyLocalPaths Include=""@(_DotNetCampusDirectWriteForwarder)""",
+            "<Private>true</Private>",
             targetsContent,
             StringComparison.Ordinal);
     }
