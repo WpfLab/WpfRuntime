@@ -137,7 +137,7 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateBuildTransitivePropsDisablesWindowsDesktopFrameworkReferenceBeforeSdkResolution()
+    public void GenerateBuildTransitivePropsPreservesSdkFrameworkReferences()
     {
         var stagingDirectory = CreateStagingDirectory();
 
@@ -145,8 +145,8 @@ public sealed class NuGetPackageServiceTests
         var propsContent = File.ReadAllText(
             Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.props"));
 
-        Assert.Contains("<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>", propsContent, StringComparison.Ordinal);
-        Assert.Contains("<FrameworkReference Include=\"Microsoft.NETCore.App\" />", propsContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("DisableImplicitFrameworkReferences", propsContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("FrameworkReference", propsContent, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
-    public void GenerateBuildTransitiveTargetsRemovesWindowsDesktopBeforeFrameworkResolution()
+    public void GenerateBuildTransitiveTargetsPreservesWindowsDesktopFrameworkReferences()
     {
         var stagingDirectory = CreateStagingDirectory();
 
@@ -329,11 +329,7 @@ public sealed class NuGetPackageServiceTests
         var targetsContent = File.ReadAllText(
             Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
 
-        Assert.Contains("BeforeTargets=\"ProcessFrameworkReferences\"", targetsContent, StringComparison.Ordinal);
-        Assert.Contains(
-            "<FrameworkReference Remove=\"Microsoft.WindowsDesktop.App;Microsoft.WindowsDesktop.App.WPF;Microsoft.WindowsDesktop.App.WindowsForms\" />",
-            targetsContent,
-            StringComparison.Ordinal);
+        Assert.DoesNotContain("<FrameworkReference Remove=", targetsContent, StringComparison.Ordinal);
     }
 
     [Fact]

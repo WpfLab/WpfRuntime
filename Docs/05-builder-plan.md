@@ -44,7 +44,7 @@ dotnet build eng/Builder/Builder.csproj --no-restore
 | `WpfRuntimeDefinition` | 读取 `eng/WpfRuntimeDependencies.props` 与 `eng/Versions.props` 中的托管程序集和运行时 NuGet 依赖定义 |
 | `NuGetPackageService` | 解析还原包路径、收集 native 资产、生成 `buildTransitive` targets 与 nuspec、校验包资产并执行打包 |
 | `CompareService` | 与官方参考程序集做清单和尺寸级报告比较；不进行 API 二进制兼容性证明 |
-| `PackageTestService` | 动态创建隔离消费项目，发布、校验包资产哈希和 `runtimeconfig.json` 框架依赖；框架依赖发布只允许 `Microsoft.NETCore.App`，拒绝会把同身份 `DirectWriteForwarder` 放入 TPA 的 `Microsoft.WindowsDesktop.App`，随后运行文本 shaping 与程序集来源 WPF 探针 |
+| `PackageTestService` | 动态创建隔离消费项目，发布、校验包资产哈希、`.deps.json` runtime 登记和 `runtimeconfig.json` 框架依赖；framework-dependent WPF 应用必须保留 `Microsoft.NETCore.App` 与 `Microsoft.WindowsDesktop.App`，随后运行文本 shaping 与程序集来源 WPF 探针 |
 | `ProcessRunner` | 运行外部进程、合并标准输出和错误输出，并对探针执行超时终止 |
 | `GitHubActionsBuildService` | 由受信任 Builder 校验 tested checkout 的凭据、事件 SHA/merge 双亲与 Git 状态，并在脱敏隔离环境中执行 solution 或 package 门禁 |
 | `GitHubArtifactCommentService` | 通过 Octokit 分页读取 workflow run、PR、artifact 与评论元数据，执行最新运行判定、artifact 身份筛选和 bot 评论幂等回写 |

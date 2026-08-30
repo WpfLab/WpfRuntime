@@ -97,7 +97,7 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
-    public void PackagePublishRejectsWindowsDesktopSharedFrameworkDependency()
+    public void PackagePublishAcceptsWindowsDesktopSharedFrameworkDependency()
     {
         var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
         Directory.CreateDirectory(publishDirectory);
@@ -114,18 +114,15 @@ public sealed class BuildServiceTests
             }
             """);
 
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            PackageTestService.ValidatePublishedFrameworkDependencies(
-                publishDirectory,
-                "PackageProbe",
-                "net8.0-windows",
-                "win-x64"));
-
-        Assert.Contains("trusted platform assembly set", exception.Message, StringComparison.Ordinal);
+        PackageTestService.ValidatePublishedFrameworkDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x64");
     }
 
     [Fact]
-    public void PackagePublishAcceptsNetCoreSharedFrameworkDependency()
+    public void PackagePublishRejectsMissingWindowsDesktopSharedFrameworkDependency()
     {
         var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
         Directory.CreateDirectory(publishDirectory);
@@ -142,11 +139,14 @@ public sealed class BuildServiceTests
             }
             """);
 
-        PackageTestService.ValidatePublishedFrameworkDependencies(
-            publishDirectory,
-            "PackageProbe",
-            "net8.0-windows",
-            "win-x64");
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidatePublishedFrameworkDependencies(
+                publishDirectory,
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x64"));
+
+        Assert.Contains("must retain Microsoft.WindowsDesktop.App", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -254,11 +254,10 @@ internal static void ValidatePublishedFrameworkDependencies(
 
     var windowsDesktopFramework = frameworkNames.FirstOrDefault(name =>
         name.StartsWith("Microsoft.WindowsDesktop.App", StringComparison.Ordinal));
-    if (windowsDesktopFramework is not null)
+    if (windowsDesktopFramework is null)
     {
         throw new InvalidOperationException(
-            $"Published application must not depend on {windowsDesktopFramework} for {projectName} ({targetFramework}/{rid}); " +
-            "the shared framework would place its DirectWriteForwarder assembly in the trusted platform assembly set.");
+            $"Published application must retain Microsoft.WindowsDesktop.App for {projectName} ({targetFramework}/{rid}).");
     }
 
     Log.Info($"Validated framework dependencies for {projectName} ({targetFramework}/{rid}): {string.Join(", ", frameworkNames)}");

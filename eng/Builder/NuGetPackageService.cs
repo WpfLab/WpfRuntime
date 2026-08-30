@@ -262,10 +262,11 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x86'">win-x86</_DotNetCampusWpfRuntimeIdentifier>
           </PropertyGroup>
 
-          <Target Name="RemoveWindowsDesktopFrameworkReferencesForDotNetCampusWpfLib"
+          <Target Name="PreserveSdkFrameworkReferencesForDotNetCampusWpfLib"
+                  Condition="'false' == 'true'"
                   BeforeTargets="ProcessFrameworkReferences">
             <ItemGroup>
-              <FrameworkReference Remove="Microsoft.WindowsDesktop.App;Microsoft.WindowsDesktop.App.WPF;Microsoft.WindowsDesktop.App.WindowsForms" />
+              <_DotNetCampusSdkFrameworkReferencesPreserved Include="true" />
             </ItemGroup>
           </Target>
 

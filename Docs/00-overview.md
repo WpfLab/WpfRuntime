@@ -81,7 +81,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 
 - 已实现共享 native 资产清单。
 - Builder 已实现 x64 和 x86 路径。
-- NuGet 包消费问题仍在修复中。真实 `net8.0-windows` 框架依赖发布产物仍包含 `Microsoft.WindowsDesktop.App`，且 `.deps.json` 缺少 `DirectWriteForwarder`，因此应用会从共享框架 TPA 加载同身份程序集并在文本 shaping 时抛出 `MissingMethodException`。当前 `buildTransitive` targets 已调整为在 `ProcessFrameworkReferences` 前移除 WindowsDesktop 框架引用，并在 `ResolveReferences` 后通过 `ReferenceDependencyPaths`/`ReferenceCopyLocalPaths` 登记包内托管运行时程序集；包测试新增 `.deps.json` 中 `DirectWriteForwarder.dll` 的结构化门禁。该修复仍需用新生成的真实 nupkg 发布复验。
+- NuGet 包消费问题仍在修复中。framework-dependent 应用同时具有 app-local 与共享框架中同身份的 `DirectWriteForwarder`；普通复制和 `.deps.json` runtime 登记不能单独保证覆盖 TPA。当前候选根因是 `PresentationCore` 模块初始化方法体直接引用 `MS.Internal.NativeWPFDLLLoader`，JIT 可在执行首条预加载语句前解析该静态依赖。实现已把该调用隔离到 `NoInlining` 辅助方法，使 app-local 路径加载先完成；标准 `Microsoft.WindowsDesktop.App` 依赖保持不变。Builder.Tests 新增同方法静态依赖与 `NoInlining` 隔离场景，仍需使用真实 C++/CLI 产物、新生成的 nupkg 和 HandyControl 文本 shaping 端到端复验。
 - Builder 已注册独立 `relay-pr` 命令，使用 Octokit 14.0.0 读取来源 PR，并在独立 clone 中执行固定 base/head SHA fetch、纯 Patch 应用、本地门禁、精确 SHA push 和目标 PR 创建/复用；命令缺少 `GITHUB_TOKEN` 时会在 clone 和远端写入前退出；`--allow-untrusted-build` 仅控制是否在 Temp workspace 执行本地构建验证，默认跳过并依赖 GitHub Actions。
 - 本地门禁在隔离 HOME/NuGet/AppData/TEMP 环境中依次执行 Builder Restore/Build、x64/x86 构建打包、精确 nupkg `test-package` 和根 `Debug|x64` Rebuild，并校验构建前后 HEAD、tree、index 和 tracked working tree。
 - `eng/Builder.Tests` 与 `eng/Builder.ProcessTestHelper` 已纳入根 `slnx`；单元、进程和本地 bare repository 集成测试覆盖 URL/remote 解析、敏感环境、取消/超时、PR ref fallback、纯 Patch 应用与冲突、精确 SHA push、lease 竞争、GitHub Actions 事件/身份、artifact 评论格式、workflow 安全契约和 checkout 换行保持契约。
