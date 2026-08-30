@@ -150,6 +150,68 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
+    public void PackagePublishRejectsMissingDirectWriteForwarderRuntimeDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-deps-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.deps.json"),
+            """
+            {
+              "targets": {
+                ".NETCoreApp,Version=v8.0/win-x64": {
+                  "PackageProbe/1.0.0": {
+                    "runtime": {
+                      "PackageProbe.dll": {}
+                    }
+                  }
+                }
+              }
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidatePublishedRuntimeDependencies(
+                publishDirectory,
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x64"));
+
+        Assert.Contains("must contain DirectWriteForwarder.dll", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsDirectWriteForwarderRuntimeDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-deps-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.deps.json"),
+            """
+            {
+              "targets": {
+                ".NETCoreApp,Version=v8.0/win-x64": {
+                  "DirectWriteForwarder/0.0.0.0": {
+                    "runtime": {
+                      "DirectWriteForwarder.dll": {
+                        "assemblyVersion": "0.0.0.0",
+                        "fileVersion": "0.0.0.0"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """);
+
+        PackageTestService.ValidatePublishedRuntimeDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x64");
+    }
+
+    [Fact]
     public void RuntimeAssembliesAreBuiltInReleaseWithPortableSymbols()
     {
         var arguments = BuildService.GetRuntimeBuildArguments(

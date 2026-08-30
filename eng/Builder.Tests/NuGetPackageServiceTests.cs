@@ -321,6 +321,36 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitiveTargetsRemovesWindowsDesktopBeforeFrameworkResolution()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains("BeforeTargets=\"ProcessFrameworkReferences\"", targetsContent, StringComparison.Ordinal);
+        Assert.Contains(
+            "<FrameworkReference Remove=\"Microsoft.WindowsDesktop.App;Microsoft.WindowsDesktop.App.WPF;Microsoft.WindowsDesktop.App.WindowsForms\" />",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsRegistersManagedRuntimeAssembliesForDepsFile()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains("<ReferenceDependencyPaths Include=\"@(_DotNetCampusWpfManagedRuntimeDll)\"", targetsContent, StringComparison.Ordinal);
+        Assert.Contains("IncludeRuntimeDependency=\"true\"", targetsContent, StringComparison.Ordinal);
+        Assert.Contains("<ReferenceCopyLocalPaths Include=\"@(_DotNetCampusWpfManagedRuntimeDll)\"", targetsContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsSelectsSingleIjwHostPublishAsset()
     {
         var stagingDirectory = CreateStagingDirectory();

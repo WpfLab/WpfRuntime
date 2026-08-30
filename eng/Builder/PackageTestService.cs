@@ -90,6 +90,7 @@ static void PublishAndValidatePackageTest(
 
     ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
     ValidatePublishedFrameworkDependencies(publishDir, testProject.Name, targetFramework, rid);
+    ValidatePublishedRuntimeDependencies(publishDir, testProject.Name, targetFramework, rid);
     foreach (var dependency in runtimePackageDependencies)
     {
         ValidatePublishedDependencyDll(publishDir, $"{dependency.Id}.dll", testProject.Name, targetFramework, rid);
@@ -261,6 +262,36 @@ internal static void ValidatePublishedFrameworkDependencies(
     }
 
     Log.Info($"Validated framework dependencies for {projectName} ({targetFramework}/{rid}): {string.Join(", ", frameworkNames)}");
+}
+
+internal static void ValidatePublishedRuntimeDependencies(
+    string publishDir,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    var depsPath = Path.Join(publishDir, $"{projectName}.deps.json");
+    if (!File.Exists(depsPath))
+        throw new InvalidOperationException($"Published dependency manifest is missing: {depsPath}");
+
+    using var document = JsonDocument.Parse(File.ReadAllBytes(depsPath));
+    var containsDirectWriteForwarder = document.RootElement
+        .GetProperty("targets")
+        .EnumerateObject()
+        .SelectMany(target => target.Value.EnumerateObject())
+        .Any(library =>
+            library.Value.TryGetProperty("runtime", out var runtimeAssets) &&
+            runtimeAssets.EnumerateObject().Any(asset =>
+                string.Equals(Path.GetFileName(asset.Name), "DirectWriteForwarder.dll", StringComparison.OrdinalIgnoreCase)));
+
+    if (!containsDirectWriteForwarder)
+    {
+        throw new InvalidOperationException(
+            $"Published dependency manifest must contain DirectWriteForwarder.dll for {projectName} ({targetFramework}/{rid}); " +
+            "copying the file without registering it as a runtime asset does not override host assembly resolution.");
+    }
+
+    Log.Info($"Validated DirectWriteForwarder runtime dependency for {projectName} ({targetFramework}/{rid})");
 }
 
 static void ValidatePublishedDependencyDll(

@@ -81,7 +81,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 
 - 已实现共享 native 资产清单。
 - Builder 已实现 x64 和 x86 路径。
-- NuGet 包的 `buildTransitive` props 在 SDK 处理 `UseWPF` 前关闭隐式框架引用并显式保留 `Microsoft.NETCore.App`，避免框架依赖应用同时依赖 `Microsoft.WindowsDesktop.App`，从而防止共享框架中同身份 `DirectWriteForwarder` 进入 TPA 后覆盖包内实现。包测试会检查发布后的 `runtimeconfig.json`，拒绝 `Microsoft.WindowsDesktop.App`，并继续执行 `FormattedText` shaping 与实际程序集来源探针。
+- NuGet 包消费问题仍在修复中。真实 `net8.0-windows` 框架依赖发布产物仍包含 `Microsoft.WindowsDesktop.App`，且 `.deps.json` 缺少 `DirectWriteForwarder`，因此应用会从共享框架 TPA 加载同身份程序集并在文本 shaping 时抛出 `MissingMethodException`。当前 `buildTransitive` targets 已调整为在 `ProcessFrameworkReferences` 前移除 WindowsDesktop 框架引用，并在 `ResolveReferences` 后通过 `ReferenceDependencyPaths`/`ReferenceCopyLocalPaths` 登记包内托管运行时程序集；包测试新增 `.deps.json` 中 `DirectWriteForwarder.dll` 的结构化门禁。该修复仍需用新生成的真实 nupkg 发布复验。
 - Builder 已注册独立 `relay-pr` 命令，使用 Octokit 14.0.0 读取来源 PR，并在独立 clone 中执行固定 base/head SHA fetch、纯 Patch 应用、本地门禁、精确 SHA push 和目标 PR 创建/复用；命令缺少 `GITHUB_TOKEN` 时会在 clone 和远端写入前退出；`--allow-untrusted-build` 仅控制是否在 Temp workspace 执行本地构建验证，默认跳过并依赖 GitHub Actions。
 - 本地门禁在隔离 HOME/NuGet/AppData/TEMP 环境中依次执行 Builder Restore/Build、x64/x86 构建打包、精确 nupkg `test-package` 和根 `Debug|x64` Rebuild，并校验构建前后 HEAD、tree、index 和 tracked working tree。
 - `eng/Builder.Tests` 与 `eng/Builder.ProcessTestHelper` 已纳入根 `slnx`；单元、进程和本地 bare repository 集成测试覆盖 URL/remote 解析、敏感环境、取消/超时、PR ref fallback、纯 Patch 应用与冲突、精确 SHA push、lease 竞争、GitHub Actions 事件/身份、artifact 评论格式、workflow 安全契约和 checkout 换行保持契约。
@@ -127,7 +127,7 @@ IDE 接口对新增 `eng/Builder.Tests` 和 `eng/Builder.ProcessTestHelper` 尚�
 
 - 根 `slnx` 的 `Debug|x64` 和 `Debug|Any CPU` Restore + Rebuild 已在当前工作区成功；该结论不外推到其他配置、平台或 Visual Studio 设计时/F5 行为。
 - Builder PR relay 的本地自动化验证不包含真实 GitHub push、PR 创建或不可信外部 PR 构建；Actions 权限、fork 与评论行为仍需真实 PR 验收。
-- `DirectWriteForwarder` 的框架依赖冲突修复已通过 Builder 单元测试和构建；当前工作区没有可直接消费的 `.nupkg`，仍需在下一次完整 x64/x86 打包后执行 `test-package`，确认真实发布产物只依赖 `Microsoft.NETCore.App` 且文本 shaping 探针通过。
+- `DirectWriteForwarder` 冲突尚未完成真实包验证。上一版生成的框架依赖发布产物仍包含 `Microsoft.WindowsDesktop.App`，且 `.deps.json` 没有 `DirectWriteForwarder`；当前仅确认新的 MSBuild 资产登记逻辑、runtimeconfig/deps 门禁通过 Builder 定向测试。必须重新打包并执行 `test-package`，确认最终 `runtimeconfig.json` 不含 WindowsDesktop、`.deps.json` 包含包内 `DirectWriteForwarder.dll`，且文本 shaping 与实际加载路径探针通过。
 - 主题 ref 与运行时主题的成功依赖当前显式完整 `PresentationFramework` 引用边界；在同名打印 cycle-breaker 收敛前，不应移除该隔离，也不应使用会在干净项目求值时消失的条件式输出引用。
 - 独立项目成功不能替代根 `slnx` 成功；增量成功不能替代强制重建成功。
 - IDE 枚举项目路径不能证明项目已加载；必须由 Visual Studio 的加载状态和实际构建验证。

@@ -266,12 +266,17 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x86'">win-x86</_DotNetCampusWpfRuntimeIdentifier>
           </PropertyGroup>
 
-          <ItemGroup>
-            <FrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
-          </ItemGroup>
+          <Target Name="RemoveWindowsDesktopFrameworkReferencesForDotNetCampusWpfLib"
+                  BeforeTargets="ProcessFrameworkReferences">
+            <ItemGroup>
+              <FrameworkReference Remove="Microsoft.WindowsDesktop.App;Microsoft.WindowsDesktop.App.WPF;Microsoft.WindowsDesktop.App.WindowsForms" />
+            </ItemGroup>
+          </Target>
 
           <ItemGroup Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' != ''">
-            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll" />
+            <_DotNetCampusWpfManagedRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll"
+                                                   Exclude="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\ijwhost.dll" />
+            <_DotNetCampusWpfRuntimeDll Include="@(_DotNetCampusWpfManagedRuntimeDll)" />
             <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\*.dll" />
             <Reference Include="DirectWriteForwarder">
               <HintPath>$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll</HintPath>
@@ -298,6 +303,15 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
                                                MatchOnMetadata="Filename" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
+              <ReferenceDependencyPaths Remove="@(_DotNetCampusWpfManagedRuntimeDll)"
+                                        MatchOnMetadata="Filename" />
+              <ReferenceDependencyPaths Include="@(_DotNetCampusWpfManagedRuntimeDll)"
+                                        CopyLocal="true"
+                                        IncludeRuntimeDependency="true"
+                                        ReferenceSourceTarget="DotNetCampusWpfRuntime" />
+              <ReferenceCopyLocalPaths Include="@(_DotNetCampusWpfManagedRuntimeDll)"
+                                       CopyLocal="true"
+                                       ReferenceSourceTarget="DotNetCampusWpfRuntime" />
             </ItemGroup>
             <Message Importance="high"
                      Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"
