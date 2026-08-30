@@ -97,6 +97,59 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
+    public void PackagePublishRejectsWindowsDesktopSharedFrameworkDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.runtimeconfig.json"),
+            """
+            {
+              "runtimeOptions": {
+                "frameworks": [
+                  { "name": "Microsoft.NETCore.App", "version": "8.0.0" },
+                  { "name": "Microsoft.WindowsDesktop.App", "version": "8.0.0" }
+                ]
+              }
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidatePublishedFrameworkDependencies(
+                publishDirectory,
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x64"));
+
+        Assert.Contains("trusted platform assembly set", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsNetCoreSharedFrameworkDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.runtimeconfig.json"),
+            """
+            {
+              "runtimeOptions": {
+                "framework": {
+                  "name": "Microsoft.NETCore.App",
+                  "version": "8.0.0"
+                }
+              }
+            }
+            """);
+
+        PackageTestService.ValidatePublishedFrameworkDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x64");
+    }
+
+    [Fact]
     public void RuntimeAssembliesAreBuiltInReleaseWithPortableSymbols()
     {
         var arguments = BuildService.GetRuntimeBuildArguments(

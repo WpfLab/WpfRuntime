@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Xml.Linq;
 
 namespace WpfReorganize.Builder;
@@ -88,6 +89,7 @@ static void PublishAndValidatePackageTest(
     }
 
     ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
+    ValidatePublishedFrameworkDependencies(publishDir, testProject.Name, targetFramework, rid);
     foreach (var dependency in runtimePackageDependencies)
     {
         ValidatePublishedDependencyDll(publishDir, $"{dependency.Id}.dll", testProject.Name, targetFramework, rid);
@@ -219,6 +221,46 @@ static void ValidatePublishedPackageDlls(
     }
 
     Log.Info($"Validated {expectedDlls.Count} package DLLs for {projectName} ({targetFramework}/{rid})");
+}
+
+internal static void ValidatePublishedFrameworkDependencies(
+    string publishDir,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    var runtimeConfigPath = Path.Join(publishDir, $"{projectName}.runtimeconfig.json");
+    if (!File.Exists(runtimeConfigPath))
+        throw new InvalidOperationException($"Published runtime configuration is missing: {runtimeConfigPath}");
+
+    using var document = JsonDocument.Parse(File.ReadAllBytes(runtimeConfigPath));
+    var runtimeOptions = document.RootElement.GetProperty("runtimeOptions");
+    var frameworkNames = new List<string>();
+    if (runtimeOptions.TryGetProperty("framework", out var framework))
+        frameworkNames.Add(framework.GetProperty("name").GetString() ?? string.Empty);
+
+    if (runtimeOptions.TryGetProperty("frameworks", out var frameworks))
+    {
+        frameworkNames.AddRange(frameworks.EnumerateArray().Select(item =>
+            item.GetProperty("name").GetString() ?? string.Empty));
+    }
+
+    if (!frameworkNames.Contains("Microsoft.NETCore.App", StringComparer.Ordinal))
+    {
+        throw new InvalidOperationException(
+            $"Published application must retain Microsoft.NETCore.App for {projectName} ({targetFramework}/{rid}).");
+    }
+
+    var windowsDesktopFramework = frameworkNames.FirstOrDefault(name =>
+        name.StartsWith("Microsoft.WindowsDesktop.App", StringComparison.Ordinal));
+    if (windowsDesktopFramework is not null)
+    {
+        throw new InvalidOperationException(
+            $"Published application must not depend on {windowsDesktopFramework} for {projectName} ({targetFramework}/{rid}); " +
+            "the shared framework would place its DirectWriteForwarder assembly in the trusted platform assembly set.");
+    }
+
+    Log.Info($"Validated framework dependencies for {projectName} ({targetFramework}/{rid}): {string.Join(", ", frameworkNames)}");
 }
 
 static void ValidatePublishedDependencyDll(

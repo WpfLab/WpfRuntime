@@ -137,6 +137,19 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitivePropsDisablesWindowsDesktopFrameworkReferenceBeforeSdkResolution()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveFiles(stagingDirectory);
+        var propsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.props"));
+
+        Assert.Contains("<DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>", propsContent, StringComparison.Ordinal);
+        Assert.Contains("<FrameworkReference Include=\"Microsoft.NETCore.App\" />", propsContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsInfersRuntimeIdentifierFromPlatformTarget()
     {
         var stagingDirectory = CreateStagingDirectory();
