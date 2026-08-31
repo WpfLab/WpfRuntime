@@ -87,12 +87,6 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
 
-    - name: Setup x86 .NET SDK
-      uses: actions/setup-dotnet@v6
-      with:
-        dotnet-version: 8.0.x
-        architecture: x86
-
     - name: Setup .NET SDKs
       uses: actions/setup-dotnet@v6
       with:
@@ -114,8 +108,6 @@ jobs:
     - name: Build and test package through trusted Builder
       id: build-package
       working-directory: trusted
-      env:
-        DOTNET_ROOT_X86: C:\Program Files (x86)\dotnet
       run: dotnet eng/Builder/bin/Builder.dll ci-build --repository ../tested --target package
 
     - name: Upload package test diagnostics
