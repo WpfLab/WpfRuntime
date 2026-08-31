@@ -20,6 +20,9 @@ public sealed class WorkflowContractTests
         Assert.Equal(2, CountOccurrences(normalized, "        path: trusted\n        fetch-depth: 1"));
         Assert.Equal(2, CountOccurrences(normalized, "        path: tested\n        fetch-depth: 0"));
         Assert.Equal(2, CountOccurrences(workflow, "Builder.dll ci-build"));
+        Assert.Contains("name: Setup x86 .NET SDK", workflow, StringComparison.Ordinal);
+        Assert.Contains("architecture: x86", workflow, StringComparison.Ordinal);
+        Assert.Contains("DOTNET_ROOT_X86: C:\\Program Files (x86)\\dotnet", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("github.event.pull_request.head.sha", workflow, StringComparison.Ordinal);
         Assert.Equal(3, CountOccurrences(workflow, "tested/eng/Builder/bin/nupkg/*."));
         Assert.Contains("path: tested/eng/Builder/bin/nupkg/*.nupkg", workflow, StringComparison.Ordinal);
