@@ -212,6 +212,47 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
+    public void PackagePublishAcceptsRestoredDependencyProvidedBySharedFramework()
+    {
+        var assetsPath = Path.Join(Path.GetTempPath(), $"builder-assets-{Guid.NewGuid():N}.json");
+        File.WriteAllText(
+            assetsPath,
+            """
+            {
+              "libraries": {
+                "System.Configuration.ConfigurationManager/8.0.0": {
+                  "type": "package"
+                }
+              }
+            }
+            """);
+
+        PackageTestService.ValidateRestoredPackageDependencies(
+            assetsPath,
+            [new PackageDependency("System.Configuration.ConfigurationManager", "8.0.0")],
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x86");
+    }
+
+    [Fact]
+    public void PackagePublishRejectsDependencyMissingFromRestoreAssets()
+    {
+        var assetsPath = Path.Join(Path.GetTempPath(), $"builder-assets-{Guid.NewGuid():N}.json");
+        File.WriteAllText(assetsPath, """{ "libraries": {} }""");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidateRestoredPackageDependencies(
+                assetsPath,
+                [new PackageDependency("System.Configuration.ConfigurationManager", "8.0.0")],
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x86"));
+
+        Assert.Contains("was not restored", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RuntimeAssembliesAreBuiltInReleaseWithPortableSymbols()
     {
         var arguments = BuildService.GetRuntimeBuildArguments(

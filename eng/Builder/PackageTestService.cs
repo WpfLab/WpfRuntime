@@ -91,10 +91,12 @@ static void PublishAndValidatePackageTest(
     ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
     ValidatePublishedFrameworkDependencies(publishDir, testProject.Name, targetFramework, rid);
     ValidatePublishedRuntimeDependencies(publishDir, testProject.Name, targetFramework, rid);
-    foreach (var dependency in runtimePackageDependencies)
-    {
-        ValidatePublishedDependencyDll(publishDir, $"{dependency.Id}.dll", testProject.Name, targetFramework, rid);
-    }
+    ValidateRestoredPackageDependencies(
+        Path.Join(Path.GetDirectoryName(testProject.ProjectPath)!, "obj", "project.assets.json"),
+        runtimePackageDependencies,
+        testProject.Name,
+        targetFramework,
+        rid);
     RunPublishedPackageProbe(testProject.Name, targetFramework, rid, publishDir);
 }
 
@@ -293,21 +295,31 @@ internal static void ValidatePublishedRuntimeDependencies(
     Log.Info($"Validated DirectWriteForwarder runtime dependency for {projectName} ({targetFramework}/{rid})");
 }
 
-static void ValidatePublishedDependencyDll(
-    string publishDir,
-    string fileName,
+internal static void ValidateRestoredPackageDependencies(
+    string assetsPath,
+    IReadOnlyList<PackageDependency> expectedDependencies,
     string projectName,
     string targetFramework,
     string rid)
 {
-    var dependencyPath = Path.Join(publishDir, fileName);
-    if (!File.Exists(dependencyPath))
+    if (!File.Exists(assetsPath))
+        throw new InvalidOperationException($"Package restore assets are missing: {assetsPath}");
+
+    using var document = JsonDocument.Parse(File.ReadAllBytes(assetsPath));
+    var libraries = document.RootElement.GetProperty("libraries");
+    foreach (var dependency in expectedDependencies)
     {
-        throw new InvalidOperationException(
-            $"Published NuGet dependency is missing for {projectName} ({targetFramework}/{rid}): {dependencyPath}");
+        var libraryName = $"{dependency.Id}/{dependency.Version}";
+        if (!libraries.TryGetProperty(libraryName, out var library) ||
+            !library.TryGetProperty("type", out var type) ||
+            !string.Equals(type.GetString(), "package", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"NuGet dependency was not restored for {projectName} ({targetFramework}/{rid}): {libraryName}");
+        }
     }
 
-    Log.Info($"Validated published dependency {fileName} for {projectName} ({targetFramework}/{rid})");
+    Log.Info($"Validated {expectedDependencies.Count} restored NuGet dependencies for {projectName} ({targetFramework}/{rid})");
 }
 
 static string FindRuntimeLibDirectory(string extractedPackageDir, string rid)
