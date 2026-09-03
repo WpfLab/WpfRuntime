@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Xml.Linq;
 
 namespace WpfReorganize.Builder;
@@ -88,10 +89,15 @@ static void PublishAndValidatePackageTest(
     }
 
     ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
-    foreach (var dependency in runtimePackageDependencies)
-    {
-        ValidatePublishedDependencyDll(publishDir, $"{dependency.Id}.dll", testProject.Name, targetFramework, rid);
-    }
+    ValidatePublishedSelfContainedRuntime(publishDir, testProject.Name, targetFramework, rid);
+    ValidatePublishedFrameworkDependencies(publishDir, testProject.Name, targetFramework, rid);
+    ValidatePublishedRuntimeDependencies(publishDir, testProject.Name, targetFramework, rid);
+    ValidateRestoredPackageDependencies(
+        Path.Join(Path.GetDirectoryName(testProject.ProjectPath)!, "obj", "project.assets.json"),
+        runtimePackageDependencies,
+        testProject.Name,
+        targetFramework,
+        rid);
     RunPublishedPackageProbe(testProject.Name, targetFramework, rid, publishDir);
 }
 
@@ -221,21 +227,120 @@ static void ValidatePublishedPackageDlls(
     Log.Info($"Validated {expectedDlls.Count} package DLLs for {projectName} ({targetFramework}/{rid})");
 }
 
-static void ValidatePublishedDependencyDll(
+internal static void ValidatePublishedSelfContainedRuntime(
     string publishDir,
-    string fileName,
     string projectName,
     string targetFramework,
     string rid)
 {
-    var dependencyPath = Path.Join(publishDir, fileName);
-    if (!File.Exists(dependencyPath))
+    var hostFxrPath = Path.Join(publishDir, "hostfxr.dll");
+    if (!File.Exists(hostFxrPath))
     {
         throw new InvalidOperationException(
-            $"Published NuGet dependency is missing for {projectName} ({targetFramework}/{rid}): {dependencyPath}");
+            $"Published package test must be self-contained for {projectName} ({targetFramework}/{rid}); missing: {hostFxrPath}");
+    }
+}
+
+internal static void ValidatePublishedFrameworkDependencies(
+    string publishDir,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    var runtimeConfigPath = Path.Join(publishDir, $"{projectName}.runtimeconfig.json");
+    if (!File.Exists(runtimeConfigPath))
+        throw new InvalidOperationException($"Published runtime configuration is missing: {runtimeConfigPath}");
+
+    using var document = JsonDocument.Parse(File.ReadAllBytes(runtimeConfigPath));
+    var runtimeOptions = document.RootElement.GetProperty("runtimeOptions");
+    var frameworkNames = new List<string>();
+    if (runtimeOptions.TryGetProperty("framework", out var framework))
+        frameworkNames.Add(framework.GetProperty("name").GetString() ?? string.Empty);
+
+    if (runtimeOptions.TryGetProperty("frameworks", out var frameworks))
+    {
+        frameworkNames.AddRange(frameworks.EnumerateArray().Select(item =>
+            item.GetProperty("name").GetString() ?? string.Empty));
     }
 
-    Log.Info($"Validated published dependency {fileName} for {projectName} ({targetFramework}/{rid})");
+    if (runtimeOptions.TryGetProperty("includedFrameworks", out var includedFrameworks))
+    {
+        frameworkNames.AddRange(includedFrameworks.EnumerateArray().Select(item =>
+            item.GetProperty("name").GetString() ?? string.Empty));
+    }
+
+    if (!frameworkNames.Contains("Microsoft.NETCore.App", StringComparer.Ordinal))
+    {
+        throw new InvalidOperationException(
+            $"Published application must retain Microsoft.NETCore.App for {projectName} ({targetFramework}/{rid}).");
+    }
+
+    var windowsDesktopFramework = frameworkNames.FirstOrDefault(name =>
+        name.StartsWith("Microsoft.WindowsDesktop.App", StringComparison.Ordinal));
+    if (windowsDesktopFramework is null)
+    {
+        throw new InvalidOperationException(
+            $"Published application must retain Microsoft.WindowsDesktop.App for {projectName} ({targetFramework}/{rid}).");
+    }
+
+    Log.Info($"Validated framework dependencies for {projectName} ({targetFramework}/{rid}): {string.Join(", ", frameworkNames)}");
+}
+
+internal static void ValidatePublishedRuntimeDependencies(
+    string publishDir,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    var depsPath = Path.Join(publishDir, $"{projectName}.deps.json");
+    if (!File.Exists(depsPath))
+        throw new InvalidOperationException($"Published dependency manifest is missing: {depsPath}");
+
+    using var document = JsonDocument.Parse(File.ReadAllBytes(depsPath));
+    var containsDirectWriteForwarder = document.RootElement
+        .GetProperty("targets")
+        .EnumerateObject()
+        .SelectMany(target => target.Value.EnumerateObject())
+        .Any(library =>
+            library.Value.TryGetProperty("runtime", out var runtimeAssets) &&
+            runtimeAssets.EnumerateObject().Any(asset =>
+                string.Equals(Path.GetFileName(asset.Name), "DirectWriteForwarder.dll", StringComparison.OrdinalIgnoreCase)));
+
+    if (!containsDirectWriteForwarder)
+    {
+        throw new InvalidOperationException(
+            $"Published dependency manifest must contain DirectWriteForwarder.dll for {projectName} ({targetFramework}/{rid}); " +
+            "copying the file without registering it as a runtime asset does not override host assembly resolution.");
+    }
+
+    Log.Info($"Validated DirectWriteForwarder runtime dependency for {projectName} ({targetFramework}/{rid})");
+}
+
+internal static void ValidateRestoredPackageDependencies(
+    string assetsPath,
+    IReadOnlyList<PackageDependency> expectedDependencies,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    if (!File.Exists(assetsPath))
+        throw new InvalidOperationException($"Package restore assets are missing: {assetsPath}");
+
+    using var document = JsonDocument.Parse(File.ReadAllBytes(assetsPath));
+    var libraries = document.RootElement.GetProperty("libraries");
+    foreach (var dependency in expectedDependencies)
+    {
+        var libraryName = $"{dependency.Id}/{dependency.Version}";
+        if (!libraries.TryGetProperty(libraryName, out var library) ||
+            !library.TryGetProperty("type", out var type) ||
+            !string.Equals(type.GetString(), "package", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"NuGet dependency was not restored for {projectName} ({targetFramework}/{rid}): {libraryName}");
+        }
+    }
+
+    Log.Info($"Validated {expectedDependencies.Count} restored NuGet dependencies for {projectName} ({targetFramework}/{rid})");
 }
 
 static string FindRuntimeLibDirectory(string extractedPackageDir, string rid)

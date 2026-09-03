@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Loader;
 using MS.Internal.Text.TextInterface;
 
 internal static class ModuleInitializer
@@ -18,13 +20,31 @@ internal static class ModuleInitializer
     [ModuleInitializer]
     public static void Initialize()
     {
+        LoadAppLocalDirectWriteForwarder();
+
         IsProcessDpiAware();
 
         DWriteLoader.LoadDWrite();
 
-        MS.Internal.NativeWPFDLLLoader.LoadDwrite();
+        LoadNativeWpfDlls();
     }
 #pragma warning restore CA2255
+
+    // Keep the static DirectWriteForwarder reference out of Initialize so the JIT cannot bind it before the app-local load.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void LoadNativeWpfDlls()
+    {
+        MS.Internal.NativeWPFDLLLoader.LoadDwrite();
+    }
+
+    private static void LoadAppLocalDirectWriteForwarder()
+    {
+        string assemblyPath = Path.Combine(AppContext.BaseDirectory, "DirectWriteForwarder.dll");
+        if (File.Exists(assemblyPath))
+        {
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+        }
+    }
 
     private static void IsProcessDpiAware()
     {

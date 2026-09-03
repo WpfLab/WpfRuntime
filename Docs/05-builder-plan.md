@@ -44,7 +44,7 @@ dotnet build eng/Builder/Builder.csproj --no-restore
 | `WpfRuntimeDefinition` | 读取 `eng/WpfRuntimeDependencies.props` 与 `eng/Versions.props` 中的托管程序集和运行时 NuGet 依赖定义 |
 | `NuGetPackageService` | 解析还原包路径、收集 native 资产、生成 `buildTransitive` targets 与 nuspec、校验包资产并执行打包 |
 | `CompareService` | 与官方参考程序集做清单和尺寸级报告比较；不进行 API 二进制兼容性证明 |
-| `PackageTestService` | 动态创建隔离消费项目，发布、校验包资产哈希并运行 WPF 探针 |
+| `PackageTestService` | 动态创建隔离消费项目，发布、校验包资产哈希、`.deps.json` runtime 登记和 `runtimeconfig.json` 框架依赖；framework-dependent WPF 应用必须保留 `Microsoft.NETCore.App` 与 `Microsoft.WindowsDesktop.App`，随后运行文本 shaping 与程序集来源 WPF 探针 |
 | `ProcessRunner` | 运行外部进程、合并标准输出和错误输出，并对探针执行超时终止 |
 | `GitHubActionsBuildService` | 由受信任 Builder 校验 tested checkout 的凭据、事件 SHA/merge 双亲与 Git 状态，并在脱敏隔离环境中执行 solution 或 package 门禁 |
 | `GitHubArtifactCommentService` | 通过 Octokit 分页读取 workflow run、PR、artifact 与评论元数据，执行最新运行判定、artifact 身份筛选和 bot 评论幂等回写 |
@@ -127,26 +127,32 @@ Builder 构建时使用 `$(NuGetPackageRoot)` 和共享版本写出 `PackagePath
 
 ## NuGet 包结构与消费逻辑
 
-包 ID 为 `DotNetCampus.WpfLib`。当前包布局为：
+包 ID 为 `WpfLab.WpfRuntime`。当前包布局为：
 
 ```text
-DotNetCampus.WpfLib.<version>.nupkg
+WpfLab.WpfRuntime.<version>.nupkg
 ├─ ref/net8.0/*.dll
 ├─ runtimes/win-x64/lib/net8.0/*.dll（包含 ijwhost.dll）
 ├─ runtimes/win-x64/native/*.dll（包含 ijwhost.dll）
 ├─ runtimes/win-x86/lib/net8.0/*.dll（包含 ijwhost.dll）
 ├─ runtimes/win-x86/native/*.dll（包含 ijwhost.dll）
-└─ buildTransitive/DotNetCampus.WpfLib.targets
+└─ buildTransitive/WpfLab.WpfRuntime.targets
 ```
 
 nuspec 为 `net8.0` 和 `net9.0` 写入运行时包依赖组，依赖版本来自 `eng/WpfRuntimeDependencies.props` 和 `eng/Versions.props`。实现程序集仍是 `net8.0` 资产并写入 RID 目录；公共 `lib/net8.0` 不承载这些实现。通用输出回退可能让同一托管 DLL 同时进入两个 RID，不能仅凭目录布局断言二进制架构不同。
 
-`buildTransitive/DotNetCampus.WpfLib.targets` 承担以下消费行为：
+`buildTransitive/WpfLab.WpfRuntime.targets` 承担以下消费行为：
 
 - 移除 `Microsoft.WindowsDesktop.App.WPF` FrameworkReference。
 - 在解析引用后按文件名移除选定的 WPF 同名引用，并注入包内 `ref/net8.0`；当前实现不区分这些引用来自 inbox、显式引用还是其他包。
 - 当 `RuntimeIdentifier` 为 `win-x64` 或 `win-x86` 时，选择对应的托管实现和 native DLL。
 - 在普通 Build 与 Publish 后把 RID 资产复制到应用输出目录。
+
+### Builder 与生成 targets 的命名约定
+
+对外发布的包、文件和诊断来源统一使用正式名称 `WpfLab.WpfRuntime`。生成 targets 中以下划线开头的私有 MSBuild 属性、Item 和 Target 不机械拼接组织名与产品名，统一使用简洁的 `WpfRuntime` 前缀，例如 `_WpfRuntimeIdentifier`、`_WpfRuntimeReferenceDll`、`RemoveInboxWpfReferencesForWpfRuntime`。现有 `_DotNetCampus...` 和 `...ForDotNetCampusWpfLib` 属于旧命名，后续修改生成逻辑时应按该约定迁移；这些内部名称不是兼容性契约。
+
+`DotNetCampus.Cli` 命名空间和 `DotNetCampus.CommandLine` 包名是当前第三方命令行依赖的正式名称，不属于仓库或 NuGet 包改名范围，应继续保留。
 
 打包前会校验两个 RID 的核心 ref、实现、native 和 `buildTransitive` 文件。实际 `dotnet pack` 使用系统临时目录中的最小 SDK 项目，避免临时 pack 项目继承仓库根构建导入；生成的包写入 `eng/Builder/bin/nupkg/`。
 

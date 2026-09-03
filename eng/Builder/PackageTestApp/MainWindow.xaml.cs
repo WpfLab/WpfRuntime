@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Versioning;
@@ -29,19 +30,43 @@ public partial class MainWindow : Window
             ValidateWpfAssembly(typeof(DependencyObject).Assembly, "WindowsBase.dll");
             ValidateWpfAssembly(typeof(Visual).Assembly, "PresentationCore.dll");
             ValidateWpfAssembly(typeof(Application).Assembly, "PresentationFramework.dll");
+            ValidateTextShaping();
+            ValidateWpfAssembly(LoadAssembly("DirectWriteForwarder"), "DirectWriteForwarder.dll");
             ValidateControls();
 
             StatusTextBlock.Text = "Validation passed";
             Console.WriteLine($"WPF XAML package probe completed on {Environment.ProcessPath}.");
             Application.Current.Shutdown(0);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or MissingMethodException)
         {
             Console.Error.WriteLine(exception);
             StatusTextBlock.Text = "Validation failed";
             Application.Current.Shutdown(1);
         }
     }
+
+    private static void ValidateTextShaping()
+    {
+        FormattedText formattedText = new(
+            "WPF package text shaping probe",
+            CultureInfo.GetCultureInfo("en-US"),
+            FlowDirection.LeftToRight,
+            new Typeface("Segoe UI"),
+            12,
+            Brushes.Black,
+            1);
+
+        if (formattedText.Width <= 0)
+            throw new InvalidOperationException("WPF text shaping returned an invalid width.");
+
+        Console.WriteLine($"Validated WPF text shaping width {formattedText.Width:F2}.");
+    }
+
+    private static Assembly LoadAssembly(string assemblyName) =>
+        AppDomain.CurrentDomain.GetAssemblies().SingleOrDefault(assembly =>
+            string.Equals(assembly.GetName().Name, assemblyName, StringComparison.Ordinal))
+        ?? Assembly.Load(assemblyName);
 
     private void ValidateControls()
     {

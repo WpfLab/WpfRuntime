@@ -257,16 +257,28 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
           <PropertyGroup>
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == 'win-x64'">$(RuntimeIdentifier)</_DotNetCampusWpfRuntimeIdentifier>
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x64' Or '$(Platform)' == 'x64')">win-x64</_DotNetCampusWpfRuntimeIdentifier>
-            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x86' Or '$(Platform)' == 'x86' Or '$(Platform)' == 'Win32')">win-x86</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x86' Or '$(Platform)' == 'x86' Or '$(Platform)' == 'Win32' Or '$(Prefer32Bit)' == 'true')">win-x86</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x64'">win-x64</_DotNetCampusWpfRuntimeIdentifier>
+            <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x86'">win-x86</_DotNetCampusWpfRuntimeIdentifier>
           </PropertyGroup>
 
-          <ItemGroup>
-            <FrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
-          </ItemGroup>
+          <Target Name="PreserveSdkFrameworkReferencesForDotNetCampusWpfLib"
+                  Condition="'false' == 'true'"
+                  BeforeTargets="ProcessFrameworkReferences">
+            <ItemGroup>
+              <_DotNetCampusSdkFrameworkReferencesPreserved Include="true" />
+            </ItemGroup>
+          </Target>
 
           <ItemGroup Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' != ''">
-            <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll" />
+            <_DotNetCampusWpfManagedRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll"
+                                                   Exclude="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\ijwhost.dll" />
+            <_DotNetCampusWpfRuntimeDll Include="@(_DotNetCampusWpfManagedRuntimeDll)" />
             <_DotNetCampusWpfRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\*.dll" />
+            <Reference Include="DirectWriteForwarder">
+              <HintPath>$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll</HintPath>
+              <Private>true</Private>
+            </Reference>
           </ItemGroup>
 
           <ItemGroup>
@@ -288,6 +300,15 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
                                                MatchOnMetadata="Filename" />
               <ReferencePath Include="@(_DotNetCampusWpfReferenceDll)" />
               <ReferencePathWithRefAssemblies Include="@(_DotNetCampusWpfReferenceDll)" />
+              <ReferenceDependencyPaths Remove="@(_DotNetCampusWpfManagedRuntimeDll)"
+                                        MatchOnMetadata="Filename" />
+              <ReferenceDependencyPaths Include="@(_DotNetCampusWpfManagedRuntimeDll)"
+                                        CopyLocal="true"
+                                        IncludeRuntimeDependency="true"
+                                        ReferenceSourceTarget="DotNetCampusWpfRuntime" />
+              <ReferenceCopyLocalPaths Include="@(_DotNetCampusWpfManagedRuntimeDll)"
+                                       CopyLocal="true"
+                                       ReferenceSourceTarget="DotNetCampusWpfRuntime" />
             </ItemGroup>
             <Message Importance="high"
                      Condition="'$(WpfRuntimeReferenceDiagnostics)' == 'true'"

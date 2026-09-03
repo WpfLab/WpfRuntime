@@ -137,6 +137,19 @@ public sealed class NuGetPackageServiceTests
     }
 
     [Fact]
+    public void GenerateBuildTransitivePropsPreservesSdkFrameworkReferences()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveFiles(stagingDirectory);
+        var propsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.props"));
+
+        Assert.DoesNotContain("DisableImplicitFrameworkReferences", propsContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("FrameworkReference", propsContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GenerateBuildTransitiveTargetsInfersRuntimeIdentifierFromPlatformTarget()
     {
         var stagingDirectory = CreateStagingDirectory();
@@ -147,6 +160,36 @@ public sealed class NuGetPackageServiceTests
 
         Assert.Contains(
             "Condition=\"'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And ('$(PlatformTarget)' == 'x64' Or '$(Platform)' == 'x64')\">win-x64",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsInfersRuntimeIdentifierForAnyCpuProjects()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "Condition=\"'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x64'\">win-x64",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsUsesX86RuntimeWhenPrefer32BitIsEnabled()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            "Or '$(Prefer32Bit)' == 'true')\">win-x86",
             targetsContent,
             StringComparison.Ordinal);
     }
@@ -252,6 +295,55 @@ public sealed class NuGetPackageServiceTests
             @"runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\native\*.dll",
             targetsContent,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsRegistersDirectWriteForwarderAsPrivateReference()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains(
+            @"<Reference Include=""DirectWriteForwarder"">",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            @"<HintPath>$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\DirectWriteForwarder.dll</HintPath>",
+            targetsContent,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<Private>true</Private>",
+            targetsContent,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsPreservesWindowsDesktopFrameworkReferences()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.DoesNotContain("<FrameworkReference Remove=", targetsContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GenerateBuildTransitiveTargetsRegistersManagedRuntimeAssembliesForDepsFile()
+    {
+        var stagingDirectory = CreateStagingDirectory();
+
+        NuGetPackageService.GenerateBuildTransitiveTargets(stagingDirectory);
+        var targetsContent = File.ReadAllText(
+            Path.Join(stagingDirectory, "buildTransitive", $"{PackageMetadata.Id}.targets"));
+
+        Assert.Contains("<ReferenceDependencyPaths Include=\"@(_DotNetCampusWpfManagedRuntimeDll)\"", targetsContent, StringComparison.Ordinal);
+        Assert.Contains("IncludeRuntimeDependency=\"true\"", targetsContent, StringComparison.Ordinal);
+        Assert.Contains("<ReferenceCopyLocalPaths Include=\"@(_DotNetCampusWpfManagedRuntimeDll)\"", targetsContent, StringComparison.Ordinal);
     }
 
     [Fact]
