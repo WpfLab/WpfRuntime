@@ -93,7 +93,50 @@ public sealed class BuildServiceTests
 
         Assert.Contains("--property:WpfRuntimeReferenceDiagnostics=true", arguments, StringComparison.Ordinal);
         Assert.Contains("--property:GenerateTemporaryTargetAssemblyDebuggingInformation=true", arguments, StringComparison.Ordinal);
-        Assert.Contains("--self-contained false", arguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishIsSelfContainedSoCrossArchitectureProbeDoesNotUseMachineHostFxr()
+    {
+        var arguments = PackageTestService.GetPublishArguments(
+            "PackageTestApp.csproj",
+            "net8.0-windows",
+            "win-x86",
+            "NuGet.Config",
+            "packages",
+            "publish");
+
+        Assert.Contains("--self-contained true", arguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishRejectsFrameworkDependentOutputBeforeRunningProbe()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtime-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidatePublishedSelfContainedRuntime(
+                publishDirectory,
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x86"));
+
+        Assert.Contains("must be self-contained", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsSelfContainedOutput()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtime-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllBytes(Path.Join(publishDirectory, "hostfxr.dll"), []);
+
+        PackageTestService.ValidatePublishedSelfContainedRuntime(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x86");
     }
 
     [Fact]
@@ -119,6 +162,31 @@ public sealed class BuildServiceTests
             "PackageProbe",
             "net8.0-windows",
             "win-x64");
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsSelfContainedFrameworkDependencies()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.runtimeconfig.json"),
+            """
+            {
+              "runtimeOptions": {
+                "includedFrameworks": [
+                  { "name": "Microsoft.NETCore.App", "version": "8.0.0" },
+                  { "name": "Microsoft.WindowsDesktop.App", "version": "8.0.0" }
+                ]
+              }
+            }
+            """);
+
+        PackageTestService.ValidatePublishedFrameworkDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x86");
     }
 
     [Fact]

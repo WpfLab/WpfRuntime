@@ -89,6 +89,7 @@ static void PublishAndValidatePackageTest(
     }
 
     ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
+    ValidatePublishedSelfContainedRuntime(publishDir, testProject.Name, targetFramework, rid);
     ValidatePublishedFrameworkDependencies(publishDir, testProject.Name, targetFramework, rid);
     ValidatePublishedRuntimeDependencies(publishDir, testProject.Name, targetFramework, rid);
     ValidateRestoredPackageDependencies(
@@ -226,6 +227,20 @@ static void ValidatePublishedPackageDlls(
     Log.Info($"Validated {expectedDlls.Count} package DLLs for {projectName} ({targetFramework}/{rid})");
 }
 
+internal static void ValidatePublishedSelfContainedRuntime(
+    string publishDir,
+    string projectName,
+    string targetFramework,
+    string rid)
+{
+    var hostFxrPath = Path.Join(publishDir, "hostfxr.dll");
+    if (!File.Exists(hostFxrPath))
+    {
+        throw new InvalidOperationException(
+            $"Published package test must be self-contained for {projectName} ({targetFramework}/{rid}); missing: {hostFxrPath}");
+    }
+}
+
 internal static void ValidatePublishedFrameworkDependencies(
     string publishDir,
     string projectName,
@@ -245,6 +260,12 @@ internal static void ValidatePublishedFrameworkDependencies(
     if (runtimeOptions.TryGetProperty("frameworks", out var frameworks))
     {
         frameworkNames.AddRange(frameworks.EnumerateArray().Select(item =>
+            item.GetProperty("name").GetString() ?? string.Empty));
+    }
+
+    if (runtimeOptions.TryGetProperty("includedFrameworks", out var includedFrameworks))
+    {
+        frameworkNames.AddRange(includedFrameworks.EnumerateArray().Select(item =>
             item.GetProperty("name").GetString() ?? string.Empty));
     }
 
@@ -481,7 +502,7 @@ internal static string GetPublishArguments(
     string nugetConfigPath,
     string restorePackagesDir,
     string publishDir) =>
-    $"publish \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained false --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
+    $"publish \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained true --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
 
 static string XmlEscape(string value) =>
     value.Replace("&", "&amp;", StringComparison.Ordinal)
