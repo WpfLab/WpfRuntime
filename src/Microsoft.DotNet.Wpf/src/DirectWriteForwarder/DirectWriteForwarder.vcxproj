@@ -65,7 +65,7 @@
     <ClCompile>
       <AdditionalOptions>%(AdditionalOptions) /clr:initLocals</AdditionalOptions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(WpfSharedDir)\inc;.\;.\CPP</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>$(CDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>$(CDefines);DIRECTWRITE_FORWARDER_ASSEMBLY_VERSION=&quot;$(WpfRuntimeAssemblyVersion)&quot;;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>precomp.hxx</PrecompiledHeaderFile>
       <ForceConformanceInForLoopScope>false</ForceConformanceInForLoopScope>
       <PreprocessorDefinitions>$(CDefines);_NO_CRT_STDIO_INLINE;_INC_SWPRINTF_INL_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
