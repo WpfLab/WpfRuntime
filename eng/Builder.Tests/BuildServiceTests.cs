@@ -308,6 +308,23 @@ public sealed class BuildServiceTests
         Assert.Equal("42.42.42.42424", PackageMetadata.RuntimeAssemblyVersion);
     }
 
+    [Fact]
+    public void DirectWriteForwarderAssemblyVersionFallsBackForNonPackageBuilds()
+    {
+        string project = File.ReadAllText(Path.Join(
+            FindRepositoryRoot(),
+            "src",
+            "Microsoft.DotNet.Wpf",
+            "src",
+            "DirectWriteForwarder",
+            "DirectWriteForwarder.vcxproj"));
+
+        Assert.Contains(
+            "<DirectWriteForwarderAssemblyVersion Condition=\"'$(DirectWriteForwarderAssemblyVersion)' == ''\">$(AssemblyVersion)</DirectWriteForwarderAssemblyVersion>",
+            project,
+            StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("x64", "net472")]
     [InlineData("x64", "net8.0")]

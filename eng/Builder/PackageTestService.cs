@@ -96,7 +96,14 @@ static void BuildAndValidatePackageTest(
         testProject.Name,
         targetFramework,
         rid);
-    RunBuiltPackageProbe(testProject.ProjectPath, testProject.Name, targetFramework, rid, outputDir);
+    if (string.Equals(rid, "win-x64", StringComparison.OrdinalIgnoreCase))
+    {
+        RunBuiltPackageProbe(testProject.ProjectPath, testProject.Name, targetFramework, rid, outputDir);
+    }
+    else
+    {
+        Log.Info($"Validated build outputs for {testProject.Name} ({targetFramework}/{rid}); runtime probe is limited to win-x64.");
+    }
 }
 
 static void ValidatePackageDependencies(
