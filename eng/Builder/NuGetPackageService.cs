@@ -238,7 +238,11 @@ public static void GenerateBuildTransitiveFiles(string stagingDir)
         <Project>
           <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core'">
             <_PresentationBuildTasksAssembly>$(MSBuildThisFileDirectory)..\tools\net8.0\PresentationBuildTasks.dll</_PresentationBuildTasksAssembly>
+            <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
           </PropertyGroup>
+          <ItemGroup Condition="'$(MSBuildRuntimeType)' == 'Core'">
+            <FrameworkReference Include="Microsoft.NETCore.App" />
+          </ItemGroup>
         </Project>
         """;
     File.WriteAllText(propsPath, propsContent);
