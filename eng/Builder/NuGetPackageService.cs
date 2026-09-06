@@ -262,14 +262,6 @@ public static void GenerateBuildTransitiveTargets(string stagingDir)
             <_DotNetCampusWpfRuntimeIdentifier Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' == '' And '$(NETCoreSdkRuntimeIdentifier)' == 'win-x86'">win-x86</_DotNetCampusWpfRuntimeIdentifier>
           </PropertyGroup>
 
-          <Target Name="PreserveSdkFrameworkReferencesForDotNetCampusWpfLib"
-                  Condition="'false' == 'true'"
-                  BeforeTargets="ProcessFrameworkReferences">
-            <ItemGroup>
-              <_DotNetCampusSdkFrameworkReferencesPreserved Include="true" />
-            </ItemGroup>
-          </Target>
-
           <ItemGroup Condition="'$(_DotNetCampusWpfRuntimeIdentifier)' != ''">
             <_DotNetCampusWpfManagedRuntimeDll Include="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\*.dll"
                                                    Exclude="$(MSBuildThisFileDirectory)..\runtimes\$(_DotNetCampusWpfRuntimeIdentifier)\lib\net8.0\ijwhost.dll" />
