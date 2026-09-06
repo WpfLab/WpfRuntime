@@ -123,13 +123,9 @@ NuGet 包语义版本和 CLR 程序集版本是不同概念。Builder 的 `--ver
 - Builder 已向全部 x86/x64 WPF 运行时项目传播统一程序集版本 `42.42.42.42424`。
 - `DirectWriteForwarder` 已显式写入相同的 C++/CLI 托管程序集版本。
 - 组包前版本门禁已确认所有收集到的 x86/x64 运行时程序集均为 `42.42.42.42424`。
-- 修复包 `WpfLab.WpfRuntime.1.0.0-assembly-version-fix.4.nupkg` 已通过 framework-dependent 消费矩阵。
+- `PresentationCore/ModuleInitializer.cs` 已恢复为正常初始化逻辑，只保留 DPI awareness、`DWriteLoader.LoadDWrite()` 和 `NativeWPFDLLLoader.LoadDwrite()`；手工 app-local 加载与 `NoInlining` workaround 已移除。
+- 清理后重新生成的 `复包 `WpfLab.WpfRuntime.1.0.0-cleanup-validation.nupkg` 已通过 framework-dependent 消费矩阵。
 - 消费矩阵覆盖 .NET 8、.NET 9、win-x86、win-x64、单目标和多目标项目，并通过 app-local 加载、精确 ABI、文本 shaping 与 XAML 控件验证。
+- Builder 完整单元测试共 140 项通过。
 
-后续收敛：
-
-1. 从 `PresentationCore/ModuleInitializer.cs` 删除仅用于抢先加载 app-local `DirectWriteForwarder.dll` 的 workaround。
-2. 保留 DPI awareness、`DWriteLoader.LoadDWrite()` 和 `NativeWPFDLLLoader.LoadDwrite()` 等正常初始化职责。
-3. 重新构建 x86/x64 NuGet 包。
-4. 再次执行真实 `dotnet build` + `dotnet run --no-build` 消费矩阵。
-5. 只有移除 workaround 后仍实际加载包内 `DirectWriteForwarder 42.42.42.42424`，且 ABI、文本 shaping 和 XAML 验证继续通过，才完成 `ModuleInitializer` 的最终清理。
+当前结论：统一程序集身份修复是根本修复，`ModuleInitializer` 不再承担程序集解析 workaround。后续变更不得重新引入 self-contained-only 验证或手工抢先加载来替代 framework-dependent build/run 门禁。

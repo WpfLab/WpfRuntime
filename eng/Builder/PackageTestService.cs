@@ -43,7 +43,7 @@ public static int Run(BuilderContext context, string? packageArg)
         {
             foreach (var rid in new[] { "win-x86", "win-x64" })
             {
-                PublishAndValidatePackageTest(
+                BuildAndValidatePackageTest(
                     testProject,
                     targetFramework,
                     rid,
@@ -55,12 +55,12 @@ public static int Run(BuilderContext context, string? packageArg)
         }
     }
 
-    Log.Info("Package publish validation passed for all projects, target frameworks, and runtime identifiers.");
+    Log.Info("Package build and runtime validation passed for all projects, target frameworks, and runtime identifiers.");
 
     return 0;
 }
 
-static void PublishAndValidatePackageTest(
+static void BuildAndValidatePackageTest(
     PackageTestProject testProject,
     string targetFramework,
     string rid,
@@ -223,20 +223,6 @@ static void ValidatePublishedPackageDlls(
     }
 
     Log.Info($"Validated {expectedDlls.Count} package DLLs for {projectName} ({targetFramework}/{rid})");
-}
-
-internal static void ValidatePublishedSelfContainedRuntime(
-    string publishDir,
-    string projectName,
-    string targetFramework,
-    string rid)
-{
-    var hostFxrPath = Path.Join(publishDir, "hostfxr.dll");
-    if (!File.Exists(hostFxrPath))
-    {
-        throw new InvalidOperationException(
-            $"Published package test must be self-contained for {projectName} ({targetFramework}/{rid}); missing: {hostFxrPath}");
-    }
 }
 
 internal static void ValidatePublishedFrameworkDependencies(
