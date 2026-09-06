@@ -40,16 +40,30 @@
 
 因此问题不是旧文件残留、NuGet 缓存混用或输出目录缺少文件，而是 framework-dependent 默认加载上下文中的程序集身份与统一行为。
 
-## ModuleInitializer 的能力边界
+## ModuleInitializer 的职责与能力边界
 
-`PresentationCore/ModuleInitializer.cs` 在模块初始化时调用 `AssemblyLoadContext.Default.LoadFromAssemblyPath`，不能可靠覆盖已经由共享框架满足的同身份程序集引用。
+`PresentationCore/ModuleInitializer.cs` 本身仍有正常的 WPF 初始化职责，包括：
 
-将静态依赖调用隔离到 `NoInlining` 方法可以避免 JIT 在方法入口过早解析依赖，但不能解决以下情况：
+- 尽早设置进程 DPI awareness。
+- 调用 `DWriteLoader.LoadDWrite()` 初始化 DirectWrite。
+- 调用 `MS.Internal.NativeWPFDLLLoader.LoadDwrite()` 触发 WPF native/C++/CLI 组件初始化。
+
+这些初始化职责与本次程序集身份冲突不同，应继续保留。
+
+当前文件中后来加入的 app-local 程序集加载逻辑属于独立 workaround：
+
+- `LoadAppLocalDirectWriteForwarder()`。
+- `AssemblyLoadContext.Default.LoadFromAssemblyPath(...)`。
+- 为确保该调用先执行而增加的 `NoInlining` 辅助方法和加载顺序调整。
+
+该 workaround 不能可靠覆盖已经由共享框架满足的同身份程序集引用。`NoInlining` 可以避免 JIT 在方法入口过早解析静态依赖，但不能解决以下情况：
 
 - 包内和共享框架中的程序集简单名称、版本、区域性和公钥标记构成兼容身份。
 - 默认加载上下文已经选择共享框架程序集来满足引用。
 
-因此，加载时序调整不是完整修复。最终修复必须保证包内 `PresentationCore` 所引用的 `DirectWriteForwarder` 身份不能由 inbox 共享框架版本满足。
+统一程序集版本修复后，`PresentationCore` 引用 `DirectWriteForwarder, Version=42.42.42.42424`，共享框架中的 `8.0.0.0` 不能满足该引用。此时正常的 `.deps.json` 和默认加载上下文应直接选择应用输出目录中的包内 forwarder，不再需要手工按路径抢先加载。
+
+因此，最终收敛目标是：保留正常 DPI、DirectWrite 和 native 初始化职责；删除仅用于 app-local 程序集抢先加载的 workaround。删除后必须重新执行真实 framework-dependent NuGet 消费测试，只有加载路径、ABI 和文本 shaping 继续通过，才能确认该 workaround 可以安全移除。
 
 ## DirectWriteForwarder 版本缺陷
 
@@ -70,14 +84,14 @@
 
 `42.42.42.42424`
 
-最终修复必须：
+当前实现采用以下统一版本链：
 
-1. 由 Builder 将统一隔离版本传入所有运行时项目构建，而不是仅修改单个源文件。
-2. 让 SDK 风格托管项目和 C++/CLI `DirectWriteForwarder` 使用同一个版本输入。
-3. 让 `DirectWriteForwarder` 显式生成托管 `AssemblyVersionAttribute`，避免退化为 `0.0.0.0`。
-4. 确认 `PresentationCore` 的程序集引用记录为相同的 `DirectWriteForwarder, Version=42.42.42.42424`。
-5. 在组包前校验所有目标运行时程序集的程序集版本，禁止 `DirectWriteForwarder` 为 `0.0.0.0` 或与其他运行时程序集不一致。
-6. 使用真实 `dotnet build` 和 `dotnet run --no-build` 回归验证 app-local 加载与文本 shaping。
+1. Builder 以独立的 `WpfRuntimeAssemblyVersion` 属性将 `42.42.42.42424` 传入所有运行时项目构建，不与 NuGet 包版本混用。
+2. 根 `Directory.Build.targets` 在 Arcade props 求值完成后、程序集属性生成前，将 `WpfRuntimeAssemblyVersion` 映射为 `AssemblyVersion`。
+3. SDK 风格托管项目由正常程序集属性生成流程写入 `AssemblyVersionAttribute`。
+4. C++/CLI `DirectWriteForwarder` 通过预处理宏接收同一个 `WpfRuntimeAssemblyVersion`，并在 `OtherAssemblyAttrs.cpp` 显式生成托管 `AssemblyVersionAttribute`，避免退化为 `0.0.0.0`。
+5. Builder 在组包前使用 PE 元数据读取所有 x86/x64 运行时程序集的实际 CLR 版本；任一程序集不是 `42.42.42.42424` 时立即停止组包。
+6. 消费探针同时检查实际加载路径、程序集版本、MVID、SHA-256、`TextAnalyzer.Itemize` ABI、文本 shaping 和 XAML 控件创建。
 
 NuGet 包语义版本和 CLR 程序集版本是不同概念。Builder 的 `--version` 参数继续控制 NuGet 包版本；`42.42.42.42424` 控制本仓库运行时程序集身份隔离，不应从任意 NuGet 预发布版本字符串直接推导。
 
@@ -103,16 +117,19 @@ NuGet 包语义版本和 CLR 程序集版本是不同概念。Builder 的 `--ver
 
 当前已完成：
 
-- 真实 framework-dependent build/run 测试能够稳定复现问题。
-- 已确认 app-local 文件存在且 `.deps.json` 已登记，仍会加载共享框架 forwarder。
-- 已确认 `0.0.0.0` 和 `8.0.0.0` 均不能作为最终程序集身份。
-- 已确认目标统一隔离程序集版本为 `42.42.42.42424`。
+- 真实 framework-dependent build/run 测试能够稳定复现原问题。
+- 已确认 app-local 文件存在且 `.deps.json` 已登记时，同身份 forwarder 仍可能由共享框架满足。
+- 已确认 `0.0.0.0` 和 `8.0.0.0` 均不能作为本仓库包的隔离程序集身份。
+- Builder 已向全部 x86/x64 WPF 运行时项目传播统一程序集版本 `42.42.42.42424`。
+- `DirectWriteForwarder` 已显式写入相同的 C++/CLI 托管程序集版本。
+- 组包前版本门禁已确认所有收集到的 x86/x64 运行时程序集均为 `42.42.42.42424`。
+- 修复包 `WpfLab.WpfRuntime.1.0.0-assembly-version-fix.4.nupkg` 已通过 framework-dependent 消费矩阵。
+- 消费矩阵覆盖 .NET 8、.NET 9、win-x86、win-x64、单目标和多目标项目，并通过 app-local 加载、精确 ABI、文本 shaping 与 XAML 控件验证。
 
-下一步实施：
+后续收敛：
 
-1. 在 Builder 中定义并向运行时项目传播统一隔离程序集版本。
-2. 修复 `DirectWriteForwarder` 的 C++/CLI 托管程序集版本生成。
-3. 增加组包前版本一致性校验和对应单元测试。
-4. 重新构建 x86/x64 NuGet 包。
-5. 执行 net8 framework-dependent `dotnet build` + `dotnet run --no-build` 回归测试。
-6. 只有实际加载包内 `DirectWriteForwarder 42.42.42.42424` 且文本 shaping 通过，才可判定修复完成。
+1. 从 `PresentationCore/ModuleInitializer.cs` 删除仅用于抢先加载 app-local `DirectWriteForwarder.dll` 的 workaround。
+2. 保留 DPI awareness、`DWriteLoader.LoadDWrite()` 和 `NativeWPFDLLLoader.LoadDwrite()` 等正常初始化职责。
+3. 重新构建 x86/x64 NuGet 包。
+4. 再次执行真实 `dotnet build` + `dotnet run --no-build` 消费矩阵。
+5. 只有移除 workaround 后仍实际加载包内 `DirectWriteForwarder 42.42.42.42424`，且 ABI、文本 shaping 和 XAML 验证继续通过，才完成 `ModuleInitializer` 的最终清理。
