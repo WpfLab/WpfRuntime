@@ -162,6 +162,16 @@ internal static class BuildService
                 return 1;
             }
 
+            try
+            {
+                AssemblyCollector.ValidateRuntimeAssemblyVersions(runtimeDlls, PackageMetadata.RuntimeAssemblyVersion, rid);
+            }
+            catch (InvalidOperationException exception)
+            {
+                Log.Error(exception.Message);
+                return 1;
+            }
+
             var runtimeLibDir = Path.Join(context.StagingDir, "runtimes", rid, "lib", "net8.0");
             Directory.CreateDirectory(runtimeLibDir);
             foreach (var (name, sourcePath) in runtimeDlls)
@@ -235,7 +245,7 @@ internal static class BuildService
         string projectPath,
         string platform,
         string logPath) =>
-        $"\"{projectPath}\" -restore /p:Configuration=Release /p:Platform={platform} /p:DebugSymbols=true /p:DebugType=portable /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
+        $"\"{projectPath}\" -restore /p:Configuration=Release /p:Platform={platform} /p:WpfRuntimeAssemblyVersion={PackageMetadata.RuntimeAssemblyVersion} /p:DebugSymbols=true /p:DebugType=portable /p:UsePrebuiltPresentationBuildTasks=true /p:BuildPresentationBuildTasksOnDemand=false /m:1 /nr:false /v:minimal /clp:ErrorsOnly{MsBuildService.GetFileLoggerArguments(logPath)}";
 
     internal static string GetPresentationBuildTasksBuildArguments(
         string projectPath,

@@ -1,4 +1,8 @@
 <Project>
+  <PropertyGroup Condition="'$(WpfRuntimeAssemblyVersion)' != ''">
+    <AssemblyVersion>$(WpfRuntimeAssemblyVersion)</AssemblyVersion>
+  </PropertyGroup>
+
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <Import Project="$(WpfSourceDir)PresentationBuildTasks\Microsoft.WinFX.targets"

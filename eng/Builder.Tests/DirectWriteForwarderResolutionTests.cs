@@ -45,10 +45,12 @@ public sealed class DirectWriteForwarderResolutionTests
             Path.GetTempPath(),
             $"directwrite-forwarder-resolution-{Guid.NewGuid():N}");
         var assemblyDirectory = Path.Join(rootDirectory, "assembly");
+        var bridgeDirectory = Path.Join(rootDirectory, "bridge");
         var packageDirectory = Path.Join(rootDirectory, "package");
         var packageSourceDirectory = Path.Join(rootDirectory, "packages");
         var probeDirectory = Path.Join(rootDirectory, "probe");
         Directory.CreateDirectory(assemblyDirectory);
+        Directory.CreateDirectory(bridgeDirectory);
         Directory.CreateDirectory(packageDirectory);
         Directory.CreateDirectory(packageSourceDirectory);
         Directory.CreateDirectory(probeDirectory);
@@ -87,9 +89,10 @@ public sealed class DirectWriteForwarderResolutionTests
         File.Copy(directWriteForwarderPath, Path.Join(runtimeDirectory, "DirectWriteForwarder.dll"));
         File.Copy(directWriteForwarderPath, Path.Join(runtimeDirectory, "ijwhost.dll"));
 
+        var bridgePath = BuildDependencyBridge(bridgeDirectory, directWriteForwarderPath);
         NuGetPackageService.GenerateBuildTransitiveFiles(packageDirectory);
         CreatePackage(packageDirectory, packageSourceDirectory);
-        WriteProbeProject(probeDirectory);
+        WriteProbeProject(probeDirectory, bridgePath);
         File.WriteAllText(Path.Join(probeDirectory, "probe-mode.txt"), probeMode.ToString());
         WriteNuGetConfig(rootDirectory, packageSourceDirectory);
 
@@ -142,6 +145,70 @@ public sealed class DirectWriteForwarderResolutionTests
         Assert.True(result.ExitCode == 0, result.Output);
     }
 
+    private static string BuildDependencyBridge(string bridgeDirectory, string directWriteForwarderPath)
+    {
+        File.WriteAllText(
+            Path.Join(bridgeDirectory, "DirectWriteForwarderDependencyBridge.csproj"),
+            $$"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+                <AssemblyName>DirectWriteForwarderDependencyBridge</AssemblyName>
+              </PropertyGroup>
+              <ItemGroup>
+                <Reference Include="DirectWriteForwarder">
+                  <HintPath>{{directWriteForwarderPath}}</HintPath>
+                  <Private>false</Private>
+                </Reference>
+              </ItemGroup>
+            </Project>
+            """);
+        File.WriteAllText(
+            Path.Join(bridgeDirectory, "DependencyLoader.cs"),
+            """
+            using System;
+            using System.IO;
+            using System.Runtime.CompilerServices;
+            using System.Runtime.Loader;
+            using DirectWriteForwarderProbe;
+
+            namespace DirectWriteForwarderDependencyBridge;
+
+            public static class DependencyLoader
+            {
+                public static string LoadAndCallDependencyInSameMethod()
+                {
+                    AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "DirectWriteForwarder.dll"));
+                    return Marker.GetAssemblyLocation();
+                }
+
+                public static string LoadBeforeDependencyCall()
+                {
+                    AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "DirectWriteForwarder.dll"));
+                    return CallDependency();
+                }
+
+                [MethodImpl(MethodImplOptions.NoInlining)]
+                private static string CallDependency() => Marker.GetAssemblyLocation();
+            }
+            """);
+
+        RunDotNet(
+            bridgeDirectory,
+            "build",
+            "DirectWriteForwarderDependencyBridge.csproj",
+            "--configuration",
+            "Release",
+            "--nologo");
+
+        return Path.Join(
+            bridgeDirectory,
+            "bin",
+            "Release",
+            "net8.0",
+            "DirectWriteForwarderDependencyBridge.dll");
+    }
+
     private static void CreatePackage(string packageDirectory, string packageSourceDirectory)
     {
         File.WriteAllText(
@@ -162,11 +229,11 @@ public sealed class DirectWriteForwarderResolutionTests
         ZipFile.CreateFromDirectory(packageDirectory, packagePath);
     }
 
-    private static void WriteProbeProject(string probeDirectory)
+    private static void WriteProbeProject(string probeDirectory, string bridgePath)
     {
         File.WriteAllText(
             Path.Join(probeDirectory, "Probe.csproj"),
-            """
+            $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
                 <OutputType>Exe</OutputType>
@@ -178,6 +245,10 @@ public sealed class DirectWriteForwarderResolutionTests
               <ItemGroup>
                 <Content Include="probe-mode.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
                 <PackageReference Include="WpfLab.WpfRuntime" Version="1.0.0-resolution-test" />
+                <Reference Include="DirectWriteForwarderDependencyBridge">
+                  <HintPath>{{bridgePath}}</HintPath>
+                  <Private>true</Private>
+                </Reference>
               </ItemGroup>
             </Project>
             """);
@@ -187,9 +258,8 @@ public sealed class DirectWriteForwarderResolutionTests
             using System;
             using System.IO;
             using System.Reflection;
-            using System.Runtime.CompilerServices;
             using System.Runtime.Loader;
-            using DirectWriteForwarderProbe;
+            using DirectWriteForwarderDependencyBridge;
 
             var mode = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "probe-mode.txt"));
             if (mode == "NameBinding")
@@ -201,9 +271,9 @@ public sealed class DirectWriteForwarderResolutionTests
             try
             {
                 if (mode == "SameMethodDependencyCall")
-                    LoadAndCallDependencyInSameMethod();
+                    Console.WriteLine(DependencyLoader.LoadAndCallDependencyInSameMethod());
                 else
-                    LoadBeforeDependencyCall();
+                    Console.WriteLine(DependencyLoader.LoadBeforeDependencyCall());
             }
             catch (TypeLoadException)
             {
@@ -214,23 +284,6 @@ public sealed class DirectWriteForwarderResolutionTests
                 Console.WriteLine(Assembly.Load("DirectWriteForwarder").Location);
             }
 
-            static void LoadAndCallDependencyInSameMethod()
-            {
-                AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "DirectWriteForwarder.dll"));
-                Console.WriteLine(Marker.GetAssemblyLocation());
-            }
-
-            static void LoadBeforeDependencyCall()
-            {
-                AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "DirectWriteForwarder.dll"));
-                CallDependency();
-            }
-
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            static void CallDependency()
-            {
-                Console.WriteLine(Marker.GetAssemblyLocation());
-            }
             """);
     }
 

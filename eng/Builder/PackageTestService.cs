@@ -69,36 +69,34 @@ static void PublishAndValidatePackageTest(
     string nugetConfigPath,
     IReadOnlyList<PackageDependency> runtimePackageDependencies)
 {
-    var publishDir = Path.Join(testRoot, "publish", testProject.Name, targetFramework, rid);
+    var projectDirectory = Path.GetDirectoryName(testProject.ProjectPath)!;
+    var outputDir = Path.Join(projectDirectory, "bin", "Release", targetFramework, rid);
     var restorePackagesDir = Path.Join(testRoot, "restore-packages");
-    Directory.CreateDirectory(publishDir);
-    Log.Step($"Publishing {testProject.Name} for {targetFramework}/{rid}...");
+    Log.Step($"Building {testProject.Name} for {targetFramework}/{rid}...");
 
-    var arguments = GetPublishArguments(
+    var arguments = GetBuildArguments(
         testProject.ProjectPath,
         targetFramework,
         rid,
         nugetConfigPath,
-        restorePackagesDir,
-        publishDir);
+        restorePackagesDir);
     var result = ProcessRunner.Run("dotnet", arguments, Path.GetDirectoryName(testProject.ProjectPath)!);
     if (result.ExitCode != 0)
     {
         Log.Error(result.Output);
-        throw new InvalidOperationException($"Package test publish failed for {testProject.Name} ({targetFramework}/{rid})");
+        throw new InvalidOperationException($"Package test build failed for {testProject.Name} ({targetFramework}/{rid})");
     }
 
-    ValidatePublishedPackageDlls(extractedPackageDir, publishDir, rid, testProject.Name, targetFramework);
-    ValidatePublishedSelfContainedRuntime(publishDir, testProject.Name, targetFramework, rid);
-    ValidatePublishedFrameworkDependencies(publishDir, testProject.Name, targetFramework, rid);
-    ValidatePublishedRuntimeDependencies(publishDir, testProject.Name, targetFramework, rid);
+    ValidatePublishedPackageDlls(extractedPackageDir, outputDir, rid, testProject.Name, targetFramework);
+    ValidatePublishedFrameworkDependencies(outputDir, testProject.Name, targetFramework, rid);
+    ValidatePublishedRuntimeDependencies(outputDir, testProject.Name, targetFramework, rid);
     ValidateRestoredPackageDependencies(
         Path.Join(Path.GetDirectoryName(testProject.ProjectPath)!, "obj", "project.assets.json"),
         runtimePackageDependencies,
         testProject.Name,
         targetFramework,
         rid);
-    RunPublishedPackageProbe(testProject.Name, targetFramework, rid, publishDir);
+    RunBuiltPackageProbe(testProject.ProjectPath, testProject.Name, targetFramework, rid, outputDir);
 }
 
 static void ValidatePackageDependencies(
@@ -365,19 +363,20 @@ static byte[] ComputeSha256(string path)
     return SHA256.HashData(stream);
 }
 
-static void RunPublishedPackageProbe(string projectName, string targetFramework, string rid, string publishDir)
+static void RunBuiltPackageProbe(string projectPath, string projectName, string targetFramework, string rid, string outputDir)
 {
-    var executablePath = Path.Join(publishDir, $"{projectName}.exe");
+    var executablePath = Path.Join(outputDir, $"{projectName}.exe");
     if (!File.Exists(executablePath))
-        throw new InvalidOperationException($"Published package test executable was not found: {executablePath}");
+        throw new InvalidOperationException($"Built package test executable was not found: {executablePath}");
 
-    Log.Info($"Running {projectName} ({targetFramework}/{rid})...");
-    var result = ProcessRunner.Run(executablePath, "", publishDir, TimeSpan.FromSeconds(30));
+    Log.Info($"Running {projectName} ({targetFramework}/{rid}) with dotnet run --no-build...");
+    string arguments = $"run --project \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --no-build --no-restore";
+    var result = ProcessRunner.Run("dotnet", arguments, Path.GetDirectoryName(projectPath)!, TimeSpan.FromSeconds(30));
     if (result.ExitCode != 0)
     {
         Log.Error(result.Output);
         throw new InvalidOperationException(
-            $"Published package test failed for {projectName} ({targetFramework}/{rid}) with exit code {result.ExitCode}");
+            $"Built package test failed for {projectName} ({targetFramework}/{rid}) with exit code {result.ExitCode}");
     }
 
     if (!string.IsNullOrWhiteSpace(result.Output))
@@ -495,14 +494,13 @@ static void CopyPackageTestProjectTemplate(string sourceDir, string destinationD
     }
 }
 
-internal static string GetPublishArguments(
+internal static string GetBuildArguments(
     string projectPath,
     string targetFramework,
     string rid,
     string nugetConfigPath,
-    string restorePackagesDir,
-    string publishDir) =>
-    $"publish \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --self-contained true --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --output \"{publishDir}\" --nologo --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
+    string restorePackagesDir) =>
+    $"build \"{projectPath}\" --configuration Release --framework {targetFramework} --runtime {rid} --configfile \"{nugetConfigPath}\" --packages \"{restorePackagesDir}\" --nologo --property:SelfContained=false --property:WpfRuntimeReferenceDiagnostics=true --property:GenerateTemporaryTargetAssemblyDebuggingInformation=true";
 
 static string XmlEscape(string value) =>
     value.Replace("&", "&amp;", StringComparison.Ordinal)

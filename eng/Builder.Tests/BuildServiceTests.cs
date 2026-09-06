@@ -81,62 +81,30 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
-    public void PackagePublishEnablesWpfReferenceDiagnostics()
+    public void PackageBuildEnablesWpfReferenceDiagnostics()
     {
-        var arguments = PackageTestService.GetPublishArguments(
+        var arguments = PackageTestService.GetBuildArguments(
             "PackageTestApp.csproj",
             "net9.0-windows",
             "win-x86",
             "NuGet.Config",
-            "packages",
-            "publish");
+            "packages");
 
         Assert.Contains("--property:WpfRuntimeReferenceDiagnostics=true", arguments, StringComparison.Ordinal);
         Assert.Contains("--property:GenerateTemporaryTargetAssemblyDebuggingInformation=true", arguments, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PackagePublishIsSelfContainedSoCrossArchitectureProbeDoesNotUseMachineHostFxr()
+    public void PackageBuildIsFrameworkDependent()
     {
-        var arguments = PackageTestService.GetPublishArguments(
+        var arguments = PackageTestService.GetBuildArguments(
             "PackageTestApp.csproj",
             "net8.0-windows",
             "win-x86",
             "NuGet.Config",
-            "packages",
-            "publish");
+            "packages");
 
-        Assert.Contains("--self-contained true", arguments, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void PackagePublishRejectsFrameworkDependentOutputBeforeRunningProbe()
-    {
-        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtime-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(publishDirectory);
-
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            PackageTestService.ValidatePublishedSelfContainedRuntime(
-                publishDirectory,
-                "PackageProbe",
-                "net8.0-windows",
-                "win-x86"));
-
-        Assert.Contains("must be self-contained", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void PackagePublishAcceptsSelfContainedOutput()
-    {
-        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtime-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(publishDirectory);
-        File.WriteAllBytes(Path.Join(publishDirectory, "hostfxr.dll"), []);
-
-        PackageTestService.ValidatePublishedSelfContainedRuntime(
-            publishDirectory,
-            "PackageProbe",
-            "net8.0-windows",
-            "win-x86");
+        Assert.Contains("--property:SelfContained=false", arguments, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -329,9 +297,15 @@ public sealed class BuildServiceTests
             "build.log");
 
         Assert.Contains(
-            "/p:Configuration=Release /p:Platform=x86 /p:DebugSymbols=true /p:DebugType=portable",
+            $"/p:Configuration=Release /p:Platform=x86 /p:WpfRuntimeAssemblyVersion={PackageMetadata.RuntimeAssemblyVersion} /p:DebugSymbols=true /p:DebugType=portable",
             arguments,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeAssemblyVersionUsesAppLocalIsolationIdentity()
+    {
+        Assert.Equal("42.42.42.42424", PackageMetadata.RuntimeAssemblyVersion);
     }
 
     [Theory]
