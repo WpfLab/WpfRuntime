@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -129,13 +129,12 @@ namespace System.Xaml
             {
                 if (objectNode.Members == null)
                 {
-                    objectNode.Members = new XamlPropertySet();
+                    objectNode.Members = new HashSet<XamlMember>() { property };
                 }
-                else if (objectNode.Members.Contains(property))
+                else if (!objectNode.Members.Add(property))
                 {
                     throw new InvalidOperationException(SR.Format(SR.XamlMarkupExtensionWriterDuplicateMember, property.Name));
                 }
-                objectNode.Members.Add(property);
             }
         }
 
@@ -188,7 +187,7 @@ namespace System.Xaml
                 get;
                 set;
             }
-            public XamlPropertySet Members
+            public HashSet<XamlMember> Members
             {
                 get;
                 set;
