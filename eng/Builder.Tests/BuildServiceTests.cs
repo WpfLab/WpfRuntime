@@ -81,18 +81,211 @@ public sealed class BuildServiceTests
     }
 
     [Fact]
-    public void PackagePublishEnablesWpfReferenceDiagnostics()
+    public void PackageBuildEnablesWpfReferenceDiagnostics()
     {
-        var arguments = PackageTestService.GetPublishArguments(
+        var arguments = PackageTestService.GetBuildArguments(
             "PackageTestApp.csproj",
             "net9.0-windows",
             "win-x86",
             "NuGet.Config",
-            "packages",
-            "publish");
+            "packages");
 
         Assert.Contains("--property:WpfRuntimeReferenceDiagnostics=true", arguments, StringComparison.Ordinal);
         Assert.Contains("--property:GenerateTemporaryTargetAssemblyDebuggingInformation=true", arguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackageBuildIsFrameworkDependent()
+    {
+        var arguments = PackageTestService.GetBuildArguments(
+            "PackageTestApp.csproj",
+            "net8.0-windows",
+            "win-x86",
+            "NuGet.Config",
+            "packages");
+
+        Assert.Contains("--property:SelfContained=false", arguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsWindowsDesktopSharedFrameworkDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.runtimeconfig.json"),
+            """
+            {
+              "runtimeOptions": {
+                "frameworks": [
+                  { "name": "Microsoft.NETCore.App", "version": "8.0.0" },
+                  { "name": "Microsoft.WindowsDesktop.App", "version": "8.0.0" }
+                ]
+              }
+            }
+            """);
+
+        PackageTestService.ValidatePublishedFrameworkDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x64");
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsSelfContainedFrameworkDependencies()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.runtimeconfig.json"),
+            """
+            {
+              "runtimeOptions": {
+                "includedFrameworks": [
+                  { "name": "Microsoft.NETCore.App", "version": "8.0.0" },
+                  { "name": "Microsoft.WindowsDesktop.App", "version": "8.0.0" }
+                ]
+              }
+            }
+            """);
+
+        PackageTestService.ValidatePublishedFrameworkDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x86");
+    }
+
+    [Fact]
+    public void PackagePublishRejectsMissingWindowsDesktopSharedFrameworkDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-runtimeconfig-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.runtimeconfig.json"),
+            """
+            {
+              "runtimeOptions": {
+                "framework": {
+                  "name": "Microsoft.NETCore.App",
+                  "version": "8.0.0"
+                }
+              }
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidatePublishedFrameworkDependencies(
+                publishDirectory,
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x64"));
+
+        Assert.Contains("must retain Microsoft.WindowsDesktop.App", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishRejectsMissingDirectWriteForwarderRuntimeDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-deps-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.deps.json"),
+            """
+            {
+              "targets": {
+                ".NETCoreApp,Version=v8.0/win-x64": {
+                  "PackageProbe/1.0.0": {
+                    "runtime": {
+                      "PackageProbe.dll": {}
+                    }
+                  }
+                }
+              }
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidatePublishedRuntimeDependencies(
+                publishDirectory,
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x64"));
+
+        Assert.Contains("must contain DirectWriteForwarder.dll", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsDirectWriteForwarderRuntimeDependency()
+    {
+        var publishDirectory = Path.Join(Path.GetTempPath(), $"builder-deps-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(publishDirectory);
+        File.WriteAllText(
+            Path.Join(publishDirectory, "PackageProbe.deps.json"),
+            """
+            {
+              "targets": {
+                ".NETCoreApp,Version=v8.0/win-x64": {
+                  "DirectWriteForwarder/0.0.0.0": {
+                    "runtime": {
+                      "DirectWriteForwarder.dll": {
+                        "assemblyVersion": "0.0.0.0",
+                        "fileVersion": "0.0.0.0"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """);
+
+        PackageTestService.ValidatePublishedRuntimeDependencies(
+            publishDirectory,
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x64");
+    }
+
+    [Fact]
+    public void PackagePublishAcceptsRestoredDependencyProvidedBySharedFramework()
+    {
+        var assetsPath = Path.Join(Path.GetTempPath(), $"builder-assets-{Guid.NewGuid():N}.json");
+        File.WriteAllText(
+            assetsPath,
+            """
+            {
+              "libraries": {
+                "System.Configuration.ConfigurationManager/8.0.0": {
+                  "type": "package"
+                }
+              }
+            }
+            """);
+
+        PackageTestService.ValidateRestoredPackageDependencies(
+            assetsPath,
+            [new PackageDependency("System.Configuration.ConfigurationManager", "8.0.0")],
+            "PackageProbe",
+            "net8.0-windows",
+            "win-x86");
+    }
+
+    [Fact]
+    public void PackagePublishRejectsDependencyMissingFromRestoreAssets()
+    {
+        var assetsPath = Path.Join(Path.GetTempPath(), $"builder-assets-{Guid.NewGuid():N}.json");
+        File.WriteAllText(assetsPath, """{ "libraries": {} }""");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PackageTestService.ValidateRestoredPackageDependencies(
+                assetsPath,
+                [new PackageDependency("System.Configuration.ConfigurationManager", "8.0.0")],
+                "PackageProbe",
+                "net8.0-windows",
+                "win-x86"));
+
+        Assert.Contains("was not restored", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -104,8 +297,31 @@ public sealed class BuildServiceTests
             "build.log");
 
         Assert.Contains(
-            "/p:Configuration=Release /p:Platform=x86 /p:DebugSymbols=true /p:DebugType=portable",
+            $"/p:Configuration=Release /p:Platform=x86 /p:WpfRuntimeAssemblyVersion={PackageMetadata.RuntimeAssemblyVersion} /p:DebugSymbols=true /p:DebugType=portable",
             arguments,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeAssemblyVersionUsesAppLocalIsolationIdentity()
+    {
+        Assert.Equal("42.42.42.42424", PackageMetadata.RuntimeAssemblyVersion);
+    }
+
+    [Fact]
+    public void DirectWriteForwarderAssemblyVersionFallsBackForNonPackageBuilds()
+    {
+        string project = File.ReadAllText(Path.Join(
+            FindRepositoryRoot(),
+            "src",
+            "Microsoft.DotNet.Wpf",
+            "src",
+            "DirectWriteForwarder",
+            "DirectWriteForwarder.vcxproj"));
+
+        Assert.Contains(
+            "<DirectWriteForwarderAssemblyVersion Condition=\"'$(DirectWriteForwarderAssemblyVersion)' == ''\">$(AssemblyVersion)</DirectWriteForwarderAssemblyVersion>",
+            project,
             StringComparison.Ordinal);
     }
 

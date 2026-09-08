@@ -111,6 +111,19 @@
   <ItemGroup>
     <FileNamesExcludedFromPackaging Include="ijwhost.dll" />
   </ItemGroup>
+  <Target Name="AddDirectWriteForwarderAssemblyVersion" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <DirectWriteForwarderAssemblyVersion Condition="'$(WpfRuntimeAssemblyVersion)' != ''">$(WpfRuntimeAssemblyVersion)</DirectWriteForwarderAssemblyVersion>
+      <DirectWriteForwarderAssemblyVersion Condition="'$(DirectWriteForwarderAssemblyVersion)' == ''">$(AssemblyVersion)</DirectWriteForwarderAssemblyVersion>
+    </PropertyGroup>
+    <Error Condition="'$(DirectWriteForwarderAssemblyVersion)' == ''"
+           Text="DirectWriteForwarder assembly version was not resolved. Set WpfRuntimeAssemblyVersion or AssemblyVersion." />
+    <ItemGroup>
+      <ClCompile>
+        <PreprocessorDefinitions>DIRECTWRITE_FORWARDER_ASSEMBLY_VERSION=&quot;$(DirectWriteForwarderAssemblyVersion)&quot;;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      </ClCompile>
+    </ItemGroup>
+  </Target>
   <Target Name="AddWindowsBaseDefine" AfterTargets="ResolveProjectReferences">
     <Error Text="Unexpected result from _WindowsBaseReference" Condition="'@(_WindowsBaseReference->Count())' != '1'" />
     <PropertyGroup>

@@ -17,6 +17,7 @@
 - [05-builder-plan.md](05-builder-plan.md)：记录 Builder 的构建、资产收集和打包设计及专题实施细节。
 - [07-wpfdemo-implementation.md](07-wpfdemo-implementation.md)：记录 WpfDemo 消费仓库 WPF 的实现结构、MSBuild 数据流和扩展约束。
 - [08-builder-pr-relay-design.md](08-builder-pr-relay-design.md)：设计 Builder 从 GitHub PR 链接搬运提交、本地验证后创建目标 PR，以及 Actions 构建产物回写机制。
+- [09-directwrite-forwarder-resolution.md](09-directwrite-forwarder-resolution.md)：记录 framework-dependent NuGet 消费时 DirectWriteForwarder 的程序集统一问题、错误测试模型和修复约束。
 - [PresentationBuildTasks-bootstrap.md](PresentationBuildTasks-bootstrap.md)：说明 `PresentationBuildTasks` 的任务程序集选择、按需构建和锁定输出处理机制。
 - [strong-name-signing.md](strong-name-signing.md)：说明 WPF 强名称密钥来源、与原始仓库一致的身份映射及修改约束。
 - [cycle-breaker.md](cycle-breaker.md)：记录循环依赖证据、cycle-breaker 的职责、保留条件和退出条件。

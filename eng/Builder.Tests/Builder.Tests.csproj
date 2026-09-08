@@ -22,7 +22,8 @@
   <ItemGroup>
 	<Compile Include="..\..\src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\MS\Internal\MarkupCompiler\CompatibleAssemblyResolver.cs"
 			 Link="CompatibleAssemblyResolver.cs" />
-	<ProjectReference Include="..\Builder\Builder.csproj" />
+	<ProjectReference Include="..\Builder\Builder.csproj"
+				  AdditionalProperties="OutputPath=$(BaseIntermediateOutputPath)BuilderReference\" />
 	<ProjectReference Include="..\Builder.ProcessTestHelper\Builder.ProcessTestHelper.csproj"
 				  ReferenceOutputAssembly="false"
 				  OutputItemType="Content"

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 
 namespace WpfReorganize.Builder;
 
@@ -84,6 +86,39 @@ internal static class AssemblyCollector
         }
 
         return result;
+    }
+
+    public static void ValidateRuntimeAssemblyVersions(
+        IReadOnlyDictionary<string, string> runtimeDlls,
+        string expectedVersion,
+        string rid)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeDlls);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedVersion);
+        ArgumentException.ThrowIfNullOrWhiteSpace(rid);
+
+        var expected = Version.Parse(expectedVersion);
+        foreach (var (name, path) in runtimeDlls)
+        {
+            Version actual = ReadAssemblyVersion(path);
+            Log.Info($"  Validated runtime assembly version for {rid}: {name} {actual}");
+            if (!actual.Equals(expected))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime assembly '{name}' for {rid} must have assembly version {expected}; actual version is {actual}: {path}");
+            }
+        }
+    }
+
+    private static Version ReadAssemblyVersion(string path)
+    {
+        using var stream = File.OpenRead(path);
+        using var peReader = new PEReader(stream);
+        if (!peReader.HasMetadata)
+            throw new InvalidOperationException($"Runtime file is not a managed assembly: {path}");
+
+        MetadataReader reader = peReader.GetMetadataReader();
+        return reader.GetAssemblyDefinition().Version;
     }
 
     public static string? GetPdbPath(string assemblyPath)
