@@ -449,7 +449,7 @@ GitHub Actions 部分拆为两个安全主体：
 - 不为不可信 PR 恢复可被其他安全上下文消费的可写缓存。
 - 根解决方案 job 和 Builder/package-test job 均由 `trusted/eng/Builder` 中构建出的 `ci-build` 命令驱动，两个 job 均成功时 workflow 才是 success。
 - NuGet artifact 只在 Builder 与 `test-package` 成功后上传；发布 Job 同时依赖根解决方案构建和包构建，任一门禁失败均不发布。
-- 每个成功的 PR 构建都以 `0.0.0-test.<UTC 时间到秒>.sha<tested SHA 前 6 位>` 版本推送到 NuGet.org 与 GitHub Packages；分支和手动构建继续使用该测试版本格式。
+- 每个成功的 PR 构建都以 `1.0.0-test.<UTC 时间到秒>.<tested SHA 前 6 位>` 版本推送到 NuGet.org 与 GitHub Packages；分支和手动构建继续使用该测试版本格式。
 - 发布 Job 只接受受信任 Builder 输出版本所对应的 `WpfLab.WpfRuntime.<version>.nupkg`，不使用通配符推送 artifact 中可能存在的额外包。
 - Tag 构建直接使用 Tag 的完整语义版本，可选移除数字版本前的 `v`；例如 `1.0.0`、`v1.0.0`、`1.0.0-alpha.1` 和 `v1.0.0-alpha.1`。
 - `if-no-files-found` 从 `warn` 改为 `error`，避免 workflow success 但没有包。

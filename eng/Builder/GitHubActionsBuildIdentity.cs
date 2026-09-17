@@ -1,21 +1,25 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record GitHubActionsBuildIdentity(
+internal sealed record GitHubActionsBuildIdentity
+(
     GitObjectId TestedSha,
     string PackageVersion,
     string PackagePath,
     string SymbolPackagePath,
     string AllSymbolsArchivePath,
-    string ArtifactName)
+    string ArtifactName
+)
 {
-    public static GitHubActionsBuildIdentity Create(
+    public static GitHubActionsBuildIdentity Create
+    (
         GitHubActionsBuildMetadata metadata,
         string repositoryPath,
         string testedSha,
         string gitRef,
         DateTimeOffset buildTime,
         long runId,
-        long runAttempt)
+        long runAttempt
+    )
     {
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
@@ -48,19 +52,23 @@ internal sealed record GitHubActionsBuildIdentity(
         var artifactName =
             $"{PackageMetadata.Id}-nupkg-{artifactIdentity}-sha-{parsedTestedSha}-run-{runId}-attempt-{runAttempt}-version-{packageVersion}";
 
-        return new GitHubActionsBuildIdentity(
+        return new GitHubActionsBuildIdentity
+        (
             parsedTestedSha,
             packageVersion,
             packagePath,
             symbolPackagePath,
             allSymbolsArchivePath,
-            artifactName);
+            artifactName
+        );
     }
 
-    private static string CreatePackageVersion(
+    private static string CreatePackageVersion
+    (
         string gitRef,
         DateTimeOffset buildTime,
-        GitObjectId testedSha)
+        GitObjectId testedSha
+    )
     {
         const string tagPrefix = "refs/tags/";
         if (gitRef.StartsWith(tagPrefix, StringComparison.Ordinal))
@@ -79,6 +87,6 @@ internal sealed record GitHubActionsBuildIdentity(
             return tag;
         }
 
-        return $"0.0.0-test.{buildTime.UtcDateTime:yyyyMMddHHmmss}.sha{testedSha.Short6}";
+        return $"{PackageMetadata.PreviewVersionPrefix}.{buildTime.UtcDateTime:yyyyMMddHHmmss}.{testedSha.Short6}";
     }
 }
