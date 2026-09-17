@@ -2,7 +2,7 @@
 
 ## 职责与结论边界
 
-根 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 当前纳入 8 个 `cycle-breaker` 项目。这些项目是当前重组树为打断构建依赖循环而维护的桥接，不是长期替代真实实现的产品边界。
+根 [`Microsoft.Dotnet.Wpf.slnx`](../../../Microsoft.Dotnet.Wpf.slnx) 当前纳入 8 个 `cycle-breaker` 项目。这些项目是当前重组树为打断构建依赖循环而维护的桥接，不是长期替代真实实现的产品边界。
 
 该文档只记录当前项目引用关系、保留条件和退出条件。完整仓库状态以 [00-overview.md](00-overview.md) 为准，实施顺序以 [01-phase-plan.md](01-phase-plan.md) 为准。
 

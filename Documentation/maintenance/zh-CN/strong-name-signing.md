@@ -1,6 +1,6 @@
 # WPF 强名称身份
 
-本仓库生成的程序集必须保持与 `dotnet/wpf` 原始仓库相同的强名称身份。程序集身份映射集中维护在 [`eng/WpfStrongName.props`](../eng/WpfStrongName.props)，不要将项目名单散落到 `Directory.Build.props` 或各个项目文件中。
+本仓库生成的程序集必须保持与 `dotnet/wpf` 原始仓库相同的强名称身份。程序集身份映射集中维护在 [`eng/WpfStrongName.props`](../../../eng/WpfStrongName.props)，不要将项目名单散落到 `Directory.Build.props` 或各个项目文件中。
 
 ## 密钥来源
 

@@ -1,6 +1,6 @@
 # WPF 重组文档
 
-本目录只维护当前事实、后续阶段和无人值守交接。仓库根入口统一为 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx)。根目录没有与该入口同名的传统解决方案文件；仓库内其他模块可以保留各自独立的 `.sln`。
+本目录只维护当前事实、后续阶段和无人值守交接。语言无关入口见 [`../README.md`](../README.md)。仓库根入口统一为 [`Microsoft.Dotnet.Wpf.slnx`](../../../Microsoft.Dotnet.Wpf.slnx)。根目录没有与该入口同名的传统解决方案文件；仓库内其他模块可以保留各自独立的 `.sln`。
 
 ## 目录索引
 
@@ -31,7 +31,7 @@
 
 ## 阅读顺序
 
-1. 阅读 `Docs/README.md`，确认文档职责和安全约束。
+1. 阅读 [`../README.md`](../README.md) 确认文档布局，再阅读本文件确认文档职责和安全约束。
 2. 阅读 [00-overview.md](00-overview.md)，取得当前工作区事实。
 3. 阅读 [01-phase-plan.md](01-phase-plan.md)，按优先级选择后续阶段。
 4. 执行前阅读 [02-next-session-handoff.md](02-next-session-handoff.md)，完成起手检查并从首个阻塞继续。

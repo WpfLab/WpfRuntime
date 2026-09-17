@@ -4,7 +4,7 @@
 
 ## 起手安全检查
 
-1. 确认当前目录是仓库根目录，根入口为 [`../Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx)。
+1. 确认当前目录是仓库根目录，根入口为 [`../../../Microsoft.Dotnet.Wpf.slnx`](../../../Microsoft.Dotnet.Wpf.slnx)。
 2. 确认 `origin/` 存在且非空。若为空，立即停止迁移，不执行复制、清理或构建修复。
 3. 检查 Git 变更，识别并保护已有修改；不要覆盖来源不明的工作。
 4. 牢记 `origin/src` 被 `origin/.gitignore` 排除，不受外层 Git 状态保护。
@@ -12,10 +12,11 @@
 
 ## 必读
 
-1. [README.md](README.md)：文档职责、事实维护与安全规则。
-2. [00-overview.md](00-overview.md)：当前状态的唯一事实源。
-3. [01-phase-plan.md](01-phase-plan.md)：后续阶段与完成标准。
-4. `.github/copilot-instructions.md`：仓库级实施规则。
+1. [`../README.md`](../README.md)：语言无关文档入口。
+2. [README.md](README.md)：文档职责、事实维护与安全规则。
+3. [00-overview.md](00-overview.md)：当前状态的唯一事实源。
+4. [01-phase-plan.md](01-phase-plan.md)：后续阶段与完成标准。
+5. `.github/copilot-instructions.md`：仓库级实施规则。
 
 其他专题文档只用于具体实现参考；其中的状态若与 `00-overview.md` 冲突，以 `00-overview.md` 为准。
 
