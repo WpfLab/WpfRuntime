@@ -34,7 +34,7 @@ internal sealed record GitHubActionsBuildIdentity
         }
 
         var parsedTestedSha = GitObjectId.Parse(testedSha);
-        var packageVersion = CreatePackageVersion(gitRef, buildTime, parsedTestedSha);
+        var packageVersion = CreatePackageVersion(repositoryPath, gitRef, buildTime, parsedTestedSha);
         var artifactIdentity = metadata.IsPullRequest
             ? $"pr-{metadata.PullRequestNumber}"
             : $"event-{metadata.EventName}";
@@ -65,6 +65,7 @@ internal sealed record GitHubActionsBuildIdentity
 
     private static string CreatePackageVersion
     (
+        string repositoryPath,
         string gitRef,
         DateTimeOffset buildTime,
         GitObjectId testedSha
@@ -87,6 +88,7 @@ internal sealed record GitHubActionsBuildIdentity
             return tag;
         }
 
-        return $"{PackageMetadata.PreviewVersionPrefix}.{buildTime.UtcDateTime:yyyyMMddHHmmss}.{testedSha.Short6}";
+        var previewVersionPrefix = WpfRuntimeDefinition.ReadCiNuGetVersionPrefix(repositoryPath);
+        return $"{previewVersionPrefix}.{buildTime.UtcDateTime:yyyyMMddHHmmss}.{testedSha.Short6}";
     }
 }

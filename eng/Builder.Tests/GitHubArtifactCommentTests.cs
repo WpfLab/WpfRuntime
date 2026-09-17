@@ -63,20 +63,20 @@ public sealed class GitHubArtifactCommentTests
     {
         var artifacts = new[]
         {
-            CreateArtifact(2, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0-test.20260311123456.222222.nupkg"),
-            CreateArtifact(1, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0-test.20260311123456.222222.nupkg"),
-            CreateArtifact(6, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0-test.20260311123456.222222.snupkg"),
-            CreateArtifact(7, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0-test.20260311123456.222222.symbols.zip"),
-            CreateArtifact(3, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-99-attempt-2-version-1.0.0-test.20260311123456.111111.nupkg"),
-            CreateArtifact(4, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-1.0.0-test.20260311123456.111111.nupkg", expired: true),
-            CreateArtifact(5, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-1.0.0-test.20260311123456.111111.nupkg", size: 0),
+            CreateArtifact(2, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0.1-test.20260311123456.222222.nupkg"),
+            CreateArtifact(1, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0.1-test.20260311123456.222222.nupkg"),
+            CreateArtifact(6, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0.1-test.20260311123456.222222.snupkg"),
+            CreateArtifact(7, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-2-version-1.0.0.1-test.20260311123456.222222.symbols.zip"),
+            CreateArtifact(3, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-99-attempt-2-version-1.0.0.1-test.20260311123456.111111.nupkg"),
+            CreateArtifact(4, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-1.0.0.1-test.20260311123456.111111.nupkg", expired: true),
+            CreateArtifact(5, $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{HeadSha}-run-42-attempt-2-version-1.0.0.1-test.20260311123456.111111.nupkg", size: 0),
         };
 
         var filtered = GitHubArtifactCommentFormatter.FilterArtifacts(artifacts, 11781, 42, 2);
 
         Assert.Equal([1L, 2L, 6L, 7L], filtered.Select(artifact => artifact.Id));
         Assert.All(filtered, artifact => Assert.Equal(TestedSha, artifact.TestedSha.ToString()));
-        Assert.All(filtered, artifact => Assert.Equal("1.0.0-test.20260311123456.222222", artifact.PackageVersion));
+        Assert.All(filtered, artifact => Assert.Equal("1.0.0.1-test.20260311123456.222222", artifact.PackageVersion));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class GitHubArtifactCommentTests
                     1536,
                     DateTime.Parse("2025-02-03T04:05:06Z").ToUniversalTime(),
                     GitObjectId.Parse(TestedSha),
-                    "1.0.0-test.20260311123456.222222"),
+                    "1.0.0.1-test.20260311123456.222222"),
             ]);
 
         Assert.True(content.HasValidSuccessArtifacts);
@@ -106,7 +106,7 @@ public sealed class GitHubArtifactCommentTests
         Assert.Contains("<!-- wpf-nuget-artifacts-run id=42 attempt=2 -->", content.Body, StringComparison.Ordinal);
         Assert.Contains("## WPF NuGet Build", content.Body, StringComparison.Ordinal);
         Assert.Contains("- Result: Succeeded", content.Body, StringComparison.Ordinal);
-        Assert.Contains("- Published NuGet: [WpfLab.WpfRuntime 1.0.0-test.20260311123456.222222](https://www.nuget.org/packages/WpfLab.WpfRuntime/1.0.0-test.20260311123456.222222)", content.Body, StringComparison.Ordinal);
+        Assert.Contains("- Published NuGet: [WpfLab.WpfRuntime 1.0.0.1-test.20260311123456.222222](https://www.nuget.org/packages/WpfLab.WpfRuntime/1.0.0.1-test.20260311123456.222222)", content.Body, StringComparison.Ordinal);
         Assert.Contains($"- NuGet package: [{GitHubArtifactCommentFormatter.EscapeMarkdown("package@team[debug].nupkg")}]", content.Body, StringComparison.Ordinal);
         Assert.Contains("1.5 KiB", content.Body, StringComparison.Ordinal);
         Assert.Contains("actions/runs/42/artifacts/7", content.Body, StringComparison.Ordinal);
