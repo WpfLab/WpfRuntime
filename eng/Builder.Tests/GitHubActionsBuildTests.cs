@@ -20,7 +20,7 @@ public sealed class GitHubActionsBuildTests
               }
             }
             """);
-        var repositoryPath = Path.Join(Path.GetTempPath(), $"builder-identity-{Guid.NewGuid():N}");
+        var repositoryPath = CreateTemporaryRepository();
         try
         {
             var metadata = GitHubActionsBuildMetadata.Read(
@@ -39,7 +39,7 @@ public sealed class GitHubActionsBuildTests
             Assert.True(metadata.IsPullRequest);
             Assert.Equal(11781, metadata.PullRequestNumber);
             Assert.Equal(SourceHeadSha, metadata.SourceHeadSha.ToString());
-            Assert.Equal("0.0.0-test.20260311123456.sha333333", identity.PackageVersion);
+            Assert.Equal("1.0.0.1-test.20260311123456.333333", identity.PackageVersion);
             Assert.Equal(
                 Path.GetFullPath(Path.Join(
                     repositoryPath,
@@ -47,7 +47,7 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.nupkg")),
+                    "WpfLab.WpfRuntime.1.0.0.1-test.20260311123456.333333.nupkg")),
                 identity.PackagePath);
             Assert.Equal(
                 Path.GetFullPath(Path.Join(
@@ -56,7 +56,7 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.snupkg")),
+                    "WpfLab.WpfRuntime.1.0.0.1-test.20260311123456.333333.snupkg")),
                 identity.SymbolPackagePath);
             Assert.Equal(
                 Path.GetFullPath(Path.Join(
@@ -65,38 +65,47 @@ public sealed class GitHubActionsBuildTests
                     "Builder",
                     "bin",
                     "nupkg",
-                    "WpfLab.WpfRuntime.0.0.0-test.20260311123456.sha333333.symbols.zip")),
+                    "WpfLab.WpfRuntime.1.0.0.1-test.20260311123456.333333.symbols.zip")),
                 identity.AllSymbolsArchivePath);
             Assert.Equal(
-                $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3-version-0.0.0-test.20260311123456.sha333333",
+                $"WpfLab.WpfRuntime-nupkg-pr-11781-sha-{TestedSha}-run-42-attempt-3-version-1.0.0.1-test.20260311123456.333333",
                 identity.ArtifactName);
         }
         finally
         {
             File.Delete(eventPath);
+            Directory.Delete(repositoryPath, recursive: true);
         }
     }
 
     [Fact]
     public void BranchPushEvent_UsesPreviewIdentityAndRejectsPullRequestMetadata()
     {
-        var metadata = GitHubActionsBuildMetadata.Create("push", TrustedSha, null, null);
-        var identity = GitHubActionsBuildIdentity.Create(
-            metadata,
-            Path.GetTempPath(),
-            TrustedSha,
-            "refs/heads/main",
-            new DateTimeOffset(2026, 3, 11, 12, 34, 56, TimeSpan.Zero),
-            runId: 7,
-            runAttempt: 1);
+        var repositoryPath = CreateTemporaryRepository();
+        try
+        {
+            var metadata = GitHubActionsBuildMetadata.Create("push", TrustedSha, null, null);
+            var identity = GitHubActionsBuildIdentity.Create(
+                metadata,
+                repositoryPath,
+                TrustedSha,
+                "refs/heads/main",
+                new DateTimeOffset(2026, 3, 11, 12, 34, 56, TimeSpan.Zero),
+                runId: 7,
+                runAttempt: 1);
 
-        Assert.False(metadata.IsPullRequest);
-        Assert.Equal("0.0.0-test.20260311123456.sha222222", identity.PackageVersion);
-        Assert.Equal(
-            $"WpfLab.WpfRuntime-nupkg-event-push-sha-{TrustedSha}-run-7-attempt-1-version-0.0.0-test.20260311123456.sha222222",
-            identity.ArtifactName);
-        Assert.Throws<ArgumentException>(() =>
-            GitHubActionsBuildMetadata.Create("push", TrustedSha, 1, SourceHeadSha));
+            Assert.False(metadata.IsPullRequest);
+            Assert.Equal("1.0.0.1-test.20260311123456.222222", identity.PackageVersion);
+            Assert.Equal(
+                $"WpfLab.WpfRuntime-nupkg-event-push-sha-{TrustedSha}-run-7-attempt-1-version-1.0.0.1-test.20260311123456.222222",
+                identity.ArtifactName);
+            Assert.Throws<ArgumentException>(() =>
+                GitHubActionsBuildMetadata.Create("push", TrustedSha, 1, SourceHeadSha));
+        }
+        finally
+        {
+            Directory.Delete(repositoryPath, recursive: true);
+        }
     }
 
     [Theory]
@@ -209,6 +218,17 @@ public sealed class GitHubActionsBuildTests
                 pushMetadata,
                 GitObjectId.Parse(TestedSha),
                 []));
+    }
+
+    private static string CreateTemporaryRepository()
+    {
+        var path = Path.Join(Path.GetTempPath(), $"builder-identity-{Guid.NewGuid():N}");
+        var engPath = Path.Join(path, "eng");
+        Directory.CreateDirectory(engPath);
+        File.WriteAllText(
+            Path.Join(engPath, "Versions.props"),
+            "<Project><PropertyGroup><WpfRuntimeCiNuGetVersionPrefix>1.0.0.1-test</WpfRuntimeCiNuGetVersionPrefix></PropertyGroup></Project>");
+        return path;
     }
 
     private static string CreateTemporaryFile(string content)

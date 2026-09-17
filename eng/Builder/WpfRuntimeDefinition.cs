@@ -10,10 +10,17 @@ internal static class WpfRuntimeDefinition
     public static HashSet<string> ReadRuntimeAssemblyNames(string repoRoot) =>
         ReadAssemblyNames(repoRoot, includeReferenceOnly: false);
 
+    public static string ReadCiNuGetVersionPrefix(string repoRoot)
+    {
+        var versionsPropsPath = GetVersionsPropsPath(repoRoot);
+        var versionsDocument = XDocument.Load(versionsPropsPath);
+        return ReadMsBuildProperty(versionsDocument, versionsPropsPath, "WpfRuntimeCiNuGetVersionPrefix");
+    }
+
     public static IReadOnlyList<PackageDependency> ReadRuntimePackageDependencies(string repoRoot)
     {
         var runtimePropsPath = GetRuntimePropsPath(repoRoot);
-        var versionsPropsPath = Path.Join(repoRoot, "eng", "Versions.props");
+        var versionsPropsPath = GetVersionsPropsPath(repoRoot);
         var runtimeDocument = XDocument.Load(runtimePropsPath);
         var versionsDocument = XDocument.Load(versionsPropsPath);
         var dependencies = new List<PackageDependency>();
@@ -56,6 +63,15 @@ internal static class WpfRuntimeDefinition
         var path = Path.Join(repoRoot, "eng", "WpfRuntimeDependencies.props");
         if (!File.Exists(path))
             throw new FileNotFoundException("Shared WPF runtime definition was not found", path);
+
+        return path;
+    }
+
+    private static string GetVersionsPropsPath(string repoRoot)
+    {
+        var path = Path.Join(repoRoot, "eng", "Versions.props");
+        if (!File.Exists(path))
+            throw new FileNotFoundException("Shared version definition was not found", path);
 
         return path;
     }
