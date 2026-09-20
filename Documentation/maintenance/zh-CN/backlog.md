@@ -11,7 +11,7 @@
 ## 统一 Builder 与 WpfDemo 的 native 必需文件清单
 
 - 背景：native 文件的复制、打包校验和 WpfDemo 输出校验应基于同一份带用途信息的声明，避免增删文件时多处清单漂移。
-- 证据：[`eng/WpfRuntimeDependencies.props`](../eng/WpfRuntimeDependencies.props) 定义了 5 个 `RepoWpfNativeRuntimeFile`；WpfDemo 用该项复制文件，但输出校验另行硬编码 3 个文件；[`NuGetPackageService.cs`](../eng/Builder/NuGetPackageService.cs) 会复制包内全部 native DLL，并以独立数组硬编码 4 个必需文件，`ijwhost.dll` 还来自另一类 host 包。
+- 证据：[`eng/WpfRuntimeDependencies.props`](../../../eng/WpfRuntimeDependencies.props) 定义了 5 个 `RepoWpfNativeRuntimeFile`；WpfDemo 用该项复制文件，但输出校验另行硬编码 3 个文件；[`NuGetPackageService.cs`](../../../eng/Builder/NuGetPackageService.cs) 会复制包内全部 native DLL，并以独立数组硬编码 4 个必需文件，`ijwhost.dll` 还来自另一类 host 包。
 - 触发条件：native 文件集合、运行时包版本、打包校验规则或消费入口发生变化时，先让 Builder 与 WpfDemo 读取同一份结构化清单，并保留 runtime 包与 host 包来源差异，消除 Builder 的文件名硬编码。该维护项针对现有 x64/x86 规则收敛，不替代阶段计划中的平台扩展。
 
 ## 修正 Builder `compare` 的无 staging 回退
@@ -29,7 +29,7 @@
 ## 调查 `DWriteLoader.UnloadDWrite` 的生命周期意图
 
 - 背景：显式加载 `dwrite.dll` 后是否需要在某个生命周期节点释放，应由宿主生命周期和上游设计决定，不能仅凭存在一个清理方法推断应调用或删除。
-- 证据：[`DWriteLoader.cs`](../src/Microsoft.DotNet.Wpf/src/PresentationCore/MS/internal/Text/TextInterface/DWriteLoader.cs) 定义了 `UnloadDWrite`；当前工作区搜索只发现该定义，没有已确认调用点，而 `LoadDWrite` 由 `PresentationCore` 的模块初始化路径调用。
+- 证据：[`DWriteLoader.cs`](../../../src/Microsoft.DotNet.Wpf/src/PresentationCore/MS/internal/Text/TextInterface/DWriteLoader.cs) 定义了 `UnloadDWrite`；当前工作区搜索只发现该定义，没有已确认调用点，而 `LoadDWrite` 由 `PresentationCore` 的模块初始化路径调用。
 - 触发条件：出现 native 模块卸载、进程关闭、可卸载加载上下文或相关资源生命周期问题，或准备调整该方法时，先对照固定的 origin 快照并验证实际生命周期，再决定补充调用、保留或移除。
 
 ## 为专题验证结果建立可持久日志约定

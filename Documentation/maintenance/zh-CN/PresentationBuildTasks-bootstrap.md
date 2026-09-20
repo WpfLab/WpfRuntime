@@ -6,9 +6,9 @@
 
 实现依据：
 
-- [`Microsoft.WinFX.targets`](../src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/Microsoft.WinFX.targets)
-- [`PresentationBuildTasks.csproj`](../src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/PresentationBuildTasks.csproj)
-- 根 [`Directory.Build.targets`](../Directory.Build.targets)
+- [`Microsoft.WinFX.targets`](../../../src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/Microsoft.WinFX.targets)
+- [`PresentationBuildTasks.csproj`](../../../src/Microsoft.DotNet.Wpf/src/PresentationBuildTasks/PresentationBuildTasks.csproj)
+- 根 [`Directory.Build.targets`](../../../Directory.Build.targets)
 
 ## 宿主 TFM 与唯一 DLL 路径
 

@@ -19,8 +19,8 @@
 - 递归排除路径中的 `bin/`、`obj/`、`artifacts/`、`TestResults/`。
 - “项目”只统计 `*.csproj`、`*.vcxproj`、`*.proj`。
 - “文件”统计排除上述输出目录后的全部普通文件，项目文件也包含在文件数中。
-- “当前仓库主要项目根”合并统计 `src/`、`Demo/`、`Docs/`、`eng/`。
-- 根解决方案统计以 [`Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) 中唯一的 `<Project Path="...">` 声明为准，不与磁盘项目数混用。
+- “当前仓库主要项目根”合并统计 `src/`、`Demo/`、`Documentation/maintenance/`、`eng/`。
+- 根解决方案统计以 [`Microsoft.Dotnet.Wpf.slnx`](../../../Microsoft.Dotnet.Wpf.slnx) 中唯一的 `<Project Path="...">` 声明为准，不与磁盘项目数混用。
 
 ### 当前结果
 
@@ -28,7 +28,7 @@
 |---|---:|---:|---|
 | `origin/src/` | 90 | 6380 | 本地来源快照 |
 | 当前主源码树 `src/` | 64 | 4980 | 包含 `src/Microsoft.DotNet.Wpf/cycle-breakers/` 下的 8 个桥接项目 |
-| 当前仓库主要项目根合计 | 68 | — | 合并 `src/`、`Demo/`、`Docs/`、`eng/` |
+| 当前仓库主要项目根合计 | 68 | — | 合并 `src/`、`Demo/`、`Documentation/maintenance/`、`eng/` |
 | 根 `slnx` | 57 | — | 解决方案声明数，不代表磁盘项目总数或 IDE 加载状态 |
 
 这些数字是树状态的瞬时结果。新增、迁移、删除项目或生成文件后必须按同一口径重算，不能长期沿用旧数字，也不能仅用项目数差值推导“遗漏项目数”。

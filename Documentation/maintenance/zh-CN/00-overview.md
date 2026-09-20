@@ -6,7 +6,7 @@
 
 | 项目 | 当前事实 |
 |---|---|
-| 根解决方案入口 | [`../Microsoft.Dotnet.Wpf.slnx`](../Microsoft.Dotnet.Wpf.slnx) |
+| 根解决方案入口 | [`../../../Microsoft.Dotnet.Wpf.slnx`](../../../Microsoft.Dotnet.Wpf.slnx) |
 | 根传统解决方案 | 根目录不存在同名传统解决方案文件；仓库其他模块内部可以存在独立 `.sln` |
 | `origin/` | 当前非空；若后续发现为空，必须立即停止迁移 |
 | `origin/src` 保护边界 | 被 `origin/.gitignore` 排除，不受外层 Git 状态保护；禁止使用 `git clean -xdf` |
@@ -24,7 +24,7 @@
 | `src/Microsoft.DotNet.Wpf/src/` | 46 |
 | `src/Microsoft.DotNet.Wpf/cycle-breakers/` | 8 |
 | `Demo/` | 1 |
-| `Docs/` | 1 |
+| `Documentation/maintenance/` | 1 |
 | `eng/` | 3 |
 | 合计 | 59 |
 

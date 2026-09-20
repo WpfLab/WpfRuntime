@@ -318,5 +318,5 @@
     <Platform Solution="*|Any CPU" Project="x64" />
     <Platform Solution="*|x64" Project="x64" />
   </Project>
-  <Project Path="Docs/Docs.csproj" />
+  <Project Path="Documentation/maintenance/Docs.csproj" />
 </Solution>
