@@ -28,17 +28,21 @@ public sealed class BuildServiceTests
         Assert.DoesNotContain("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadReferenceAssemblyNames(FindRepositoryRoot()));
     }
 
-    [Fact]
-    public void RuntimeCollectorUsesAssemblyNameInsteadOfProjectName()
+    [Theory]
+    [InlineData("x64")]
+    [InlineData("x86")]
+    public void RuntimeCollectorUsesAssemblyNameInsteadOfProjectName(string platform)
     {
         var artifactsDir = Path.Join(Path.GetTempPath(), "WpfRuntimeTests", Guid.NewGuid().ToString("N"));
-        var outputDir = Path.Join(artifactsDir, "bin", "System.Windows.Primitives", "x64", "Release", "net8.0");
+        var outputDir = Path.Join(artifactsDir, "bin", "System.Windows.Primitives", platform, "Release", "net8.0");
         Directory.CreateDirectory(outputDir);
         var assemblyPath = Path.Join(outputDir, "WpfRuntime.Windows.Primitives.dll");
         File.WriteAllBytes(assemblyPath, []);
         File.WriteAllBytes(Path.Join(outputDir, "WindowsBase.dll"), []);
+        File.WriteAllBytes(Path.Join(outputDir, "System.Windows.Primitives.dll"), []);
+        File.WriteAllBytes(Path.Join(outputDir, "System.Private.Windows.Core.dll"), []);
 
-        var assemblies = AssemblyCollector.CollectRuntimeDlls(FindRepositoryRoot(), artifactsDir, "x64");
+        var assemblies = AssemblyCollector.CollectRuntimeDlls(FindRepositoryRoot(), artifactsDir, platform);
 
         Assert.Equal(new KeyValuePair<string, string>("WpfRuntime.Windows.Primitives.dll", assemblyPath), Assert.Single(assemblies));
     }
