@@ -5,6 +5,44 @@ namespace WpfReorganize.Builder.Tests;
 
 public sealed class BuildServiceTests
 {
+    [Theory]
+    [InlineData("System.Windows.Primitives.csproj")]
+    [InlineData("ref/System.Windows.Primitives-ref.csproj")]
+    public void PrimitivesUsesIsolatedAssemblyIdentity(string projectFile)
+    {
+        var projectPath = Path.Join(FindRepositoryRoot(), "src", "Microsoft.DotNet.Wpf", "src", "System.Windows.Primitives", projectFile);
+        var document = XDocument.Load(projectPath);
+
+        Assert.Equal("WpfRuntime.Windows.Primitives", document.Descendants().Single(element => element.Name.LocalName == "AssemblyName").Value);
+    }
+
+    [Fact]
+    public void RuntimeInventoryIncludesIsolatedPrimitives()
+    {
+        Assert.Contains("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadRuntimeAssemblyNames(FindRepositoryRoot()));
+    }
+
+    [Fact]
+    public void ReferenceInventoryExcludesPrivatePrimitives()
+    {
+        Assert.DoesNotContain("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadReferenceAssemblyNames(FindRepositoryRoot()));
+    }
+
+    [Fact]
+    public void RuntimeCollectorUsesAssemblyNameInsteadOfProjectName()
+    {
+        var artifactsDir = Path.Join(Path.GetTempPath(), "WpfRuntimeTests", Guid.NewGuid().ToString("N"));
+        var outputDir = Path.Join(artifactsDir, "bin", "System.Windows.Primitives", "x64", "Release", "net8.0");
+        Directory.CreateDirectory(outputDir);
+        var assemblyPath = Path.Join(outputDir, "WpfRuntime.Windows.Primitives.dll");
+        File.WriteAllBytes(assemblyPath, []);
+        File.WriteAllBytes(Path.Join(outputDir, "WindowsBase.dll"), []);
+
+        var assemblies = AssemblyCollector.CollectRuntimeDlls(FindRepositoryRoot(), artifactsDir, "x64");
+
+        Assert.Equal(new KeyValuePair<string, string>("WpfRuntime.Windows.Primitives.dll", assemblyPath), Assert.Single(assemblies));
+    }
+
     [Fact]
     public void PresentationBuildTasksProjectTargetsNet472AndNet80()
     {
