@@ -115,16 +115,16 @@
       <Platform Solution="*|x64" Project="x64" />
     </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/System.Windows.Primitives/System.Windows.Primitives.csproj">
-      <Platform Solution="*|Any CPU" Project="AnyCPU" />
-      <Platform Solution="*|arm64" Project="AnyCPU" />
-      <Platform Solution="*|x64" Project="AnyCPU" />
-      <Platform Solution="*|x86" Project="AnyCPU" />
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
     </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/System.Windows.Primitives/ref/System.Windows.Primitives-ref.csproj">
-      <Platform Solution="*|Any CPU" Project="AnyCPU" />
-      <Platform Solution="*|arm64" Project="AnyCPU" />
-      <Platform Solution="*|x64" Project="AnyCPU" />
-      <Platform Solution="*|x86" Project="AnyCPU" />
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|arm64" Project="arm64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
     </Project>
     <Project Path="src/Microsoft.DotNet.Wpf/src/UIAutomation/UIAutomationProvider/UIAutomationProvider.csproj">
       <Platform Solution="*|Any CPU" Project="x64" />
