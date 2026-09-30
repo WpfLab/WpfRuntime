@@ -125,16 +125,16 @@
 
 	<Error Condition="'%(RepoWpfRuntimeAssembly.WpfDemoRequired)' == 'true' And
 					  '%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder' And
-					  !Exists('$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll')"
-		   Text="Required repository WPF implementation assembly is missing: $(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll" />
+					  !Exists('$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.ProjectName)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll')"
+		   Text="Required repository WPF implementation assembly is missing: $(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.ProjectName)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll" />
 	<Error Condition="'%(RepoWpfRuntimeAssembly.Identity)' == 'DirectWriteForwarder' And
 					  '%(RepoWpfRuntimeAssembly.WpfDemoRequired)' == 'true' And
 					  !Exists('$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll')"
 		   Text="Required repository WPF implementation assembly is missing: $(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll" />
 
 	<ItemGroup>
-	  <_RepoWpfRuntimeAssembly Include="$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll"
-							   Condition="'%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder' And Exists('$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll')" />
+	  <_RepoWpfRuntimeAssembly Include="$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.ProjectName)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll"
+							   Condition="'%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder' And Exists('$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.ProjectName)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\%(RepoWpfRuntimeAssembly.Identity).dll')" />
 	  <_RepoWpfRuntimeAssembly Include="$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll"
 							   Condition="Exists('$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\DirectWriteForwarder.dll')" />
 
@@ -156,7 +156,7 @@
 		  AfterTargets="Build"
 		  Condition="'$(RepoWpfConsumerEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'">
 	<ItemGroup>
-	  <_RepoWpfRuntimeResource Include="$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.Identity)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\*\%(RepoWpfRuntimeAssembly.Identity).resources.dll"
+	  <_RepoWpfRuntimeResource Include="$(ArtifactsBinDir)%(RepoWpfRuntimeAssembly.ProjectName)\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\$(RepoWpfTargetFramework)\*\%(RepoWpfRuntimeAssembly.Identity).resources.dll"
 							   Condition="'%(RepoWpfRuntimeAssembly.Identity)' != 'DirectWriteForwarder'" />
 	  <_RepoWpfNativeRuntime Include="$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\$(RepoWpfWindowsDesktopRuntimeVersion)\runtimes\win-x64\native\%(RepoWpfNativeRuntimeFile.Identity)" />
 	  <_RepoWpfIjwHost Include="$(ArtifactsBinDir)DirectWriteForwarder\$(RepoWpfPlatform)\$(RepoWpfConfiguration)\Ijwhost.dll" />

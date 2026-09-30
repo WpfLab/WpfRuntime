@@ -231,7 +231,8 @@ internal sealed class GitHubActionsBuildService
             "/p:Platform=x64",
             "/m:1",
             "/nr:false",
-            "/v:minimal");
+            "/v:minimal",
+            "/clp:Summary");
 
     private async Task<GitObjectId> ReadTestedShaAsync(
         string repositoryPath,

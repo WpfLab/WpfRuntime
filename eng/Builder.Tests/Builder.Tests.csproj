@@ -22,6 +22,8 @@
   <ItemGroup>
 	<Compile Include="..\..\src\Microsoft.DotNet.Wpf\src\PresentationBuildTasks\MS\Internal\MarkupCompiler\CompatibleAssemblyResolver.cs"
 			 Link="CompatibleAssemblyResolver.cs" />
+	<Content Include="..\Builder.TestAssets\WpfWinFormsNet10\**\*" Exclude="..\Builder.TestAssets\WpfWinFormsNet10\bin\**;..\Builder.TestAssets\WpfWinFormsNet10\obj\**"
+             Link="WpfWinFormsNet10\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 	<ProjectReference Include="..\Builder\Builder.csproj"
 				  AdditionalProperties="OutputPath=$(BaseIntermediateOutputPath)BuilderReference\" />
 	<ProjectReference Include="..\Builder.ProcessTestHelper\Builder.ProcessTestHelper.csproj"

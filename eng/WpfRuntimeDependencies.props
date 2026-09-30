@@ -68,6 +68,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<RepoWpfRuntimeAssembly Include="WpfRuntime.Windows.Primitives" ProjectName="System.Windows.Primitives" WpfDemoRequired="true" PackReference="false" />
 	<RepoWpfRuntimeAssembly Include="WindowsBase" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="System.Xaml" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="PresentationCore" WpfDemoRequired="true" />
@@ -90,6 +91,12 @@
 	<RepoWpfRuntimeAssembly Include="PresentationFramework.Luna" WpfDemoRequired="true" WpfThemeAssembly="true" />
 	<RepoWpfRuntimeAssembly Include="PresentationFramework.Royale" WpfDemoRequired="true" WpfThemeAssembly="true" />
 	<RepoWpfRuntimeAssembly Include="DirectWriteForwarder" WpfDemoRequired="true" PackReference="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<RepoWpfRuntimeAssembly Update="@(RepoWpfRuntimeAssembly)">
+	  <ProjectName Condition="'%(RepoWpfRuntimeAssembly.ProjectName)' == ''">%(Identity)</ProjectName>
+	</RepoWpfRuntimeAssembly>
   </ItemGroup>
 
   <ItemGroup>

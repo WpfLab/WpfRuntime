@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <!--<Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />-->
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);BASE_NATIVEMETHODS;WINDOWS_BASE</DefineConstants>
@@ -278,7 +278,6 @@
     <Compile Include="MS\Internal\PriorityChain.cs" />
     <Compile Include="MS\Internal\PriorityItem.cs" />
     <Compile Include="MS\Internal\PriorityQueue.cs" />
-    <Compile Include="MS\Internal\SplashScreenNativeMethods.cs" />
     <Compile Include="MS\Internal\Threading\ExceptionWrapper.cs" />
     <Compile Include="System\Windows\Input\ModifierKeys.cs" />
     <Compile Include="System\Windows\Input\ModifierKeysConverter.cs" />
@@ -431,6 +430,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(WpfSourceDir)System.Xaml\System.Xaml.csproj" />
+    <ProjectReference Include="..\System.Windows.Primitives\System.Windows.Primitives.csproj" />
     <!--<ProjectReference Include="$(WpfSourceDir)WindowsBase\ref\WindowsBase-ref.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>-->
