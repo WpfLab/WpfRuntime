@@ -161,7 +161,7 @@ namespace System.Windows.Input
                  {
                      // Unmarshal each langid from short array.
                      short langid = Marshal.PtrToStructure<short>((IntPtr)((Int64)langids + sizeOfShort * i));
-                     arrayLang.Add(new CultureInfo(langid));
+                     arrayLang.Add(InputLanguageSource.GetCultureInfo(langid));
                  }
 
                  // Call CoTaskMemFree().
