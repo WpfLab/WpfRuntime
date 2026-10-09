@@ -712,21 +712,12 @@ namespace System.Windows.Media
 
                     PathGeometry.FigureList list = new PathGeometry.FigureList();
 
-                    // The handle to the pDashArray, if we have one.
-                    // Since the dash array is optional, we may not need to Free it.
-                    GCHandle handle = new GCHandle();
-
-                    // Pin the pDashArray, if we have one.
-                    if (dashArray != null)
+                    int hr;
+                    fixed (double* ptrDashArray = dashArray)
                     {
-                        handle = GCHandle.Alloc(dashArray, GCHandleType.Pinned);
-                    }
-
-                    try
-                    {
-                        int hr = UnsafeNativeMethods.MilCoreApi.MilUtility_PathGeometryWiden(
+                        hr = UnsafeNativeMethods.MilCoreApi.MilUtility_PathGeometryWiden(
                             &penData,
-                            (dashArray == null) ? null : (double*)handle.AddrOfPinnedObject(),
+                            ptrDashArray,
                             &pathData.Matrix,
                             pathData.FillRule,
                             pbPathData,
@@ -735,26 +726,19 @@ namespace System.Windows.Media
                             type == ToleranceType.Relative,
                             new PathGeometry.AddFigureToListDelegate(list.AddFigureToList),
                             out fillRule);
-
-                        if (hr == (int)MILErrors.WGXERR_BADNUMBER)
-                        {
-                            // When we encounter NaNs in the renderer, we absorb the error and draw
-                            // nothing. To be consistent, we return an empty geometry.
-                            resultGeometry = new PathGeometry();
-                        }
-                        else
-                        {
-                            HRESULT.Check(hr);
-
-                            resultGeometry = new PathGeometry(list.Figures, fillRule, null);
-                        }
                     }
-                    finally
+
+                    if (hr == (int)MILErrors.WGXERR_BADNUMBER)
                     {
-                        if (handle.IsAllocated)
-                        {
-                            handle.Free();
-                        }
+                        // When we encounter NaNs in the renderer, we absorb the error and draw
+                        // nothing. To be consistent, we return an empty geometry.
+                        resultGeometry = new PathGeometry();
+                    }
+                    else
+                    {
+                        HRESULT.Check(hr);
+
+                        resultGeometry = new PathGeometry(list.Figures, fillRule, null);
                     }
 }
 
