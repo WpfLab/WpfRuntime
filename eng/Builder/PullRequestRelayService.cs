@@ -363,11 +363,6 @@ internal sealed class PullRequestRelayService
 
     private static void ValidateSource(PullRequestSource source, PullRequestAddress requestedAddress)
     {
-        if (!string.Equals(source.State, "open", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(BuilderResources.PullRequestNotOpen);
-        }
-
         if (!string.Equals(source.Address.SourceKey, requestedAddress.SourceKey, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
