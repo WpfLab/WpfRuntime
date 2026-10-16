@@ -292,7 +292,7 @@ namespace System.Windows.Input
                 }
 
                 // This needs to work before source is attached.
-                return new CultureInfo((short)NativeMethods.IntPtrToInt32(hkl));
+                return InputLanguageSource.GetCultureInfo((short)NativeMethods.IntPtrToInt32(hkl));
             }
             set
             {
