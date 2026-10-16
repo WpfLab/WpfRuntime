@@ -10,6 +10,18 @@ internal static class WpfRuntimeDefinition
     public static HashSet<string> ReadRuntimeAssemblyNames(string repoRoot) =>
         ReadAssemblyNames(repoRoot, includeReferenceOnly: false);
 
+    internal static Dictionary<string, string> ReadRuntimeAssemblyProjects(string repoRoot)
+    {
+        var runtimePropsPath = GetRuntimePropsPath(repoRoot);
+        var document = XDocument.Load(runtimePropsPath);
+        return document.Descendants()
+            .Where(element => element.Name.LocalName == "RepoWpfRuntimeAssembly" && element.Attribute("Include") is not null)
+            .ToDictionary(
+                element => (string?)element.Attribute("ProjectName") ?? GetRequiredAttribute(element, runtimePropsPath, "Include"),
+                element => GetRequiredAttribute(element, runtimePropsPath, "Include"),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
     public static string ReadCiNuGetVersionPrefix(string repoRoot)
     {
         var versionsPropsPath = GetVersionsPropsPath(repoRoot);
@@ -45,7 +57,7 @@ internal static class WpfRuntimeDefinition
         var document = XDocument.Load(runtimePropsPath);
         var names = document
             .Descendants()
-            .Where(element => element.Name.LocalName == "RepoWpfRuntimeAssembly")
+            .Where(element => element.Name.LocalName == "RepoWpfRuntimeAssembly" && element.Attribute("Include") is not null)
             .Where(element =>
                 !includeReferenceOnly ||
                 !string.Equals((string?)element.Attribute("PackReference"), "false", StringComparison.OrdinalIgnoreCase))

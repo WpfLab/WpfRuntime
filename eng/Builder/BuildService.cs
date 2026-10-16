@@ -25,6 +25,7 @@ internal static class BuildService
 
         var projectsToBuild = new[]
         {
+            Path.Join(context.SourceDir, "System.Windows.Primitives", "System.Windows.Primitives.csproj"),
             Path.Join(context.SourceDir, "WindowsBase", "WindowsBase.csproj"),
             Path.Join(context.SourceDir, "System.Xaml", "System.Xaml.csproj"),
             Path.Join(context.SourceDir, "UIAutomation", "UIAutomationTypes", "UIAutomationTypes.csproj"),
