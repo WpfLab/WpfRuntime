@@ -22,6 +22,7 @@ using System.Windows.Data;
 using System.Windows.Markup;
 using MS.Internal.Data;
 using MS.Internal;          // Invariant.Assert
+using MS.Internal.KnownBoxes;
 
 namespace MS.Internal.Data
 {
@@ -588,12 +589,12 @@ namespace MS.Internal.Data
         private void RequestRun()
         {
             // Run tasks before layout, to front load as much layout work as possible
-            Dispatcher.BeginInvoke(DispatcherPriority.DataBind, new DispatcherOperationCallback(Run), false);
+            Dispatcher.BeginInvoke(DispatcherPriority.DataBind, new DispatcherOperationCallback(Run), BooleanBoxes.FalseBox);
 
             // Run tasks (especially re-tried AttachToContext tasks) again after
             // layout as the last chance.  Any failures in AttachToContext will
             // be treated as an error.
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new DispatcherOperationCallback(Run), true);
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new DispatcherOperationCallback(Run), BooleanBoxes.TrueBox);
         }
 
         // run a cleanup pass
