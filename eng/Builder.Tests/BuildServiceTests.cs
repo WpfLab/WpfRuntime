@@ -6,6 +6,41 @@ namespace WpfReorganize.Builder.Tests;
 public sealed class BuildServiceTests
 {
     [Fact]
+    public void RuntimeInventoryExcludesStandalonePrimitives()
+    {
+        Assert.DoesNotContain("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadRuntimeAssemblyNames(FindRepositoryRoot()));
+    }
+
+    [Fact]
+    public void ReferenceInventoryExcludesPrivatePrimitives()
+    {
+        Assert.DoesNotContain("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadReferenceAssemblyNames(FindRepositoryRoot()));
+    }
+
+    [Theory]
+    [InlineData("x64")]
+    [InlineData("x86")]
+    public void RuntimeCollectorUsesAssemblyNameInsteadOfProjectName(string platform)
+    {
+        var artifactsDir = Path.Join(Path.GetTempPath(), "WpfRuntimeTests", Guid.NewGuid().ToString("N"));
+        var repositoryRoot = Path.Join(artifactsDir, "repo");
+        Directory.CreateDirectory(Path.Join(repositoryRoot, "eng"));
+        File.WriteAllText(Path.Join(repositoryRoot, "eng", "WpfRuntimeDependencies.props"),
+            """<Project><ItemGroup><RepoWpfRuntimeAssembly Include="Custom.Interop" ProjectName="InteropProject" /></ItemGroup></Project>""");
+        var outputDir = Path.Join(artifactsDir, "bin", "InteropProject", platform, "Release", "net8.0");
+        Directory.CreateDirectory(outputDir);
+        var assemblyPath = Path.Join(outputDir, "Custom.Interop.dll");
+        File.WriteAllBytes(assemblyPath, []);
+        File.WriteAllBytes(Path.Join(outputDir, "WindowsBase.dll"), []);
+        File.WriteAllBytes(Path.Join(outputDir, "System.Windows.Primitives.dll"), []);
+        File.WriteAllBytes(Path.Join(outputDir, "System.Private.Windows.Core.dll"), []);
+
+        var assemblies = AssemblyCollector.CollectRuntimeDlls(repositoryRoot, artifactsDir, platform);
+
+        Assert.Equal(new KeyValuePair<string, string>("Custom.Interop.dll", assemblyPath), Assert.Single(assemblies));
+    }
+
+    [Fact]
     public void PresentationBuildTasksProjectTargetsNet472AndNet80()
     {
         var repositoryRoot = FindRepositoryRoot();

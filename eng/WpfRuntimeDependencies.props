@@ -93,6 +93,12 @@
   </ItemGroup>
 
   <ItemGroup>
+	<RepoWpfRuntimeAssembly Update="@(RepoWpfRuntimeAssembly)">
+	  <ProjectName Condition="'%(RepoWpfRuntimeAssembly.ProjectName)' == ''">%(Identity)</ProjectName>
+	</RepoWpfRuntimeAssembly>
+  </ItemGroup>
+
+  <ItemGroup>
 	<RepoWpfNativeRuntimeFile Include="D3DCompiler_47_cor3.dll" />
 	<RepoWpfNativeRuntimeFile Include="PenImc_cor3.dll" />
 	<RepoWpfNativeRuntimeFile Include="PresentationNative_cor3.dll" />

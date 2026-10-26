@@ -51,7 +51,7 @@ internal static class AssemblyCollector
         if (!Directory.Exists(binDir))
             return [];
 
-        var wantedDlls = WpfRuntimeDefinition.ReadRuntimeAssemblyNames(repoRoot);
+        var assemblyProjects = WpfRuntimeDefinition.ReadRuntimeAssemblyProjects(repoRoot);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var projectDir in Directory.GetDirectories(binDir))
@@ -60,7 +60,7 @@ internal static class AssemblyCollector
             if (dirName.EndsWith("-ref", StringComparison.OrdinalIgnoreCase)) continue;
             if (dirName.Contains("-api-cycle", StringComparison.OrdinalIgnoreCase)) continue;
             if (dirName.Contains("-impl-cycle", StringComparison.OrdinalIgnoreCase)) continue;
-            if (!wantedDlls.Contains(dirName)) continue;
+            if (!assemblyProjects.TryGetValue(dirName, out var assemblyName)) continue;
 
             var platformCandidates = platform == "x86" ? new[] { "x86", "Win32" } : new[] { platform };
             foreach (var platformCandidate in platformCandidates)
@@ -75,7 +75,7 @@ internal static class AssemblyCollector
                 {
                     if (!Directory.Exists(dllDir)) continue;
 
-                    var dllPath = Path.Join(dllDir, $"{dirName}.dll");
+                    var dllPath = Path.Join(dllDir, $"{assemblyName}.dll");
                     if (File.Exists(dllPath))
                     {
                         result[Path.GetFileName(dllPath)] = dllPath;
