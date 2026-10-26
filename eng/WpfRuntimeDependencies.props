@@ -68,7 +68,6 @@
   </ItemGroup>
 
   <ItemGroup>
-	<RepoWpfRuntimeAssembly Include="WpfRuntime.Windows.Primitives" ProjectName="System.Windows.Primitives" WpfDemoRequired="true" PackReference="false" />
 	<RepoWpfRuntimeAssembly Include="WindowsBase" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="System.Xaml" WpfDemoRequired="true" />
 	<RepoWpfRuntimeAssembly Include="PresentationCore" WpfDemoRequired="true" />

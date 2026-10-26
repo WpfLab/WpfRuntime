@@ -7,14 +7,17 @@ namespace WpfReorganize.Builder.Tests;
 
 public sealed class WpfWinFormsCompatibilityTests(ITestOutputHelper output)
 {
-    [Fact]
+    [Theory]
+    [InlineData(8, "8.0.101")]
+    [InlineData(10, "10.0.100")]
     [Trait("Category", "PackageIntegration")]
-    public async Task Net10WpfAndWinFormsPreserveFrameworkAssembliesAsync()
+    public async Task WpfAndWinFormsPreserveFrameworkAssembliesAsync(int majorVersion, string sdkVersion)
     {
-        Assert.True(OperatingSystem.IsWindows(), "This integration test requires Windows and the .NET 10 SDK/Desktop runtime.");
+        Assert.True(OperatingSystem.IsWindows(), $"This integration test requires Windows and the .NET {majorVersion} SDK/Desktop runtime.");
         var packagePath = Environment.GetEnvironmentVariable("WPF_RUNTIME_TEST_PACKAGE");
         Assert.True(!string.IsNullOrWhiteSpace(packagePath) && File.Exists(packagePath), "Set WPF_RUNTIME_TEST_PACKAGE to the freshly built WpfLab.WpfRuntime .nupkg.");
         using var package = ZipFile.OpenRead(packagePath!);
+        Assert.DoesNotContain(package.Entries, entry => Path.GetFileName(entry.FullName) is "WpfRuntime.Windows.Primitives.dll" or "System.Windows.Primitives.dll");
         using var manifestStream = package.Entries.Single(entry => entry.FullName.EndsWith(".nuspec", StringComparison.Ordinal)).Open();
         var manifest = XDocument.Load(manifestStream);
         var version = manifest.Descendants().Single(element => element.Name.LocalName == "version").Value;
@@ -36,12 +39,13 @@ public sealed class WpfWinFormsCompatibilityTests(ITestOutputHelper output)
                 new XElement("packageSource", new XAttribute("key", "local"), new XElement("package", new XAttribute("pattern", "WpfLab.WpfRuntime"))),
                 new XElement("packageSource", new XAttribute("key", "nuget.org"), new XElement("package", new XAttribute("pattern", "*"))))))
             .Save(Path.Join(directory, "NuGet.config"));
-        await File.WriteAllTextAsync(Path.Join(directory, "global.json"), """{"sdk":{"version":"10.0.100","rollForward":"latestFeature"}}""");
+        await File.WriteAllTextAsync(Path.Join(directory, "global.json"), System.Text.Json.JsonSerializer.Serialize(
+            new { sdk = new { version = sdkVersion, rollForward = "latestFeature" } }));
         await File.WriteAllBytesAsync(Path.Join(directory, "splash.png"), Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII="));
 
         var build = await ProcessRunner.RunAsync(new ProcessRunOptions("dotnet", directory,
             "build", "WpfWinFormsNet10.csproj", "-c", "Release", "-o", "output",
-            $"-p:WpfRuntimeTestVersion={version}", $"-p:RestorePackagesPath={Path.Join(directory, "packages")}")
+            $"-p:WpfCompatibilityTargetFramework=net{majorVersion}.0-windows", $"-p:WpfRuntimeTestVersion={version}", $"-p:RestorePackagesPath={Path.Join(directory, "packages")}")
         { Timeout = TimeSpan.FromMinutes(10) });
         output.WriteLine(build.StandardOutput);
         output.WriteLine(build.StandardError);
@@ -51,7 +55,7 @@ public sealed class WpfWinFormsCompatibilityTests(ITestOutputHelper output)
             Path.Join(directory, "output", "WpfWinFormsNet10.dll")) { Timeout = TimeSpan.FromMinutes(2) });
         output.WriteLine(run.StandardOutput);
         output.WriteLine(run.StandardError);
-        Assert.True(run.ExitCode == 0 && run.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Contains("WPF_WINFORMS_NET10_PASS"),
+        Assert.True(run.ExitCode == 0 && run.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Contains($"WPF_WINFORMS_NET{majorVersion}_PASS"),
             $"Probe failed ({run.ExitCode}): {run.StandardOutput}\n{run.StandardError}");
     }
 }

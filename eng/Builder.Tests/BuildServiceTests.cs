@@ -5,21 +5,10 @@ namespace WpfReorganize.Builder.Tests;
 
 public sealed class BuildServiceTests
 {
-    [Theory]
-    [InlineData("System.Windows.Primitives.csproj")]
-    [InlineData("ref/System.Windows.Primitives-ref.csproj")]
-    public void PrimitivesUsesIsolatedAssemblyIdentity(string projectFile)
-    {
-        var projectPath = Path.Join(FindRepositoryRoot(), "src", "Microsoft.DotNet.Wpf", "src", "System.Windows.Primitives", projectFile);
-        var document = XDocument.Load(projectPath);
-
-        Assert.Equal("WpfRuntime.Windows.Primitives", document.Descendants().Single(element => element.Name.LocalName == "AssemblyName").Value);
-    }
-
     [Fact]
-    public void RuntimeInventoryIncludesIsolatedPrimitives()
+    public void RuntimeInventoryExcludesStandalonePrimitives()
     {
-        Assert.Contains("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadRuntimeAssemblyNames(FindRepositoryRoot()));
+        Assert.DoesNotContain("WpfRuntime.Windows.Primitives", WpfRuntimeDefinition.ReadRuntimeAssemblyNames(FindRepositoryRoot()));
     }
 
     [Fact]
@@ -34,17 +23,21 @@ public sealed class BuildServiceTests
     public void RuntimeCollectorUsesAssemblyNameInsteadOfProjectName(string platform)
     {
         var artifactsDir = Path.Join(Path.GetTempPath(), "WpfRuntimeTests", Guid.NewGuid().ToString("N"));
-        var outputDir = Path.Join(artifactsDir, "bin", "System.Windows.Primitives", platform, "Release", "net8.0");
+        var repositoryRoot = Path.Join(artifactsDir, "repo");
+        Directory.CreateDirectory(Path.Join(repositoryRoot, "eng"));
+        File.WriteAllText(Path.Join(repositoryRoot, "eng", "WpfRuntimeDependencies.props"),
+            """<Project><ItemGroup><RepoWpfRuntimeAssembly Include="Custom.Interop" ProjectName="InteropProject" /></ItemGroup></Project>""");
+        var outputDir = Path.Join(artifactsDir, "bin", "InteropProject", platform, "Release", "net8.0");
         Directory.CreateDirectory(outputDir);
-        var assemblyPath = Path.Join(outputDir, "WpfRuntime.Windows.Primitives.dll");
+        var assemblyPath = Path.Join(outputDir, "Custom.Interop.dll");
         File.WriteAllBytes(assemblyPath, []);
         File.WriteAllBytes(Path.Join(outputDir, "WindowsBase.dll"), []);
         File.WriteAllBytes(Path.Join(outputDir, "System.Windows.Primitives.dll"), []);
         File.WriteAllBytes(Path.Join(outputDir, "System.Private.Windows.Core.dll"), []);
 
-        var assemblies = AssemblyCollector.CollectRuntimeDlls(FindRepositoryRoot(), artifactsDir, platform);
+        var assemblies = AssemblyCollector.CollectRuntimeDlls(repositoryRoot, artifactsDir, platform);
 
-        Assert.Equal(new KeyValuePair<string, string>("WpfRuntime.Windows.Primitives.dll", assemblyPath), Assert.Single(assemblies));
+        Assert.Equal(new KeyValuePair<string, string>("Custom.Interop.dll", assemblyPath), Assert.Single(assemblies));
     }
 
     [Fact]
