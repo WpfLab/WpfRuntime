@@ -437,17 +437,86 @@ namespace System.Windows.Interop
             OnDpiChangedAfterParent(e);
         }
 
+        // Scoped by Window to one native placement operation, including synchronous DPI messages.
+        internal DpiRectOverride DpiSuggestedRect { get; set; }
+
         /// <summary>
-        ///     Announces when the DPI is going to change for the window. If the user handles this event,
-        ///     WPF does not scale any visual.
+        ///     Carries requested device axes and DIP constraint snapshots for one native operation.
+        ///     This is not a persistent DPI sizing policy; default leaves the suggested rectangle unchanged.
         /// </summary>
+        internal readonly struct DpiRectOverride
+        {
+            internal DpiRectOverride(double? left, double? top, double? width, double? height,
+                Size minimum = default, Size? maximum = null)
+            {
+                Left = left;
+                Top = top;
+                Width = width;
+                Height = height;
+                _minimum = minimum;
+                _maximum = maximum ?? new Size(double.PositiveInfinity, double.PositiveInfinity);
+            }
+
+            internal double? Left { get; }
+            internal double? Top { get; }
+            internal double? Width { get; }
+            internal double? Height { get; }
+            private readonly Size _minimum;
+            private readonly Size _maximum;
+
+            internal Rect ApplyTo(Rect suggested)
+            {
+                if (Left.HasValue)
+                {
+                    suggested.X = Left.Value;
+                }
+
+                if (Top.HasValue)
+                {
+                    suggested.Y = Top.Value;
+                }
+
+                if (Width.HasValue)
+                {
+                    suggested.Width = Width.Value;
+                }
+
+                if (Height.HasValue)
+                {
+                    suggested.Height = Height.Value;
+                }
+
+                return suggested;
+            }
+
+            internal Rect ApplyTo(Rect suggested, DpiScale dpi)
+            {
+                suggested = ApplyTo(suggested);
+                // This operation's DIP constraint snapshots must use the destination DPI:
+                // the source HWND transform is stale during a cross-monitor native move.
+                if (Width.HasValue)
+                {
+                    suggested.Width = Math.Round(Math.Max(_minimum.Width * dpi.DpiScaleX,
+                        Math.Min(Width.Value, _maximum.Width * dpi.DpiScaleX)), MidpointRounding.AwayFromZero);
+                }
+
+                if (Height.HasValue)
+                {
+                    suggested.Height = Math.Round(Math.Max(_minimum.Height * dpi.DpiScaleY,
+                        Math.Min(Height.Value, _maximum.Height * dpi.DpiScaleY)), MidpointRounding.AwayFromZero);
+                }
+
+                return suggested;
+            }
+        }
+
         protected virtual void OnDpiChanged(HwndDpiChangedEventArgs e)
         {
             DpiChanged?.Invoke(this, e);
 
             if (!e.Handled)
             {
-                _hwndTarget?.OnDpiChanged(e);
+                _hwndTarget?.OnDpiChanged(e, DpiSuggestedRect.ApplyTo(e.SuggestedRect, e.NewDpi));
 
                 // New world transform has been set-up by HwndTarget
                 // set the layouts size again to account for this
