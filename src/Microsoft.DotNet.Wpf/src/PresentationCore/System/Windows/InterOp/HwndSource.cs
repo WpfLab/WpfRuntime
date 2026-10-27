@@ -437,12 +437,15 @@ namespace System.Windows.Interop
             OnDpiChangedAfterParent(e);
         }
 
-        // Scoped by Window to one native placement operation, including synchronous DPI messages.
+        // Set by Window for the duration of a single native placement operation, including the
+        // synchronous DPI messages raised by that operation.  The default value keeps the
+        // rectangle suggested by Windows.
         internal DpiRectOverride DpiSuggestedRect { get; set; }
 
         /// <summary>
-        ///     Carries requested device axes and DIP constraint snapshots for one native operation.
-        ///     This is not a persistent DPI sizing policy; default leaves the suggested rectangle unchanged.
+        ///     Device units requested for one native placement operation, together with the
+        ///     logical size constraints that apply to it.  This is not a persistent sizing
+        ///     policy.  Every axis left at null keeps the rectangle suggested by Windows.
         /// </summary>
         internal readonly struct DpiRectOverride
         {
@@ -492,8 +495,9 @@ namespace System.Windows.Interop
             internal Rect ApplyTo(Rect suggested, DpiScale dpi)
             {
                 suggested = ApplyTo(suggested);
-                // This operation's DIP constraint snapshots must use the destination DPI:
-                // the source HWND transform is stale during a cross-monitor native move.
+                // The constraints are logical values, so they have to be converted with the
+                // destination DPI.  During a cross-monitor native move the HWND still reports
+                // the DPI of the monitor the window is leaving.
                 if (Width.HasValue)
                 {
                     suggested.Width = Math.Round(Math.Max(_minimum.Width * dpi.DpiScaleX,
@@ -510,6 +514,10 @@ namespace System.Windows.Interop
             }
         }
 
+        /// <summary>
+        ///     Announces when the DPI is going to change for the window. If the user handles this event,
+        ///     WPF does not scale any visual.
+        /// </summary>
         protected virtual void OnDpiChanged(HwndDpiChangedEventArgs e)
         {
             DpiChanged?.Invoke(this, e);
