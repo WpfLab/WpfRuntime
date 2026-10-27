@@ -607,8 +607,10 @@ namespace System.Windows
                         new ValidateValueCallback(IsValidDeviceSize));
 
         /// <summary>
-        ///     Gets or sets the requested normal outer left edge in GetWindowRect screen coordinates.
-        ///     NaN cancels an uncommitted request; this property does not report actual bounds.
+        ///     Gets or sets the requested left edge of the normal window, in device units, in the
+        ///     screen coordinates reported by GetWindowRect.
+        ///     This is a request only and does not report the current bounds.  Setting it to NaN
+        ///     cancels a request that has not been applied yet.
         /// </summary>
         public double DeviceLeft
         {
@@ -627,8 +629,10 @@ namespace System.Windows
         }
 
         /// <summary>
-        ///     Gets or sets the requested normal outer top edge in GetWindowRect screen coordinates.
-        ///     NaN cancels an uncommitted request; this property does not report actual bounds.
+        ///     Gets or sets the requested top edge of the normal window, in device units, in the
+        ///     screen coordinates reported by GetWindowRect.
+        ///     This is a request only and does not report the current bounds.  Setting it to NaN
+        ///     cancels a request that has not been applied yet.
         /// </summary>
         public double DeviceTop
         {
@@ -647,8 +651,10 @@ namespace System.Windows
         }
 
         /// <summary>
-        ///     Gets or sets the requested normal outer width in GetWindowRect device units.
-        ///     NaN cancels an uncommitted request; this property does not report actual bounds.
+        ///     Gets or sets the requested width of the normal window, in device units, measured on
+        ///     the outer rect reported by GetWindowRect.
+        ///     This is a request only and does not report the current size.  Setting it to NaN
+        ///     cancels a request that has not been applied yet.
         /// </summary>
         public double DeviceWidth
         {
@@ -667,8 +673,10 @@ namespace System.Windows
         }
 
         /// <summary>
-        ///     Gets or sets the requested normal outer height in GetWindowRect device units.
-        ///     NaN cancels an uncommitted request; this property does not report actual bounds.
+        ///     Gets or sets the requested height of the normal window, in device units, measured on
+        ///     the outer rect reported by GetWindowRect.
+        ///     This is a request only and does not report the current size.  Setting it to NaN
+        ///     cancels a request that has not been applied yet.
         /// </summary>
         public double DeviceHeight
         {
@@ -2463,6 +2471,8 @@ namespace System.Windows
         private void InternalDispose()
         {
             _disposed = true;
+
+            // A queued device request must not touch the HWND once the window is gone.
             _deviceOperation?.Abort();
             _deviceOperation = null;
             ClearPendingDeviceBounds();
@@ -2649,6 +2659,8 @@ namespace System.Windows
                     param.SetPosition((int)screenTopLeft.X, (int)screenTopLeft.Y);
                 }
 
+                // A device request overrides the location and size computed from the logical
+                // values above.
                 ResolveDeviceCreation(ref param, topLeftPointHelper.ScreenTopLeft,
                     requestedLeft, requestedTop, requestedWidth, requestedHeight);
 
@@ -2727,6 +2739,8 @@ namespace System.Windows
             // Sub classes can have different intialization. RBW does very minimalistic
             // stuff in its override
             SetupInitialState(requestedTop, requestedLeft, requestedWidth, requestedHeight);
+            // SetupInitialState consumed the creation request, so a request still pending was
+            // issued by the events it raised.
             if (HasPendingDeviceBounds) QueueDeviceBounds();
 
             // Fire SourceInitialized event
@@ -2798,7 +2812,8 @@ namespace System.Windows
 
         internal virtual void SetupInitialState(double requestedTop, double requestedLeft, double requestedWidth, double requestedHeight)
         {
-            // Consume creation requests before native callbacks can issue new ones.
+            // The creation request has already been applied to the HwndSource parameters, so
+            // drop it before the native callbacks below can apply it a second time.
             ClearPendingDeviceBounds();
             // Push the current SizeToContent value to HwndSource after it's created. Initial sync up.
             HwndSourceSizeToContent = (SizeToContent) GetValue(SizeToContentProperty);
@@ -3018,6 +3033,8 @@ namespace System.Windows
                 }
             }
 
+            // A minimized or maximized window reports the rect of that state, so the request has
+            // to go through SetWindowPlacement, which stores the normal bounds instead.
             if (WindowState != WindowState.Normal && (HasDeviceRequest(BoundsSpecified.Left) || HasDeviceRequest(BoundsSpecified.Top) ||
                 HasDeviceRequest(BoundsSpecified.Width) || HasDeviceRequest(BoundsSpecified.Height)))
             {
@@ -3549,7 +3566,8 @@ namespace System.Windows
 
         private static bool IsInDeviceIntegerRange(double value)
         {
-            // DoubleToInt rounds halves away from zero; validate before the conversion.
+            // DoubleToInt rounds halves away from zero before the conversion to int, so the
+            // bounds are exclusive and accept every value that still fits in an int.
             return value > (double)int.MinValue - 0.5 && value < (double)int.MaxValue + 0.5;
         }
 
@@ -3592,6 +3610,7 @@ namespace System.Windows
                 return;
             }
 
+            // Coalesce every request made in the same frame into a single native operation.
             _deviceOperation = Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(FlushDeviceBounds));
         }
 
@@ -3618,6 +3637,8 @@ namespace System.Windows
         private Rect ReadDeviceBounds()
         {
             NativeMethods.WINDOWPLACEMENT placement = ReadDevicePlacement();
+            // The current rect of a minimized or maximized window belongs to that state, so its
+            // normal placement is used: the device properties always describe normal bounds.
             if (placement.showCmd == NativeMethods.SW_NORMAL || placement.showCmd == NativeMethods.SW_SHOW)
             {
                 NativeMethods.RECT bounds = WindowBounds;
@@ -3642,8 +3663,9 @@ namespace System.Windows
             rect.top = DoubleUtil.DoubleToInt(bounds.Top);
             rect.right = checked(rect.left + DoubleUtil.DoubleToInt(bounds.Width));
             rect.bottom = checked(rect.top + DoubleUtil.DoubleToInt(bounds.Height));
-            // WINDOWPLACEMENT coordinates are not screen coordinates. Select the source
-            // monitor from the HWND on reads, and from the complete screen target on writes.
+            // WINDOWPLACEMENT stores workspace coordinates, so the result has to be moved between
+            // the working area and the monitor rectangle.  A read uses the monitor of the HWND, a
+            // write uses the monitor that contains the whole target rect.
             IntPtr monitor = toScreen ? MonitorFromWindow(CriticalHandle) :
                 SafeNativeMethods.MonitorFromRect(ref rect, NativeMethods.MONITOR_DEFAULTTONEAREST);
             NativeMethods.MONITORINFOEX info = new NativeMethods.MONITORINFOEX();
@@ -3669,9 +3691,12 @@ namespace System.Windows
 
             double left = _pendingDeviceLeft;
             double top = _pendingDeviceTop;
+            // SizeToContent owns the axis it measures, so a device width or height for that axis
+            // is ignored.
             double width = (SizeToContent & SizeToContent.Width) == 0 ? _pendingDeviceWidth : double.NaN;
             double height = (SizeToContent & SizeToContent.Height) == 0 ? _pendingDeviceHeight : double.NaN;
-            // Consume before native calls so reentrant setters belong to the next batch.
+            // Clear the pending values before the native calls, so that a setter invoked
+            // reentrantly belongs to the next batch instead of this one.
             ClearPendingDeviceBounds();
             HwndSource.DpiRectOverride request = new HwndSource.DpiRectOverride(
                 double.IsNaN(left) ? null : DoubleUtil.DoubleToInt(left),
@@ -3722,7 +3747,8 @@ namespace System.Windows
                 position.Y = DeviceTop;
             }
 
-            // Keep native defaults as defaults; a missing axis is not a screen origin.
+            // An axis that was not requested keeps CW_USEDEFAULT.  It must not be treated as the
+            // screen origin when the monitor is picked.
             IntPtr monitor = _ownerHandle != IntPtr.Zero ? MonitorFromWindow(_ownerHandle) : GetCurrentMonitorFromMousePosition();
             if (manual && position.X != NativeMethods.CW_USEDEFAULT && position.Y != NativeMethods.CW_USEDEFAULT)
             {
@@ -3751,8 +3777,9 @@ namespace System.Windows
 
             NativeMethods.MONITORINFOEX info = new NativeMethods.MONITORINFOEX();
             SafeNativeMethods.GetMonitorInfo(new HandleRef(this, monitor), info);
-            // A device axis requires an explicit pair in CreateWindowEx. Resolve only
-            // its missing partner from the selected work area, never from (0,0).
+            // CreateWindowEx resolves CW_USEDEFAULT for both axes at once, so a requested axis
+            // needs an explicit partner.  Take the missing one from the work area of the selected
+            // monitor instead of leaving (0, 0) as the position.
             if (manual && HasDeviceRequest(BoundsSpecified.Top) && position.X == NativeMethods.CW_USEDEFAULT)
             {
                 position.X = info.rcWork.left;
@@ -3788,6 +3815,8 @@ namespace System.Windows
                 ? DeviceWidth : width * scaleX;
             double deviceHeight = HasDeviceRequest(BoundsSpecified.Height) && (SizeToContent & SizeToContent.Height) == 0
                 ? DeviceHeight : height * scaleY;
+            // Width and Height are outer window sizes, so the non-client frame must not be added
+            // to them again.
             parameters.AdjustSizingForNonClientArea = false;
             if (!double.IsNaN(deviceWidth))
             {
@@ -3799,6 +3828,7 @@ namespace System.Windows
                 parameters.Height = DoubleUtil.DoubleToInt(Math.Max(MinHeight * scaleY, Math.Min(deviceHeight, MaxHeight * scaleY)));
             }
 
+            // CenterScreen and CenterOwner need the final device size to compute the location.
             if (!manual && !double.IsNaN(deviceWidth) && !double.IsNaN(deviceHeight))
             {
                 double x = position.X;
@@ -3822,7 +3852,8 @@ namespace System.Windows
             HwndSource.DpiRectOverride previous = source.DpiSuggestedRect;
             bool wasApplying = _applyingDeviceBounds;
             _applyingDeviceBounds = true;
-            // The request is scoped to this native operation, never to later user drags.
+            // Publish the request for this native operation only.  The DPI messages it raises keep
+            // the requested axes, a later user resize does not.
             source.DpiSuggestedRect = new HwndSource.DpiRectOverride(request.Left, request.Top, request.Width, request.Height,
                 new Size(MinWidth, MinHeight), new Size(MaxWidth, MaxHeight));
             try
@@ -3850,6 +3881,7 @@ namespace System.Windows
                 }
                 else
                 {
+                    // The window is minimized or maximized, so only its normal bounds are updated.
                     Rect normal = ConvertDevicePlacement(bounds, false);
                     placement.rcNormalPosition_left = DoubleUtil.DoubleToInt(normal.X);
                     placement.rcNormalPosition_top = DoubleUtil.DoubleToInt(normal.Y);
@@ -6221,6 +6253,7 @@ namespace System.Windows
 
         private void OnHeightChanged(double height)
         {
+            // A device request owns this axis, so the logical value must not resize the HWND.
             if (HasDeviceRequest(BoundsSpecified.Height) && (SizeToContent & SizeToContent.Height) == 0) return;
             //  Move ValidateLengthForHeightWidth calls from property
             // invalidation callback to PropertyMetadata
@@ -6322,6 +6355,7 @@ namespace System.Windows
 
         private void OnWidthChanged(double width)
         {
+            // A device request owns this axis, so the logical value must not resize the HWND.
             if (HasDeviceRequest(BoundsSpecified.Width) && (SizeToContent & SizeToContent.Width) == 0) return;
             ValidateLengthForHeightWidth(width);
 
@@ -6612,6 +6646,7 @@ namespace System.Windows
 
         private void OnTopChanged(double newTop)
         {
+            // A device request owns this axis, so the logical value must not move the HWND.
             if (HasDeviceRequest(BoundsSpecified.Top)) return;
             // Adding check for IsCompositionTargetInvalid
             if (IsSourceWindowNull == false && IsCompositionTargetInvalid == false)
@@ -6708,6 +6743,7 @@ namespace System.Windows
         // 3) SetupInitialState
         private void OnLeftChanged(double newLeft)
         {
+            // A device request owns this axis, so the logical value must not move the HWND.
             if (HasDeviceRequest(BoundsSpecified.Left)) return;
             // Adding check for IsCompositionTargetInvalid
             if (IsSourceWindowNull == false && IsCompositionTargetInvalid == false)
@@ -7741,12 +7777,14 @@ namespace System.Windows
         //----------------------------------------------
         #region Private Fields
 
+        // Device units requested through DeviceLeft, DeviceTop, DeviceWidth and DeviceHeight that
+        // have not been applied yet.  NaN means that no request exists for the axis.
         private double _pendingDeviceLeft = double.NaN;
         private double _pendingDeviceTop = double.NaN;
         private double _pendingDeviceWidth = double.NaN;
         private double _pendingDeviceHeight = double.NaN;
-        private DispatcherOperation _deviceOperation;
-        private bool _applyingDeviceBounds;
+        private DispatcherOperation _deviceOperation;                   // queued flush of the pending request
+        private bool _applyingDeviceBounds;                             // true while a request is applied
 
         private SourceWindowHelper  _swh;                               // object that will hold the window
         private Window              _ownerWindow;                       // owner window

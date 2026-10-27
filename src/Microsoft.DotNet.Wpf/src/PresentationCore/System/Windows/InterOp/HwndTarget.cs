@@ -1747,7 +1747,8 @@ namespace System.Windows.Interop
         }
 
         /// <summary>
-        /// Resizes and repositions the HWND based on suggestedRect and the new DPI.
+        /// Resizes and repositions the HWND based on the requested device rectangle, or on
+        /// suggestedRect when no rectangle was requested, and the new DPI.
         /// </summary>
         internal void OnDpiChanged(HwndDpiChangedEventArgs e, Rect? deviceRect = null)
         {
@@ -1760,7 +1761,8 @@ namespace System.Windows.Interop
             NotifyListenersOfWorldTransformAndClipBoundsChanged();
             NotifyRendererOfDpiChange(afterParent:false);
 
-            // An explicit device request can replace the rectangle, not the DPI update.
+            // Set the new window size.  A rectangle requested by the caller replaces only the
+            // rectangle suggested for the new DPI.
             Rect bounds = deviceRect ?? e.SuggestedRect;
             UnsafeNativeMethods.SetWindowPos(
                 _hWnd.MakeHandleRef(this),
