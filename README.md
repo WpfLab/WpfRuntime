@@ -1,4 +1,4 @@
-﻿# WpfRuntime
+# WpfRuntime
 
 [![NuGet](https://img.shields.io/nuget/v/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/WpfLab.WpfRuntime.svg)](https://www.nuget.org/packages/WpfLab.WpfRuntime)
@@ -19,8 +19,10 @@ msbuild Microsoft.Dotnet.Wpf.slnx -restore /p:Configuration=Debug /p:Platform=x6
 ## Build a Local Package
 
 ```powershell
-dotnet run --project eng/Builder/Builder.csproj -- --version 1.0.0-local
+dotnet run --project eng/Builder/Builder.csproj
 ```
+
+The default local package version uses `WpfRuntimeCiNuGetVersionPrefix` from `eng/Versions.props`, with its prerelease suffix replaced by `-local`. Use `--version` to override it explicitly.
 
 The generated `WpfLab.WpfRuntime` package is written to `eng/Builder/bin/nupkg/`.
 
