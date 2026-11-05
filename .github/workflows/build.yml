@@ -152,6 +152,7 @@ jobs:
       actions: read
       contents: read
       packages: write
+      id-token: write
 
     steps:
     - name: Download NuGet package artifact
@@ -171,12 +172,20 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
+    - name: NuGet login (OIDC)
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: lindexi
+
     - name: Push generated package to NuGet registries
       shell: pwsh
+      env:
+        NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
       run: |
         $packagePath = "nupkg/WpfLab.WpfRuntime.${{ needs.build-package.outputs.version }}.nupkg"
         if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
           throw "Expected NuGet package was not found: $packagePath"
         }
-        dotnet nuget push $packagePath -s https://api.nuget.org/v3/index.json -k "${{ secrets.NugetKey }}"
+        dotnet nuget push $packagePath -s https://api.nuget.org/v3/index.json -k "$env:NUGET_API_KEY"
         dotnet nuget push $packagePath -s "https://nuget.pkg.github.com/${{ github.repository_owner }}" --api-key "${{ secrets.GITHUB_TOKEN }}"
