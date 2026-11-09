@@ -112,7 +112,7 @@ namespace System.Windows.Input
         {
             get
             {
-                return new CultureInfo(_CurrentInputLanguage);
+                return GetCultureInfo(_CurrentInputLanguage);
             }
             set
             {
@@ -155,7 +155,7 @@ namespace System.Windows.Input
                 // Call InputLanguageManager if its current source is this.
                 if (InputLanguageManager.Current.Source == this)
                 {
-                    return InputLanguageManager.Current.ReportInputLanguageChanging(new CultureInfo(langid), new CultureInfo(_langid));
+                    return InputLanguageManager.Current.ReportInputLanguageChanging(GetCultureInfo(langid), GetCultureInfo(_langid));
                 }
             }
                 
@@ -176,7 +176,7 @@ namespace System.Windows.Input
                 // Call InputLanguageManager if its current source is this.
                 if (InputLanguageManager.Current.Source == this)
                 {
-                    InputLanguageManager.Current.ReportInputLanguageChanged(new CultureInfo(langid), new CultureInfo(prevlangid));
+                    InputLanguageManager.Current.ReportInputLanguageChanged(GetCultureInfo(langid), GetCultureInfo(prevlangid));
                 }
             }
         }
@@ -186,6 +186,12 @@ namespace System.Windows.Input
         //  Private Method
         //
         //------------------------------------------------------
+
+        internal static CultureInfo GetCultureInfo(short languageId)
+        {
+            // LANGID is an unsigned WORD even though the interop signatures represent it as a short.
+            return new CultureInfo(unchecked((ushort)languageId));
+        }
 
         /// <summary>
         ///    This creates ITfInputProcessorProfile object and advice sink.
