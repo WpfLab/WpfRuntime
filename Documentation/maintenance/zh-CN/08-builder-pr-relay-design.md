@@ -60,7 +60,7 @@ Builder 应完成以下动作：
 - `eng/Builder/Builder.csproj` 是 `net8.0` 控制台项目，当前注册默认构建、`clean`、`compare`、`test-package` 和 `relay-pr` 命令。
 - 默认 Builder 构建会构建 x64/x86、收集程序集与 native 资产、生成 `WpfLab.WpfRuntime` NuGet 包，并在项目构建不完整时返回非零退出码。
 - `test-package` 会对 net8.0/net9.0 与 win-x86/win-x64 组合执行隔离 Publish、哈希校验和运行探针。
-- `.github/workflows/build.yml` 使用只读 `pull_request_target` 受信任定义，将 `github.sha` 的 Builder 与 PR merge ref 分别 checkout 到 `trusted/` 和 `tested/`，再由受信任 C# 命令校验并构建 tested checkout；`.github/workflows/comment-pr-build-artifacts.yml` 在 `workflow_run` 受信任上下文中只 checkout `github.sha` 的 Builder、读取元数据并回写 PR 评论。
+- `.github/workflows/build.yml` 使用只读 `pull_request_target` 受信任定义，名称保持 `Build WPF NuGet Package`，将 `github.sha` 的 Builder 与 PR merge ref 分别 checkout 到 `trusted/` 和 `tested/`，再由受信任 C# 命令校验并构建 tested checkout；`publish-nuget.yml` 是不 checkout 的 `workflow_run` OIDC 发布入口，NuGet 策略应绑定 `publish-nuget.yml`（远端配置待 CI 验证）；`.github/workflows/comment-pr-build-artifacts.yml` 继续按构建名称在 `workflow_run` 受信任上下文中只 checkout `github.sha` 的 Builder、读取元数据并回写 PR 评论。
 - 当前仓库有多个远端，因此不能用“列表中的第一个 GitHub 远端”猜测目标仓库。命令使用显式目标 remote，默认值为 `origin`。
 - 示例 PR 页面显示其 base 为 `dotnet/wpf:main`，head 为 `TFGSUMIT/wpf:fix/issue-11774`，页面展示的缩写提交为 `4ce6f21`。实现不得硬编码这些值，必须在每次执行时通过 API 获取完整 head SHA。
 

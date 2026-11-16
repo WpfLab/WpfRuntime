@@ -12,6 +12,7 @@ try
         .AddHandler<RelayPullRequestCommand>()
         .AddHandler<GitHubActionsBuildCommand>()
         .AddHandler<GitHubArtifactCommentCommand>()
+        .AddHandler<PublishPackagesCommand>()
         .RunAsync();
 }
 catch (CommandLineParseException exception)

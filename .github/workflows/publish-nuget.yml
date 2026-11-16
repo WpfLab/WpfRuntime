@@ -1,0 +1,60 @@
+name: Publish WPF NuGet Package
+
+on:
+  workflow_run:
+    workflows: [Build WPF NuGet Package]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-wpf-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  publish-package:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+    - name: Checkout trusted Builder
+      uses: actions/checkout@v7
+      with:
+        ref: ${{ github.sha }}
+        path: trusted
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore trusted Builder
+      working-directory: trusted
+      run: dotnet restore eng/Builder/Builder.csproj -p:RestoreWpfRuntimePackages=false
+
+    - name: Build trusted Builder
+      working-directory: trusted
+      run: dotnet build eng/Builder/Builder.csproj --no-restore -p:RestoreWpfRuntimePackages=false
+
+    - name: NuGet login (OIDC)
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: lindexi
+
+    - name: Publish packages through trusted Builder
+      working-directory: trusted
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        PUBLISH_REPOSITORY: ${{ github.repository }}
+        PUBLISH_RUN_ID: ${{ github.event.workflow_run.id }}
+      run: dotnet eng/Builder/bin/Builder.dll publish-packages

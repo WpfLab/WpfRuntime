@@ -192,12 +192,14 @@ nuspec 为 `net8.0` 和 `net9.0` 写入运行时包依赖组，依赖版本来�
 
 ## CI 路径
 
-`.github/workflows/build.yml` 包含两个相互独立的 Windows job：
+`.github/workflows/build.yml`（名称保持 `Build WPF NuGet Package`）包含两个相互独立的只读 Windows job：
 
 - `build-solution`：分别 checkout `github.sha` 的受信任 Builder 与待测试 commit/PR merge ref；轻量构建受信任 Builder 后，由 `ci-build --target solution` 复核身份并对 tested checkout 执行根 `Debug|x64` Rebuild。
 - `build-package`：使用相同的 trusted/tested 双 checkout，由 `ci-build --target package` 在脱敏环境中还原并构建 tested Builder、运行默认 x64/x86 构建与打包、验证精确 nupkg，并生成 artifact 名称和绝对包路径。
 
 两个 job 的 YAML 只保留固定版本 Action、环境准备和单行 Builder 调用，不再维护 PowerShell 身份计算或构建脚本。`build-package` 中任一此前步骤失败时，带 `failure()` 条件的诊断步骤会尝试上传 tested checkout 的 `eng/Builder/bin/package-tests`；构建与包测试均成功时，后续步骤按 C# 输出的精确路径上传 nupkg。workflow 中配置了这些步骤，不代表任意本地工作区或最新远端运行已经通过，实际结论必须以对应运行日志和产物为准。
+
+`.github/workflows/publish-nuget.yml` 通过 `workflow_run` 接力发布，不 checkout 或执行 tested 内容。工作流保持精简编排：上游成功后构建可信默认分支 Builder、OIDC 登录并调用 `publish-packages`。业务逻辑只放在 Builder，不添加与上传无关的身份、版本或 PR 门槛。Builder 按传入 repository/run-id 下载包产物，安全解压 nupkg/snupkg 后推送全部实际 nupkg；无包时报告无包。两个源均尝试，返回失败或超时会汇总为失败，不记录凭据。NuGet.org 使用固定用户 `lindexi` 的 OIDC 短期凭据，GitHub Packages 使用 `github.token`，无长期 NuGet API key；相邻 snupkg 随 NuGet push 发布。两个工作流必须一起进入默认分支，NuGet 策略应绑定 `publish-nuget.yml`（远端配置无法在仓库内验证），真实 `workflow_run` OIDC 认证仍需 CI 验证。
 
 `.github/workflows/comment-pr-build-artifacts.yml` 只 checkout `github.sha` 的受信任 Builder，不 checkout PR ref，也不下载 artifact；它在 Ubuntu 上轻量构建 Builder，再以单行命令调用 `comment-pr-artifacts`。只有该最终命令步骤获得 `GITHUB_TOKEN`，Restore/Build 步骤不持有写 token。
 
