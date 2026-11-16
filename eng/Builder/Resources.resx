@@ -34,4 +34,6 @@
   <data name="WorkflowRunRepositoryMismatch" xml:space="preserve"><value>The workflow_run event repository does not match GITHUB_REPOSITORY.</value></data>
   <data name="InvalidWorkflowRunPullRequestAssociation" xml:space="preserve"><value>The workflow_run event contains an invalid pull request association.</value></data>
   <data name="InvalidWorkflowRunEventProperty" xml:space="preserve"><value>The workflow_run event property '{0}' is missing or invalid.</value></data>
+  <data name="NoPackagesToPublish" xml:space="preserve"><value>No NuGet packages were found in the upstream run artifacts.</value></data>
+  <data name="PackagePushResult" xml:space="preserve"><value>Push {0} to {1}: exit code {2}.</value></data>
 </root>

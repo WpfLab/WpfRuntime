@@ -67,6 +67,10 @@ internal static class BuilderResources
 
     public static string InvalidWorkflowRunEventProperty => GetString(nameof(InvalidWorkflowRunEventProperty));
 
+    public static string NoPackagesToPublish => GetString(nameof(NoPackagesToPublish));
+
+    public static string PackagePushResult => GetString(nameof(PackagePushResult));
+
     private static string GetString(string name) =>
         ResourceManager.GetString(name) ?? throw new MissingManifestResourceException($"Resource '{name}' was not found.");
 }
