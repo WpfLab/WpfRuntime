@@ -145,7 +145,14 @@ namespace MS.Internal
             set
             {
                 EventKey key = new EventKey(manager, source, true);
-                _dataTable[key] = value;
+                if (!_inPurge)
+                {
+                    _dataTable[key] = value;
+                }
+                else
+                {
+                    _toUpdate.Add(new(key, value));
+                }
             }
         }
 
@@ -329,6 +336,7 @@ namespace MS.Internal
                 else
                 {
                     Debug.Assert(_toRemove.Count == 0, "to-remove list should be empty");
+                    Debug.Assert(_toUpdate.Count == 0, "to-update list should be empty");
                     _inPurge = true;
 
                     // enumerate the dictionary using IDE explicitly rather than
@@ -351,6 +359,17 @@ namespace MS.Internal
                     LogAllocation(ide.GetType(), 1, 36);                    // Hashtable+HashtableEnumerator
 #endif
                     _inPurge = false;
+                }
+
+                // Apply the updates before the removes, in case an entry appears in both lists.
+                if (_toUpdate.Count > 0)
+                {
+                    foreach (var (key, value) in _toUpdate)
+                    {
+                        _dataTable[key] = value;
+                    }
+                    _toUpdate.Clear();
+                    _toUpdate.TrimExcess();
                 }
 
                 if (purgeAll)
@@ -459,6 +478,7 @@ namespace MS.Internal
         private CleanupHelper       _cleanupHelper;
         private bool                _inPurge;
         private List<EventKey>      _toRemove = new List<EventKey>();
+        private readonly List<(EventKey, object)> _toUpdate = new();
 
 #if WeakEventTelemetry
         const int LOH_Threshold = 85000;    // per LOH docs
