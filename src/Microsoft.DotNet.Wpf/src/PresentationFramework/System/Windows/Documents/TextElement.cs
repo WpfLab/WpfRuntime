@@ -1089,6 +1089,14 @@ namespace System.Windows.Documents
             return group;
         }
 
+        // Returns the delta the caller must apply to the cached IME character counts.
+        internal int SetIMELeftEdgeDeferred(bool isDeferred)
+        {
+            int oldCount = this.IMELeftEdgeCharCount;
+            _isIMELeftEdgeDeferred = isDeferred;
+            return this.IMELeftEdgeCharCount - oldCount;
+        }
+
         // ........................................................................
         //
         // Helpers for Text Flow Initialization
@@ -1375,8 +1383,9 @@ namespace System.Windows.Documents
                     {
                         // The first sibling is always invisible to the IME.
                         // This ensures we don't get into trouble creating implicit
-                        // content on IME SetText calls.
-                        leftEdgeCharCount = this.TextElementNode.IsFirstSibling ? 0 : 1;
+                        // content on IME SetText calls. Other implicit edges can be hidden
+                        // until composition ends.
+                        leftEdgeCharCount = (this.TextElementNode.IsFirstSibling || this.IsIMELeftEdgeDeferred) ? 0 : 1;
                     }
                 }
 
@@ -1409,6 +1418,22 @@ namespace System.Windows.Documents
                 }
 
                 return isFirstIMEVisibleSibling;
+            }
+        }
+
+        // Whether the left edge is hidden from the IME during composition.
+        internal bool IsIMELeftEdgeDeferred
+        {
+            get
+            {
+                return _isIMELeftEdgeDeferred;
+            }
+
+            set
+            {
+                // Attached nodes must update cached character counts via SetIMELeftEdgeDeferred.
+                Invariant.Assert(_textElementNode?.ParentNode == null, "TextElement is in a TextContainer, caller should update character count.");
+                _isIMELeftEdgeDeferred = value;
             }
         }
 
@@ -1632,6 +1657,8 @@ namespace System.Windows.Documents
 
         // The node in a TextContainer representing this TextElement.
         private TextTreeTextElementNode _textElementNode;
+
+        private bool _isIMELeftEdgeDeferred;
 
         //-------------------------------------------------------------------
         // Typography Group Property

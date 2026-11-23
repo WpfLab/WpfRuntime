@@ -1040,6 +1040,18 @@ namespace System.Windows.Documents
                 element.TextElementNode = (TextTreeTextElementNode)elementNode;
             }
 
+            if (element.IsIMELeftEdgeDeferred)
+            {
+                if (this.IMECompositionScope is IMECompositionScope scope)
+                {
+                    scope.DeferredElements.Add(element);
+                }
+                else
+                {
+                    element.IsIMELeftEdgeDeferred = false;
+                }
+            }
+
             // If the new element will become the parent of an old element,
             // the old element may become a firstIMEVisibleSibling.
             TextTreeTextElementNode newFirstIMEVisibleNode = null;
@@ -1275,6 +1287,90 @@ namespace System.Windows.Documents
             {
                 RaiseEventForNewFirstIMEVisibleNode(nextIMEVisibleNode);
             }
+        }
+
+        // Hides an edge from the IME until composition ends.
+        internal void DeferIMELeftEdge(TextElement element)
+        {
+            Invariant.Assert(_rootNode != null, "Asking for composition scope before root node create!");
+            _rootNode.IMECompositionScope ??= new IMECompositionScope();
+            UpdateIMELeftEdgeDeferred(element, true);
+        }
+
+        // Undo outside a composition must reveal the edge rather than defer it again.
+        internal void UpdateIMELeftEdgeDeferred(TextElement element, bool isDeferred)
+        {
+            Invariant.Assert(element.IsInTree, "Element must be in the tree!");
+
+            IMECompositionScope scope = this.IMECompositionScope;
+            isDeferred = isDeferred && scope != null;
+            bool wasDeferred = element.IsIMELeftEdgeDeferred;
+
+            if (isDeferred == wasDeferred)
+            {
+                return;
+            }
+
+            BeginChangeNoUndo();
+            try
+            {
+                TextTreeUndo.CreateIMEDeferralUndoUnit(this, element, wasDeferred);
+                if (isDeferred)
+                {
+                    scope.DeferredElements.Add(element);
+                }
+
+                int diffCount = element.SetIMELeftEdgeDeferred(isDeferred);
+                if (diffCount != 0)
+                {
+                    TextTreeTextElementNode node = element.TextElementNode;
+                    node.IMECharCount += diffCount;
+                    UpdateContainerSymbolCount(node.GetContainingNode(), /* symbolCount */ 0, diffCount);
+
+                    if (diffCount > 0)
+                    {
+                        RaiseEventForFormerFirstIMEVisibleNode(node);
+                    }
+                    else
+                    {
+                        RaiseEventForNewFirstIMEVisibleNode(node);
+                    }
+                }
+            }
+            finally
+            {
+                EndChange(true /* skipEvents */);
+            }
+        }
+
+        // Reveal edges even for elements moved out of this tree during replay.
+        internal void RevealDeferredIMELeftEdges()
+        {
+            IMECompositionScope scope = this.IMECompositionScope;
+            if (scope == null)
+            {
+                return;
+            }
+
+            foreach (TextElement element in scope.DeferredElements)
+            {
+                // Undo or an earlier entry may already have revealed the edge.
+                if (!element.IsIMELeftEdgeDeferred)
+                {
+                    continue;
+                }
+
+                if (element.IsInTree)
+                {
+                    element.TextContainer.UpdateIMELeftEdgeDeferred(element, false);
+                }
+                else
+                {
+                    element.IsIMELeftEdgeDeferred = false;
+                }
+            }
+
+            _rootNode.IMECompositionScope = null;
         }
 
         internal void GetNodeAndEdgeAtOffset(int offset, out SplayTreeNode node, out ElementEdge edge)
@@ -3483,6 +3579,8 @@ namespace System.Windows.Documents
                 return (this.Parent != null) ? this.Parent.Dispatcher : null;
             }
         }
+
+        private IMECompositionScope IMECompositionScope => _rootNode?.IMECompositionScope;
 
         #endregion Private Properties
 

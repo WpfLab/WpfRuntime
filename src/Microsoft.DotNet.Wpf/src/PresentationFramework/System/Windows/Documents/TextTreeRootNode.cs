@@ -429,6 +429,9 @@ namespace System.Windows.Documents
             }
         }
 
+        // An active composition that requires deferring element edges.
+        internal IMECompositionScope IMECompositionScope { get; set; }
+
         #endregion Internal Properties
 
         //------------------------------------------------------

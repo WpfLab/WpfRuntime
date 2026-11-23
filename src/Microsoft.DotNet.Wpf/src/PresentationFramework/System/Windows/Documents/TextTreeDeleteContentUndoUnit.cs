@@ -278,6 +278,7 @@ namespace System.Windows.Documents
                 container = new ElementContentContainer(elementNode.TextElement.GetType(),
                                                         GetPropertyRecordArray(elementNode.TextElement),
                                                         elementNode.TextElement.Resources,
+                                                        elementNode.TextElement.IsIMELeftEdgeDeferred,
                                                         CopyContent((TextTreeNode)elementNode.GetFirstContainedNode(), null));
             }
 
@@ -404,12 +405,13 @@ namespace System.Windows.Documents
         {
             // Creates a new instance.
             // childContainer holds all content covered by this TextElement.
-            internal ElementContentContainer(Type elementType, PropertyRecord[] localValues, ResourceDictionary resources, ContentContainer childContainer)
+            internal ElementContentContainer(Type elementType, PropertyRecord[] localValues, ResourceDictionary resources, bool isIMELeftEdgeDeferred, ContentContainer childContainer)
             {
                 _elementType = elementType;
                 _localValues = localValues;
                 _childContainer = childContainer;
                 _resources = resources;
+                _isIMELeftEdgeDeferred = isIMELeftEdgeDeferred;
             }
 
             // Inserts the content held by this container at a specified position.
@@ -422,6 +424,7 @@ namespace System.Windows.Documents
 
                 // Insert the element.
                 element = (TextElement)Activator.CreateInstance(_elementType);
+                element.IsIMELeftEdgeDeferred = _isIMELeftEdgeDeferred;
                 element.Reposition(navigator, navigator);
 
                 // Get inside its scope.
@@ -453,6 +456,8 @@ namespace System.Windows.Documents
             // Resources defined locally on the TextElement
             private readonly ResourceDictionary _resources;
 
+            private readonly bool _isIMELeftEdgeDeferred;
+
             // Contained content.
             private readonly ContentContainer _childContainer;
         }
@@ -461,7 +466,7 @@ namespace System.Windows.Documents
         private class TableElementContentContainer : ElementContentContainer
         {
             internal TableElementContentContainer(Table table, PropertyRecord []localValues, ContentContainer childContainer) :
-                base(table.GetType(), localValues, table.Resources, childContainer)
+                base(table.GetType(), localValues, table.Resources, table.IsIMELeftEdgeDeferred, childContainer)
             {
                 _cpTable = table.TextContainer.Start.GetOffsetToPosition(table.ContentStart);
                 _columns = SaveColumns(table);
