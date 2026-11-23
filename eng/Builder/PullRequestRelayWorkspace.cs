@@ -3,6 +3,7 @@ namespace WpfReorganize.Builder;
 internal sealed class PullRequestRelayWorkspace
 {
     private const string StateFileName = "state.json";
+    private const string OwnershipFileName = ".relay-workspace";
     private static readonly string TemporaryRoot = Path.GetFullPath
     (
         Path.Join(Path.GetTempPath(), "WpfRuntimeTemp")
@@ -27,21 +28,29 @@ internal sealed class PullRequestRelayWorkspace
 
     public string StatePath { get; }
 
-    public static PullRequestRelayWorkspace Create(PullRequestAddress source)
+    /// <summary>Creates a dedicated relay directory under the requested parent or the default temporary root.</summary>
+    public static PullRequestRelayWorkspace Create(PullRequestAddress source, string? workspaceRoot = null)
     {
         ArgumentNullException.ThrowIfNull(source);
-        Directory.CreateDirectory(TemporaryRoot);
+        var parentPath = string.IsNullOrWhiteSpace(workspaceRoot) ? TemporaryRoot : Path.GetFullPath(workspaceRoot);
         var repositoryName = SanitizePathSegment(source.Repository);
-        var name = $"{repositoryName}-{source.Number}-{DateTime.UtcNow:MMddHHmmss}";
-        var workspace = new PullRequestRelayWorkspace(Path.Join(TemporaryRoot, name));
+        var suffix = Guid.NewGuid().ToString("N")[..12];
+        var name = $"{repositoryName}-{source.Number}-{DateTime.UtcNow:MMddHHmmss}-{suffix}";
+        var workspace = new PullRequestRelayWorkspace(Path.Join(parentPath, name));
         Directory.CreateDirectory(workspace.RootPath);
+        // Bind cleanup to the original child path, even when resuming in another process.
+        using (var marker = new StreamWriter(new FileStream(Path.Join(workspace.RootPath, OwnershipFileName), FileMode.CreateNew)))
+        {
+            marker.Write(workspace.RootPath);
+        }
+
         Directory.CreateDirectory(workspace.LogsPath);
         Directory.CreateDirectory(workspace.IsolatedHomePath);
         return workspace;
     }
 
     public static PullRequestRelayWorkspace Open(string rootPath) =>
-        new(Path.GetFullPath(rootPath));
+        new(Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath)));
 
     public async Task<PullRequestRelayState> ReadStateAsync(CancellationToken cancellationToken)
     {
@@ -77,18 +86,34 @@ internal sealed class PullRequestRelayWorkspace
 
     public void Delete()
     {
-        var fullRootPath = Path.GetFullPath(RootPath);
-        var relativePath = Path.GetRelativePath(TemporaryRoot, fullRootPath);
-        if (relativePath.StartsWith("..", StringComparison.Ordinal)
-            || Path.IsPathRooted(relativePath)
-            || string.Equals(relativePath, ".", StringComparison.Ordinal)
-            || !File.Exists(StatePath))
+        if (!File.Exists(StatePath)
+            || (File.GetAttributes(RootPath) & FileAttributes.ReparsePoint) != 0
+            || !IsOwnedWorkspace())
         {
             throw new InvalidOperationException($"Refusing to delete an unrecognized relay workspace: {RootPath}");
         }
 
-        ClearReadOnlyAttributes(fullRootPath);
-        Directory.Delete(fullRootPath, recursive: true);
+        ClearReadOnlyAttributes(RootPath);
+        Directory.Delete(RootPath, recursive: true);
+    }
+
+    private bool IsOwnedWorkspace()
+    {
+        var markerPath = Path.Join(RootPath, OwnershipFileName);
+        if (File.Exists(markerPath))
+        {
+            if ((File.GetAttributes(markerPath) & FileAttributes.ReparsePoint) != 0)
+            {
+                return false;
+            }
+
+            var originalPath = File.ReadAllText(markerPath);
+            return Path.IsPathFullyQualified(originalPath) && Path.GetRelativePath(RootPath, originalPath) == ".";
+        }
+
+        // Older runs did not write a marker and could only create direct children of TemporaryRoot.
+        var relativePath = Path.GetRelativePath(TemporaryRoot, RootPath);
+        return System.Text.RegularExpressions.Regex.IsMatch(relativePath, @"\A[A-Za-z0-9_.-]+-[0-9]+-[0-9]{10}\z");
     }
 
     private static string SanitizePathSegment(string value)
@@ -107,7 +132,7 @@ internal sealed class PullRequestRelayWorkspace
             foreach (var filePath in Directory.EnumerateFiles(directory))
             {
                 var attributes = File.GetAttributes(filePath);
-                if ((attributes & FileAttributes.ReadOnly) != 0)
+                if ((attributes & (FileAttributes.ReadOnly | FileAttributes.ReparsePoint)) == FileAttributes.ReadOnly)
                 {
                     File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
                 }

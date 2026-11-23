@@ -30,10 +30,10 @@ internal sealed class PullRequestRelayService
 
         PullRequestRelayWorkspace? workspace = null;
         var succeeded = false;
-        var canceled = false;
         var state = new PullRequestRelayState
         {
             Stage = PullRequestRelayStage.InputValidated,
+            PreserveWorkspace = !string.IsNullOrWhiteSpace(options.WorkspaceRoot),
             SourcePullRequestUrl = options.PullRequest.CanonicalUrl,
         };
         try
@@ -64,7 +64,7 @@ internal sealed class PullRequestRelayService
                     source.Address,
                     cancellationToken).ConfigureAwait(false);
 
-            workspace = PullRequestRelayWorkspace.Create(source.Address);
+            workspace = PullRequestRelayWorkspace.Create(source.Address, options.WorkspaceRoot);
             await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
             Log.Info($"Relay workspace: {workspace.RootPath}");
             await _git.CloneTargetAsync(callerRepository, target, workspace, cancellationToken).ConfigureAwait(false);
@@ -104,7 +104,7 @@ internal sealed class PullRequestRelayService
                 await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
                 Log.Info(BuilderResources.NoChangesToRelay);
                 succeeded = true;
-                return CreateResult(null, workspace, null, options.KeepWorkspace, succeeded);
+                return new PullRequestRelayResult(null, workspace.RootPath, null, state.PreserveWorkspace);
             }
             catch (PatchConflictException exception)
             {
@@ -168,27 +168,11 @@ internal sealed class PullRequestRelayService
             await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
             Log.Info($"Target pull request: {targetPullRequest}");
             succeeded = true;
-            return CreateResult(
-                targetPullRequest,
-                workspace,
-                validation.CommitSha,
-                options.KeepWorkspace,
-                succeeded);
-        }
-        catch (OperationCanceledException)
-        {
-            canceled = true;
-            throw;
+            return new PullRequestRelayResult(targetPullRequest, workspace.RootPath, validation.CommitSha, state.PreserveWorkspace);
         }
         finally
         {
-            var publicationNeedsRecovery = !succeeded && state.Stage >= PullRequestRelayStage.BranchPushed;
-            var manualConflictNeedsRecovery = state.Stage == PullRequestRelayStage.ConflictResolutionRequired;
-            if (workspace is not null
-                && !canceled
-                && !publicationNeedsRecovery
-                && !manualConflictNeedsRecovery
-                && !ShouldKeepWorkspace(options.KeepWorkspace, succeeded))
+            if (workspace is not null && succeeded && !state.PreserveWorkspace)
             {
                 try
                 {
@@ -205,7 +189,6 @@ internal sealed class PullRequestRelayService
     public async Task<PullRequestRelayResult> ContinueAsync(
         string workspacePath,
         string callerRepository,
-        KeepWorkspacePolicy keepWorkspace,
         bool allowUntrustedBuild,
         CancellationToken cancellationToken)
     {
@@ -274,11 +257,11 @@ internal sealed class PullRequestRelayService
             await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
             Log.Info($"Target pull request: {targetPullRequest}");
             succeeded = true;
-            return CreateResult(targetPullRequest, workspace, validation.CommitSha, keepWorkspace, succeeded);
+            return new PullRequestRelayResult(targetPullRequest, workspace.RootPath, validation.CommitSha, state.PreserveWorkspace);
         }
         finally
         {
-            if (succeeded && !ShouldKeepWorkspace(keepWorkspace, succeeded))
+            if (succeeded && !state.PreserveWorkspace)
             {
                 workspace.Delete();
             }
@@ -370,22 +353,7 @@ internal sealed class PullRequestRelayService
         }
     }
 
-    private static PullRequestRelayResult CreateResult(
-        Uri? pullRequestUrl,
-        PullRequestRelayWorkspace workspace,
-        GitObjectId? validatedCommit,
-        KeepWorkspacePolicy policy,
-        bool succeeded)
-    {
-        var retained = ShouldKeepWorkspace(policy, succeeded);
-        return new PullRequestRelayResult(pullRequestUrl, workspace.RootPath, validatedCommit, retained);
-    }
-
     private static Uri CreateBranchUrl(TargetRepository target) =>
         new($"https://github.com/{target.Address.Owner}/{target.Address.Repository}/tree/" +
             string.Join('/', target.RelayBranch.Split('/').Select(Uri.EscapeDataString)));
-
-    private static bool ShouldKeepWorkspace(KeepWorkspacePolicy policy, bool succeeded) =>
-        policy == KeepWorkspacePolicy.Always
-        || (policy == KeepWorkspacePolicy.OnFailure && !succeeded);
 }

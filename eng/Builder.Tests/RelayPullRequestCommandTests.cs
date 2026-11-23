@@ -4,6 +4,20 @@ namespace WpfReorganize.Builder.Tests;
 
 public sealed class RelayPullRequestCommandTests
 {
+    [Fact]
+    public async Task RunAsync_WhenWorkspaceRootAndResumeWorkspaceAreBothSpecifiedThenRejectsArguments()
+    {
+        var command = new RelayPullRequestCommand
+        {
+            WorkspaceRoot = "relay-root",
+            ResumeWorkspace = "existing-relay",
+        };
+
+        var exitCode = await command.RunAsync();
+
+        Assert.Equal(2, exitCode);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

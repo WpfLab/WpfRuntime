@@ -8,7 +8,7 @@
   <data name="InvalidGitHubRemote" xml:space="preserve"><value>The target remote must be a GitHub.com HTTPS or SSH repository URL.</value></data>
   <data name="TargetRemoteMismatch" xml:space="preserve"><value>The target remote fetch and push URLs do not identify the same GitHub repository.</value></data>
   <data name="InvalidGitObjectId" xml:space="preserve"><value>The Git object ID must be a full 40-character hexadecimal SHA.</value></data>
-  <data name="InvalidKeepWorkspacePolicy" xml:space="preserve"><value>--keep-workspace must be always, on-failure, or never.</value></data>
+  <data name="WorkspaceRootWithResume" xml:space="preserve"><value>--workspace-root is only for new relay runs and cannot be used with --resume-workspace.</value></data>
   <data name="UntrustedBuildConsentRequired" xml:space="preserve"><value>This command builds code from an external pull request. Run only in a disposable, low-privilege environment and pass --allow-untrusted-build to acknowledge the risk.</value></data>
   <data name="GitHubTokenRequired" xml:space="preserve"><value>Provide --github-token or set GITHUB_TOKEN for GitHub API access.</value></data>
   <data name="GitPushAuthenticationMayPrompt" xml:space="preserve"><value>Publishing the relay branch with Git. Git Credential Manager, a browser sign-in window, or SSH authentication may prompt for the credentials configured for the target remote.</value></data>

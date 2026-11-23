@@ -26,7 +26,7 @@ https://github.com/dotnet/wpf/pull/11781
 Builder 应完成以下动作：
 
 1. 解析 PR 所属仓库和编号，并通过 GitHub API 读取 PR 的真实来源仓库、来源分支和固定 head SHA。
-2. 在 `%TEMP%\WpfRuntimeTemp\<repository>-<PR number>-<MMddHHmmss>` 独立临时 clone 中，以自己的目标仓库 base 分支为起点创建 `t/bot/PR_<number>` 分支；示例分支为 `t/bot/PR_11781`。
+2. 在独立工作区内 clone 目标仓库，以其 base 分支为起点创建 `t/bot/PR_<number>` 分支；示例分支为 `t/bot/PR_11781`。工作区默认位于 `%TEMP%\WpfRuntimeTemp` 下，也可通过 `--workspace-root` 指定父目录。
 3. 拉取并校验原 PR 的固定 base SHA 与 head SHA，生成 `Base.Sha -> Head.Sha` 的 Patch 并应用到目标分支。
 4. 创建 relay commit 时保留来源 PR 首个提交的 Author，并仅使用 `WpfRuntime Bot <wpfruntime-bot@users.noreply.github.com>` 作为 Committer。
 5. 默认跳过 Temp workspace 中的本地构建、打包和包验证，直接推送精确 relay commit；显式传入 `--allow-untrusted-build` 时才执行完整本地门禁，并只在门禁成功后推送。
@@ -87,8 +87,8 @@ dotnet run --project eng/Builder/Builder.csproj --no-build -- relay-pr `
 | `--target-remote` | 否 | `origin` | 调用者仓库中代表“自己的 GitHub 仓库”的 remote；fetch URL 用于取得 base，push URL 用于发布分支 |
 | `--base` | 否 | `<target-remote>/main`（默认 `origin/main`） | 新 PR 的 base 分支；同时接受 `main` 与 `origin/main` 形式 |
 | `--github-token` | 条件必需 | `GITHUB_TOKEN` | GitHub API Token；命令行值优先，未提供或为空时回退到环境变量 |
-| `--allow-untrusted-build` | 否 | `false` | 显式允许在 Temp workspace 中执行外部 PR 的本地构建、打包和测试；默认跳过本地验证，直接发布 relay PR 并由 GitHub Actions 验证 |
-| `--keep-workspace` | 否 | `on-failure` | `always`、`on-failure` 或 `never`；控制独立临时 clone 的保留策略 |
+| `--allow-untrusted-build` | 否 | `false` | 显式允许在独立工作区中执行外部 PR 的本地构建、打包和测试；默认跳过本地验证，由 GitHub Actions 验证 |
+| `--workspace-root` | 否 | `%TEMP%\WpfRuntimeTemp` | 新建工作区的父目录，例如 `--workspace-root "D:\Work\RelayPR"`。每次运行创建独立子目录；显式指定时始终保留子目录，未指定时成功后清理。不能与 `--resume-workspace` 同用 |
 | `--conflict-mode` | 否 | `manual` | `manual` 在 Patch 冲突时保留 workspace 并输出人工处理步骤；显式指定 `fail` 才恢复为失败后清理冲突状态的行为 |
 | `--resume-workspace` | 恢复时必需 | 无 | 开发者解决冲突并执行 `git add` 后，从指定 workspace 直接继续 commit、构建、验证、push 和 PR 创建流程 |
 
@@ -194,15 +194,17 @@ URL 中的仓库是原 PR 的 base repository，不一定是提交代码的来�
 
 linked worktree 与主工作区共享 refs 和对象数据库，而且现有 `RepositoryLocator` 只识别 `.git` 目录，不识别 worktree 中的 `.git` 文件。外部 PR 构建也需要更明确的 Git 元数据隔离。因此使用独立 clone，但 clone 来源是调用者本地仓库；Git 会直接复制或硬链接本地对象，随后仅从目标远端 fetch 受控 ref。这样既不改变调用者工作区，也避免从网络重新下载完整对象库。
 
-### 临时目录布局
+### 工作区目录布局
 
-建议使用系统临时目录下的专用根：
+默认使用 `%TEMP%/WpfRuntimeTemp/`，也可用 `--workspace-root` 指定父目录：
 
 ```text
-%TEMP%/WpfReorganize.Builder/pr-relay/
-└─ dotnet-wpf-11781-<timestamp>-<random>/
+<workspace-root>/
+└─ wpf-11781-<MMddHHmmss>-<random>/
    ├─ repository/
    ├─ logs/
+   ├─ home/
+   ├─ .relay-workspace
    └─ state.json
 ```
 
@@ -215,7 +217,7 @@ linked worktree 与主工作区共享 refs 和对象数据库，而且现有 `Re
 - push 前观察到的远端分支 SHA。
 - 创建或复用的目标 PR URL。
 
-清理必须验证目标路径位于已知临时根下，并带有命令创建的状态文件；不能对任意用户路径执行递归删除。
+清理只针对带有状态文件和路径归属标记的独立工作区；旧版目录按默认临时根下的旧命名格式识别。用户选定的父目录不作为工作区清理。恢复时将子目录传给 `--resume-workspace`，无需再指定父目录，仍按首次运行的设置保留或清理子目录。
 
 ## Git Patch 流程
 

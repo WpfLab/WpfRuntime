@@ -1,12 +1,5 @@
 namespace WpfReorganize.Builder;
 
-internal enum KeepWorkspacePolicy
-{
-    Always,
-    OnFailure,
-    Never,
-}
-
 internal enum ConflictMode
 {
     Manual,
@@ -60,8 +53,8 @@ internal sealed record PullRequestRelayOptions(
     string TargetRemote,
     string? BaseBranch,
     bool AllowUntrustedBuild,
-    KeepWorkspacePolicy KeepWorkspace,
-    ConflictMode ConflictMode);
+    ConflictMode ConflictMode,
+    string? WorkspaceRoot);
 
 internal sealed record PullRequestRelayResult(
     Uri? PullRequestUrl,
@@ -72,6 +65,8 @@ internal sealed record PullRequestRelayResult(
 internal sealed record PullRequestRelayState
 {
     public PullRequestRelayStage Stage { get; set; }
+
+    public bool PreserveWorkspace { get; init; }
 
     public string? SourcePullRequestUrl { get; set; }
 

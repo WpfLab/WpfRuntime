@@ -12,6 +12,9 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
     [Option("resume-workspace")]
     public string? ResumeWorkspace { get; init; }
 
+    [Option("workspace-root")]
+    public string? WorkspaceRoot { get; init; }
+
     [Option("target-remote")]
     public string TargetRemote { get; init; } = "origin";
 
@@ -24,9 +27,6 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
     [Option("allow-untrusted-build")]
     public bool AllowUntrustedBuild { get; init; }
 
-    [Option("keep-workspace")]
-    public string KeepWorkspace { get; init; } = "on-failure";
-
     [Option("conflict-mode")]
     public string ConflictMode { get; init; } = "manual";
 
@@ -34,12 +34,16 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(ResumeWorkspace) && !string.IsNullOrWhiteSpace(WorkspaceRoot))
+            {
+                Log.Error(BuilderResources.WorkspaceRootWithResume);
+                return 2;
+            }
+
+            var workspaceRoot = string.IsNullOrWhiteSpace(WorkspaceRoot) ? null : Path.GetFullPath(WorkspaceRoot);
             var context = BuilderContext.Create();
             var targetRemote = ResolveTargetRemote(TargetRemote);
             var baseBranch = ResolveBaseBranch(Base, targetRemote);
-            var keepWorkspace = string.IsNullOrWhiteSpace(KeepWorkspace)
-                ? KeepWorkspacePolicy.OnFailure
-                : ParseKeepWorkspace(KeepWorkspace);
             var conflictMode = string.IsNullOrWhiteSpace(ConflictMode)
                 ? WpfReorganize.Builder.ConflictMode.Manual
                 : ParseConflictMode(ConflictMode);
@@ -100,7 +104,6 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                     (
                         ResumeWorkspace,
                         context.RepoRoot,
-                        keepWorkspace,
                         AllowUntrustedBuild,
                         cancellationTokenSource.Token
                     ).ConfigureAwait(false);
@@ -117,8 +120,8 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                             targetRemote,
                             baseBranch,
                             AllowUntrustedBuild,
-                            keepWorkspace,
-                            conflictMode),
+                            conflictMode,
+                            workspaceRoot),
                         context.RepoRoot,
                         cancellationTokenSource.Token).ConfigureAwait(false);
                 }
@@ -181,15 +184,6 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             : !string.IsNullOrWhiteSpace(environmentToken)
                 ? environmentToken
                 : null;
-
-    internal static KeepWorkspacePolicy ParseKeepWorkspace(string value) =>
-        value.ToLowerInvariant() switch
-        {
-            "always" => KeepWorkspacePolicy.Always,
-            "on-failure" => KeepWorkspacePolicy.OnFailure,
-            "never" => KeepWorkspacePolicy.Never,
-            _ => throw new ArgumentException(BuilderResources.InvalidKeepWorkspacePolicy, nameof(value)),
-        };
 
     internal static ConflictMode ParseConflictMode(string value) =>
         value.ToLowerInvariant() switch

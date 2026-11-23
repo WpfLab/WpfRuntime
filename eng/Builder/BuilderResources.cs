@@ -15,7 +15,7 @@ internal static class BuilderResources
 
     public static string InvalidGitObjectId => GetString(nameof(InvalidGitObjectId));
 
-    public static string InvalidKeepWorkspacePolicy => GetString(nameof(InvalidKeepWorkspacePolicy));
+    public static string WorkspaceRootWithResume => GetString(nameof(WorkspaceRootWithResume));
 
     public static string UntrustedBuildConsentRequired => GetString(nameof(UntrustedBuildConsentRequired));
 
