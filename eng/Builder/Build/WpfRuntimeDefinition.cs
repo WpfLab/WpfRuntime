@@ -25,7 +25,8 @@ internal static class WpfRuntimeDefinition
         var versionsDocument = XDocument.Load(versionsPropsPath);
         var dependencies = new List<PackageDependency>();
 
-        foreach (var element in runtimeDocument.Descendants().Where(element => element.Name.LocalName == "RepoWpfRuntimePackage"))
+        foreach (var element in runtimeDocument.Descendants().Where
+                     (element => element.Name.LocalName == "RepoWpfRuntimePackage"))
         {
             var id = GetRequiredAttribute(element, runtimePropsPath, "Include");
             var versionProperty = GetRequiredAttribute(element, runtimePropsPath, "VersionProperty");
@@ -34,7 +35,9 @@ internal static class WpfRuntimeDefinition
         }
 
         if (dependencies.Count == 0)
+        {
             throw new InvalidOperationException($"No RepoWpfRuntimePackage items were found in {runtimePropsPath}");
+        }
 
         return dependencies;
     }
@@ -46,14 +49,18 @@ internal static class WpfRuntimeDefinition
         var names = document
             .Descendants()
             .Where(element => element.Name.LocalName == "RepoWpfRuntimeAssembly")
-            .Where(element =>
+            .Where
+            (element =>
                 !includeReferenceOnly ||
-                !string.Equals((string?)element.Attribute("PackReference"), "false", StringComparison.OrdinalIgnoreCase))
+                !string.Equals((string?)element.Attribute("PackReference"), "false", StringComparison.OrdinalIgnoreCase)
+            )
             .Select(element => GetRequiredAttribute(element, runtimePropsPath, "Include"))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         if (names.Count == 0)
+        {
             throw new InvalidOperationException($"No RepoWpfRuntimeAssembly items were found in {runtimePropsPath}");
+        }
 
         return names;
     }
@@ -62,7 +69,9 @@ internal static class WpfRuntimeDefinition
     {
         var path = Path.Join(repoRoot, "eng", "WpfRuntimeDependencies.props");
         if (!File.Exists(path))
+        {
             throw new FileNotFoundException("Shared WPF runtime definition was not found", path);
+        }
 
         return path;
     }
@@ -71,7 +80,9 @@ internal static class WpfRuntimeDefinition
     {
         var path = Path.Join(repoRoot, "eng", "Versions.props");
         if (!File.Exists(path))
+        {
             throw new FileNotFoundException("Shared version definition was not found", path);
+        }
 
         return path;
     }
@@ -80,7 +91,10 @@ internal static class WpfRuntimeDefinition
     {
         var value = (string?)element.Attribute(attributeName);
         if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"{element.Name.LocalName} is missing required attribute '{attributeName}' in {path}");
+        {
+            throw new InvalidOperationException
+                ($"{element.Name.LocalName} is missing required attribute '{attributeName}' in {path}");
+        }
 
         return value;
     }
@@ -89,16 +103,24 @@ internal static class WpfRuntimeDefinition
     {
         var values = document
             .Descendants()
-            .Where(element =>
+            .Where
+            (element =>
                 element.Parent?.Name.LocalName == "PropertyGroup" &&
-                element.Name.LocalName == propertyName)
+                element.Name.LocalName == propertyName
+            )
             .Select(element => element.Value)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .ToList();
         if (values.Count == 0)
+        {
             throw new InvalidOperationException($"MSBuild property '{propertyName}' was not found in {propsPath}");
+        }
+
         if (values.Count > 1)
-            throw new InvalidOperationException($"MSBuild property '{propertyName}' is defined multiple times in {propsPath}");
+        {
+            throw new InvalidOperationException
+                ($"MSBuild property '{propertyName}' is defined multiple times in {propsPath}");
+        }
 
         return values[0];
     }

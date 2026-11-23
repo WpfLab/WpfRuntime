@@ -1,7 +1,9 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record PullRequestRelayResult(
+internal sealed record PullRequestRelayResult
+(
     Uri? PullRequestUrl,
     string WorkspacePath,
     GitObjectId? ValidatedCommit,
-    bool WorkspaceRetained);
+    bool WorkspaceRetained
+);

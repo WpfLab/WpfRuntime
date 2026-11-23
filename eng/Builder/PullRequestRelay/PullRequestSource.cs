@@ -1,6 +1,7 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record PullRequestSource(
+internal sealed record PullRequestSource
+(
     PullRequestAddress Address,
     string Title,
     string State,
@@ -15,4 +16,5 @@ internal sealed record PullRequestSource(
     GitObjectId BaseSha,
     IReadOnlySet<GitObjectId> CommitShas,
     string AuthorName,
-    string AuthorEmail);
+    string AuthorEmail
+);

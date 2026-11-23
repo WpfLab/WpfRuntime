@@ -4,6 +4,7 @@ internal sealed class PullRequestRelayWorkspace
 {
     private const string StateFileName = "state.json";
     private const string OwnershipFileName = ".relay-workspace";
+
     private static readonly string TemporaryRoot = Path.GetFullPath
     (
         Path.Join(Path.GetTempPath(), "WpfRuntimeTemp")
@@ -39,7 +40,8 @@ internal sealed class PullRequestRelayWorkspace
         var workspace = new PullRequestRelayWorkspace(Path.Join(parentPath, name));
         Directory.CreateDirectory(workspace.RootPath);
         // Bind cleanup to the original child path, even when resuming in another process.
-        using (var marker = new StreamWriter(new FileStream(Path.Join(workspace.RootPath, OwnershipFileName), FileMode.CreateNew)))
+        using (var marker = new StreamWriter
+                   (new FileStream(Path.Join(workspace.RootPath, OwnershipFileName), FileMode.CreateNew)))
         {
             marker.Write(workspace.RootPath);
         }
@@ -54,33 +56,40 @@ internal sealed class PullRequestRelayWorkspace
 
     public async Task<PullRequestRelayState> ReadStateAsync(CancellationToken cancellationToken)
     {
-        await using var stream = new FileStream(
+        await using var stream = new FileStream
+        (
             StatePath,
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
             bufferSize: 4096,
-            useAsync: true);
-        return await System.Text.Json.JsonSerializer.DeserializeAsync<PullRequestRelayState>(stream, cancellationToken: cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Unable to read relay state from '{StatePath}'.");
+            useAsync: true
+        );
+        return await System.Text.Json.JsonSerializer.DeserializeAsync<PullRequestRelayState>
+                       (stream, cancellationToken: cancellationToken)
+                   .ConfigureAwait(false)
+               ?? throw new InvalidOperationException($"Unable to read relay state from '{StatePath}'.");
     }
 
     public async Task WriteStateAsync(PullRequestRelayState state, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(state);
-        await using var stream = new FileStream(
+        await using var stream = new FileStream
+        (
             StatePath,
             FileMode.Create,
             FileAccess.Write,
             FileShare.Read,
             bufferSize: 4096,
-            useAsync: true);
-        await System.Text.Json.JsonSerializer.SerializeAsync(
+            useAsync: true
+        );
+        await System.Text.Json.JsonSerializer.SerializeAsync
+            (
                 stream,
                 state,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true },
-                cancellationToken)
+                cancellationToken
+            )
             .ConfigureAwait(false);
     }
 

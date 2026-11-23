@@ -4,7 +4,8 @@ namespace WpfReorganize.Builder;
 
 internal sealed record PullRequestAddress(string Owner, string Repository, int Number)
 {
-    public string CanonicalUrl => $"https://github.com/{Uri.EscapeDataString(Owner)}/{Uri.EscapeDataString(Repository)}/pull/{Number}";
+    public string CanonicalUrl =>
+        $"https://github.com/{Uri.EscapeDataString(Owner)}/{Uri.EscapeDataString(Repository)}/pull/{Number}";
 
     public string SourceKey => $"{Owner}/{Repository}#{Number}";
 
@@ -67,14 +68,18 @@ internal sealed record PullRequestAddress(string Owner, string Repository, int N
         }
 
         return !string.IsNullOrWhiteSpace(decoded)
-            && decoded is not "." and not ".."
-            && decoded.All(character =>
-                char.IsAsciiLetterOrDigit(character)
-                || character is '-' or '_' or '.')
-            && !decoded.Any(character =>
-                char.IsControl(character)
-                || char.IsWhiteSpace(character)
-                || character is '/' or '\\');
+               && decoded is not "." and not ".."
+               && decoded.All
+               (character =>
+                   char.IsAsciiLetterOrDigit(character)
+                   || character is '-' or '_' or '.'
+               )
+               && !decoded.Any
+               (character =>
+                   char.IsControl(character)
+                   || char.IsWhiteSpace(character)
+                   || character is '/' or '\\'
+               );
     }
 
     private static bool HasValidPercentEncoding(string value)

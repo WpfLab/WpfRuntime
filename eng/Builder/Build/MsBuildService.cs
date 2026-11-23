@@ -4,21 +4,26 @@ internal static class MsBuildService
 {
     public static string FindMsBuild()
     {
-        var vswhere = Path.Join(
+        var vswhere = Path.Join
+        (
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-            "Microsoft Visual Studio", "Installer", "vswhere.exe");
+            "Microsoft Visual Studio", "Installer", "vswhere.exe"
+        );
 
         if (File.Exists(vswhere))
         {
             foreach (var pattern in new[]
+                     {
+                         "MSBuild\\**\\Bin\\amd64\\MSBuild.exe",
+                         "MSBuild\\**\\Bin\\MSBuild.exe",
+                     })
             {
-                "MSBuild\\**\\Bin\\amd64\\MSBuild.exe",
-                "MSBuild\\**\\Bin\\MSBuild.exe",
-            })
-            {
-                var result = ProcessRunner.Run(vswhere,
+                var result = ProcessRunner.Run
+                (
+                    vswhere,
                     $"-latest -requires Microsoft.Component.MSBuild -find {pattern}",
-                    AppContext.BaseDirectory);
+                    AppContext.BaseDirectory
+                );
                 if (result.ExitCode == 0)
                 {
                     var path = result.Output.Trim();
@@ -35,23 +40,40 @@ internal static class MsBuildService
         var pathResult = ProcessRunner.Run("where", "msbuild", AppContext.BaseDirectory);
         if (pathResult.ExitCode == 0)
         {
-            var path = pathResult.Output.Trim().Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+            var path = pathResult.Output.Trim().Split
+                ('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
                 return path;
+            }
         }
 
         var candidates = new List<string>();
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         foreach (var edition in new[] { "Enterprise", "Professional", "Community", "BuildTools" })
         {
-            candidates.Add(Path.Join(programFiles, "Microsoft Visual Studio", "2022", edition, "MSBuild", "Current", "Bin", "MSBuild.exe"));
-            candidates.Add(Path.Join(programFiles, "Microsoft Visual Studio", "2026", edition, "MSBuild", "Current", "Bin", "MSBuild.exe"));
+            candidates.Add
+            (
+                Path.Join
+                (
+                    programFiles, "Microsoft Visual Studio", "2022", edition, "MSBuild", "Current", "Bin", "MSBuild.exe"
+                )
+            );
+            candidates.Add
+            (
+                Path.Join
+                (
+                    programFiles, "Microsoft Visual Studio", "2026", edition, "MSBuild", "Current", "Bin", "MSBuild.exe"
+                )
+            );
         }
 
         foreach (var candidate in candidates)
         {
             if (File.Exists(candidate))
+            {
                 return candidate;
+            }
         }
 
         Log.Warn("Could not locate MSBuild.exe via vswhere or well-known paths; falling back to 'msbuild' on PATH");
@@ -61,21 +83,24 @@ internal static class MsBuildService
     public static string GetBuildLogPath(string buildLogsDir, string projectName, string platform)
     {
         var invalidFileNameChars = Path.GetInvalidFileNameChars();
-        var safeProjectName = new string(projectName.Select(character => invalidFileNameChars.Contains(character) ? '_' : character).ToArray());
+        var safeProjectName = new string
+            (projectName.Select(character => invalidFileNameChars.Contains(character) ? '_' : character).ToArray());
         return Path.Join(buildLogsDir, $"{safeProjectName}-{platform}.log");
     }
 
     public static string GetFileLoggerArguments(string logPath) =>
         $" /fl /flp:\"logfile={logPath};verbosity=diagnostic;encoding=UTF-8\"";
 
-    public static void LogBuildFailure(
+    public static void LogBuildFailure
+    (
         string projectName,
         string platform,
         string msbuildExe,
         string arguments,
         string workingDirectory,
         string logPath,
-        ProcessResult result)
+        ProcessResult result
+    )
     {
         Log.Error($"Build failed: {projectName} ({platform})");
         Log.Error($"Exit code: {result.ExitCode}; elapsed: {result.Elapsed.TotalSeconds:F1}s");

@@ -11,11 +11,13 @@ internal sealed record GitHubActionsBuildMetadata
         "workflow_dispatch",
     ];
 
-    private GitHubActionsBuildMetadata(
+    private GitHubActionsBuildMetadata
+    (
         string eventName,
         GitObjectId trustedSha,
         int? pullRequestNumber,
-        GitObjectId? sourceHeadSha)
+        GitObjectId? sourceHeadSha
+    )
     {
         EventName = eventName;
         TrustedSha = trustedSha;
@@ -33,10 +35,12 @@ internal sealed record GitHubActionsBuildMetadata
 
     public bool IsPullRequest => EventName == "pull_request_target";
 
-    public static GitHubActionsBuildMetadata Read(
+    public static GitHubActionsBuildMetadata Read
+    (
         string eventPath,
         string eventName,
-        string trustedSha)
+        string trustedSha
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventPath);
         if (!File.Exists(eventPath))
@@ -64,11 +68,13 @@ internal sealed record GitHubActionsBuildMetadata
         return Create(eventName, trustedSha, pullRequestNumber, shaElement.GetString());
     }
 
-    public static GitHubActionsBuildMetadata Create(
+    public static GitHubActionsBuildMetadata Create
+    (
         string eventName,
         string trustedSha,
         int? pullRequestNumber,
-        string? sourceHeadSha)
+        string? sourceHeadSha
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
         ArgumentException.ThrowIfNullOrWhiteSpace(trustedSha);
@@ -76,9 +82,11 @@ internal sealed record GitHubActionsBuildMetadata
         eventName = eventName.Trim();
         if (!SupportedEvents.Contains(eventName))
         {
-            throw new ArgumentException(
+            throw new ArgumentException
+            (
                 string.Format(BuilderResources.UnsupportedGitHubActionsEvent, eventName),
-                nameof(eventName));
+                nameof(eventName)
+            );
         }
 
         var parsedTrustedSha = GitObjectId.Parse(trustedSha);
@@ -89,11 +97,13 @@ internal sealed record GitHubActionsBuildMetadata
                 throw new ArgumentException(BuilderResources.PullRequestBuildMetadataRequired);
             }
 
-            return new GitHubActionsBuildMetadata(
+            return new GitHubActionsBuildMetadata
+            (
                 eventName,
                 parsedTrustedSha,
                 pullRequestNumber,
-                GitObjectId.Parse(sourceHeadSha));
+                GitObjectId.Parse(sourceHeadSha)
+            );
         }
 
         if (pullRequestNumber is not null || !string.IsNullOrWhiteSpace(sourceHeadSha))

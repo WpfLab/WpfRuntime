@@ -1,16 +1,20 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record GitHubArtifactCommentResult(
+internal sealed record GitHubArtifactCommentResult
+(
     bool Updated,
     int? PullRequestNumber,
     long? RunAttempt,
-    string Message)
+    string Message
+)
 {
     public static GitHubArtifactCommentResult Skip(string reason) => new(false, null, null, reason);
 
-    public static GitHubArtifactCommentResult Success(
+    public static GitHubArtifactCommentResult Success
+    (
         int pullRequestNumber,
         long runAttempt,
-        string message) =>
+        string message
+    ) =>
         new(true, pullRequestNumber, runAttempt, message);
 }

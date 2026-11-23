@@ -6,7 +6,8 @@ namespace WpfReorganize.Builder;
 
 internal static class ProcessRunner
 {
-    public static ProcessResult Run(string fileName, string arguments, string workingDirectory, TimeSpan? timeout = null)
+    public static ProcessResult Run
+        (string fileName, string arguments, string workingDirectory, TimeSpan? timeout = null)
     {
         var startTime = Stopwatch.GetTimestamp();
         var startInfo = new ProcessStartInfo
@@ -21,7 +22,7 @@ internal static class ProcessRunner
         };
 
         using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"Failed to start process: {fileName}");
+                            ?? throw new InvalidOperationException($"Failed to start process: {fileName}");
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
         var exited = timeout is null
@@ -32,31 +33,36 @@ internal static class ProcessRunner
             process.Kill(entireProcessTree: true);
             process.WaitForExit();
             Task.WaitAll(outputTask, errorTask);
-            throw new TimeoutException($"Process timed out after {timeout!.Value.TotalSeconds:F0} seconds: {fileName} {arguments}");
+            throw new TimeoutException
+                ($"Process timed out after {timeout!.Value.TotalSeconds:F0} seconds: {fileName} {arguments}");
         }
 
         Task.WaitAll(outputTask, errorTask);
 
-        return new ProcessResult(
+        return new ProcessResult
+        (
             process.ExitCode,
             outputTask.Result,
             errorTask.Result,
-            Stopwatch.GetElapsedTime(startTime));
+            Stopwatch.GetElapsedTime(startTime)
+        );
     }
 
     public static ProcessResult Run(ProcessRunOptions options, CancellationToken cancellationToken = default) =>
         RunAsync(options, cancellationToken).GetAwaiter().GetResult();
 
-    public static async Task<ProcessResult> RunAsync(
+    public static async Task<ProcessResult> RunAsync
+    (
         ProcessRunOptions options,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(options);
 
         var startTime = Stopwatch.GetTimestamp();
         var startInfo = CreateStartInfo(options);
         using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"Failed to start process: {options.FileName}");
+                            ?? throw new InvalidOperationException($"Failed to start process: {options.FileName}");
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
         using var timeoutCancellationTokenSource = options.Timeout is null
@@ -64,9 +70,11 @@ internal static class ProcessRunner
             : new CancellationTokenSource(options.Timeout.Value);
         using var linkedCancellationTokenSource = timeoutCancellationTokenSource is null
             ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
-            : CancellationTokenSource.CreateLinkedTokenSource(
+            : CancellationTokenSource.CreateLinkedTokenSource
+            (
                 cancellationToken,
-                timeoutCancellationTokenSource.Token);
+                timeoutCancellationTokenSource.Token
+            );
 
         try
         {
@@ -82,23 +90,29 @@ internal static class ProcessRunner
 
             if (cancellationToken.IsCancellationRequested)
             {
-                throw new OperationCanceledException(
+                throw new OperationCanceledException
+                (
                     $"Process was canceled: {FormatCommand(options)}",
                     innerException: null,
-                    cancellationToken);
+                    cancellationToken
+                );
             }
 
-            throw new TimeoutException(
-                $"Process timed out after {options.Timeout!.Value.TotalSeconds:F0} seconds: {FormatCommand(options)}");
+            throw new TimeoutException
+            (
+                $"Process timed out after {options.Timeout!.Value.TotalSeconds:F0} seconds: {FormatCommand(options)}"
+            );
         }
 
         var output = await ReadOutputAsync(outputTask, errorTask).ConfigureAwait(false);
         await WriteLogAsync(options.LogPath, output.StandardOutput, output.StandardError).ConfigureAwait(false);
-        return new ProcessResult(
+        return new ProcessResult
+        (
             process.ExitCode,
             output.StandardOutput,
             output.StandardError,
-            Stopwatch.GetElapsedTime(startTime));
+            Stopwatch.GetElapsedTime(startTime)
+        );
     }
 
     private static ProcessStartInfo CreateStartInfo(ProcessRunOptions options)
@@ -154,9 +168,11 @@ internal static class ProcessRunner
         }
     }
 
-    private static async Task<(string StandardOutput, string StandardError)> ReadOutputAsync(
+    private static async Task<(string StandardOutput, string StandardError)> ReadOutputAsync
+    (
         Task<string> outputTask,
-        Task<string> errorTask)
+        Task<string> errorTask
+    )
     {
         await Task.WhenAll(outputTask, errorTask).ConfigureAwait(false);
         return (outputTask.Result, errorTask.Result);
@@ -175,10 +191,12 @@ internal static class ProcessRunner
             Directory.CreateDirectory(directory);
         }
 
-        await File.WriteAllTextAsync(
+        await File.WriteAllTextAsync
+            (
                 logPath,
                 standardOutput + standardError,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+            )
             .ConfigureAwait(false);
     }
 

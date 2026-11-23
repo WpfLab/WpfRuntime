@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-	<OutputType>WinExe</OutputType>
-	<TargetFramework>net8.0-windows</TargetFramework>
-	<UseWPF>true</UseWPF>
-	<Nullable>enable</Nullable>
-	<ImplicitUsings>enable</ImplicitUsings>
-	<AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AppendRuntimeIdentifierToOutputPath>true</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-	<PackageReference Include="AvalonEdit" Version="6.0.1" />
-	<PackageReference Include="WpfLab.WpfRuntime" Version="0.0.0-package-test" />
+    <PackageReference Include="AvalonEdit" Version="6.0.1" />
+    <PackageReference Include="WpfLab.WpfRuntime" Version="0.0.0-package-test" />
   </ItemGroup>
 </Project>

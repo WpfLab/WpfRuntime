@@ -2,7 +2,8 @@ namespace WpfReorganize.Builder;
 
 using System.Text.Json;
 
-internal sealed record GitHubWorkflowRunEvent(
+internal sealed record GitHubWorkflowRunEvent
+(
     GitHubRepositoryAddress Repository,
     long RunId,
     long WorkflowId,
@@ -12,7 +13,8 @@ internal sealed record GitHubWorkflowRunEvent(
     string Status,
     DateTimeOffset CreatedAt,
     GitHubRepositoryAddress RunRepository,
-    IReadOnlyList<GitHubWorkflowRunPullRequestAssociation> PullRequests)
+    IReadOnlyList<GitHubWorkflowRunPullRequestAssociation> PullRequests
+)
 {
     public static GitHubWorkflowRunEvent Read(string eventPath, string repositoryFullName)
     {
@@ -33,7 +35,8 @@ internal sealed record GitHubWorkflowRunEvent(
             throw new InvalidDataException(BuilderResources.WorkflowRunRepositoryMismatch);
         }
 
-        return new GitHubWorkflowRunEvent(
+        return new GitHubWorkflowRunEvent
+        (
             expectedRepository,
             GetPositiveInt64(run, "id"),
             GetPositiveInt64(run, "workflow_id"),
@@ -43,7 +46,8 @@ internal sealed record GitHubWorkflowRunEvent(
             GetRequiredString(run, "status"),
             GetRequiredDateTimeOffset(run, "created_at"),
             ParseRepository(GetRequiredObject(run, "repository")),
-            ReadAssociations(run));
+            ReadAssociations(run)
+        );
     }
 
     private static IReadOnlyList<GitHubWorkflowRunPullRequestAssociation> ReadAssociations(JsonElement run)
@@ -72,10 +76,15 @@ internal sealed record GitHubWorkflowRunEvent(
                 throw new InvalidDataException(BuilderResources.InvalidWorkflowRunPullRequestAssociation);
             }
 
-            associations.Add(new GitHubWorkflowRunPullRequestAssociation(
-                number,
-                headSha,
-                baseReferenceElement.GetString()!));
+            associations.Add
+            (
+                new GitHubWorkflowRunPullRequestAssociation
+                (
+                    number,
+                    headSha,
+                    baseReferenceElement.GetString()!
+                )
+            );
         }
 
         return associations;
@@ -109,6 +118,7 @@ internal sealed record GitHubWorkflowRunEvent(
         {
             return null;
         }
+
         if (value.ValueKind != JsonValueKind.String)
         {
             throw new InvalidDataException(string.Format(BuilderResources.InvalidWorkflowRunEventProperty, name));
@@ -136,6 +146,7 @@ internal sealed record GitHubWorkflowRunEvent(
         {
             return null;
         }
+
         if (!value.TryGetInt64(out var number) || number <= 0)
         {
             throw new InvalidDataException(string.Format(BuilderResources.InvalidWorkflowRunEventProperty, name));

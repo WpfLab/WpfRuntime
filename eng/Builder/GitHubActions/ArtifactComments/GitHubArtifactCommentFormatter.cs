@@ -8,18 +8,23 @@ using Octokit;
 internal static class GitHubArtifactCommentFormatter
 {
     private const int MaxArtifacts = 5;
-    private static readonly Regex RunMarkerRegex = new(
-        "<!-- wpf-nuget-artifacts-run id=(\\d+) attempt=(\\d+) -->",
-        RegexOptions.CultureInvariant);
 
-    public static GitHubArtifactCommentContent Create(
+    private static readonly Regex RunMarkerRegex = new
+    (
+        "<!-- wpf-nuget-artifacts-run id=(\\d+) attempt=(\\d+) -->",
+        RegexOptions.CultureInvariant
+    );
+
+    public static GitHubArtifactCommentContent Create
+    (
         GitHubRepositoryAddress repository,
         int pullRequestNumber,
         GitObjectId currentPullRequestHead,
         long runId,
         long runAttempt,
         string conclusion,
-        IReadOnlyList<GitHubArtifactCommentItem> artifacts)
+        IReadOnlyList<GitHubArtifactCommentItem> artifacts
+    )
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentException.ThrowIfNullOrWhiteSpace(conclusion);
@@ -28,10 +33,12 @@ internal static class GitHubArtifactCommentFormatter
         {
             throw new ArgumentOutOfRangeException(nameof(pullRequestNumber));
         }
+
         if (runId <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(runId));
         }
+
         if (runAttempt <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(runAttempt));
@@ -40,8 +47,8 @@ internal static class GitHubArtifactCommentFormatter
         var testedShas = artifacts.Select(artifact => artifact.TestedSha).Distinct().ToArray();
         GitObjectId? testedSha = testedShas.Length == 1 ? testedShas[0] : null;
         var hasValidSuccessArtifacts = string.Equals(conclusion, "success", StringComparison.Ordinal)
-            && artifacts.Count > 0
-            && testedSha is not null;
+                                       && artifacts.Count > 0
+                                       && testedSha is not null;
         var resultLabel = hasValidSuccessArtifacts
             ? "Succeeded"
             : string.Equals(conclusion, "success", StringComparison.Ordinal)
@@ -64,11 +71,13 @@ internal static class GitHubArtifactCommentFormatter
 
         if (hasValidSuccessArtifacts)
         {
-            var packageVersions = artifacts.Select(artifact => artifact.PackageVersion).Distinct(StringComparer.Ordinal).ToArray();
+            var packageVersions = artifacts.Select(artifact => artifact.PackageVersion).Distinct
+                (StringComparer.Ordinal).ToArray();
             if (packageVersions.Length == 1)
             {
                 var packageVersion = packageVersions[0];
-                var packageUrl = $"https://www.nuget.org/packages/{PackageMetadata.Id}/{Uri.EscapeDataString(packageVersion)}";
+                var packageUrl =
+                    $"https://www.nuget.org/packages/{PackageMetadata.Id}/{Uri.EscapeDataString(packageVersion)}";
                 body.Add($"- Published NuGet: [{PackageMetadata.Id} {packageVersion}]({packageUrl})");
             }
 
@@ -78,7 +87,10 @@ internal static class GitHubArtifactCommentFormatter
                 var (artifactLabel, fileName) = GetArtifactPresentation(artifact.Name);
                 body.Add($"- {artifactLabel}: [{EscapeMarkdown(fileName)}]({artifactUrl})");
                 body.Add($"  - Size: {FormatBytes(artifact.SizeInBytes)}");
-                body.Add($"  - Expires at: {EscapeMarkdown(artifact.ExpiresAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}");
+                body.Add
+                (
+                    $"  - Expires at: {EscapeMarkdown(artifact.ExpiresAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}"
+                );
             }
 
             if (artifacts.Count > MaxArtifacts)
@@ -87,17 +99,20 @@ internal static class GitHubArtifactCommentFormatter
             }
         }
 
-        return new GitHubArtifactCommentContent(
+        return new GitHubArtifactCommentContent
+        (
             marker,
             runMarker,
             string.Join('\n', body),
             hasValidSuccessArtifacts,
-            testedSha);
+            testedSha
+        );
     }
 
     private static (string Label, string FileName) GetArtifactPresentation(string artifactName)
     {
-        if (artifactName.EndsWith(".symbols.zip", StringComparison.Ordinal))
+        if (artifactName.EndsWith
+                (".symbols.zip", StringComparison.Ordinal))
         {
             return ("PDB symbols archive", artifactName);
         }
@@ -110,30 +125,40 @@ internal static class GitHubArtifactCommentFormatter
         return ("NuGet package", artifactName);
     }
 
-    public static IReadOnlyList<GitHubArtifactCommentItem> FilterArtifacts(
+    public static IReadOnlyList<GitHubArtifactCommentItem> FilterArtifacts
+    (
         IEnumerable<Artifact> artifacts,
         int pullRequestNumber,
         long runId,
-        long runAttempt)
+        long runAttempt
+    )
     {
         ArgumentNullException.ThrowIfNull(artifacts);
-        var pattern = new Regex(
+        var pattern = new Regex
+        (
             $"^{Regex.Escape(PackageMetadata.Id)}-nupkg-pr-{pullRequestNumber}-sha-([0-9a-fA-F]{{40}})-run-{runId}-attempt-{runAttempt}-version-([0-9A-Za-z.+-]+?)\\.(?:nupkg|snupkg|symbols\\.zip)$",
-            RegexOptions.CultureInvariant);
+            RegexOptions.CultureInvariant
+        );
         return artifacts
-            .Where(artifact => artifact is not null
-                && !artifact.Expired
-                && artifact.SizeInBytes > 0
-                && artifact.Name?.StartsWith($"{PackageMetadata.Id}-nupkg-", StringComparison.Ordinal) == true)
+            .Where
+            (artifact => artifact is not null
+                         && !artifact.Expired
+                         && artifact.SizeInBytes > 0
+                         && artifact.Name?.StartsWith($"{PackageMetadata.Id}-nupkg-", StringComparison.Ordinal) == true
+            )
             .Select(artifact => (Artifact: artifact, Match: pattern.Match(artifact.Name)))
             .Where(item => item.Match.Success)
-            .Select(item => new GitHubArtifactCommentItem(
-                item.Artifact.Id,
-                item.Artifact.Name,
-                item.Artifact.SizeInBytes,
-                item.Artifact.ExpiresAt,
-                GitObjectId.Parse(item.Match.Groups[1].Value),
-                item.Match.Groups[2].Value))
+            .Select
+            (item => new GitHubArtifactCommentItem
+                (
+                    item.Artifact.Id,
+                    item.Artifact.Name,
+                    item.Artifact.SizeInBytes,
+                    item.Artifact.ExpiresAt,
+                    GitObjectId.Parse(item.Match.Groups[1].Value),
+                    item.Match.Groups[2].Value
+                )
+            )
             .OrderBy(item => item.Id)
             .ToArray();
     }
@@ -150,10 +175,10 @@ internal static class GitHubArtifactCommentFormatter
         runAttempt = 0;
         var match = RunMarkerRegex.Match(body ?? string.Empty);
         return match.Success
-            && long.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out runId)
-            && runId > 0
-            && long.TryParse(match.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out runAttempt)
-            && runAttempt > 0;
+               && long.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out runId)
+               && runId > 0
+               && long.TryParse(match.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out runAttempt)
+               && runAttempt > 0;
     }
 
     public static int CompareRunIdentity(long leftId, long leftAttempt, long rightId, long rightAttempt)
@@ -183,6 +208,7 @@ internal static class GitHubArtifactCommentFormatter
                 {
                     builder.Append('\\');
                 }
+
                 builder.Append(character);
             }
         }
@@ -224,5 +250,4 @@ internal static class GitHubArtifactCommentFormatter
             "stale" => "Stale",
             _ => EscapeMarkdown(conclusion),
         };
-
 }

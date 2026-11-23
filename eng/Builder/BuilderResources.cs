@@ -33,7 +33,8 @@ internal static class BuilderResources
 
     public static string PullRequestBuildMetadataRequired => GetString(nameof(PullRequestBuildMetadataRequired));
 
-    public static string NonPullRequestBuildMetadataNotAllowed => GetString(nameof(NonPullRequestBuildMetadataNotAllowed));
+    public static string NonPullRequestBuildMetadataNotAllowed => GetString
+        (nameof(NonPullRequestBuildMetadataNotAllowed));
 
     public static string GitHubActionsEventFileNotFound => GetString(nameof(GitHubActionsEventFileNotFound));
 
@@ -53,17 +54,20 @@ internal static class BuilderResources
 
     public static string TestedCommitDoesNotMatchEventSha => GetString(nameof(TestedCommitDoesNotMatchEventSha));
 
-    public static string TestedMergeDoesNotMatchPullRequestEvent => GetString(nameof(TestedMergeDoesNotMatchPullRequestEvent));
+    public static string TestedMergeDoesNotMatchPullRequestEvent => GetString
+        (nameof(TestedMergeDoesNotMatchPullRequestEvent));
 
     public static string MsBuildNotFound => GetString(nameof(MsBuildNotFound));
 
-    public static string GitHubActionsEnvironmentVariableRequired => GetString(nameof(GitHubActionsEnvironmentVariableRequired));
+    public static string GitHubActionsEnvironmentVariableRequired => GetString
+        (nameof(GitHubActionsEnvironmentVariableRequired));
 
     public static string InvalidGitHubRepositoryFullName => GetString(nameof(InvalidGitHubRepositoryFullName));
 
     public static string WorkflowRunRepositoryMismatch => GetString(nameof(WorkflowRunRepositoryMismatch));
 
-    public static string InvalidWorkflowRunPullRequestAssociation => GetString(nameof(InvalidWorkflowRunPullRequestAssociation));
+    public static string InvalidWorkflowRunPullRequestAssociation => GetString
+        (nameof(InvalidWorkflowRunPullRequestAssociation));
 
     public static string InvalidWorkflowRunEventProperty => GetString(nameof(InvalidWorkflowRunEventProperty));
 
@@ -72,5 +76,6 @@ internal static class BuilderResources
     public static string PackagePushResult => GetString(nameof(PackagePushResult));
 
     private static string GetString(string name) =>
-        ResourceManager.GetString(name) ?? throw new MissingManifestResourceException($"Resource '{name}' was not found.");
+        ResourceManager.GetString
+            (name) ?? throw new MissingManifestResourceException($"Resource '{name}' was not found.");
 }

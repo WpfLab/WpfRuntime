@@ -20,16 +20,20 @@ internal sealed class LocalBuildValidationService
         _msBuildPath = msBuildPath;
     }
 
-    public static async Task<string> FindDotNetAsync(
+    public static async Task<string> FindDotNetAsync
+    (
         string workingDirectory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        var result = await ProcessRunner.RunAsync(
+        var result = await ProcessRunner.RunAsync
+        (
             new ProcessRunOptions("where.exe", workingDirectory, "dotnet.exe")
             {
                 Timeout = TimeSpan.FromSeconds(30),
             },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken
+        ).ConfigureAwait(false);
         if (result.ExitCode != 0)
         {
             throw new InvalidOperationException("dotnet.exe was not found on PATH.");
@@ -41,44 +45,54 @@ internal sealed class LocalBuildValidationService
         return path ?? throw new InvalidOperationException("dotnet.exe was not found on PATH.");
     }
 
-    public async Task<LocalBuildValidationResult> ValidateAsync(
+    public async Task<LocalBuildValidationResult> ValidateAsync
+    (
         PullRequestSource source,
         TargetRepository target,
         GitObjectId relayCommit,
         PullRequestRelayWorkspace workspace,
         PullRequestRelayState state,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(state);
         var repositoryPath = workspace.RepositoryPath;
-        var initialHead = await _git.ResolveCommitAsync(
+        var initialHead = await _git.ResolveCommitAsync
+        (
             repositoryPath,
             workspace.IsolatedHomePath,
             "HEAD",
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken
+        ).ConfigureAwait(false);
         if (initialHead != relayCommit)
         {
             throw new InvalidOperationException($"HEAD {initialHead} does not match relay commit {relayCommit}.");
         }
 
-        var initialTree = await _git.ResolveTreeAsync(
+        var initialTree = await _git.ResolveTreeAsync
+        (
             repositoryPath,
             workspace.IsolatedHomePath,
             "HEAD",
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken
+        ).ConfigureAwait(false);
         state.RelayTreeSha = initialTree.ToString();
         await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
-        var initialChanges = await _git.GetTrackedChangesAsync(
+        var initialChanges = await _git.GetTrackedChangesAsync
+        (
             repositoryPath,
             workspace.IsolatedHomePath,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken
+        ).ConfigureAwait(false);
         if (initialChanges.Count > 0)
         {
-            throw new InvalidOperationException(
-                $"Tracked working tree or index is dirty before validation: {string.Join(", ", initialChanges)}");
+            throw new InvalidOperationException
+            (
+                $"Tracked working tree or index is dirty before validation: {string.Join(", ", initialChanges)}"
+            );
         }
 
         var builderProject = Path.Join(repositoryPath, "eng", "Builder", "Builder.csproj");
@@ -90,12 +104,14 @@ internal sealed class LocalBuildValidationService
         {
             Directory.Delete(nupkgDirectory, recursive: true);
         }
+
         Directory.CreateDirectory(nupkgDirectory);
 
         var version = $"0.0.0-pr.{source.Address.Number}.sha{source.HeadSha.Short}";
         var packagePath = Path.Join(nupkgDirectory, $"{PackageMetadata.Id}.{version}.nupkg");
         var environment = ProcessEnvironment.CreateUntrustedBuildEnvironment(workspace.IsolatedHomePath);
-        await RunGateAsync(
+        await RunGateAsync
+        (
             "restore-builder",
             _dotnetPath,
             repositoryPath,
@@ -105,8 +121,10 @@ internal sealed class LocalBuildValidationService
             RestoreTimeout,
             cancellationToken,
             "restore",
-            builderProject).ConfigureAwait(false);
-        await RunGateAsync(
+            builderProject
+        ).ConfigureAwait(false);
+        await RunGateAsync
+        (
             "build-builder",
             _dotnetPath,
             repositoryPath,
@@ -117,8 +135,10 @@ internal sealed class LocalBuildValidationService
             cancellationToken,
             "build",
             builderProject,
-            "--no-restore").ConfigureAwait(false);
-        await RunGateAsync(
+            "--no-restore"
+        ).ConfigureAwait(false);
+        await RunGateAsync
+        (
             "build-package",
             _dotnetPath,
             repositoryPath,
@@ -133,9 +153,11 @@ internal sealed class LocalBuildValidationService
             "--no-build",
             "--",
             "--version",
-            version).ConfigureAwait(false);
+            version
+        ).ConfigureAwait(false);
         RequireNonEmptyFile(packagePath);
-        await RunGateAsync(
+        await RunGateAsync
+        (
             "test-package",
             _dotnetPath,
             repositoryPath,
@@ -151,8 +173,10 @@ internal sealed class LocalBuildValidationService
             "--",
             "test-package",
             "--package",
-            packagePath).ConfigureAwait(false);
-        await RunGateAsync(
+            packagePath
+        ).ConfigureAwait(false);
+        await RunGateAsync
+        (
             "rebuild-solution",
             _msBuildPath,
             repositoryPath,
@@ -168,39 +192,51 @@ internal sealed class LocalBuildValidationService
             "/p:Platform=x64",
             "/m:1",
             "/nr:false",
-            "/v:minimal").ConfigureAwait(false);
+            "/v:minimal"
+        ).ConfigureAwait(false);
 
-        var finalHead = await _git.ResolveCommitAsync(
+        var finalHead = await _git.ResolveCommitAsync
+        (
             repositoryPath,
             workspace.IsolatedHomePath,
             "HEAD",
-            cancellationToken).ConfigureAwait(false);
-        var finalTree = await _git.ResolveTreeAsync(
+            cancellationToken
+        ).ConfigureAwait(false);
+        var finalTree = await _git.ResolveTreeAsync
+        (
             repositoryPath,
             workspace.IsolatedHomePath,
             "HEAD",
-            cancellationToken).ConfigureAwait(false);
-        var finalChanges = await _git.GetTrackedChangesAsync(
+            cancellationToken
+        ).ConfigureAwait(false);
+        var finalChanges = await _git.GetTrackedChangesAsync
+        (
             repositoryPath,
             workspace.IsolatedHomePath,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken
+        ).ConfigureAwait(false);
         if (finalHead != initialHead || finalTree != initialTree || finalChanges.Count > 0)
         {
-            throw new InvalidOperationException(
+            throw new InvalidOperationException
+            (
                 $"Untrusted validation modified Git state. " +
                 $"HEAD: {initialHead} -> {finalHead}; tree: {initialTree} -> {finalTree}; " +
-                $"tracked changes: {string.Join(", ", finalChanges)}");
+                $"tracked changes: {string.Join(", ", finalChanges)}"
+            );
         }
 
         RequireNonEmptyFile(packagePath);
-        return new LocalBuildValidationResult(
+        return new LocalBuildValidationResult
+        (
             finalHead,
             finalTree,
             packagePath,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow
+        );
     }
 
-    private static async Task RunGateAsync(
+    private static async Task RunGateAsync
+    (
         string name,
         string fileName,
         string workingDirectory,
@@ -209,14 +245,16 @@ internal sealed class LocalBuildValidationService
         IReadOnlyDictionary<string, string?> environment,
         TimeSpan timeout,
         CancellationToken cancellationToken,
-        params string[] arguments)
+        params string[] arguments
+    )
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var logPath = Path.Join(workspace.LogsPath, $"{name}.log");
         ProcessResult result;
         try
         {
-            result = await ProcessRunner.RunAsync(
+            result = await ProcessRunner.RunAsync
+            (
                 new ProcessRunOptions(fileName, workingDirectory, arguments)
                 {
                     Timeout = timeout,
@@ -224,7 +262,8 @@ internal sealed class LocalBuildValidationService
                     EnvironmentVariables = environment,
                     LogPath = logPath,
                 },
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken
+            ).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -243,27 +282,34 @@ internal sealed class LocalBuildValidationService
             .ConfigureAwait(false);
         if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException(
-                $"Local validation gate '{name}' failed with exit code {result.ExitCode}. See {logPath}");
+            throw new InvalidOperationException
+            (
+                $"Local validation gate '{name}' failed with exit code {result.ExitCode}. See {logPath}"
+            );
         }
     }
 
-    private static async Task RecordGateAsync(
+    private static async Task RecordGateAsync
+    (
         PullRequestRelayState state,
         PullRequestRelayWorkspace workspace,
         string name,
         string logPath,
         DateTimeOffset startedAtUtc,
-        int exitCode)
+        int exitCode
+    )
     {
-        state.ValidationGates.Add(new LocalValidationGateState
-        {
-            Name = name,
-            LogPath = logPath,
-            StartedAtUtc = startedAtUtc,
-            CompletedAtUtc = DateTimeOffset.UtcNow,
-            ExitCode = exitCode,
-        });
+        state.ValidationGates.Add
+        (
+            new LocalValidationGateState
+            {
+                Name = name,
+                LogPath = logPath,
+                StartedAtUtc = startedAtUtc,
+                CompletedAtUtc = DateTimeOffset.UtcNow,
+                ExitCode = exitCode,
+            }
+        );
         await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
     }
 

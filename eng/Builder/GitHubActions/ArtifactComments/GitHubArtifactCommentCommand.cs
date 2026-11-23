@@ -26,18 +26,23 @@ internal sealed class GitHubArtifactCommentCommand : ICommandHandler
                 : SummaryPath;
             var workflowEvent = GitHubWorkflowRunEvent.Read(eventPath, repository);
             if (!string.Equals(workflowEvent.EventName, "pull_request_target", StringComparison.Ordinal)
-                || !string.Equals(
+                || !string.Equals
+                (
                     workflowEvent.RunRepository.FullName,
                     workflowEvent.Repository.FullName,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.OrdinalIgnoreCase
+                ))
             {
-                return Skip(
+                return Skip
+                (
                     summaryPath,
-                    "workflow_run did not originate from this repository pull_request_target workflow.");
+                    "workflow_run did not originate from this repository pull_request_target workflow."
+                );
             }
 
             var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-            if (string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace
+                    (token))
             {
                 throw new InvalidOperationException(BuilderResources.GitHubTokenRequired);
             }
@@ -60,11 +65,13 @@ internal sealed class GitHubArtifactCommentCommand : ICommandHandler
                 }
 
                 Log.Info(result.Message);
-                GitHubActionsSummary.Write(
+                GitHubActionsSummary.Write
+                (
                     summaryPath,
                     "PR build artifact comment",
                     $"Updated PR #{result.PullRequestNumber} for workflow run {workflowEvent.RunId}, " +
-                    $"attempt {result.RunAttempt}.");
+                    $"attempt {result.RunAttempt}."
+                );
                 return 0;
             }
             finally
@@ -87,10 +94,12 @@ internal sealed class GitHubArtifactCommentCommand : ICommandHandler
     private static int Skip(string? summaryPath, string reason)
     {
         Log.Info($"Skipping PR comment: {reason}");
-        GitHubActionsSummary.Write(
+        GitHubActionsSummary.Write
+        (
             summaryPath,
             "PR build artifact comment",
-            $"Skipped: {GitHubArtifactCommentFormatter.EscapeMarkdown(reason)}");
+            $"Skipped: {GitHubArtifactCommentFormatter.EscapeMarkdown(reason)}"
+        );
         return 0;
     }
 }

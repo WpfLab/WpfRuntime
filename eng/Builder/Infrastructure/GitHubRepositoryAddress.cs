@@ -4,7 +4,8 @@ internal sealed record GitHubRepositoryAddress(string Owner, string Repository)
 {
     public string FullName => $"{Owner}/{Repository}";
 
-    public string HttpsUrl => $"https://github.com/{Uri.EscapeDataString(Owner)}/{Uri.EscapeDataString(Repository)}.git";
+    public string HttpsUrl =>
+        $"https://github.com/{Uri.EscapeDataString(Owner)}/{Uri.EscapeDataString(Repository)}.git";
 
     public static GitHubRepositoryAddress ParseFullName(string value)
     {
@@ -60,15 +61,16 @@ internal sealed record GitHubRepositoryAddress(string Owner, string Repository)
             path = value["git@github.com:".Length..];
         }
         else if (Uri.TryCreate(value, UriKind.Absolute, out var uri)
-            && (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(uri.Scheme, "ssh", StringComparison.OrdinalIgnoreCase))
-            && string.Equals(uri.IdnHost, "github.com", StringComparison.OrdinalIgnoreCase)
-            && string.IsNullOrEmpty(uri.Query)
-            && string.IsNullOrEmpty(uri.Fragment)
-            && (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
-                ? string.IsNullOrEmpty(uri.UserInfo) && (uri.IsDefaultPort || uri.Port == 443)
-                : (string.IsNullOrEmpty(uri.UserInfo) || string.Equals(uri.UserInfo, "git", StringComparison.OrdinalIgnoreCase))
-                    && (uri.IsDefaultPort || uri.Port == 22)))
+                 && (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(uri.Scheme, "ssh", StringComparison.OrdinalIgnoreCase))
+                 && string.Equals(uri.IdnHost, "github.com", StringComparison.OrdinalIgnoreCase)
+                 && string.IsNullOrEmpty(uri.Query)
+                 && string.IsNullOrEmpty(uri.Fragment)
+                 && (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                     ? string.IsNullOrEmpty(uri.UserInfo) && (uri.IsDefaultPort || uri.Port == 443)
+                     : (string.IsNullOrEmpty(uri.UserInfo) || string.Equals
+                           (uri.UserInfo, "git", StringComparison.OrdinalIgnoreCase))
+                       && (uri.IsDefaultPort || uri.Port == 22)))
         {
             path = uri.GetComponents(UriComponents.Path, UriFormat.UriEscaped);
         }

@@ -19,25 +19,33 @@ internal sealed class GitHubArtifactCommentService
         _client = client;
     }
 
-    public async Task<GitHubArtifactCommentResult> RunAsync(
+    public async Task<GitHubArtifactCommentResult> RunAsync
+    (
         GitHubWorkflowRunEvent workflowEvent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(workflowEvent);
         if (!string.Equals(workflowEvent.EventName, "pull_request_target", StringComparison.Ordinal)
-            || !string.Equals(
+            || !string.Equals
+            (
                 workflowEvent.RunRepository.FullName,
                 workflowEvent.Repository.FullName,
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase
+            ))
         {
-            return GitHubArtifactCommentResult.Skip(
-                "workflow_run did not originate from this repository pull_request_target workflow.");
+            return GitHubArtifactCommentResult.Skip
+            (
+                "workflow_run did not originate from this repository pull_request_target workflow."
+            );
         }
 
         if (workflowEvent.PullRequests.Count != 1)
         {
-            return GitHubArtifactCommentResult.Skip(
-                $"workflow_run.pull_requests contained {workflowEvent.PullRequests.Count} entries; exactly one is required.");
+            return GitHubArtifactCommentResult.Skip
+            (
+                $"workflow_run.pull_requests contained {workflowEvent.PullRequests.Count} entries; exactly one is required."
+            );
         }
 
         var repository = workflowEvent.Repository;
@@ -65,11 +73,13 @@ internal sealed class GitHubArtifactCommentService
 
         var artifacts = await ReadArtifactsAsync(repository, workflowEvent.RunId, cancellationToken)
             .ConfigureAwait(false);
-        var validArtifacts = GitHubArtifactCommentFormatter.FilterArtifacts(
+        var validArtifacts = GitHubArtifactCommentFormatter.FilterArtifacts
+        (
             artifacts,
             association.Number,
             workflowEvent.RunId,
-            runAttempt);
+            runAttempt
+        );
 
         pullRequest = await ReadPullRequestAsync(repository, association.Number, cancellationToken)
             .ConfigureAwait(false);
@@ -79,50 +89,64 @@ internal sealed class GitHubArtifactCommentService
             return GitHubArtifactCommentResult.Skip(pullRequestError);
         }
 
-        var newerRun = await FindNewerAssociatedRunAsync(
+        var newerRun = await FindNewerAssociatedRunAsync
+            (
                 repository,
                 currentRun,
                 association.Number,
                 runAttempt,
-                cancellationToken)
+                cancellationToken
+            )
             .ConfigureAwait(false);
         if (newerRun is not null)
         {
-            return GitHubArtifactCommentResult.Skip(
-                $"A newer associated workflow run exists: {newerRun.Id}.");
+            return GitHubArtifactCommentResult.Skip
+            (
+                $"A newer associated workflow run exists: {newerRun.Id}."
+            );
         }
 
         var conclusion = currentRun.Conclusion?.StringValue
-            ?? workflowEvent.Conclusion
-            ?? "unknown";
-        var content = GitHubArtifactCommentFormatter.Create(
+                         ?? workflowEvent.Conclusion
+                         ?? "unknown";
+        var content = GitHubArtifactCommentFormatter.Create
+        (
             repository,
             association.Number,
             GitObjectId.Parse(pullRequest.Head.Sha),
             workflowEvent.RunId,
             runAttempt,
             conclusion,
-            validArtifacts);
+            validArtifacts
+        );
         var comments = await ReadCommentsAsync(repository, association.Number, cancellationToken)
             .ConfigureAwait(false);
-        var existing = comments.FirstOrDefault(comment =>
+        var existing = comments.FirstOrDefault
+        (comment =>
             string.Equals(comment.User?.Login, "github-actions[bot]", StringComparison.OrdinalIgnoreCase)
-            && comment.Body?.Contains(content.Marker, StringComparison.Ordinal) == true);
+            && comment.Body?.Contains(content.Marker, StringComparison.Ordinal) == true
+        );
 
         if (existing is not null)
         {
-            if (GitHubArtifactCommentFormatter.TryReadRunIdentity(
+            if (GitHubArtifactCommentFormatter.TryReadRunIdentity
+                (
                     existing.Body,
                     out var existingRunId,
-                    out var existingRunAttempt)
-                && GitHubArtifactCommentFormatter.CompareRunIdentity(
+                    out var existingRunAttempt
+                )
+                && GitHubArtifactCommentFormatter.CompareRunIdentity
+                (
                     existingRunId,
                     existingRunAttempt,
                     workflowEvent.RunId,
-                    runAttempt) > 0)
+                    runAttempt
+                ) > 0)
             {
-                return GitHubArtifactCommentResult.Skip(
-                    $"The existing bot comment already records newer run {existingRunId}.");
+                return GitHubArtifactCommentResult.Skip
+                (
+                    $"The existing bot comment already records newer run {existingRunId}."
+                );
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -130,10 +154,12 @@ internal sealed class GitHubArtifactCommentService
                 .Update(repository.Owner, repository.Repository, existing.Id, content.Body)
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
-            return GitHubArtifactCommentResult.Success(
+            return GitHubArtifactCommentResult.Success
+            (
                 association.Number,
                 runAttempt,
-                $"Updated artifact comment {existing.Id} for PR #{association.Number}.");
+                $"Updated artifact comment {existing.Id} for PR #{association.Number}."
+            );
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -141,24 +167,30 @@ internal sealed class GitHubArtifactCommentService
             .Create(repository.Owner, repository.Repository, association.Number, content.Body)
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
-        return GitHubArtifactCommentResult.Success(
+        return GitHubArtifactCommentResult.Success
+        (
             association.Number,
             runAttempt,
-            $"Created artifact comment {created.Id} for PR #{association.Number}.");
+            $"Created artifact comment {created.Id} for PR #{association.Number}."
+        );
     }
 
-    private static string? ValidateCurrentRun(
+    private static string? ValidateCurrentRun
+    (
         GitHubWorkflowRunEvent workflowEvent,
         WorkflowRun currentRun,
         GitHubWorkflowRunPullRequestAssociation association,
-        long runAttempt)
+        long runAttempt
+    )
     {
         if (runAttempt <= 0
             || currentRun.Id != workflowEvent.RunId
-            || !string.Equals(
+            || !string.Equals
+            (
                 currentRun.Repository?.FullName,
                 workflowEvent.Repository.FullName,
-                StringComparison.OrdinalIgnoreCase)
+                StringComparison.OrdinalIgnoreCase
+            )
             || !string.Equals(currentRun.Event, "pull_request_target", StringComparison.Ordinal)
             || currentRun.WorkflowId != workflowEvent.WorkflowId
             || (currentRun.RunAttempt <= 0 ? 1 : currentRun.RunAttempt) != runAttempt
@@ -172,10 +204,12 @@ internal sealed class GitHubArtifactCommentService
             || confirmedAssociations[0].Number != association.Number
             || !GitObjectId.TryParse(confirmedAssociations[0].Head?.Sha, out var confirmedHeadSha)
             || confirmedHeadSha != association.HeadSha
-            || !string.Equals(
+            || !string.Equals
+            (
                 confirmedAssociations[0].Base?.Ref,
                 association.BaseReference,
-                StringComparison.Ordinal))
+                StringComparison.Ordinal
+            ))
         {
             return "The workflow run pull request association could not be re-confirmed through the Actions API.";
         }
@@ -188,28 +222,34 @@ internal sealed class GitHubArtifactCommentService
         return null;
     }
 
-    private static string? ValidatePullRequest(
+    private static string? ValidatePullRequest
+    (
         PullRequest pullRequest,
         GitHubWorkflowRunPullRequestAssociation association,
-        DateTimeOffset runCreatedAt)
+        DateTimeOffset runCreatedAt
+    )
     {
         if (!string.Equals(pullRequest.State.StringValue, "open", StringComparison.Ordinal))
         {
             return "The associated pull request is no longer open.";
         }
+
         if (!SupportedBases.Contains(pullRequest.Base?.Ref ?? string.Empty))
         {
             return $"The pull request base '{pullRequest.Base?.Ref ?? "unknown"}' is not supported.";
         }
+
         if (!GitObjectId.TryParse(pullRequest.Head?.Sha, out var currentHeadSha)
             || currentHeadSha != association.HeadSha)
         {
             return "The workflow run source head no longer matches the current pull request head.";
         }
+
         if (!string.Equals(pullRequest.Base?.Ref, association.BaseReference, StringComparison.Ordinal))
         {
             return "The workflow run base no longer matches the current pull request base.";
         }
+
         if (runCreatedAt < pullRequest.CreatedAt)
         {
             return "The workflow run predates the associated pull request.";
@@ -218,10 +258,12 @@ internal sealed class GitHubArtifactCommentService
         return null;
     }
 
-    private async Task<PullRequest> ReadPullRequestAsync(
+    private async Task<PullRequest> ReadPullRequestAsync
+    (
         GitHubRepositoryAddress repository,
         int pullRequestNumber,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
         return await _client.PullRequest
@@ -230,17 +272,20 @@ internal sealed class GitHubArtifactCommentService
             .ConfigureAwait(false);
     }
 
-    private async Task<IReadOnlyList<Artifact>> ReadArtifactsAsync(
+    private async Task<IReadOnlyList<Artifact>> ReadArtifactsAsync
+    (
         GitHubRepositoryAddress repository,
         long runId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var artifacts = new List<Artifact>();
-        for (var page = 1; ; page++)
+        for (var page = 1;; page++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var response = await _client.Actions.Artifacts
-                .ListWorkflowArtifacts(
+                .ListWorkflowArtifacts
+                (
                     repository.Owner,
                     repository.Repository,
                     runId,
@@ -248,7 +293,8 @@ internal sealed class GitHubArtifactCommentService
                     {
                         Page = page,
                         PerPage = PageSize,
-                    })
+                    }
+                )
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
             artifacts.AddRange(response.Artifacts);
@@ -259,18 +305,21 @@ internal sealed class GitHubArtifactCommentService
         }
     }
 
-    private async Task<WorkflowRun?> FindNewerAssociatedRunAsync(
+    private async Task<WorkflowRun?> FindNewerAssociatedRunAsync
+    (
         GitHubRepositoryAddress repository,
         WorkflowRun currentRun,
         int pullRequestNumber,
         long runAttempt,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        for (var page = 1; ; page++)
+        for (var page = 1;; page++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var response = await _client.Actions.Workflows.Runs
-                .ListByWorkflow(
+                .ListByWorkflow
+                (
                     repository.Owner,
                     repository.Repository,
                     currentRun.WorkflowId,
@@ -284,32 +333,39 @@ internal sealed class GitHubArtifactCommentService
                         StartPage = page,
                         PageCount = 1,
                         PageSize = PageSize,
-                    })
+                    }
+                )
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
-            var newer = response.WorkflowRuns.FirstOrDefault(candidate =>
-            {
-                var candidateAttempt = candidate.RunAttempt <= 0 ? 1 : candidate.RunAttempt;
-                if (candidate.Id == currentRun.Id)
+            var newer = response.WorkflowRuns.FirstOrDefault
+            (candidate =>
                 {
-                    return candidateAttempt > runAttempt;
-                }
-                if (GitHubArtifactCommentFormatter.CompareRunIdentity(
-                        candidate.Id,
-                        candidateAttempt,
-                        currentRun.Id,
-                        runAttempt) <= 0)
-                {
-                    return false;
-                }
+                    var candidateAttempt = candidate.RunAttempt <= 0 ? 1 : candidate.RunAttempt;
+                    if (candidate.Id == currentRun.Id)
+                    {
+                        return candidateAttempt > runAttempt;
+                    }
 
-                var associations = candidate.PullRequests ?? [];
-                return associations.Count == 1 && associations[0].Number == pullRequestNumber;
-            });
+                    if (GitHubArtifactCommentFormatter.CompareRunIdentity
+                        (
+                            candidate.Id,
+                            candidateAttempt,
+                            currentRun.Id,
+                            runAttempt
+                        ) <= 0)
+                    {
+                        return false;
+                    }
+
+                    var associations = candidate.PullRequests ?? [];
+                    return associations.Count == 1 && associations[0].Number == pullRequestNumber;
+                }
+            );
             if (newer is not null)
             {
                 return newer;
             }
+
             if (response.WorkflowRuns.Count < PageSize || page * PageSize >= response.TotalCount)
             {
                 return null;
@@ -317,17 +373,20 @@ internal sealed class GitHubArtifactCommentService
         }
     }
 
-    private async Task<IReadOnlyList<IssueComment>> ReadCommentsAsync(
+    private async Task<IReadOnlyList<IssueComment>> ReadCommentsAsync
+    (
         GitHubRepositoryAddress repository,
         int pullRequestNumber,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var comments = new List<IssueComment>();
-        for (var page = 1; ; page++)
+        for (var page = 1;; page++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var response = await _client.Issue.Comment
-                .GetAllForIssue(
+                .GetAllForIssue
+                (
                     repository.Owner,
                     repository.Repository,
                     pullRequestNumber,
@@ -336,7 +395,8 @@ internal sealed class GitHubArtifactCommentService
                         StartPage = page,
                         PageCount = 1,
                         PageSize = PageSize,
-                    })
+                    }
+                )
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
             comments.AddRange(response);

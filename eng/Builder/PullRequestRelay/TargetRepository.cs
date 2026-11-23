@@ -1,6 +1,7 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record TargetRepository(
+internal sealed record TargetRepository
+(
     string RemoteName,
     GitHubRepositoryAddress Address,
     string FetchUrl,
@@ -8,4 +9,5 @@ internal sealed record TargetRepository(
     string BaseBranch,
     string RelayBranch,
     GitObjectId BaseSha,
-    GitObjectId? ExistingRelayBranchSha);
+    GitObjectId? ExistingRelayBranchSha
+);

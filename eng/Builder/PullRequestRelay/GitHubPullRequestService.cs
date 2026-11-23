@@ -19,9 +19,11 @@ internal sealed class GitHubPullRequestService
         _client = client;
     }
 
-    public async Task<PullRequestSource> GetSourceAsync(
+    public async Task<PullRequestSource> GetSourceAsync
+    (
         PullRequestAddress address,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(address);
         cancellationToken.ThrowIfCancellationRequested();
@@ -36,13 +38,15 @@ internal sealed class GitHubPullRequestService
         cancellationToken.ThrowIfCancellationRequested();
 
         var baseRepository = pullRequest.Base.Repository
-            ?? throw new InvalidOperationException("The source pull request base repository is unavailable.");
+                             ?? throw new InvalidOperationException
+                                 ("The source pull request base repository is unavailable.");
         var baseAddress = ParseFullName(baseRepository.FullName);
         var baseCloneAddress = GitHubRepositoryAddress.ParseRemote(baseRepository.CloneUrl);
         if (!string.Equals(baseAddress.FullName, baseCloneAddress.FullName, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("GitHub returned inconsistent base repository metadata.");
         }
+
         var headRepository = pullRequest.Head.Repository;
         GitHubRepositoryAddress? headAddress = null;
         string? headCloneUrl = null;
@@ -57,6 +61,7 @@ internal sealed class GitHubPullRequestService
 
             headCloneUrl = headRepository.CloneUrl;
         }
+
         var mappedAddress = PullRequestAddress.TryParse(pullRequest.HtmlUrl, out var htmlAddress)
             ? htmlAddress
             : address;
@@ -85,30 +90,36 @@ internal sealed class GitHubPullRequestService
         );
     }
 
-    public async Task<PullRequestSource> RefreshSourceOnceAsync(
+    public async Task<PullRequestSource> RefreshSourceOnceAsync
+    (
         PullRequestSource expected,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(expected);
         var refreshed = await GetSourceAsync(expected.Address, cancellationToken).ConfigureAwait(false);
         return refreshed;
     }
 
-    public async Task<Uri?> FindMatchingOpenTargetPullRequestAsync(
+    public async Task<Uri?> FindMatchingOpenTargetPullRequestAsync
+    (
         TargetRepository target,
         PullRequestAddress source,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var pullRequest = await FindOpenTargetPullRequestAsync(target, source, cancellationToken).ConfigureAwait(false);
         return pullRequest is null ? null : new Uri(pullRequest.HtmlUrl);
     }
 
-    public async Task<Uri> CreateOrReuseTargetPullRequestAsync(
+    public async Task<Uri> CreateOrReuseTargetPullRequestAsync
+    (
         TargetRepository target,
         PullRequestSource source,
         DateTimeOffset relayCompletedAtUtc,
         bool localValidationPerformed,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(source);
@@ -121,11 +132,12 @@ internal sealed class GitHubPullRequestService
 
         var title = CreateTitle(source);
         var body = CreateBody(target, source, relayCompletedAtUtc, localValidationPerformed);
-        var newPullRequest = new NewPullRequest(title, $"{target.Address.Owner}:{target.RelayBranch}", target.BaseBranch)
-        {
-            Body = body,
-            MaintainerCanModify = false,
-        };
+        var newPullRequest = new NewPullRequest
+            (title, $"{target.Address.Owner}:{target.RelayBranch}", target.BaseBranch)
+            {
+                Body = body,
+                MaintainerCanModify = false,
+            };
 
         try
         {
@@ -156,11 +168,13 @@ internal sealed class GitHubPullRequestService
         return $"[PR relay] {source.Address.Owner}/{source.Address.Repository}#{source.Address.Number}: {title}";
     }
 
-    internal static string CreateBody(
+    internal static string CreateBody
+    (
         TargetRepository target,
         PullRequestSource source,
         DateTimeOffset relayCompletedAtUtc,
-        bool localValidationPerformed) =>
+        bool localValidationPerformed
+    ) =>
         $"Relays {source.Address.CanonicalUrl}.\n\n" +
         $"- Source base: `{EscapeCode(source.BaseRepository.FullName)}:{EscapeCode(source.BaseReference)}` at `{source.BaseSha}`\n" +
         $"- Source head: `{EscapeCode(source.HeadRepository?.FullName ?? "deleted-source-repository")}:{EscapeCode(source.HeadReference)}` at `{source.HeadSha}`\n" +
@@ -186,10 +200,12 @@ internal sealed class GitHubPullRequestService
         };
     }
 
-    private async Task<PullRequest?> FindOpenTargetPullRequestAsync(
+    private async Task<PullRequest?> FindOpenTargetPullRequestAsync
+    (
         TargetRepository target,
         PullRequestAddress source,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(source);
@@ -234,7 +250,8 @@ internal sealed class GitHubPullRequestService
             throw new InvalidOperationException($"GitHub returned an invalid repository name: {fullName}");
         }
 
-        if (!GitHubRepositoryAddress.TryParseRemote($"https://github.com/{segments[0]}/{segments[1]}.git", out var address))
+        if (!GitHubRepositoryAddress.TryParseRemote
+                ($"https://github.com/{segments[0]}/{segments[1]}.git", out var address))
         {
             throw new InvalidOperationException($"GitHub returned an invalid repository name: {fullName}");
         }
@@ -244,10 +261,13 @@ internal sealed class GitHubPullRequestService
 
     private static string SanitizeInlineText(string value, int maximumLength)
     {
-        var sanitized = new string(value
-            .Where(character => !char.IsControl(character))
-            .Select(character => char.IsWhiteSpace(character) ? ' ' : character)
-            .ToArray());
+        var sanitized = new string
+        (
+            value
+                .Where(character => !char.IsControl(character))
+                .Select(character => char.IsWhiteSpace(character) ? ' ' : character)
+                .ToArray()
+        );
         sanitized = string.Join(' ', sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
         if (sanitized.Length > maximumLength)
         {

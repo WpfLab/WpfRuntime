@@ -1,8 +1,10 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record GitHubArtifactCommentContent(
+internal sealed record GitHubArtifactCommentContent
+(
     string Marker,
     string RunMarker,
     string Body,
     bool HasValidSuccessArtifacts,
-    GitObjectId? TestedSha);
+    GitObjectId? TestedSha
+);

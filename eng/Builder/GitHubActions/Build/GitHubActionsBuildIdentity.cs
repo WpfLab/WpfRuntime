@@ -28,6 +28,7 @@ internal sealed record GitHubActionsBuildIdentity
         {
             throw new ArgumentOutOfRangeException(nameof(runId));
         }
+
         if (runAttempt <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(runAttempt));
@@ -38,17 +39,24 @@ internal sealed record GitHubActionsBuildIdentity
         var artifactIdentity = metadata.IsPullRequest
             ? $"pr-{metadata.PullRequestNumber}"
             : $"event-{metadata.EventName}";
-        var packagePath = Path.GetFullPath(Path.Join(
-            repositoryPath,
-            "eng",
-            "Builder",
-            "bin",
-            "nupkg",
-            $"{PackageMetadata.Id}.{packageVersion}.nupkg"));
+        var packagePath = Path.GetFullPath
+        (
+            Path.Join
+            (
+                repositoryPath,
+                "eng",
+                "Builder",
+                "bin",
+                "nupkg",
+                $"{PackageMetadata.Id}.{packageVersion}.nupkg"
+            )
+        );
         var symbolPackagePath = Path.ChangeExtension(packagePath, ".snupkg");
-        var allSymbolsArchivePath = Path.Join(
+        var allSymbolsArchivePath = Path.Join
+        (
             Path.GetDirectoryName(packagePath)!,
-            $"{Path.GetFileNameWithoutExtension(packagePath)}.symbols.zip");
+            $"{Path.GetFileNameWithoutExtension(packagePath)}.symbols.zip"
+        );
         var artifactName =
             $"{PackageMetadata.Id}-nupkg-{artifactIdentity}-sha-{parsedTestedSha}-run-{runId}-attempt-{runAttempt}-version-{packageVersion}";
 
@@ -80,7 +88,8 @@ internal sealed record GitHubActionsBuildIdentity
                 tag = tag[1..];
             }
 
-            if (string.IsNullOrWhiteSpace(tag))
+            if (string.IsNullOrWhiteSpace
+                    (tag))
             {
                 throw new ArgumentException("The Git tag must contain a package version.", nameof(gitRef));
             }

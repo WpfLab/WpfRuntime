@@ -60,36 +60,45 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
             {
                 var gitPath = await GitService.FindGitAsync(repositoryPath, cancellationTokenSource.Token)
                     .ConfigureAwait(false);
-                var dotnetPath = await LocalBuildValidationService.FindDotNetAsync(
+                var dotnetPath = await LocalBuildValidationService.FindDotNetAsync
+                    (
                         repositoryPath,
-                        cancellationTokenSource.Token)
+                        cancellationTokenSource.Token
+                    )
                     .ConfigureAwait(false);
                 var msBuildPath = MsBuildService.FindMsBuild();
                 if (!Path.IsPathFullyQualified(msBuildPath) || !File.Exists(msBuildPath))
                 {
                     throw new FileNotFoundException(BuilderResources.MsBuildNotFound, msBuildPath);
                 }
+
                 var service = new GitHubActionsBuildService(gitPath, dotnetPath, msBuildPath);
-                var identity = await service.RunAsync(
-                        new GitHubActionsBuildOptions(
+                var identity = await service.RunAsync
+                    (
+                        new GitHubActionsBuildOptions
+                        (
                             repositoryPath,
                             metadata,
                             target,
                             gitRef,
                             DateTimeOffset.UtcNow,
                             runId,
-                            runAttempt),
-                        cancellationTokenSource.Token)
+                            runAttempt
+                        ),
+                        cancellationTokenSource.Token
+                    )
                     .ConfigureAwait(false);
 
                 if (target == GitHubActionsBuildTarget.Package)
                 {
-                    if (string.IsNullOrWhiteSpace(githubOutput))
+                    if (string.IsNullOrWhiteSpace
+                            (githubOutput))
                     {
                         throw new ArgumentException(BuilderResources.GitHubActionsOutputRequired);
                     }
 
-                    GitHubActionsOutput.Write(
+                    GitHubActionsOutput.Write
+                    (
                         githubOutput,
                         new Dictionary<string, string>
                         {
@@ -99,7 +108,8 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
                             ["symbol-package-path"] = identity.SymbolPackagePath,
                             ["all-symbols-archive-path"] = identity.AllSymbolsArchivePath,
                             ["artifact-name"] = identity.ArtifactName,
-                        });
+                        }
+                    );
                 }
 
                 return 0;
@@ -128,5 +138,4 @@ internal sealed class GitHubActionsBuildCommand : ICommandHandler
             "package" => GitHubActionsBuildTarget.Package,
             _ => throw new ArgumentException(BuilderResources.InvalidGitHubActionsBuildTarget, nameof(value)),
         };
-
 }

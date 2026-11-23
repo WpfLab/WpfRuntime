@@ -21,9 +21,11 @@ internal sealed class GitHubActionsBuildService
         _msBuildPath = msBuildPath;
     }
 
-    public async Task<GitHubActionsBuildIdentity> RunAsync(
+    public async Task<GitHubActionsBuildIdentity> RunAsync
+    (
         GitHubActionsBuildOptions options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(options);
         var repositoryPath = Path.GetFullPath(options.RepositoryPath);
@@ -33,34 +35,43 @@ internal sealed class GitHubActionsBuildService
 
         await ValidateCheckoutCredentialsAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
         var testedSha = await ReadTestedShaAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
-        await ValidateTestedIdentityAsync(
+        await ValidateTestedIdentityAsync
+            (
                 repositoryPath,
                 options.Metadata,
                 testedSha,
-                cancellationToken)
+                cancellationToken
+            )
             .ConfigureAwait(false);
         var initialTree = await ReadTreeShaAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
         var initialChanges = await ReadTrackedChangesAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
         if (initialChanges.Count > 0)
         {
-            throw new InvalidOperationException(
-                $"The tested checkout is dirty before the build: {string.Join(", ", initialChanges)}");
+            throw new InvalidOperationException
+            (
+                $"The tested checkout is dirty before the build: {string.Join(", ", initialChanges)}"
+            );
         }
-        var identity = GitHubActionsBuildIdentity.Create(
+
+        var identity = GitHubActionsBuildIdentity.Create
+        (
             options.Metadata,
             repositoryPath,
             testedSha.ToString(),
             options.GitRef,
             options.BuildTime,
             options.RunId,
-            options.RunAttempt);
+            options.RunAttempt
+        );
         LogIdentity(options.Metadata, identity);
 
-        var isolatedHome = Path.Join(
+        var isolatedHome = Path.Join
+        (
             Path.GetTempPath(),
             "WpfReorganize.Builder",
             "ci",
-            Guid.NewGuid().ToString("N"));
+            Guid.NewGuid().ToString("N")
+        );
         var environment = ProcessEnvironment.CreateUntrustedBuildEnvironment(isolatedHome);
         try
         {
@@ -74,11 +85,13 @@ internal sealed class GitHubActionsBuildService
                     .ConfigureAwait(false);
             }
 
-            await ValidateGitStateAfterBuildAsync(
+            await ValidateGitStateAfterBuildAsync
+                (
                     repositoryPath,
                     testedSha,
                     initialTree,
-                    cancellationToken)
+                    cancellationToken
+                )
                 .ConfigureAwait(false);
             return identity;
         }
@@ -88,35 +101,45 @@ internal sealed class GitHubActionsBuildService
         }
     }
 
-    internal async Task ValidateCheckoutCredentialsAsync(
+    internal async Task ValidateCheckoutCredentialsAsync
+    (
         string repositoryPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        var extraHeaders = await RunGitAsync(
+        var extraHeaders = await RunGitAsync
+        (
             repositoryPath,
             allowFailure: true,
             cancellationToken,
             "config",
             "--local",
             "--get-regexp",
-            "^http\\..*\\.extraheader$").ConfigureAwait(false);
+            "^http\\..*\\.extraheader$"
+        ).ConfigureAwait(false);
         if (extraHeaders.ExitCode is not 0 and not 1)
         {
-            throw new InvalidOperationException(
-                $"Unable to inspect local Git HTTP headers; git exited with {extraHeaders.ExitCode}.");
+            throw new InvalidOperationException
+            (
+                $"Unable to inspect local Git HTTP headers; git exited with {extraHeaders.ExitCode}."
+            );
         }
+
         if (extraHeaders.ExitCode == 0 || !string.IsNullOrWhiteSpace(extraHeaders.StandardOutput))
         {
             throw new InvalidOperationException(BuilderResources.CheckoutPersistedHttpCredentials);
         }
 
-        var remotes = await RunGitAsync(
+        var remotes = await RunGitAsync
+        (
             repositoryPath,
             allowFailure: false,
             cancellationToken,
             "remote",
-            "-v").ConfigureAwait(false);
-        if (ContainsCredentialInRemote(remotes.StandardOutput))
+            "-v"
+        ).ConfigureAwait(false);
+        if (ContainsCredentialInRemote
+                (remotes.StandardOutput))
         {
             throw new InvalidOperationException(BuilderResources.CheckoutPersistedRemoteCredentials);
         }
@@ -144,11 +167,13 @@ internal sealed class GitHubActionsBuildService
         return false;
     }
 
-    private async Task BuildAndTestPackageAsync(
+    private async Task BuildAndTestPackageAsync
+    (
         string repositoryPath,
         GitHubActionsBuildIdentity identity,
         IReadOnlyDictionary<string, string?> environment,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var builderProject = Path.Join(repositoryPath, "eng", "Builder", "Builder.csproj");
         var nupkgDirectory = Path.GetDirectoryName(identity.PackagePath)!;
@@ -157,7 +182,8 @@ internal sealed class GitHubActionsBuildService
             Directory.Delete(nupkgDirectory, recursive: true);
         }
 
-        await RunRequiredAsync(
+        await RunRequiredAsync
+        (
             "restore Builder",
             _dotnetPath,
             repositoryPath,
@@ -165,8 +191,10 @@ internal sealed class GitHubActionsBuildService
             RestoreTimeout,
             cancellationToken,
             "restore",
-            builderProject).ConfigureAwait(false);
-        await RunRequiredAsync(
+            builderProject
+        ).ConfigureAwait(false);
+        await RunRequiredAsync
+        (
             "build Builder",
             _dotnetPath,
             repositoryPath,
@@ -175,8 +203,10 @@ internal sealed class GitHubActionsBuildService
             cancellationToken,
             "build",
             builderProject,
-            "--no-restore").ConfigureAwait(false);
-        await RunRequiredAsync(
+            "--no-restore"
+        ).ConfigureAwait(false);
+        await RunRequiredAsync
+        (
             "build and package WPF",
             _dotnetPath,
             repositoryPath,
@@ -189,11 +219,13 @@ internal sealed class GitHubActionsBuildService
             "--no-build",
             "--",
             "--version",
-            identity.PackageVersion).ConfigureAwait(false);
+            identity.PackageVersion
+        ).ConfigureAwait(false);
         RequireNonEmptyFile(identity.PackagePath);
         RequireNonEmptyFile(identity.SymbolPackagePath);
         RequireNonEmptyFile(identity.AllSymbolsArchivePath);
-        await RunRequiredAsync(
+        await RunRequiredAsync
+        (
             "test generated package",
             _dotnetPath,
             repositoryPath,
@@ -207,17 +239,21 @@ internal sealed class GitHubActionsBuildService
             "--",
             "test-package",
             "--package",
-            identity.PackagePath).ConfigureAwait(false);
+            identity.PackagePath
+        ).ConfigureAwait(false);
         RequireNonEmptyFile(identity.PackagePath);
         RequireNonEmptyFile(identity.SymbolPackagePath);
         RequireNonEmptyFile(identity.AllSymbolsArchivePath);
     }
 
-    private Task RebuildSolutionAsync(
+    private Task RebuildSolutionAsync
+    (
         string repositoryPath,
         IReadOnlyDictionary<string, string?> environment,
-        CancellationToken cancellationToken) =>
-        RunRequiredAsync(
+        CancellationToken cancellationToken
+    ) =>
+        RunRequiredAsync
+        (
             "restore and rebuild solution",
             _msBuildPath,
             repositoryPath,
@@ -231,74 +267,95 @@ internal sealed class GitHubActionsBuildService
             "/p:Platform=x64",
             "/m:1",
             "/nr:false",
-            "/v:minimal");
+            "/v:minimal"
+        );
 
-    private async Task<GitObjectId> ReadTestedShaAsync(
+    private async Task<GitObjectId> ReadTestedShaAsync
+    (
         string repositoryPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        var result = await RunGitAsync(
+        var result = await RunGitAsync
+        (
             repositoryPath,
             allowFailure: false,
             cancellationToken,
             "rev-parse",
             "--verify",
-            "HEAD^{commit}").ConfigureAwait(false);
+            "HEAD^{commit}"
+        ).ConfigureAwait(false);
         return GitObjectId.Parse(result.StandardOutput.Trim());
     }
 
-    private async Task<GitObjectId> ReadTreeShaAsync(
+    private async Task<GitObjectId> ReadTreeShaAsync
+    (
         string repositoryPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        var result = await RunGitAsync(
+        var result = await RunGitAsync
+        (
             repositoryPath,
             allowFailure: false,
             cancellationToken,
             "rev-parse",
             "--verify",
-            "HEAD^{tree}").ConfigureAwait(false);
+            "HEAD^{tree}"
+        ).ConfigureAwait(false);
         return GitObjectId.Parse(result.StandardOutput.Trim());
     }
 
-    private async Task<IReadOnlyList<string>> ReadTrackedChangesAsync(
+    private async Task<IReadOnlyList<string>> ReadTrackedChangesAsync
+    (
         string repositoryPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        var result = await RunGitAsync(
+        var result = await RunGitAsync
+        (
             repositoryPath,
             allowFailure: false,
             cancellationToken,
             "status",
             "--porcelain=v1",
-            "--untracked-files=no").ConfigureAwait(false);
-        return result.StandardOutput.Split(
+            "--untracked-files=no"
+        ).ConfigureAwait(false);
+        return result.StandardOutput.Split
+        (
             ['\r', '\n'],
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+        );
     }
 
-    private async Task ValidateGitStateAfterBuildAsync(
+    private async Task ValidateGitStateAfterBuildAsync
+    (
         string repositoryPath,
         GitObjectId initialCommit,
         GitObjectId initialTree,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var finalCommit = await ReadTestedShaAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
         var finalTree = await ReadTreeShaAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
         var finalChanges = await ReadTrackedChangesAsync(repositoryPath, cancellationToken).ConfigureAwait(false);
         if (finalCommit != initialCommit || finalTree != initialTree || finalChanges.Count > 0)
         {
-            throw new InvalidOperationException(
+            throw new InvalidOperationException
+            (
                 $"The tested build modified Git state. HEAD: {initialCommit} -> {finalCommit}; " +
-                $"tree: {initialTree} -> {finalTree}; tracked changes: {string.Join(", ", finalChanges)}");
+                $"tree: {initialTree} -> {finalTree}; tracked changes: {string.Join(", ", finalChanges)}"
+            );
         }
     }
 
-    private async Task ValidateTestedIdentityAsync(
+    private async Task ValidateTestedIdentityAsync
+    (
         string repositoryPath,
         GitHubActionsBuildMetadata metadata,
         GitObjectId testedSha,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (!metadata.IsPullRequest)
         {
@@ -306,7 +363,8 @@ internal sealed class GitHubActionsBuildService
             return;
         }
 
-        var result = await RunGitAsync(
+        var result = await RunGitAsync
+        (
             repositoryPath,
             allowFailure: false,
             cancellationToken,
@@ -314,10 +372,13 @@ internal sealed class GitHubActionsBuildService
             "--parents",
             "-n",
             "1",
-            testedSha.ToString()).ConfigureAwait(false);
-        var identities = result.StandardOutput.Split(
+            testedSha.ToString()
+        ).ConfigureAwait(false);
+        var identities = result.StandardOutput.Split
+        (
             (char[]?)null,
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+        );
         var parsedCommit = identities.Length > 0 ? GitObjectId.Parse(identities[0]) : default;
         var parents = identities.Skip(1).Select(GitObjectId.Parse).ToArray();
         if (parsedCommit != testedSha)
@@ -328,10 +389,12 @@ internal sealed class GitHubActionsBuildService
         ValidateTestedIdentity(metadata, testedSha, parents);
     }
 
-    internal static void ValidateTestedIdentity(
+    internal static void ValidateTestedIdentity
+    (
         GitHubActionsBuildMetadata metadata,
         GitObjectId testedSha,
-        IReadOnlyList<GitObjectId> parents)
+        IReadOnlyList<GitObjectId> parents
+    )
     {
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(parents);
@@ -353,35 +416,45 @@ internal sealed class GitHubActionsBuildService
         }
     }
 
-    private async Task<ProcessResult> RunGitAsync(
+    private async Task<ProcessResult> RunGitAsync
+    (
         string repositoryPath,
         bool allowFailure,
         CancellationToken cancellationToken,
-        params string[] arguments)
+        params string[] arguments
+    )
     {
-        var isolatedHome = Path.Join(
+        var isolatedHome = Path.Join
+        (
             Path.GetTempPath(),
             "WpfReorganize.Builder",
             "git-inspection",
-            Guid.NewGuid().ToString("N"));
+            Guid.NewGuid().ToString("N")
+        );
         try
         {
             var environment = ProcessEnvironment.CreateUntrustedBuildEnvironment(isolatedHome);
-            var result = await ProcessRunner.RunAsync(
-                new ProcessRunOptions(
+            var result = await ProcessRunner.RunAsync
+            (
+                new ProcessRunOptions
+                (
                     _gitPath,
                     repositoryPath,
-                    ["-c", "core.fsmonitor=false", .. arguments])
+                    ["-c", "core.fsmonitor=false", .. arguments]
+                )
                 {
                     Timeout = GitTimeout,
                     InheritEnvironment = false,
                     EnvironmentVariables = environment,
                 },
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken
+            ).ConfigureAwait(false);
             if (!allowFailure && result.ExitCode != 0)
             {
-                throw new InvalidOperationException(
-                    $"Git command failed with exit code {result.ExitCode}; credential output is omitted.");
+                throw new InvalidOperationException
+                (
+                    $"Git command failed with exit code {result.ExitCode}; credential output is omitted."
+                );
             }
 
             return result;
@@ -392,52 +465,62 @@ internal sealed class GitHubActionsBuildService
         }
     }
 
-    private static async Task RunRequiredAsync(
+    private static async Task RunRequiredAsync
+    (
         string description,
         string fileName,
         string workingDirectory,
         IReadOnlyDictionary<string, string?> environment,
         TimeSpan timeout,
         CancellationToken cancellationToken,
-        params string[] arguments)
+        params string[] arguments
+    )
     {
         Log.Step(description);
-        var result = await ProcessRunner.RunAsync(
+        var result = await ProcessRunner.RunAsync
+        (
             new ProcessRunOptions(fileName, workingDirectory, arguments)
             {
                 Timeout = timeout,
                 InheritEnvironment = false,
                 EnvironmentVariables = environment,
             },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken
+        ).ConfigureAwait(false);
         if (result.ExitCode != 0)
         {
             if (!string.IsNullOrWhiteSpace(result.StandardOutput))
             {
                 Console.Error.Write(result.StandardOutput);
             }
+
             if (!string.IsNullOrWhiteSpace(result.StandardError))
             {
                 Console.Error.Write(result.StandardError);
             }
 
-            throw new InvalidOperationException(
-                $"GitHub Actions step '{description}' failed with exit code {result.ExitCode}.");
+            throw new InvalidOperationException
+            (
+                $"GitHub Actions step '{description}' failed with exit code {result.ExitCode}."
+            );
         }
 
         if (!string.IsNullOrWhiteSpace(result.StandardOutput))
         {
             Console.Write(result.StandardOutput);
         }
+
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
             Console.Error.Write(result.StandardError);
         }
     }
 
-    private static void LogIdentity(
+    private static void LogIdentity
+    (
         GitHubActionsBuildMetadata metadata,
-        GitHubActionsBuildIdentity identity)
+        GitHubActionsBuildIdentity identity
+    )
     {
         Log.Info($"Tested merge/commit SHA: {identity.TestedSha}");
         if (metadata.IsPullRequest)
@@ -445,6 +528,7 @@ internal sealed class GitHubActionsBuildService
             Log.Info($"Source PR head SHA: {metadata.SourceHeadSha}");
             Log.Info($"Trusted workflow/base SHA: {metadata.TrustedSha}");
         }
+
         Log.Info($"Package version: {identity.PackageVersion}");
     }
 

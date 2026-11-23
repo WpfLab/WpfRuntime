@@ -16,8 +16,10 @@ internal sealed class PublishPackagesCommand : ICommandHandler
 
     public async Task<int> RunAsync()
     {
-        var repository = GitHubRepositoryAddress.ParseFullName(
-            GitHubActionsEnvironment.GetRequired(Repository, "PUBLISH_REPOSITORY"));
+        var repository = GitHubRepositoryAddress.ParseFullName
+        (
+            GitHubActionsEnvironment.GetRequired(Repository, "PUBLISH_REPOSITORY")
+        );
         var runId = GitHubActionsEnvironment.GetPositiveInt64(RunId, "PUBLISH_RUN_ID");
         var githubToken = GitHubActionsEnvironment.GetRequired(null, "GITHUB_TOKEN");
         var nugetKey = GitHubActionsEnvironment.GetRequired(null, "NUGET_API_KEY");
@@ -33,9 +35,11 @@ internal sealed class PublishPackagesCommand : ICommandHandler
         Console.CancelKeyPress += handler;
         try
         {
-            return await new PublishPackagesService(client, ProcessRunner.RunAsync).RunAsync(
+            return await new PublishPackagesService(client, ProcessRunner.RunAsync).RunAsync
+            (
                 repository, runId, Path.Join(Path.GetTempPath(), $"builder-publish-{Guid.NewGuid():N}"),
-                nugetKey, githubToken, cancellation.Token).ConfigureAwait(false);
+                nugetKey, githubToken, cancellation.Token
+            ).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

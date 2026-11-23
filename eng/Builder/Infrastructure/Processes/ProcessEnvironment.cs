@@ -83,13 +83,13 @@ internal static class ProcessEnvironment
         environment["DOTNET_NOLOGO"] = "1";
         environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         foreach (var directory in new[]
-        {
-            environment["DOTNET_CLI_HOME"],
-            environment["APPDATA"],
-            environment["LOCALAPPDATA"],
-            environment["NUGET_PACKAGES"],
-            environment["TEMP"],
-        })
+                 {
+                     environment["DOTNET_CLI_HOME"],
+                     environment["APPDATA"],
+                     environment["LOCALAPPDATA"],
+                     environment["NUGET_PACKAGES"],
+                     environment["TEMP"],
+                 })
         {
             Directory.CreateDirectory(directory!);
         }
@@ -118,6 +118,7 @@ internal static class ProcessEnvironment
                 environment[name] = null;
             }
         }
+
         return environment;
     }
 
@@ -138,7 +139,7 @@ internal static class ProcessEnvironment
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         return SensitiveNames.Contains(name)
-            || SensitiveNamePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            || SensitiveNameFragments.Any(fragment => name.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+               || SensitiveNamePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+               || SensitiveNameFragments.Any(fragment => name.Contains(fragment, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -23,8 +23,10 @@ internal static class RelayMarkers
 
     public static bool MergeMessageMatches(string message, PullRequestAddress address) =>
         !string.IsNullOrWhiteSpace(message)
-        && message.Split('\n').Any(line =>
-            string.Equals(line.TrimEnd('\r'), SourcePullRequestTrailer + address.CanonicalUrl, StringComparison.Ordinal));
+        && message.Split('\n').Any
+        (line =>
+            string.Equals(line.TrimEnd('\r'), SourcePullRequestTrailer + address.CanonicalUrl, StringComparison.Ordinal)
+        );
 
     public static bool PullRequestBodyMatches(string? body, PullRequestAddress address) =>
         body?.Contains(CreatePullRequestMarker(address), StringComparison.Ordinal) == true;

@@ -18,7 +18,9 @@ internal sealed class BuildCommand : ICommandHandler
     internal string ResolveVersion(string repoRoot)
     {
         if (!string.IsNullOrWhiteSpace(Version))
+        {
             return Version;
+        }
 
         var prefix = WpfRuntimeDefinition.ReadCiNuGetVersionPrefix(repoRoot);
         var suffixIndex = prefix.IndexOf('-');

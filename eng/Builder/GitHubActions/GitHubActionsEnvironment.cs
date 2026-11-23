@@ -8,9 +8,14 @@ internal static class GitHubActionsEnvironment
             ? Environment.GetEnvironmentVariable(environmentName)
             : optionValue;
         return string.IsNullOrWhiteSpace(value)
-            ? throw new ArgumentException(string.Format(
-                BuilderResources.GitHubActionsEnvironmentVariableRequired,
-                environmentName))
+            ? throw new ArgumentException
+            (
+                string.Format
+                (
+                    BuilderResources.GitHubActionsEnvironmentVariableRequired,
+                    environmentName
+                )
+            )
             : value;
     }
 
@@ -27,8 +32,13 @@ internal static class GitHubActionsEnvironment
             return parsed;
         }
 
-        throw new ArgumentException(string.Format(
-            BuilderResources.GitHubActionsEnvironmentVariableRequired,
-            environmentName));
+        throw new ArgumentException
+        (
+            string.Format
+            (
+                BuilderResources.GitHubActionsEnvironmentVariableRequired,
+                environmentName
+            )
+        );
     }
 }

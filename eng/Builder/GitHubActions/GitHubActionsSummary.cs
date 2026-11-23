@@ -19,19 +19,24 @@ internal static class GitHubActionsSummary
             Directory.CreateDirectory(directory);
         }
 
-        File.AppendAllText(
+        File.AppendAllText
+        (
             summaryPath,
             $"## {Sanitize(heading, 120)}{Environment.NewLine}{Environment.NewLine}" +
             $"{Sanitize(message, 500)}{Environment.NewLine}",
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+        );
     }
 
     private static string Sanitize(string value, int maximumLength)
     {
-        var sanitized = new string(value
-            .Where(character => !char.IsControl(character) || character is '\r' or '\n' or '\t')
-            .Take(maximumLength)
-            .ToArray());
+        var sanitized = new string
+        (
+            value
+                .Where(character => !char.IsControl(character) || character is '\r' or '\n' or '\t')
+                .Take(maximumLength)
+                .ToArray()
+        );
         return sanitized.Replace("@", "@\u200b", StringComparison.Ordinal);
     }
 }

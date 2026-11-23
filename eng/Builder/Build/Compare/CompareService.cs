@@ -90,7 +90,8 @@ internal static class CompareService
         // Missing: in official but not in ours
         var missing = officialDlls.Keys.Except(ourDlls.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
         var extra = ourDlls.Keys.Except(officialDlls.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
-        var common = officialDlls.Keys.Intersect(ourDlls.Keys, StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+        var common = officialDlls.Keys.Intersect(ourDlls.Keys, StringComparer.OrdinalIgnoreCase).OrderBy
+            (x => x).ToList();
 
         // Size comparison (flag if size differs by >50% — ref vs impl naturally differ)
         var sizeWarnings = new List<(string Name, long Official, long Ours)>();

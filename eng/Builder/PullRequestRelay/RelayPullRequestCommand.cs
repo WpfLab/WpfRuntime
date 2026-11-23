@@ -47,9 +47,11 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
             var conflictMode = string.IsNullOrWhiteSpace(ConflictMode)
                 ? WpfReorganize.Builder.ConflictMode.Manual
                 : ParseConflictMode(ConflictMode);
-            var token = ResolveGitHubToken(
+            var token = ResolveGitHubToken
+            (
                 GitHubToken,
-                Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
+                Environment.GetEnvironmentVariable("GITHUB_TOKEN")
+            );
             if (token is null)
             {
                 Log.Error(BuilderResources.GitHubTokenRequired);
@@ -92,7 +94,8 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                 }
                 else
                 {
-                    Log.Info("Local build validation is skipped. GitHub Actions will validate the published pull request.");
+                    Log.Info
+                        ("Local build validation is skipped. GitHub Actions will validate the published pull request.");
                 }
 
                 var service = new PullRequestRelayService(git, github, validation);
@@ -114,17 +117,22 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                     Log.Info($"Source PR: {address.CanonicalUrl}");
                     Log.Info($"Target remote: {targetRemote}");
                     Log.Info($"Target base: {baseBranch}");
-                    result = await service.RunAsync(
-                        new PullRequestRelayOptions(
+                    result = await service.RunAsync
+                    (
+                        new PullRequestRelayOptions
+                        (
                             address,
                             targetRemote,
                             baseBranch,
                             AllowUntrustedBuild,
                             conflictMode,
-                            workspaceRoot),
+                            workspaceRoot
+                        ),
                         context.RepoRoot,
-                        cancellationTokenSource.Token).ConfigureAwait(false);
+                        cancellationTokenSource.Token
+                    ).ConfigureAwait(false);
                 }
+
                 if (result.PullRequestUrl is null)
                 {
                     Log.Info(BuilderResources.NoChangesToRelay);
@@ -138,6 +146,7 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
                 {
                     Log.Info($"Validated commit: {result.ValidatedCommit}");
                 }
+
                 if (result.WorkspaceRetained)
                 {
                     Log.Info($"Relay workspace retained: {result.WorkspacePath}");
@@ -198,20 +207,20 @@ internal sealed class RelayPullRequestCommand : ICommandHandler
         var workspacePath = Path.GetDirectoryName(patchPath)!;
         var repositoryPath = Path.Join(workspacePath, "repository");
         return $"""
-            Manual conflict resolution steps:
-            1. Enter the relay repository:
-               cd /d "{repositoryPath}"
-            2. Apply the generated patch and keep conflicts for manual resolution:
-               git apply --index --3way --ignore-space-change --ignore-whitespace "{patchPath}"
-            3. Edit every conflicted file and remove the conflict markers.
-            4. Stage each resolved file with git add. Do not run git commit. For example:
-               git add "src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Input/Stylus/Wisp/WispLogic.cs"
-            5. Chinese and English AI LLM prompts containing the full context and instructions were created here:
-               "{Path.Join(workspacePath, AiPatchConflictPromptWriter.ChineseFileName)}"
-               "{Path.Join(workspacePath, AiPatchConflictPromptWriter.EnglishFileName)}"
-            6. Resume the relay pipeline with this directly executable command:
-               dotnet run --project "{Path.Join(BuilderContext.Create().RepoRoot, "eng", "Builder", "Builder.csproj")}" -- relay-pr --resume-workspace "{workspacePath}"
-               Add --allow-untrusted-build only if you also want to run the optional local build validation before publishing.
-            """;
+                Manual conflict resolution steps:
+                1. Enter the relay repository:
+                   cd /d "{repositoryPath}"
+                2. Apply the generated patch and keep conflicts for manual resolution:
+                   git apply --index --3way --ignore-space-change --ignore-whitespace "{patchPath}"
+                3. Edit every conflicted file and remove the conflict markers.
+                4. Stage each resolved file with git add. Do not run git commit. For example:
+                   git add "src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Input/Stylus/Wisp/WispLogic.cs"
+                5. Chinese and English AI LLM prompts containing the full context and instructions were created here:
+                   "{Path.Join(workspacePath, AiPatchConflictPromptWriter.ChineseFileName)}"
+                   "{Path.Join(workspacePath, AiPatchConflictPromptWriter.EnglishFileName)}"
+                6. Resume the relay pipeline with this directly executable command:
+                   dotnet run --project "{Path.Join(BuilderContext.Create().RepoRoot, "eng", "Builder", "Builder.csproj")}" -- relay-pr --resume-workspace "{workspacePath}"
+                   Add --allow-untrusted-build only if you also want to run the optional local build validation before publishing.
+                """;
     }
 }
