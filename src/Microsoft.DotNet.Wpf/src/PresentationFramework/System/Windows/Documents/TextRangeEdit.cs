@@ -1506,7 +1506,39 @@ namespace System.Windows.Documents
             // Anything required for custom types here?
         }
 
-        // Helper for DeleteParagraphContent 
+        // Replacing both blocks would otherwise remove the left edge still known to the IME.
+        internal static TextPointer ReplaceBlockUIContainersWithParagraph(ITextPointer start, ITextPointer end)
+        {
+            if (start.CompareTo(end) == 0 || !TextPointerBase.IsAtBlockUIContainerStart(start) || !TextPointerBase.IsAtBlockUIContainerEnd(end))
+            {
+                return null;
+            }
+
+            TextPointer startPosition = (TextPointer)start;
+            BlockUIContainer firstBlock = (BlockUIContainer)startPosition.Parent;
+            BlockUIContainer lastBlock = (BlockUIContainer)((TextPointer)end).Parent;
+            if (firstBlock.Parent != lastBlock.Parent)
+            {
+                return null;
+            }
+
+            TextPointer insertionPosition = TextRangeEditTables.EnsureInsertionPosition(startPosition);
+            Paragraph paragraph = insertionPosition.Paragraph;
+            TextContainer textContainer = startPosition.TextContainer;
+            textContainer.BeginChange();
+            try
+            {
+                textContainer.DeleteContentInternal(paragraph.ElementEnd, lastBlock.ElementEnd);
+            }
+            finally
+            {
+                textContainer.EndChange();
+            }
+
+            return insertionPosition;
+        }
+
+        // Helper for DeleteParagraphContent
         // Takes 2 positions possibly parented by paragraph or BlockUIContainer
         // and deletes them if they are empty .
         private static void MergeEmptyParagraphsAndBlockUIContainers(TextPointer startPosition, TextPointer endPosition)

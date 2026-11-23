@@ -48,6 +48,16 @@ namespace System.Windows.Documents
             undoManager.Add(new TextTreeInsertElementUndoUnit(tree, symbolOffset, deep));
         }
 
+        // Edge deferral alters IME character counts, not symbol offsets.
+        internal static void CreateIMEDeferralUndoUnit(TextContainer tree, TextElement element, bool wasDeferred)
+        {
+            UndoManager undoManager = GetUndoManager(tree, false /* changingOffsets */);
+            if (undoManager == null)
+                return;
+
+            undoManager.Add(new TextTreeIMEDeferralUndoUnit(tree, element.TextElementNode.GetSymbolOffset(tree.Generation), wasDeferred));
+        }
+
         // Adds a TextTreePropertyUndoUnit to the open parent undo unit, if any.
         // Called by TextElement's property change listener.
         internal static void CreatePropertyUndoUnit(TextElement element, DependencyPropertyChangedEventArgs e)
@@ -111,6 +121,15 @@ namespace System.Windows.Documents
         // but is disabled or if there is no open parent undo unit.
         internal static UndoManager GetOrClearUndoManager(ITextContainer textContainer)
         {
+            return GetUndoManager(textContainer, true /* changingOffsets */);
+        }
+
+        #endregion Internal methods
+
+        #region Private Methods
+
+        private static UndoManager GetUndoManager(ITextContainer textContainer, bool changingOffsets)
+        {
             UndoManager undoManager;
 
             undoManager = textContainer.UndoManager;
@@ -128,14 +147,17 @@ namespace System.Windows.Documents
                 // matching the original document state when an undo unit is
                 // executed, any of our units currently in the stack will be
                 // corrupted after we finished the operation in progress.
-                undoManager.Clear();
+                if (changingOffsets)
+                {
+                    undoManager.Clear();
+                }
                 return null;
             }
 
             return undoManager;
         }
 
-        #endregion Internal methods
+        #endregion Private Methods
     }
 }
 

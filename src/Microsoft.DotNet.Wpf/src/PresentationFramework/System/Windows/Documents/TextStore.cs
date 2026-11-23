@@ -526,6 +526,36 @@ namespace System.Windows.Documents
             {
                 ITextRange range = new TextRange(start, end, true /* ignoreTextUnitBoundaries */);
 
+                // SetText cannot report implicit block edges while the IME holds the lock.
+                BlockUIContainer startContainer = GetBlockUIContainerAtInsertionPosition(range.Start);
+                BlockUIContainer endContainer = GetBlockUIContainerAtInsertionPosition(range.End);
+                if (startContainer != null || endContainer != null)
+                {
+                    // Preserve the number of IME-visible edges when replacing whole blocks.
+                    bool wasDeferred = startContainer?.IsIMELeftEdgeDeferred == true;
+                    TextPointer paragraphPosition = TextRangeEdit.ReplaceBlockUIContainersWithParagraph(range.Start, range.End);
+                    if (paragraphPosition != null)
+                    {
+                        if (wasDeferred)
+                        {
+                            paragraphPosition.TextContainer.DeferIMELeftEdge(paragraphPosition.Paragraph);
+                        }
+
+                        range.Select(paragraphPosition, paragraphPosition);
+                    }
+
+                    DeleteAndDeferIMELeftEdge(range);
+
+                    if (filteredText.Length > 0)
+                    {
+                        TextPointer insertionPosition = EnsureInsertionPositionAndDeferIMELeftEdge((TextPointer)range.Start);
+                        if (insertionPosition != null)
+                        {
+                            range.Select(insertionPosition, insertionPosition);
+                        }
+                    }
+                }
+
                 this.TextEditor.SetText(range, filteredText, InputLanguageManager.Current.CurrentInputLanguage);
 
                 change.start = startIndex;
@@ -654,6 +684,8 @@ namespace System.Windows.Documents
         {
             ITextPointer startNavigator;
             ITextPointer endNavigator;
+            int textStartIndex = -1;
+            int textEndIndex = -1;
             int selectionStartIndex;
             int selectionEndIndex;
 
@@ -768,7 +800,28 @@ namespace System.Windows.Documents
                         _previousCompositionEndOffset = this.TextSelection.End.Offset;
                     }
 
+                    // Unlike SetText, this method can report implicit changes at block boundaries.
+                    BlockUIContainer startBlock = GetBlockUIContainerAtInsertionPosition(start);
+                    BlockUIContainer endBlock = GetBlockUIContainerAtInsertionPosition(end);
+                    if (startBlock != null)
+                    {
+                        startNavigator = new TextPointer(GetInsertionPositionBefore(startBlock), LogicalDirection.Backward);
+                    }
+
+                    if (endBlock != null)
+                    {
+                        endNavigator = new TextPointer(GetInsertionPositionAfter(endBlock), LogicalDirection.Forward);
+                        change.oldEnd = endNavigator.CharOffset;
+                    }
+
                     this.TextEditor.SetSelectedText(filteredText, InputLanguageManager.Current.CurrentInputLanguage);
+
+                    if (startBlock != null || endBlock != null)
+                    {
+                        // The selection covers only the inserted text, not any implicit block edges.
+                        textStartIndex = this.TextSelection.Start.CharOffset;
+                        textEndIndex = this.TextSelection.End.CharOffset;
+                    }
 
                     change.start = startNavigator.CharOffset;
                     change.newEnd = endNavigator.CharOffset;
@@ -788,8 +841,8 @@ namespace System.Windows.Documents
             // Report the location of the new text.
             if ((flags & UnsafeNativeMethods.InsertAtSelectionFlags.TS_IAS_NOQUERY) == 0)
             {
-                startIndex = selectionStartIndex;
-                endIndex = endNavigator.CharOffset;
+                startIndex = (textStartIndex != -1) ? textStartIndex : selectionStartIndex;
+                endIndex = (textEndIndex != -1) ? textEndIndex : endNavigator.CharOffset;
             }
 
             if (IsTracing)
@@ -1650,6 +1703,11 @@ namespace System.Windows.Documents
             // TextEditor could be GCed before.
             if (this.IsTextEditorValid)
             {
+                if (!finalizer && this.TextContainer is TextContainer textContainer)
+                {
+                    textContainer.RevealDeferredIMELeftEdges();
+                }
+
                 this.TextContainer.Change -= new TextContainerChangeEventHandler(OnTextContainerChange);
             }
 
@@ -2412,6 +2470,12 @@ namespace System.Windows.Documents
                         // Finally raise the recorded composition events publicly.
                         HandleCompositionEvents(initialUndoCount);
                     }
+
+                    if (!_isComposing && _compositionEventState == CompositionEventState.NotRaisingEvents &&
+                        this.TextContainer is TextContainer textContainer)
+                    {
+                        textContainer.RevealDeferredIMELeftEdges();
+                    }
                 }
                 finally
                 {
@@ -2922,6 +2986,16 @@ namespace System.Windows.Documents
             start = CreatePointerAtCharOffset(startIndex, LogicalDirection.Backward);
             end = CreatePointerAtCharOffset(startIndex + length, LogicalDirection.Forward);
 
+            if (length == 0)
+            {
+                ITextPointer position = GetAdjustedBlockUIContainerEndPosition(start);
+                if (position != start)
+                {
+                    start = position.CreatePointer(LogicalDirection.Backward);
+                    end = position.CreatePointer(LogicalDirection.Forward);
+                }
+            }
+
             while (start.CompareTo(end) < 0 && start.GetPointerContext(LogicalDirection.Forward) != TextPointerContext.Text)
             {
                 start.MoveToNextContextPosition(LogicalDirection.Forward);
@@ -3382,10 +3456,8 @@ namespace System.Windows.Documents
         }
 
         // Repositions an ITextRange to comply with limitations on IME input.
-        // We cannot modify Table structure, or insert content
-        // before or after Tables or BlockUIContainers while maintaing our
-        // contract with the cicero interfaces (without major refactoring of
-        // our code).
+        // Keep table structure intact, but let InsertTextAtSelection replace
+        // nonempty selections at BlockUIContainer boundaries as normal typing does.
         private static void GetAdjustedSelection(ITextPointer startIn, ITextPointer endIn, out ITextPointer startOut, out ITextPointer endOut)
         {
             startOut = startIn;
@@ -3404,16 +3476,13 @@ namespace System.Windows.Documents
 
             if (startIn.CompareTo(endIn) != 0)
             {
-                bool scopingBlockUIContainer = TextPointerBase.IsInBlockUIContainer(start) || TextPointerBase.IsInBlockUIContainer(end);
                 TableCell startCell = TextRangeEditTables.GetTableCellFromPosition(start);
                 TableCell endCell = TextRangeEditTables.GetTableCellFromPosition(end);
                 bool singleScopingTableCell = (startCell != null && startCell == endCell);
                 bool scopingTable = TextRangeEditTables.GetTableFromPosition(start) != null || TextRangeEditTables.GetTableFromPosition(end) != null;
 
-                // With a non-empty selection, if neither end of the selection is inside a Table or BlockUIContainer,
-                // there's nothing to adjust.
-                if (!scopingBlockUIContainer &&
-                    (singleScopingTableCell || !scopingTable))
+                // A selection does not need adjustment unless it crosses a table cell boundary.
+                if (singleScopingTableCell || !scopingTable)
                 {
                     return;
                 }
@@ -3457,12 +3526,105 @@ namespace System.Windows.Documents
             // If we have non-canonical format, give up.
             if (start == null || start.IsAtRowEnd || TextPointerBase.IsInBlockUIContainer(start))
             {
-                throw new COMException(SR.TextStore_CompositionRejected, NativeMethods.E_FAIL);
+                if (TextPointerBase.IsInBlockUIContainer(startIn))
+                {
+                    // InsertTextAtSelection can handle the original block boundary.
+                    start = (TextPointer)startIn;
+                }
+                else
+                {
+                    throw new COMException(SR.TextStore_CompositionRejected, NativeMethods.E_FAIL);
+                }
             }
 
             startOut = start;
             endOut = start;
         }
+
+        #region IME Deferral
+
+        private static BlockUIContainer GetBlockUIContainerAtInsertionPosition(ITextPointer position)
+        {
+            // Avoid allocating a TextPointer in normal text content.
+            if (!(position is TextPointer pointer) || TextSchema.IsInTextContent(pointer))
+            {
+                return null;
+            }
+
+            return pointer.GetInsertionPosition(pointer.LogicalDirection).Parent as BlockUIContainer;
+        }
+
+        private static TextPointer GetInsertionPositionBefore(Block block)
+        {
+            return block.ContentStart.GetNextInsertionPosition(LogicalDirection.Backward) ?? block.TextContainer.Start;
+        }
+
+        private static TextPointer GetInsertionPositionAfter(Block block)
+        {
+            return block.ContentEnd.GetNextInsertionPosition(LogicalDirection.Forward) ?? block.TextContainer.End;
+        }
+
+        // If the deletion leaves both blocks intact, the IME still expects them to be merged.
+        private static void DeleteAndDeferIMELeftEdge(ITextRange range)
+        {
+            if (range.IsEmpty)
+            {
+                return;
+            }
+
+            TextPointer start = (TextPointer)range.Start;
+            TextPointer end = (TextPointer)range.End;
+            TextContainer textContainer = start.TextContainer;
+            Block startBlock = start.ParagraphOrBlockUIContainer;
+            Block endBlock = end.ParagraphOrBlockUIContainer;
+
+            range.Text = String.Empty;
+
+            // Removed blocks end up in separate trees and won't be siblings.
+            if (startBlock != null && endBlock != null && startBlock.NextBlock == endBlock)
+            {
+                textContainer.DeferIMELeftEdge(endBlock);
+            }
+        }
+
+        // Inserting a paragraph at a block boundary requires hiding the new edge between them.
+        private static TextPointer EnsureInsertionPositionAndDeferIMELeftEdge(TextPointer position)
+        {
+            BlockUIContainer blockUIContainer = GetBlockUIContainerAtInsertionPosition(position);
+            if (blockUIContainer == null)
+            {
+                return null;
+            }
+
+            TextPointer insertionPosition = TextRangeEditTables.EnsureInsertionPosition(position);
+            TextContainer textContainer = insertionPosition.TextContainer;
+            if (insertionPosition.Paragraph is Paragraph paragraph)
+            {
+                if (paragraph.NextBlock == blockUIContainer)
+                {
+                    textContainer.DeferIMELeftEdge(blockUIContainer);
+                }
+                else if (paragraph.PreviousBlock == blockUIContainer)
+                {
+                    textContainer.DeferIMELeftEdge(paragraph);
+                }
+            }
+
+            return insertionPosition;
+        }
+
+        private static ITextPointer GetAdjustedBlockUIContainerEndPosition(ITextPointer position)
+        {
+            if (position is TextPointer pointer && TextPointerBase.IsAtBlockUIContainerEnd(pointer) &&
+                ((BlockUIContainer)pointer.Parent).NextBlock is Paragraph paragraph && paragraph.IsIMELeftEdgeDeferred)
+            {
+                return paragraph.ContentStart.GetInsertionPosition(LogicalDirection.Forward);
+            }
+
+            return position;
+        }
+
+        #endregion IME Deferral
 
         // Normalizes a range:
         //
@@ -3504,6 +3666,7 @@ namespace System.Windows.Documents
 
             if (start.CompareTo(end) == 0)
             {
+                start = GetAdjustedBlockUIContainerEndPosition(start);
                 start = start.GetFormatNormalizedPosition(LogicalDirection.Backward);
                 end = start;
             }
