@@ -703,33 +703,3 @@ internal sealed class GitService
         value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 }
-
-internal sealed class SourceHeadUnavailableException : InvalidOperationException
-{
-    public SourceHeadUnavailableException(string message)
-        : base(message)
-    {
-    }
-}
-
-internal sealed class NoChangesToRelayException : InvalidOperationException
-{
-    public NoChangesToRelayException(GitObjectId relayCommit)
-        : base(BuilderResources.NoChangesToRelay)
-    {
-        RelayCommit = relayCommit;
-    }
-
-    public GitObjectId RelayCommit { get; }
-}
-
-internal sealed class PatchConflictException : InvalidOperationException
-{
-    public PatchConflictException(string patchPath, string gitOutput)
-        : base(gitOutput)
-    {
-        PatchPath = patchPath;
-    }
-
-    public string PatchPath { get; }
-}

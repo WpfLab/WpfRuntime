@@ -1,11 +1,5 @@
 namespace WpfReorganize.Builder;
 
-internal sealed record LocalBuildValidationResult(
-    GitObjectId CommitSha,
-    GitObjectId TreeSha,
-    string PackagePath,
-    DateTimeOffset CompletedAtUtc);
-
 internal sealed class LocalBuildValidationService
 {
     private static readonly TimeSpan RestoreTimeout = TimeSpan.FromMinutes(20);

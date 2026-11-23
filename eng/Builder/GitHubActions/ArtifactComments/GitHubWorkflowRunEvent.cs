@@ -2,11 +2,6 @@ namespace WpfReorganize.Builder;
 
 using System.Text.Json;
 
-internal sealed record GitHubWorkflowRunPullRequestAssociation(
-    int Number,
-    GitObjectId HeadSha,
-    string BaseReference);
-
 internal sealed record GitHubWorkflowRunEvent(
     GitHubRepositoryAddress Repository,
     long RunId,

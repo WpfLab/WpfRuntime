@@ -5,21 +5,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Octokit;
 
-internal sealed record GitHubArtifactCommentItem(
-    long Id,
-    string Name,
-    int SizeInBytes,
-    DateTime ExpiresAt,
-    GitObjectId TestedSha,
-    string PackageVersion);
-
-internal sealed record GitHubArtifactCommentContent(
-    string Marker,
-    string RunMarker,
-    string Body,
-    bool HasValidSuccessArtifacts,
-    GitObjectId? TestedSha);
-
 internal static class GitHubArtifactCommentFormatter
 {
     private const int MaxArtifacts = 5;
