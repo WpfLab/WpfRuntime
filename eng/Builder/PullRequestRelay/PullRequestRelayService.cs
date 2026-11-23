@@ -1,0 +1,393 @@
+namespace WpfReorganize.Builder;
+
+internal sealed class PullRequestRelayService
+{
+    private readonly GitService _git;
+    private readonly GitHubPullRequestService _github;
+    private readonly LocalBuildValidationService? _localValidation;
+
+    public PullRequestRelayService
+    (
+        GitService git,
+        GitHubPullRequestService github,
+        LocalBuildValidationService? localValidation
+    )
+    {
+        ArgumentNullException.ThrowIfNull(git);
+        ArgumentNullException.ThrowIfNull(github);
+        _git = git;
+        _github = github;
+        _localValidation = localValidation;
+    }
+
+    public async Task<PullRequestRelayResult> RunAsync
+    (
+        PullRequestRelayOptions options,
+        string callerRepository,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerRepository);
+
+        PullRequestRelayWorkspace? workspace = null;
+        var succeeded = false;
+        var state = new PullRequestRelayState
+        {
+            Stage = PullRequestRelayStage.InputValidated,
+            PreserveWorkspace = !string.IsNullOrWhiteSpace(options.WorkspaceRoot),
+            SourcePullRequestUrl = options.PullRequest.CanonicalUrl,
+        };
+        try
+        {
+            var target = await _git.ResolveTargetAsync
+            (
+                callerRepository,
+                options.TargetRemote,
+                options.BaseBranch,
+                options.PullRequest.Number,
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.TargetResolved;
+            state.TargetRepository = target.Address.FullName;
+            state.TargetRemote = target.RemoteName;
+            state.TargetPushUrl = target.PushUrl;
+            state.TargetBaseBranch = target.BaseBranch;
+            state.TargetRelayBranch = target.RelayBranch;
+            state.ExistingRemoteBranchSha = target.ExistingRelayBranchSha?.ToString();
+
+            var source = await _github.GetSourceAsync(options.PullRequest, cancellationToken).ConfigureAwait(false);
+            ValidateSource(source, options.PullRequest);
+            state.Stage = PullRequestRelayStage.SourceResolved;
+            state.SourcePullRequestUrl = source.Address.CanonicalUrl;
+            state.SourceHeadSha = source.HeadSha.ToString();
+            var existingPullRequest = target.ExistingRelayBranchSha is null
+                ? null
+                : await _github.FindMatchingOpenTargetPullRequestAsync
+                (
+                    target,
+                    source.Address,
+                    cancellationToken
+                ).ConfigureAwait(false);
+
+            workspace = PullRequestRelayWorkspace.Create(source.Address, options.WorkspaceRoot);
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            Log.Info($"Relay workspace: {workspace.RootPath}");
+            await _git.CloneTargetAsync(callerRepository, target, workspace, cancellationToken).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.RepositoryCloned;
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            if (existingPullRequest is null)
+            {
+                await _git.ValidateExistingBranchSourceAsync
+                (
+                    source.Address,
+                    target,
+                    workspace,
+                    cancellationToken
+                ).ConfigureAwait(false);
+            }
+
+            source = await FetchSourceWithSingleRefreshAsync
+            (
+                source,
+                workspace,
+                state,
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.SourceFetched;
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+
+            GitObjectId relayCommit;
+            try
+            {
+                relayCommit = await _git.ApplySourceChangesAsync
+                (
+                    source,
+                    target,
+                    workspace,
+                    options.ConflictMode,
+                    cancellationToken
+                ).ConfigureAwait(false);
+            }
+            catch (NoChangesToRelayException exception)
+            {
+                state.Stage = PullRequestRelayStage.ChangesApplied;
+                state.RelayCommitSha = exception.RelayCommit.ToString();
+                await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+                Log.Info(BuilderResources.NoChangesToRelay);
+                succeeded = true;
+                return new PullRequestRelayResult(null, workspace.RootPath, null, state.PreserveWorkspace);
+            }
+            catch (PatchConflictException exception)
+            {
+                state.Stage = PullRequestRelayStage.ConflictResolutionRequired;
+                await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+                await AiPatchConflictPromptWriter.WriteAsync
+                (
+                    new AiPatchConflictPromptContext
+                    (
+                        workspace.RootPath,
+                        source.Address.CanonicalUrl,
+                        source.BaseSha.ToString(),
+                        source.HeadSha.ToString(),
+                        target.Address.FullName,
+                        target.BaseBranch,
+                        workspace.RepositoryPath,
+                        exception.PatchPath,
+                        workspace.RootPath,
+                        Path.Join(callerRepository, "eng", "Builder", "Builder.csproj")
+                    ),
+                    CancellationToken.None
+                ).ConfigureAwait(false);
+                throw;
+            }
+
+            state.Stage = PullRequestRelayStage.ChangesApplied;
+            state.RelayCommitSha = relayCommit.ToString();
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            var validation = await ValidateLocallyWhenRequestedAsync
+            (
+                options.AllowUntrustedBuild,
+                source,
+                target,
+                relayCommit,
+                workspace,
+                state,
+                cancellationToken
+            ).ConfigureAwait(false);
+
+            if (existingPullRequest is not null)
+            {
+                Log.Info($"Existing target pull request (not yet updated): {existingPullRequest}");
+            }
+
+            await _git.PushValidatedCommitAsync
+            (
+                target,
+                validation.CommitSha,
+                workspace,
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.BranchPushed;
+            await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Relay branch published: {CreateBranchUrl(target)}");
+            var targetPullRequest = await _github.CreateOrReuseTargetPullRequestAsync
+            (
+                target,
+                source,
+                validation.CompletedAtUtc,
+                options.AllowUntrustedBuild,
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
+            state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
+            await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Target pull request: {targetPullRequest}");
+            succeeded = true;
+            return new PullRequestRelayResult
+                (targetPullRequest, workspace.RootPath, validation.CommitSha, state.PreserveWorkspace);
+        }
+        finally
+        {
+            if (workspace is not null && succeeded && !state.PreserveWorkspace)
+            {
+                try
+                {
+                    workspace.Delete();
+                }
+                catch (Exception exception)
+                {
+                    Log.Warn($"Unable to delete relay workspace '{workspace.RootPath}': {exception.Message}");
+                }
+            }
+        }
+    }
+
+    public async Task<PullRequestRelayResult> ContinueAsync
+    (
+        string workspacePath,
+        string callerRepository,
+        bool allowUntrustedBuild,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspacePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(callerRepository);
+        var workspace = PullRequestRelayWorkspace.Open(workspacePath);
+        var state = await workspace.ReadStateAsync(cancellationToken).ConfigureAwait(false);
+        var sourceAddress = PullRequestAddress.Parse(state.SourcePullRequestUrl!);
+        var source = await _github.GetSourceAsync(sourceAddress, cancellationToken).ConfigureAwait(false);
+        var target = await _git.ResolveTargetAsync
+        (
+            callerRepository,
+            state.TargetRemote!,
+            state.TargetBaseBranch,
+            source.Address.Number,
+            cancellationToken
+        ).ConfigureAwait(false);
+        var succeeded = false;
+        try
+        {
+            GitObjectId relayCommit;
+            if (string.IsNullOrWhiteSpace(state.RelayCommitSha))
+            {
+                relayCommit = await _git.ContinueSourceChangesAsync
+                (
+                    source,
+                    workspace,
+                    cancellationToken
+                ).ConfigureAwait(false);
+                state.Stage = PullRequestRelayStage.ChangesApplied;
+                state.RelayCommitSha = relayCommit.ToString();
+                await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                relayCommit = GitObjectId.Parse(state.RelayCommitSha);
+                Log.Info($"Reusing existing relay commit: {relayCommit}");
+            }
+
+            var validation = await ValidateLocallyWhenRequestedAsync
+            (
+                allowUntrustedBuild,
+                source,
+                target,
+                relayCommit,
+                workspace,
+                state,
+                cancellationToken
+            ).ConfigureAwait(false);
+
+            await _git.PushValidatedCommitAsync
+            (
+                target,
+                validation.CommitSha,
+                workspace,
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.BranchPushed;
+            await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Relay branch published: {CreateBranchUrl(target)}");
+
+            var targetPullRequest = await _github.CreateOrReuseTargetPullRequestAsync
+            (
+                target,
+                source,
+                validation.CompletedAtUtc,
+                allowUntrustedBuild,
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.Stage = PullRequestRelayStage.PullRequestCreatedOrReused;
+            state.TargetPullRequestUrl = targetPullRequest.AbsoluteUri;
+            await workspace.WriteStateAsync(state, CancellationToken.None).ConfigureAwait(false);
+            Log.Info($"Target pull request: {targetPullRequest}");
+            succeeded = true;
+            return new PullRequestRelayResult
+                (targetPullRequest, workspace.RootPath, validation.CommitSha, state.PreserveWorkspace);
+        }
+        finally
+        {
+            if (succeeded && !state.PreserveWorkspace)
+            {
+                workspace.Delete();
+            }
+        }
+    }
+
+    private async Task<LocalBuildValidationResult> ValidateLocallyWhenRequestedAsync
+    (
+        bool allowUntrustedBuild,
+        PullRequestSource source,
+        TargetRepository target,
+        GitObjectId relayCommit,
+        PullRequestRelayWorkspace workspace,
+        PullRequestRelayState state,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!allowUntrustedBuild)
+        {
+            var tree = await _git.ResolveTreeAsync
+            (
+                workspace.RepositoryPath,
+                workspace.IsolatedHomePath,
+                relayCommit.ToString(),
+                cancellationToken
+            ).ConfigureAwait(false);
+            state.RelayTreeSha = tree.ToString();
+            state.Stage = PullRequestRelayStage.LocalValidationSkipped;
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            Log.Info("Local build validation skipped; GitHub Actions will validate the pull request.");
+            return new LocalBuildValidationResult
+            (
+                relayCommit,
+                tree,
+                string.Empty,
+                DateTimeOffset.UtcNow
+            );
+        }
+
+        var validation = await (_localValidation
+                                ?? throw new InvalidOperationException
+                                    ("Local build validation was requested but is unavailable."))
+            .ValidateAsync
+            (
+                source,
+                target,
+                relayCommit,
+                workspace,
+                state,
+                cancellationToken
+            ).ConfigureAwait(false);
+        state.Stage = PullRequestRelayStage.LocalValidationSucceeded;
+        await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+        return validation;
+    }
+
+    private async Task<PullRequestSource> FetchSourceWithSingleRefreshAsync
+    (
+        PullRequestSource source,
+        PullRequestRelayWorkspace workspace,
+        PullRequestRelayState state,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            await _git.FetchSourceAsync(source, workspace, cancellationToken).ConfigureAwait(false);
+            return source;
+        }
+        catch (SourceHeadUnavailableException)
+        {
+            var refreshed = await _github.RefreshSourceOnceAsync(source, cancellationToken).ConfigureAwait(false);
+            ValidateSource(refreshed, source.Address);
+            if (refreshed.HeadSha == source.HeadSha)
+            {
+                throw;
+            }
+
+            state.SourceHeadSha = refreshed.HeadSha.ToString();
+            await workspace.WriteStateAsync(state, cancellationToken).ConfigureAwait(false);
+            await _git.FetchSourceAsync(refreshed, workspace, cancellationToken).ConfigureAwait(false);
+            return refreshed;
+        }
+    }
+
+    private static void ValidateSource(PullRequestSource source, PullRequestAddress requestedAddress)
+    {
+        if (!string.Equals(source.Address.SourceKey, requestedAddress.SourceKey, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException
+            (
+                $"GitHub returned a different pull request identity: {source.Address.CanonicalUrl}"
+            );
+        }
+    }
+
+    private static Uri CreateBranchUrl(TargetRepository target) =>
+        new
+        (
+            $"https://github.com/{target.Address.Owner}/{target.Address.Repository}/tree/" +
+            string.Join('/', target.RelayBranch.Split('/').Select(Uri.EscapeDataString))
+        );
+}
